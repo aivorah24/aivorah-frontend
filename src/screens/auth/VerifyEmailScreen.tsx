@@ -1,0 +1,459 @@
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Easing,
+  ScrollView,
+  Platform,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import Svg, { Path, Rect, Circle, Defs, Stop, LinearGradient as SvgGrad } from 'react-native-svg';
+import { auth } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { spacing, radius } from '../../theme';
+import type { AppColors } from '../../theme';
+import SERVER_URL from '../../config/serverUrl';
+
+// ── Landing-page "Enchanting Forest" palette (matches the marketing/auth UI) ──
+const BG     = '#050705';
+const CARD   = '#101510';
+const SURFACE= '#151D17';
+const BORDER = 'rgba(197,255,218,0.18)';
+const MUTED  = '#B6C7B9';
+const DIM    = '#728173';
+const FORE   = '#F5F7F0';
+const CYAN   = '#B7F2C7';
+const AMBER  = '#F4B84A';
+const GOLD   = '#BAA467';
+const RED    = '#E07F7F';
+const GREEN  = '#8FE6AE';
+
+// Gold→sage gradient CTA, identical to the landing page's primary button.
+function GradientButton({ label, onPress, icon, loading, disabled, style }: {
+  label: string; onPress: () => void; icon?: string; loading?: boolean; disabled?: boolean; style?: any;
+}) {
+  const [h, setH] = useState(52);
+  const [w, setW] = useState(200);
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      disabled={loading || disabled}
+      onLayout={e => { setH(e.nativeEvent.layout.height); setW(e.nativeEvent.layout.width); }}
+      style={[{ overflow: 'hidden', borderRadius: 10, width: '100%', opacity: disabled ? 0.5 : 1 }, style]}
+    >
+      <Svg style={StyleSheet.absoluteFill as any} width={w} height={h} pointerEvents="none">
+        <Defs>
+          <SvgGrad id="vbtn" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#8FE6AE" stopOpacity="1" />
+            <Stop offset="0.58" stopColor="#B7F2C7" stopOpacity="1" />
+            <Stop offset="1" stopColor="#F4B84A" stopOpacity="1" />
+          </SvgGrad>
+        </Defs>
+        <Rect x="0" y="0" width={w} height={h} fill="url(#vbtn)" />
+      </Svg>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15 }}>
+        {icon && <Feather name={icon as any} size={16} color="#061008" />}
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#061008' }}>{label}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Envelope SVG illustration ───────────────────────────────────────────────
+function EnvelopeIllustration({ color, accent }: { color: string; accent: string }) {
+  return (
+    <Svg width={96} height={80} viewBox="0 0 96 80">
+      {/* Envelope body */}
+      <Rect x="4" y="20" width="88" height="56" rx="6" fill={color} />
+      {/* Envelope flap (open) */}
+      <Path d="M4 20 L48 52 L92 20" stroke={accent} strokeWidth="2.5" fill="none" strokeLinejoin="round" />
+      {/* Left fold line */}
+      <Path d="M4 76 L36 46" stroke={accent} strokeWidth="1.5" strokeOpacity={0.45} />
+      {/* Right fold line */}
+      <Path d="M92 76 L60 46" stroke={accent} strokeWidth="1.5" strokeOpacity={0.45} />
+      {/* Notification dot */}
+      <Circle cx="76" cy="20" r="12" fill="#ef4444" />
+      <Path d="M76 13 L76 21 M76 24 L76 25" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
+export default function VerifyEmailScreen() {
+  const { user, updateUser, logout } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const [cooldown, setCooldown] = useState(0);
+  const [verifyError, setVerifyError] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [verifiedSuccess, setVerifiedSuccess] = useState(false);
+
+  // Poll every 2s — the moment user clicks the email link (any browser/device),
+  // server marks them verified and this screen auto-advances to Onboarding.
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const checkVerified = async () => {
+      try {
+        const res = await fetch(`${SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email!)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.verified) {
+            updateUser({ emailVerified: true });
+          }
+        }
+      } catch {}
+    };
+
+    const poll = setInterval(checkVerified, 2000);
+
+    // Safari (macOS/iOS) throttles/suspends setInterval in background tabs —
+    // when the user verifies in another tab and switches back here, re-check
+    // immediately instead of waiting on a possibly-stalled interval.
+    const onFocus = () => checkVerified();
+    const onVisibility = () => { if (document.visibilityState === 'visible') checkVerified(); };
+    // The /verify-success tab (opened from the email link) writes to
+    // localStorage on success — the 'storage' event fires here even while
+    // this tab is in the background, so we react the instant it's verified
+    // instead of waiting for the user to switch back.
+    const onStorage = (e: StorageEvent) => { if (e.key === 'aivorah_email_verified_ping') checkVerified(); };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+      document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('storage', onStorage);
+    }
+
+    return () => {
+      clearInterval(poll);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+        document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('storage', onStorage);
+      }
+    };
+  }, [user?.email]);
+
+  // Pulsing animation
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  async function handleResend() {
+    if (cooldown > 0 || !user?.email) return;
+    try {
+      const frontendOrigin = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://aivorah.ai';
+      await fetch(`${SERVER_URL}/user/send-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, name: user.name || 'there', frontendOrigin }),
+      });
+      setCooldown(30);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 4000);
+    } catch (err: any) {
+      setVerifyError('Failed to resend. Please try again.');
+    }
+  }
+
+  async function handleVerified() {
+    if (!user?.email) return;
+    setChecking(true);
+    setVerifyError('');
+    try {
+      // Only check our Supabase-based verification (accountStatus = 'active')
+      // Do NOT fallback to Firebase emailVerified — Google SSO users are always
+      // verified by Firebase but must still click the Aivorah activation link
+      const res = await fetch(`${SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.verified) {
+          setVerifiedSuccess(true);
+          setTimeout(() => updateUser({ emailVerified: true }), 1200);
+          return;
+        }
+      }
+      setVerifyError('Email not yet verified. Please check your inbox and click the activation link.');
+    } catch (err: any) {
+      setVerifyError(err.message || 'Something went wrong.');
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.card}>
+        {/* Illustration */}
+        <Animated.View style={[styles.illustrationWrap, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={styles.illustrationBg}>
+            <EnvelopeIllustration color="#0A0F0B" accent={CYAN} />
+          </View>
+        </Animated.View>
+
+        {/* Title */}
+        <Text style={styles.title}>Check your inbox</Text>
+        <Text style={styles.sub}>
+          We sent a verification link to
+        </Text>
+        <View style={styles.emailPill}>
+          <Feather name="mail" size={13} color={CYAN} style={{ marginRight: 6 }} />
+          <Text style={styles.emailText}>{user?.email || 'your email'}</Text>
+        </View>
+        <Text style={styles.hint}>
+          Open the email and click the link to verify your account, then come back here.
+        </Text>
+
+        {/* Spam folder warning */}
+        <View style={styles.spamWarning}>
+          <Feather name="alert-triangle" size={15} color={GOLD} style={{ marginRight: 8, marginTop: 1 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.spamTitle}>Can't find the email?</Text>
+            <Text style={styles.spamText}>
+              Check your <Text style={{ fontWeight: '700' }}>Spam</Text> or <Text style={{ fontWeight: '700' }}>Junk</Text> folder.
+              Gmail and Outlook sometimes filter verification emails. If you find it there, mark it as "Not Spam" to receive future emails.
+            </Text>
+          </View>
+        </View>
+
+        {/* Error or success */}
+        {verifyError !== '' && (
+          <View style={styles.errorBox}>
+            <Feather name="alert-circle" size={14} color={RED} style={{ marginRight: 6 }} />
+            <Text style={styles.errorText}>{verifyError}</Text>
+          </View>
+        )}
+        {resendSuccess && (
+          <View style={styles.successBox}>
+            <Feather name="check-circle" size={14} color={GREEN} style={{ marginRight: 6 }} />
+            <Text style={styles.successText}>Verification email sent!</Text>
+          </View>
+        )}
+        {verifiedSuccess && (
+          <View style={styles.successBox}>
+            <Feather name="check-circle" size={14} color={GREEN} style={{ marginRight: 6 }} />
+            <Text style={styles.successText}>Email verified! Taking you in...</Text>
+          </View>
+        )}
+
+        {/* I've Verified */}
+        <GradientButton
+          label={checking ? 'Checking...' : "I've Verified My Email"}
+          icon={checking ? undefined : 'check'}
+          onPress={handleVerified}
+          disabled={checking}
+          style={{ marginBottom: spacing.md }}
+        />
+
+        {/* Resend */}
+        <TouchableOpacity
+          style={[styles.secondaryBtn, cooldown > 0 && styles.btnDisabled]}
+          onPress={handleResend}
+          activeOpacity={0.75}
+          disabled={cooldown > 0}
+        >
+          <Feather name="refresh-cw" size={15} color={cooldown > 0 ? DIM : CYAN} style={{ marginRight: 7 }} />
+          <Text style={[styles.secondaryBtnText, cooldown > 0 && styles.dimText]}>
+            {cooldown > 0 ? `Resend Email (${cooldown}s)` : 'Resend Email'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sign out */}
+        <TouchableOpacity onPress={logout} style={styles.signOutLink} activeOpacity={0.7}>
+          <Text style={styles.signOutText}>Sign out</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+const makeStyles = (_c: AppColors) =>
+  StyleSheet.create({
+    scrollContent: {
+      flexGrow: 1,
+      backgroundColor: BG,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    card: {
+      width: '100%',
+      maxWidth: 440,
+      backgroundColor: '#000000',
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: BORDER,
+      alignItems: 'center',
+      padding: spacing.xxxl,
+    },
+    illustrationWrap: {
+      marginBottom: spacing.xxl,
+    },
+    illustrationBg: {
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: SURFACE,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: BORDER,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: FORE,
+      letterSpacing: -0.4,
+      marginBottom: spacing.sm,
+    },
+    sub: {
+      fontSize: 14,
+      color: MUTED,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    emailPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: SURFACE,
+      borderRadius: 20,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: BORDER,
+    },
+    emailText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: CYAN,
+    },
+    hint: {
+      fontSize: 13,
+      color: MUTED,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: spacing.md,
+    },
+    spamWarning: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: '#000000',
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginBottom: spacing.xl,
+      borderWidth: 1,
+      borderColor: 'rgba(186,164,103,0.40)',
+      width: '100%',
+    },
+    spamTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: GOLD,
+      marginBottom: 3,
+    },
+    spamText: {
+      fontSize: 12,
+      color: MUTED,
+      lineHeight: 18,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(224,127,127,0.12)',
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: 'rgba(224,127,127,0.40)',
+      width: '100%',
+    },
+    errorText: {
+      flex: 1,
+      fontSize: 13,
+      color: RED,
+    },
+    successBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(143,230,174,0.12)',
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: 'rgba(143,230,174,0.40)',
+      width: '100%',
+    },
+    successText: {
+      flex: 1,
+      fontSize: 13,
+      color: GREEN,
+    },
+    secondaryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: SURFACE,
+      borderRadius: radius.md,
+      paddingVertical: 13,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: BORDER,
+      marginBottom: spacing.xl,
+    },
+    secondaryBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: CYAN,
+    },
+    btnDisabled: {
+      opacity: 0.5,
+    },
+    dimText: {
+      color: DIM,
+    },
+    signOutLink: {
+      paddingVertical: spacing.sm,
+    },
+    signOutText: {
+      fontSize: 13,
+      color: MUTED,
+      textDecorationLine: 'underline',
+    },
+  });

@@ -1,0 +1,184 @@
+/**
+ * Mobile number OTP verification via Firebase Phone Auth.
+ *
+ * Wired into OnboardingParentBoxes.tsx's "Mobile Number" field (#180).
+ * Requires the Phone sign-in provider enabled + Blaze billing plan on the
+ * Firebase project — without real billing, register test phone numbers +
+ * fixed OTPs in the Firebase Console (Authentication → Sign-in method →
+ * Phone → Phone numbers for testing) to exercise this flow at zero cost.
+ * Web only — `handleSendOtp` rejects native platforms today.
+ */
+import React, { useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, signOut, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import firebaseApp from '../../config/firebase';
+const TEAL = '#5F8A86'; // same value as OnboardingScreen — kept local to avoid circular import
+
+export function usePhoneOtpVerification(mobile: string, setMobile: (v: string) => void, mobileCode = '+91') {
+  const [mobileVerified, setMobileVerified] = useState(false);
+  const [verifiedMobile, setVerifiedMobile] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const confirmationRef = useRef<any>(null);
+  const recaptchaVerifierRef = useRef<any>(null);
+  const recaptchaContainerRef = useRef<any>(null);
+  const phoneAuthAppRef = useRef<any>(null);
+
+  function cleanupPhoneAuth() {
+    if (recaptchaVerifierRef.current) {
+      recaptchaVerifierRef.current.clear?.();
+      recaptchaVerifierRef.current = null;
+    }
+    if (phoneAuthAppRef.current) {
+      const app = phoneAuthAppRef.current;
+      phoneAuthAppRef.current = null;
+      signOut(getAuth(app)).catch(() => {});
+      deleteApp(app).catch(() => {});
+    }
+  }
+
+  async function handleSendOtp() {
+    const digits = mobile.replace(/\D/g, '');
+    const minDigits = mobileCode === '+91' ? 10 : 7;
+    if (digits.length < minDigits) {
+      setOtpError(`Enter a valid mobile number (min ${minDigits} digits).`);
+      return;
+    }
+    if (Platform.OS !== 'web') {
+      setOtpError('Mobile verification is currently available on the web app.');
+      return;
+    }
+    setOtpError('');
+    setOtpSending(true);
+    try {
+      cleanupPhoneAuth();
+      const secondaryName = `onboarding-phone-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const phoneApp = initializeApp((firebaseApp as any).options, secondaryName);
+      phoneAuthAppRef.current = phoneApp;
+      const phoneAuth = getAuth(phoneApp);
+
+      const verifier = new RecaptchaVerifier(phoneAuth, recaptchaContainerRef.current, { size: 'invisible' });
+      recaptchaVerifierRef.current = verifier;
+
+      const fullPhone = `${mobileCode}${digits}`;
+      const confirmation = await signInWithPhoneNumber(phoneAuth, fullPhone, verifier);
+      confirmationRef.current = confirmation;
+      setOtpModalVisible(true);
+      setOtpCode('');
+    } catch (e: any) {
+      setOtpError(e?.message || 'Could not send OTP. Please try again.');
+      cleanupPhoneAuth();
+    } finally {
+      setOtpSending(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    if (!confirmationRef.current) {
+      setOtpError('Please request a new code.');
+      return;
+    }
+    setOtpVerifying(true);
+    setOtpError('');
+    try {
+      await confirmationRef.current.confirm(otpCode.trim());
+      setMobileVerified(true);
+      setVerifiedMobile(mobile);
+      setOtpModalVisible(false);
+      setOtpCode('');
+      confirmationRef.current = null;
+      cleanupPhoneAuth();
+    } catch (e: any) {
+      setOtpError('Incorrect code. Please try again.');
+    } finally {
+      setOtpVerifying(false);
+    }
+  }
+
+  function handleCancelOtp() {
+    setOtpModalVisible(false);
+    setOtpCode('');
+    setOtpError('');
+    confirmationRef.current = null;
+    cleanupPhoneAuth();
+  }
+
+  return {
+    mobileVerified, setMobileVerified, verifiedMobile, setVerifiedMobile,
+    otpSending, otpVerifying, otpModalVisible, otpCode, setOtpCode, otpError,
+    recaptchaContainerRef, handleSendOtp, handleVerifyOtp, handleCancelOtp,
+  };
+}
+
+interface PhoneOtpModalProps {
+  mobile: string;
+  otpModalVisible: boolean;
+  otpCode: string;
+  setOtpCode: (v: string) => void;
+  otpError: string;
+  otpVerifying: boolean;
+  handleVerifyOtp: () => void;
+  handleCancelOtp: () => void;
+  colors: any;
+  styles: any;
+}
+
+export function PhoneOtpModal({
+  mobile, mobileCode = '+91', otpModalVisible, otpCode, setOtpCode, otpError, otpVerifying,
+  handleVerifyOtp, handleCancelOtp, colors, styles,
+}: PhoneOtpModalProps & { mobileCode?: string }) {
+  return (
+    <Modal visible={otpModalVisible} transparent animationType="fade" onRequestClose={handleCancelOtp}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalBox}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: TEAL + '20', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="shield" size={17} color={TEAL} />
+            </View>
+            <View>
+              <Text style={styles.modalTitle}>Verify Mobile Number</Text>
+              <Text style={styles.modalText}>Enter the 6-digit code sent to {mobileCode} {mobile}</Text>
+            </View>
+          </View>
+          <TextInput
+            style={[styles.input, { textAlign: 'center', fontSize: 18, letterSpacing: 4 }]}
+            value={otpCode}
+            onChangeText={setOtpCode}
+            placeholder="------"
+            placeholderTextColor={colors.textDim}
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          {otpError ? <Text style={styles.warnTxt}>{otpError}</Text> : null}
+          <TouchableOpacity style={styles.modalBtn} onPress={handleVerifyOtp} disabled={otpVerifying} activeOpacity={0.85}>
+            <Text style={styles.modalBtnText}>{otpVerifying ? 'Verifying...' : 'Verify Code'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleCancelOtp} activeOpacity={0.7}>
+            <Text style={[styles.modalText, { textAlign: 'center' }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/** Extra stylesheet entries to merge into the screen's useStyles() output when re-enabling. */
+export const phoneOtpStyles = {
+  warnTxt: { color: '#ef4444', fontSize: 12, lineHeight: 17, marginTop: 4 },
+  verifyBtn: {
+    paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center',
+    borderRadius: 10, borderWidth: 1, borderColor: TEAL,
+  },
+  verifyBtnTxt: { fontSize: 12, fontWeight: '700', color: TEAL },
+  verifiedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, justifyContent: 'center',
+    borderRadius: 10, borderWidth: 1, borderColor: TEAL + '40', backgroundColor: TEAL + '12',
+  },
+  verifiedTxt: { fontSize: 12, fontWeight: '700', color: TEAL },
+} as const;
