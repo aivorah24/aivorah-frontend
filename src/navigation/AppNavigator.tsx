@@ -37,7 +37,7 @@ import MathLessonScreen from '../screens/student/MathLessonScreen';
 import BhagavathaStoriesScreen from '../screens/student/bedtime-stories/BhagavathaStoriesScreen';
 import StoryReaderScreen from '../screens/student/bedtime-stories/StoryReaderScreen';
 import ReadAloudScreen from '../screens/student/ReadAloudScreen';
-import DailyHabitsScreen from '../screens/student/DailyHabitsScreen';
+import DailyHabitsScreen from '../screens/student/daily-habits/DailyHabitsScreen';
 import SubscriptionScreen from '../screens/student/SubscriptionScreen';
 import MessagesScreen from '../screens/shared/MessagesScreen';
 import AnnouncementsScreen from '../screens/student/AnnouncementsScreen';
