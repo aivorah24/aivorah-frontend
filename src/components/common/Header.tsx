@@ -511,6 +511,7 @@ const [editingName, setEditingName] = useState(false);
           style={[styles.avatar, (photoUrl || avatarStyle) && { backgroundColor: 'transparent', borderColor: 'transparent' }]}
           onPress={() => setProfileVisible(true)}
           activeOpacity={0.7}
+          testID="header-profile-button"
         >
           {renderAvatarCircle(36)}
         </TouchableOpacity>
@@ -537,7 +538,7 @@ const [editingName, setEditingName] = useState(false);
 
                 {/* Avatar + name row */}
                 <View style={styles.profileAvatarRow}>
-                  <TouchableOpacity style={styles.profileAvatarWrap} onPress={handlePickPhoto} activeOpacity={0.85} disabled={uploadingPhoto}>
+                  <TouchableOpacity style={styles.profileAvatarWrap} onPress={handlePickPhoto} activeOpacity={0.85} disabled={uploadingPhoto} testID="profile-avatar-upload">
                     <View style={styles.profileAvatarRing}>
                       {renderAvatarCircle(80)}
                     </View>
