@@ -6,25 +6,23 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import DashboardScreen from '../screens/student/DashboardScreen';
-import ParentDashboardScreen from '../screens/parent/ParentDashboardScreen';
+import ParentDashboardScreen from '../screens/parent/dashboard/ParentDashboardScreen';
 import ParentProfileScreen from '../screens/parent/profile/ParentProfileScreen';
 import ParentMyKidsScreen from '../screens/parent/ParentMyKidsScreen';
 import ParentScheduleScreen from '../screens/parent/ParentScheduleScreen';
-import ParentLearningScreen from '../screens/parent/ParentLearningScreen';
 import ParentAssignmentsScreen from '../screens/parent/ParentAssignmentsScreen';
 import ParentChallengesScreen from '../screens/parent/ParentChallengesScreen';
 import ParentLeaderboardScreen from '../screens/parent/ParentLeaderboardScreen';
 import ParentProgressScreen from '../screens/parent/ParentProgressScreen';
 import ParentAIReportsScreen from '../screens/parent/ParentAIReportsScreen';
-import ParentControlsScreen from '../screens/parent/ParentControlsScreen';
 import ParentSettingsScreen from '../screens/parent/ParentSettingsScreen';
-import ParentHelpScreen from '../screens/parent/ParentHelpScreen';
 import ParentMessagesScreen from '../screens/parent/ParentMessagesScreen';
-import ParentDailyTasksScreen from '../screens/parent/ParentDailyTasksScreen';
 import ParentAnnouncementsScreen from '../screens/parent/ParentAnnouncementsScreen';
 import SubscriptionScreen from '../screens/student/SubscriptionScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
+import TimetableScreen from '../features/timetable/components/TimetableScreen';
+import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import ParentAttendanceScreen from '../screens/parent/ParentAttendanceScreen';
 
@@ -57,22 +55,20 @@ export default function ParentNavigator() {
       <Drawer.Screen name="ParentProfile" component={ParentProfileScreen} />
       <Drawer.Screen name="ParentMyKids" component={ParentMyKidsScreen} />
       <Drawer.Screen name="ParentSchedule" component={ParentScheduleScreen} />
-      <Drawer.Screen name="ParentLearning" component={ParentLearningScreen} />
       <Drawer.Screen name="ParentAssignments" component={ParentAssignmentsScreen} />
       <Drawer.Screen name="ParentChallenges" component={ParentChallengesScreen} />
       <Drawer.Screen name="ParentLeaderboard" component={ParentLeaderboardScreen} />
       <Drawer.Screen name="ParentProgress" component={ParentProgressScreen} />
       <Drawer.Screen name="ParentAIReports" component={ParentAIReportsScreen} />
-      <Drawer.Screen name="ParentControls" component={ParentControlsScreen} />
       <Drawer.Screen name="ParentSettings" component={ParentSettingsScreen} />
-      <Drawer.Screen name="ParentHelp" component={ParentHelpScreen} />
       <Drawer.Screen name="ParentMessages" component={ParentMessagesScreen} />
-      <Drawer.Screen name="ParentDailyTasks" component={ParentDailyTasksScreen} />
       <Drawer.Screen name="ParentAnnouncements" component={ParentAnnouncementsScreen} />
       <Drawer.Screen name="ParentAttendance" component={ParentAttendanceScreen} />
       <Drawer.Screen name="ParentSubscription" component={SubscriptionScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
+      <Drawer.Screen name="Timetable" component={TimetableScreen} />
+      <Drawer.Screen name="Resources" component={ResourcesScreen} />
       <Drawer.Screen name="Channels" component={ChannelsScreen} />
     </Drawer.Navigator>
   );

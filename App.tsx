@@ -172,7 +172,6 @@ import OnboardingStudentBoxes from './src/screens/onboarding/OnboardingStudentBo
 import OnboardingTeacherBoxes from './src/screens/onboarding/OnboardingTeacherBoxes';
 import OnboardingParentBoxes from './src/screens/onboarding/OnboardingParentBoxes';
 import SetPasswordScreen from './src/screens/onboarding/SetPasswordScreen';
-import AdminPanelScreen from './src/screens/admin/AdminPanelScreen';
 import { AuthProvider, useAuth, getPendingReturnRole } from './src/context/AuthContext';
 import { StudentDataProvider } from './src/context/StudentDataContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -849,10 +848,6 @@ function RootNavigator() {
     return () => { cancelled = true; };
   }, [loading, isAuthenticated, user?.role]);
 
-  const isWebAdminPath =
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    window.location.pathname.startsWith('/admin/panel');
   const isVerifySuccessPath =
     !verifyDone &&
     Platform.OS === 'web' &&
@@ -864,7 +859,6 @@ function RootNavigator() {
     typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/reset-password');
 
-  if (isWebAdminPath) return <AdminPanelScreen />;
   if (isVerifySuccessPath) return <VerifySuccessPage onComplete={() => setVerifyDone(true)} />;
   if (isResetPasswordPath) return <ResetPasswordScreen />;
 
