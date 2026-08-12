@@ -9,6 +9,7 @@ import ScreenLayout from '../../components/common/ScreenLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
+import LEADERBOARD_SERVICE_URL from '../../config/leaderboardServiceUrl';
 
 interface LeaderboardEntry {
   rank: number;
@@ -72,7 +73,7 @@ export default function ParentLeaderboardScreen({ navigation }: any) {
         }
         // 'overall' → no filters
       }
-      const res = await fetch(`${SERVER_URL}/student/leaderboard${params}`);
+      const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/leaderboard${params}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setLeaderboard(data);
