@@ -12,6 +12,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import SERVER_URL from '../config/serverUrl';
+import AUTH_SERVER_URL from '../config/authServerUrl';
 import { useTheme } from './ThemeContext';
 import { prefetchStudentDashboard } from '../utils/curriculumPrefetch';
 
@@ -110,7 +111,7 @@ const AuthContext = createContext<AuthContextType>({
 async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _syncOk?: boolean; _accountExists?: boolean }> {
   const combined: Partial<User> & { _syncOk?: boolean; _accountExists?: boolean } = {};
   try {
-    const res = await fetch(`${SERVER_URL}/user/sync`, {
+    const res = await fetch(`${AUTH_SERVER_URL}/user/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -851,7 +852,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // displayName (set at signup, never updated on rename), so writing it on every login
       // silently reverts any rename — which then shows the old name in teacher/parent views.
       // Only echo the DB's own name back (harmless self-heal); only set school if missing.
-      fetch(`${SERVER_URL}/user/sync`, {
+      fetch(`${AUTH_SERVER_URL}/user/sync`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
@@ -906,7 +907,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.setItem(PENDING_VERIFY_KEY, email).catch(() => {});
 
       // Sync to Supabase so the account exists before onAuthStateChanged fires
-      await fetch(`${SERVER_URL}/user/sync`, {
+      await fetch(`${AUTH_SERVER_URL}/user/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, role, curriculum: curriculum || undefined }),
@@ -918,7 +919,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : 'https://aivorah.ai';
       const safeName = name?.trim() || email.split('@')[0]; // fallback if name is empty
       try {
-        const verifyRes = await fetch(`${SERVER_URL}/user/send-verification`, {
+        const verifyRes = await fetch(`${AUTH_SERVER_URL}/user/send-verification`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, name: safeName, frontendOrigin }),
@@ -939,7 +940,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fetch existing role to determine how to handle
           let existingRole = '';
           try {
-            const res = await fetch(`${SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
+            const res = await fetch(`${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
             if (res.ok) existingRole = (await res.json()).role || '';
           } catch {}
 
@@ -1094,7 +1095,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await AsyncStorage.setItem(PENDING_VERIFY_KEY, email).catch(() => {});
 
           // Sync user to Supabase first so user_preferences row exists for token storage
-          await fetch(`${SERVER_URL}/user/sync`, {
+          await fetch(`${AUTH_SERVER_URL}/user/sync`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, role: effectiveRole, authProvider: 'google' }),
           }).catch(() => {});
@@ -1102,7 +1103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Now send the verification email
           const frontendOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://aivorah.ai';
           try {
-            const vRes = await fetch(`${SERVER_URL}/user/send-verification`, {
+            const vRes = await fetch(`${AUTH_SERVER_URL}/user/send-verification`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, name, frontendOrigin }),
@@ -1117,7 +1118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           // Returning verified user — don't overwrite the DB display name with the
           // Google displayName (which ignores in-app renames). Echo the DB name instead.
-          fetch(`${SERVER_URL}/user/sync`, {
+          fetch(`${AUTH_SERVER_URL}/user/sync`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, ...(profile.name ? { name: profile.name } : { name }), role: effectiveRole, authProvider: 'google' }),
           }).catch(() => {});
@@ -1363,7 +1364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       curriculum: testUser.curriculum,
     });
     // Sync test user profile to Supabase so backend sees correct curriculum/grade
-    fetch(`${SERVER_URL}/user/sync`, {
+    fetch(`${AUTH_SERVER_URL}/user/sync`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: testUser.name, email: testUser.email, role: testUser.role,
