@@ -29,20 +29,6 @@ interface DayActivity {
   topicsCompleted: number;
 }
 
-interface CurriculumTopic {
-  grade: string;
-  subject: string;
-  unit: string;
-  topic: string;
-}
-
-interface CurriculumData {
-  grades: string[];
-  topics: CurriculumTopic[];
-  grouped: Record<string, Record<string, { topic: string; unit: string }[]>>;
-  totalTopics: number;
-}
-
 // ── Ring Progress SVG ────────────────────────────────────────
 
 function RingProgress({ progress, color, size = 90, strokeWidth = 8 }: {
@@ -63,21 +49,6 @@ function RingProgress({ progress, color, size = 90, strokeWidth = 8 }: {
   );
 }
 
-// ── Subject config ────────────────────────────────────────────
-
-const SUBJECT_CONFIG: Record<string, { color: string; icon: React.ComponentProps<typeof Feather>['name'] }> = {
-  Mathematics:          { color: '#9FB2A4', icon: 'trending-up'  },
-  Science:              { color: '#7E9A86', icon: 'zap'          },
-  English:              { color: '#C9A24E', icon: 'book-open'    },
-  'Social Studies':     { color: '#8A8358', icon: 'globe'        },
-  Arts:                 { color: '#C9A24E', icon: 'feather'      },
-  'Physical Education': { color: '#9FB2A4', icon: 'activity'     },
-  ICT:                  { color: '#BAA467', icon: 'monitor'      },
-};
-
-function subjectColor(s: string) { return SUBJECT_CONFIG[s]?.color ?? '#9FB2A4'; }
-function subjectIcon(s: string): React.ComponentProps<typeof Feather>['name'] { return SUBJECT_CONFIG[s]?.icon ?? 'book-open'; }
-
 // ── Main Screen ───────────────────────────────────────────────
 
 export default function ProgressScreen({ navigation }: any) {
@@ -90,17 +61,22 @@ export default function ProgressScreen({ navigation }: any) {
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   const [weeklyDays, setWeeklyDays] = useState<DayActivity[]>([]);
-  const [curriculum, setCurriculum] = useState<CurriculumData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Refetches whenever periodTab changes, passing range=week|month so the
+  // "Month" tab actually shows different data instead of just re-labeling
+  // the same week (previous bug: this effect was keyed on studentId only,
+  // so "Month" never fetched anything of its own).
   useEffect(() => {
     if (!studentId) return;
-    fetch(`${SERVER_URL}/student/${studentId}/weekly`).then(r => r.json()).catch(() => ({ days: [] }))
+    setLoading(true);
+    const range = periodTab === 'Month' ? 'month' : 'week';
+    fetch(`${SERVER_URL}/student/${studentId}/weekly?range=${range}`).then(r => r.json()).catch(() => ({ days: [] }))
       .then((weekly) => {
         setWeeklyDays(weekly.days ?? []);
         setLoading(false);
       });
-  }, [studentId]);
+  }, [studentId, periodTab]);
 
   // ── Derived real values ───────────────────────────────────
 
@@ -108,28 +84,6 @@ export default function ProgressScreen({ navigation }: any) {
   // Use totalTopics from server stats — curriculum-aware (IB PYP Grade 4 = 54, NCERT etc.)
   const totalTopics = stats.totalTopics ?? 0;
   const overallPct = totalTopics > 0 ? Math.min(100, Math.round((completedSet.size / totalTopics) * 100)) : 0;
-
-  // Subject performance: % of topics completed per subject
-  const subjectStats = useMemo(() => {
-    if (!curriculum) return [];
-    const result: { name: string; total: number; done: number }[] = [];
-    for (const grade of curriculum.grades) {
-      for (const [subject, topics] of Object.entries(curriculum.grouped[grade] ?? {})) {
-        const existing = result.find(r => r.name === subject);
-        const done = topics.filter(t => completedSet.has(t.topic)).length;
-        if (existing) { existing.total += topics.length; existing.done += done; }
-        else result.push({ name: subject, total: topics.length, done });
-      }
-    }
-    return result.map(r => ({
-      name: r.name,
-      total: r.total,
-      done: r.done,
-      pct: r.total > 0 ? Math.round((r.done / r.total) * 100) : 0,
-      color: subjectColor(r.name),
-      icon: subjectIcon(r.name),
-    }));
-  }, [curriculum, completedSet]);
 
   // Weekly bar chart — real study minutes per day
   const maxMinutes = useMemo(() => Math.max(...weeklyDays.map(d => d.studyMinutes), 1), [weeklyDays]);
@@ -285,33 +239,6 @@ export default function ProgressScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* ── SUBJECT PERFORMANCE ──────────────────────── */}
-          <Text style={styles.sectionTitle}>Subject Performance</Text>
-          {subjectStats.length === 0 ? (
-            <Text style={styles.emptyText}>Complete lessons to see subject scores.</Text>
-          ) : (
-            <View style={styles.subjectsGrid}>
-              {subjectStats.map((s) => (
-                <TouchableOpacity
-                  key={s.name}
-                  style={styles.subjectCard}
-                  onPress={() => navigation.navigate('LearningPaths')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.subjectIcon, { backgroundColor: s.color + '18' }]}>
-                    <Feather name={s.icon} size={18} color={s.color} />
-                  </View>
-                  <Text style={styles.subjectName}>{s.name}</Text>
-                  <Text style={[styles.subjectScore, { color: s.color }]}>{s.pct}%</Text>
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: `${s.pct}%` as any, backgroundColor: s.color }]} />
-                  </View>
-                  <Text style={styles.subjectMeta}>{s.done} / {s.total} topics</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
           {/* ── COMPLETED TOPICS ─────────────────────────── */}
           {completedSet.size > 0 && (
             <>
@@ -430,24 +357,6 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   sectionRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: c.textMain, marginBottom: spacing.lg },
   seeAll: { fontSize: 13, fontWeight: '600' },
-
-  subjectsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xxl },
-  subjectCard: {
-    flex: 1,
-    minWidth: 140,
-    backgroundColor: c.cardDark,
-    borderWidth: 1,
-    borderColor: c.borderColor,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: 6,
-  },
-  subjectIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  subjectName: { fontSize: 13, fontWeight: '600', color: c.textMain },
-  subjectScore: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  progressTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 2 },
-  subjectMeta: { fontSize: 11, color: c.textMuted },
 
   topicsList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xxl },
   topicChip: {
