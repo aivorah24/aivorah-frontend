@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import SERVER_URL from '../../../../config/serverUrl';
+import SERVER_URL from '../../../../config/aiCoachServerUrl';
 
 export function useDailyUsage(email: string | undefined, isPro: boolean) {
   const [dailyUsage, setDailyUsage] = useState<{ used: number; remaining: number; dailyLimit: number } | null>(null);

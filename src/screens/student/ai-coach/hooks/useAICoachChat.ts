@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 import { askAIMentorStream, type ChatHistoryTurn } from '../../../../services/aiMentorApi';
-import SERVER_URL from '../../../../config/serverUrl';
+import SERVER_URL from '../../../../config/aiCoachServerUrl';
 import type { Message } from '../types';
 
 interface DailyUsage { used: number; remaining: number; dailyLimit: number }
