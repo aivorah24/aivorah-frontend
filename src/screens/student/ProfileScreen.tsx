@@ -1,50 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Alert, Image, ActivityIndicator, Platform,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, ScrollView, StyleSheet, Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, radius, fonts } from '../../theme';
 import type { AppColors } from '../../theme';
 import Header from '../../components/common/Header';
 import ScreenLayout from '../../components/common/ScreenLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import SERVER_URL from '../../config/serverUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
-import { CURRICULA, getGradesForCurriculum } from '../onboarding/OnboardingScreen';
-import { SelectField, locateFull, INDIA_CITIES } from '../onboarding/OnboardingSharedFields';
+import { LEARNING_STYLES, SUBJECT_OPTIONS, CARTOON_OPTIONS } from './profile/constants';
+import { saveProfileFields, savePreferences, uploadProfilePhoto } from './profile/services/profileService';
+import { ProfileHero } from './profile/components/ProfileHero';
+import { AvatarPickerCard } from './profile/components/AvatarPickerCard';
+import { LearningStyleCard } from './profile/components/LearningStyleCard';
+import { SubjectsCard } from './profile/components/SubjectsCard';
+import { LearningBuddyCard } from './profile/components/LearningBuddyCard';
+import { AccountCard } from './profile/components/AccountCard';
+import { EditProfileModal } from './profile/components/EditProfileModal';
+import { SignOutModal } from './profile/components/SignOutModal';
 
-// Flat, deduped, sorted list of every city across all Indian states — the
-// dropdown source for the Location picker (search-to-filter, pick one).
-const ALL_CITIES = Array.from(new Set(Object.values(INDIA_CITIES).flat())).sort();
-
-// ── Avatars — Enchanting Forest palette ─────────────────────────────────────
 const AVATARS = AVATAR_STYLES;
-
-// ── Learning styles — palette colors ─────────────────────────────────────────
-const LEARNING_STYLES = [
-  { id: 'visual',    label: 'Visual',    desc: 'I learn best through diagrams & images',  icon: 'eye'      as const, color: '#9FB2A4' },
-  { id: 'auditory',  label: 'Auditory',  desc: 'I learn best by listening & discussing',  icon: 'volume-2' as const, color: '#B2C2B7' },
-  { id: 'reading',   label: 'Reading',   desc: 'I learn best through reading & writing',  icon: 'book'     as const, color: '#BAA467' },
-  { id: 'hands-on',  label: 'Hands-On', desc: 'I learn best by doing & experimenting',   icon: 'tool'     as const, color: '#C9A24E' },
-];
-
-// ── Subject interests — Enchanting Forest palette ─────────────────────────────
-const SUBJECT_OPTIONS = [
-  { id: 'maths',   label: 'Mathematics', color: '#9FB2A4' },  // sage
-  { id: 'science', label: 'Science',     color: '#7E9A86' },  // deep sage
-  { id: 'english', label: 'English',     color: '#BAA467' },  // gold
-  { id: 'art',     label: 'Art',         color: '#C9A24E' },  // deep gold
-  { id: 'music',   label: 'Music',       color: '#B2C2B7' },  // light sage
-  { id: 'coding',  label: 'Coding',      color: '#9A7B2E' },  // amber gold
-  { id: 'history', label: 'History',     color: '#C9A24E' },  // deep gold
-  { id: 'sports',  label: 'Sports',      color: '#9FB2A4' },  // sage
-];
-
-const CARTOON_OPTIONS = ['Naruto', 'Doraemon', 'Shinchan', 'Spider-Man', 'Iron Man', 'Custom...'];
 
 // ────────────────────────────────────────────────────────────────────────────
 export default function ProfileScreen({ navigation }: any) {
@@ -60,9 +35,6 @@ export default function ProfileScreen({ navigation }: any) {
   const [selAvatar,      setSelAvatar]      = useState(initialAvatar);
   const [learningStyle,  setLearningStyle]  = useState<string>((user as any)?.learningStyle ?? '');
   const [interests,      setInterests]      = useState<string[]>((user as any)?.interests ?? []);
-  const [cartoon,        setCartoon]        = useState('');
-  const [customCartoon,  setCustomCartoon]  = useState('');
-  const [showCustom,     setShowCustom]     = useState(false);
   const [editVisible,    setEditVisible]    = useState(false);
   const [editName,       setEditName]       = useState(user?.name || '');
   const [editGrade,      setEditGrade]      = useState(user?.grade || '');
@@ -94,6 +66,12 @@ export default function ProfileScreen({ navigation }: any) {
     updateUser({ avatarStyle: id, photoUrl: undefined } as any);
   }
 
+  function handleSelectLearningStyle(id: string) {
+    setLearningStyle(id);
+    updateUser({ learningStyle: id } as any);
+    savePreferences({ email: user?.email, learningStyle: id }).catch(() => {});
+  }
+
   async function handleSaveProfile() {
     setSaveProfileError('');
     if (!editName.trim()) { setSaveProfileError('Please enter your name.'); return; }
@@ -107,18 +85,10 @@ export default function ProfileScreen({ navigation }: any) {
       if (editCurriculum.trim()) profileBody.curriculum = editCurriculum.trim();
       if (editLocation.trim())   profileBody.location   = editLocation.trim();
       if (editSchool.trim())     profileBody.school     = editSchool.trim();
-      await fetch(`${SERVER_URL}/user/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileBody),
-      });
+      await saveProfileFields(profileBody as any);
       // bio is a soft preference, not a users column → keep it in preferences.
       if (editBio.trim()) {
-        await fetch(`${SERVER_URL}/user/preferences`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user?.email, bio: editBio.trim() }),
-        });
+        await savePreferences({ email: user?.email, bio: editBio.trim() });
       }
       updateUser({
         name: editName.trim(),
@@ -136,20 +106,14 @@ export default function ProfileScreen({ navigation }: any) {
     }
   }
 
-  function handleCartoonSelect(c: string) {
-    if (c === 'Custom...') { setShowCustom(true); setCartoon(''); }
-    else { setCartoon(c); setShowCustom(false); }
-  }
-
   async function handlePickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Allow access to your photo library.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1,1], quality: 0.7, base64: true });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
     if (result.canceled || !result.assets?.[0]) return;
     setUploading(true);
     try {
-      const res  = await fetch(`${SERVER_URL}/user/upload-photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userEmail: user?.email, base64: result.assets[0].base64, mimeType: result.assets[0].mimeType ?? 'image/jpeg' }) });
-      const data = await res.json();
+      const data = await uploadProfilePhoto(user?.email, result.assets[0].base64!, result.assets[0].mimeType ?? 'image/jpeg');
       const url = data.photoUrl || data.url;
       if (url) { setPhotoUrl(url); updateUser({ photoUrl: url } as any); }
     } catch { Alert.alert('Upload failed', 'Could not upload photo. Please try again.'); }
@@ -164,351 +128,105 @@ export default function ProfileScreen({ navigation }: any) {
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-          {/* ── HERO ── */}
-          <View style={styles.heroCard}>
-            <LinearGradient colors={isDark ? ['#111111','#1C2420','#152220'] : ['#F5F1E6','#E6DEBC','#C3DCD8']} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.heroBg} />
+          <ProfileHero
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            user={user}
+            photoUrl={photoUrl}
+            uploading={uploading}
+            currentAvatar={currentAvatar}
+            heroGreen={heroGreen}
+            heroGold={heroGold}
+            onEditPress={() => setEditVisible(true)}
+            onPickPhoto={handlePickPhoto}
+            onNavigateSubscription={() => navigation.navigate('Subscription')}
+          />
 
-            {/* Edit button top-right */}
-            <TouchableOpacity style={styles.editCornerBtn} onPress={() => setEditVisible(true)}>
-              <Feather name="edit-2" size={13} color={colors.accentYellow} />
-              <Text style={styles.editCornerText}>Edit</Text>
-            </TouchableOpacity>
+          <AvatarPickerCard
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            avatars={AVATARS}
+            selAvatar={selAvatar}
+            photoUrl={photoUrl}
+            onSelectAvatar={handleSelectAvatar}
+          />
 
-            {/* Centered avatar */}
-            <TouchableOpacity style={styles.avatarWrap} onPress={handlePickPhoto} activeOpacity={0.85}>
-              {photoUrl
-                ? <Image source={{ uri: photoUrl }} style={styles.avatarPhoto} />
-                : <LinearGradient colors={currentAvatar.gradient} style={styles.avatarGrad}>
-                    <Feather name={currentAvatar.icon as any} size={36} color="white" />
-                  </LinearGradient>}
-              <View style={styles.cameraRing}>
-                {uploading ? <ActivityIndicator size="small" color="white" /> : <Feather name="camera" size={11} color="white" />}
-              </View>
-            </TouchableOpacity>
+          <LearningStyleCard
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            learningStyles={LEARNING_STYLES}
+            learningStyle={learningStyle}
+            onSelect={handleSelectLearningStyle}
+          />
 
-            {/* Name + bio */}
-            <Text style={styles.heroName}>{user?.name || 'Student'}</Text>
-            {(user as any)?.bio ? <Text style={styles.heroBio}>{(user as any).bio}</Text> : null}
+          <SubjectsCard
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            subjectOptions={SUBJECT_OPTIONS}
+            interests={interests}
+            onToggleInterest={toggleInterest}
+          />
 
-            {/* Tags */}
-            <View style={styles.heroTags}>
-              {/* Role badge — always visible so it's unmistakable which profile
-                  (student/parent/teacher) is being viewed, not just discoverable
-                  by clicking into a settings popup. */}
-              <View style={[styles.tag, { backgroundColor: isDark ? colors.accentGreen + '22' : '#FFFFFFB0', borderColor: heroGreen + '80' }]}>
-                <Feather name="user" size={10} color={heroGreen} />
-                <Text style={[styles.tagText, { color: heroGreen }]}>Student</Text>
-              </View>
-              <View style={[styles.tag, { backgroundColor: isDark ? colors.accentYellow + '22' : '#FFFFFFB0', borderColor: heroGold + '80' }]}>
-                <Feather name="book-open" size={10} color={heroGold} />
-                <Text style={[styles.tagText, { color: heroGold }]}>{user?.grade || 'Grade 3'}</Text>
-              </View>
-              <View style={[styles.tag, { backgroundColor: isDark ? colors.accentYellow + '22' : '#FFFFFFB0', borderColor: heroGold + '80' }]}>
-                <Feather name="globe" size={10} color={heroGold} />
-                <Text style={[styles.tagText, { color: heroGold }]}>{user?.curriculum || 'IB PYP'}</Text>
-              </View>
-              {user?.location && (
-                <View style={[styles.tag, { backgroundColor: isDark ? colors.accentGreen + '22' : '#FFFFFFB0', borderColor: heroGreen + '80' }]}>
-                  <Feather name="map-pin" size={10} color={heroGreen} />
-                  <Text style={[styles.tagText, { color: heroGreen }]}>{user.location}</Text>
-                </View>
-              )}
-              {(user as any)?.school && (
-                <View style={[styles.tag, { backgroundColor: isDark ? colors.accentGreen + '22' : '#FFFFFFB0', borderColor: heroGreen + '80' }]}>
-                  <Feather name="home" size={10} color={heroGreen} />
-                  <Text style={[styles.tagText, { color: heroGreen }]}>{(user as any).school}</Text>
-                </View>
-              )}
-              {/* Plan badge */}
-              <TouchableOpacity
-                style={[styles.tag, (user as any)?.isPro
-                  ? { backgroundColor: isDark ? '#C5A56A22' : '#FFFFFFB0', borderColor: '#C5A56A80' }
-                  : { backgroundColor: isDark ? 'rgba(147,176,172,0.18)' : '#FFFFFFB0', borderColor: heroGreen + '80' }
-                ]}
-                onPress={() => navigation.navigate('Subscription')}
-                activeOpacity={0.7}
-              >
-                <Feather name={(user as any)?.isPro ? 'sun' : 'feather'} size={10} color={(user as any)?.isPro ? '#C5A56A' : heroGold} />
-                <Text style={[styles.tagText, { color: (user as any)?.isPro ? '#C5A56A' : heroGold }]}>
-                  {(user as any)?.isPro ? 'Pro Plan' : 'Free Plan'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <LearningBuddyCard
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            cartoonOptions={CARTOON_OPTIONS}
+          />
 
-          {/* ── CHOOSE YOUR LOOK ── */}
-          <View style={styles.card}>
-            <SectionHead icon="user" iconBg={isDark ? 'rgba(147,176,172,0.18)' : 'rgba(195,220,216,0.35)'} iconColor={colors.accentYellow} title="Choose Your Look" sub="Pick an avatar style" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {AVATARS.map(av => {
-                // selAvatar defaults to 'default' whenever avatarStyle was never
-                // explicitly set — that's fine for a brand-new account with no
-                // photo, but once the student has picked a real uploaded photo
-                // instead, "Default" stayed checked here even though they're not
-                // actually using that style. A style is only truly "selected"
-                // when there's no custom photo overriding it.
-                const active = selAvatar === av.id && !photoUrl;
-                return (
-                  <TouchableOpacity key={av.id} onPress={() => handleSelectAvatar(av.id)} style={styles.avOption} activeOpacity={0.8}>
-                    <View style={[styles.avRing, active && { borderColor: colors.accentYellow }]}>
-                      <LinearGradient colors={av.gradient} style={styles.avCircle}>
-                        <Feather name={av.icon as any} size={26} color="white" />
-                      </LinearGradient>
-                      {active && <View style={[styles.avCheck, { backgroundColor: colors.accentYellow }]}><Feather name="check" size={9} color="white" /></View>}
-                    </View>
-                    <Text style={[styles.avLabel, active && { color: colors.accentYellow, fontWeight: '700' }]}>{av.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* ── LEARNING STYLE ── */}
-          <View style={styles.card}>
-            <SectionHead icon="cpu" iconBg={isDark ? 'rgba(197,189,150,0.18)' : 'rgba(197,189,150,0.35)'} iconColor={colors.accentYellow} title="How I Learn Best" sub="Personalises your AI Coach experience" />
-            <View style={styles.styleGrid}>
-              {LEARNING_STYLES.map(s => {
-                const active = learningStyle === s.id;
-                return (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={[styles.styleCard, active && { borderColor: s.color, backgroundColor: isDark ? `${s.color}18` : `${s.color}10` }]}
-                    onPress={() => {
-                      setLearningStyle(s.id);
-                      updateUser({ learningStyle: s.id } as any);
-                      fetch(`${SERVER_URL}/user/preferences`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user?.email, learningStyle: s.id }),
-                      }).catch(() => {});
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.styleIconWrap, { backgroundColor: `${s.color}20` }]}>
-                      <Feather name={s.icon} size={18} color={s.color} />
-                    </View>
-                    <Text style={[styles.styleLabel, active && { color: s.color }]}>{s.label}</Text>
-                    <Text style={styles.styleDesc}>{s.desc}</Text>
-                    {active && <View style={[styles.styleCheck, { backgroundColor: s.color }]}><Feather name="check" size={9} color="white" /></View>}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* ── SUBJECTS I LOVE ── */}
-          <View style={styles.card}>
-            <SectionHead icon="heart" iconBg={isDark ? 'rgba(239,209,212,0.18)' : 'rgba(239,209,212,0.45)'} iconColor={colors.accentRed} title="Subjects I Love" sub="We'll recommend content you enjoy" />
-            <View style={styles.interestWrap}>
-              {SUBJECT_OPTIONS.map(s => {
-                const active = interests.includes(s.id);
-                return (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={[styles.interestChip, active && { borderColor: s.color, backgroundColor: isDark ? `${s.color}18` : `${s.color}10` }]}
-                    onPress={() => toggleInterest(s.id)}
-                  >
-                    {active && <Feather name="check" size={11} color={s.color} />}
-                    <Text style={[styles.interestText, active && { color: s.color, fontWeight: '700' }]}>{s.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* ── LEARNING BUDDY ── */}
-          <View style={[styles.card, { overflow: 'hidden' }]}>
-            <View style={styles.cardHeadRow}>
-              <SectionHead icon="smile" iconBg={isDark ? 'rgba(195,220,216,0.15)' : 'rgba(195,220,216,0.40)'} iconColor={colors.accentYellow} title="Learning Buddy" sub="Who inspires your learning?" />
-              <View style={[styles.comingSoonBadge, { backgroundColor: colors.accentYellow + '18', borderColor: colors.accentYellow + '40' }]}>
-                <Feather name="clock" size={11} color={colors.accentYellow} />
-                <Text style={[styles.comingSoonText, { color: colors.accentYellow }]}>Coming Soon</Text>
-              </View>
-            </View>
-            {/* Content dimmed — not interactive */}
-            <View pointerEvents="none" style={{ opacity: 0.35 }}>
-              <View style={styles.interestWrap}>
-                {CARTOON_OPTIONS.map(opt => (
-                  <View key={opt} style={styles.interestChip}>
-                    <Text style={styles.interestText}>{opt}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-
-          {/* ── ACCOUNT ── */}
-          <View style={styles.card}>
-            <SectionHead icon="settings" iconBg={isDark ? 'rgba(168,181,179,0.12)' : 'rgba(168,181,179,0.2)'} iconColor={colors.textMuted} title="Account" />
-            {([
-              { icon: 'bell',         label: 'Notifications',      sub: 'Alerts and reminders',       cb: () => navigation?.navigate?.('Settings', { section: 'notifications' }), danger: false },
-              { icon: 'shield',       label: 'Privacy',            sub: 'Password, data settings',    cb: () => navigation?.navigate?.('Settings', { section: 'security' }), danger: false },
-              { icon: 'help-circle',  label: 'Help Center',        sub: 'FAQs and support',           cb: () => navigation?.navigate?.('HelpCenter'), danger: false },
-              { icon: 'log-out',      label: 'Sign Out',           sub: 'Sign out of your account',   cb: () => setSignOutVisible(true),          danger: true  },
-            ] as const).map((row, i, arr) => (
-              <TouchableOpacity key={row.label} style={[styles.accountRow, i < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderColor }]} onPress={row.cb} activeOpacity={0.7}>
-                <View style={[styles.accountIcon, row.danger && { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
-                  <Feather name={row.icon} size={15} color={row.danger ? colors.accentRed : colors.textMuted} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.accountLabel, row.danger && { color: colors.accentRed }]}>{row.label}</Text>
-                  <Text style={styles.accountSub}>{row.sub}</Text>
-                </View>
-                {!row.danger && <Feather name="chevron-right" size={14} color={colors.textDim} />}
-              </TouchableOpacity>
-            ))}
-          </View>
+          <AccountCard
+            styles={styles}
+            colors={colors}
+            isDark={isDark}
+            onNotifications={() => navigation?.navigate?.('Settings', { section: 'notifications' })}
+            onPrivacy={() => navigation?.navigate?.('Settings', { section: 'security' })}
+            onHelpCenter={() => navigation?.navigate?.('HelpCenter')}
+            onSignOut={() => setSignOutVisible(true)}
+          />
 
         </ScrollView>
 
-        {/* ── EDIT MODAL ── */}
-        <Modal visible={editVisible} transparent animationType="fade" onRequestClose={() => setEditVisible(false)}>
-          <View style={styles.overlay}>
-            <View style={styles.modalBox}>
-              <View style={styles.modalHead}>
-                <Text style={styles.modalTitle}>Edit Profile</Text>
-                <TouchableOpacity onPress={() => setEditVisible(false)}><Feather name="x" size={20} color={colors.textMuted} /></TouchableOpacity>
-              </View>
+        <EditProfileModal
+          styles={styles}
+          colors={colors}
+          visible={editVisible}
+          onClose={() => setEditVisible(false)}
+          editName={editName}
+          setEditName={setEditName}
+          editCurriculum={editCurriculum}
+          setEditCurriculum={setEditCurriculum}
+          editGrade={editGrade}
+          setEditGrade={setEditGrade}
+          editLocation={editLocation}
+          setEditLocation={setEditLocation}
+          editSchool={editSchool}
+          setEditSchool={setEditSchool}
+          editBio={editBio}
+          setEditBio={setEditBio}
+          locating={locating}
+          setLocating={setLocating}
+          saveProfileLoading={saveProfileLoading}
+          saveProfileError={saveProfileError}
+          onSave={handleSaveProfile}
+        />
 
-              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.fieldLabel}>Full Name</Text>
-              <View style={styles.inputRow}>
-                <Feather name="user" size={14} color={colors.textDim} />
-                <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={colors.textDim} value={editName} onChangeText={setEditName} autoCapitalize="words" />
-              </View>
-
-              {/* Curriculum — same radio-tile picker as onboarding */}
-              <Text style={styles.fieldLabel}>Curriculum</Text>
-              <View style={styles.radioGrid}>
-                {CURRICULA.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[styles.radioTile, editCurriculum === c && styles.radioTileActive]}
-                    onPress={() => {
-                      setEditCurriculum(c);
-                      if (!getGradesForCurriculum(c).includes(editGrade)) setEditGrade('');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.chipTxt, editCurriculum === c && styles.chipTxtActive]}>{c}</Text>
-                    <View style={[styles.radio, editCurriculum === c && { borderColor: colors.accentYellow }]}>
-                      {editCurriculum === c && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Grade — same chip picker as onboarding, scoped to the chosen curriculum */}
-              <Text style={styles.fieldLabel}>Grade</Text>
-              <View style={styles.chipRow}>
-                {getGradesForCurriculum(editCurriculum).map(g => (
-                  <TouchableOpacity key={g} style={[styles.chip, editGrade === g && styles.chipActive]}
-                    onPress={() => setEditGrade(g)} activeOpacity={0.8}>
-                    <Text style={[styles.chipTxt, editGrade === g && styles.chipTxtActive]}>{g}</Text>
-                  </TouchableOpacity>
-                ))}
-                {!editCurriculum && <Text style={styles.hintTxt}>Pick a curriculum above to see grade options.</Text>}
-              </View>
-
-              {/* Location — searchable city dropdown (city name only) + "use my location" */}
-              <View style={styles.lblRow}>
-                <Text style={styles.fieldLabel}>Location</Text>
-                {Platform.OS === 'web' && (
-                  <TouchableOpacity
-                    style={styles.locateBtn}
-                    onPress={() => locateFull(({ city }) => { if (city) setEditLocation(city); }, setLocating)}
-                    disabled={locating}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="crosshair" size={12} color={colors.accentYellow} />
-                    <Text style={styles.locateTxt}>{locating ? 'Locating...' : 'Use my location'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <SelectField
-                value={editLocation}
-                onChange={setEditLocation}
-                options={ALL_CITIES}
-                placeholder="Select your city"
-                searchPlaceholder="Search city..."
-                colors={colors}
-                styles={{ ...styles, input: styles.pickerInput }}
-              />
-
-              <Text style={styles.fieldLabel}>School</Text>
-              <View style={styles.inputRow}>
-                <Feather name="home" size={14} color={colors.textDim} />
-                <TextInput style={styles.input} placeholder="e.g. DPS Bengaluru" placeholderTextColor={colors.textDim} value={editSchool} onChangeText={setEditSchool} autoCapitalize="words" />
-              </View>
-
-              <Text style={styles.fieldLabel}>Bio</Text>
-              <View style={styles.inputRow}>
-                <Feather name="edit-2" size={14} color={colors.textDim} />
-                <TextInput style={styles.input} placeholder="A short tagline…" placeholderTextColor={colors.textDim} value={editBio} onChangeText={setEditBio} autoCapitalize="sentences" />
-              </View>
-
-              {!!saveProfileError && (
-                <Text style={{ color: '#ef4444', fontSize: 13, marginBottom: 10 }}>{saveProfileError}</Text>
-              )}
-              </ScrollView>
-              <View style={styles.modalBtns}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)} disabled={saveProfileLoading}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.saveBtn, saveProfileLoading && { opacity: 0.6 }]} onPress={handleSaveProfile} disabled={saveProfileLoading}>
-                  {saveProfileLoading
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={styles.saveText}>Save Changes</Text>}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* ── Sign Out Modal ── */}
-        <Modal visible={signOutVisible} transparent animationType="fade" onRequestClose={() => setSignOutVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <View style={{ backgroundColor: colors.cardDark, borderRadius: 16, padding: 28, width: '100%', maxWidth: 360, borderWidth: 1, borderColor: colors.borderColor }}>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textMain, marginBottom: 8 }}>Sign Out</Text>
-              <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 24 }}>Are you sure you want to sign out of your account?</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity
-                  onPress={() => setSignOutVisible(false)}
-                  style={{ flex: 1, padding: 13, borderRadius: 10, borderWidth: 1, borderColor: colors.borderColor, alignItems: 'center' }}
-                >
-                  <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => { setSignOutVisible(false); logout(); }}
-                  style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.accentRed, alignItems: 'center' }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Sign Out</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <SignOutModal
+          colors={colors}
+          visible={signOutVisible}
+          onCancel={() => setSignOutVisible(false)}
+          onConfirm={() => { setSignOutVisible(false); logout(); }}
+        />
       </View>
     </ScreenLayout>
   );
 }
 
-// ── Reusable section header ──────────────────────────────────────────────────
-function SectionHead({ icon, iconBg, iconColor, title, sub }: { icon: string; iconBg: string; iconColor: string; title: string; sub?: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-      <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
-        <Feather name={icon as any} size={15} color={iconColor} />
-      </View>
-      <View>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textMain }}>{title}</Text>
-        {sub ? <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 1 }}>{sub}</Text> : null}
-      </View>
-    </View>
-  );
-}
-
 // ── Styles ───────────────────────────────────────────────────────────────────
-const makeStyles = (c: AppColors, isDark: boolean) => StyleSheet.create({
+export const makeStyles = (c: AppColors, isDark: boolean) => StyleSheet.create({
   screen:  { flex: 1, backgroundColor: c.bgDark },
   scroll:  { flex: 1 },
   content: { padding: spacing.xl, paddingBottom: 48, gap: spacing.lg },
