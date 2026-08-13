@@ -17,7 +17,7 @@ import ChallengesScreen from '../screens/student/challenges/ChallengesScreen';
 import LeaderboardScreen from '../screens/student/LeaderboardScreen';
 import ProgressScreen from '../screens/student/ProgressScreen';
 import HelpCenterScreen from '../screens/student/HelpCenterScreen';
-import SettingsScreen from '../screens/student/SettingsScreen';
+import SettingsScreen from '../screens/student/settings/SettingsScreen';
 import VideoLessonScreen from '../screens/student/VideoLessonScreen';
 import VideoPlayerScreen from '../screens/student/VideoPlayerScreen';
 import NCERTChaptersScreen from '../screens/student/NCERTChaptersScreen';
