@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, BackHandler, Platform } from 'react-native';
 import SERVER_URL from '../../../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { computeCappedQuizMinutes } from '../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound } from '../utils';
 import type { Question, QuizPhase } from '../types';
@@ -56,7 +57,7 @@ export function useQuiz(params: {
     perQuestionResultsRef.current.forEach((r, i) => {
       if (r.isCorrect) return;
       if (explanationsRef.current[i]) return; // already have it
-      fetch(`${SERVER_URL}/ibpyp/explain-wrong`, {
+      fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/explain-wrong`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, subject, grade, question: r.question, wrongAnswer: r.studentAnswer, correctAnswer: r.correctAnswer }),
       })
@@ -100,7 +101,7 @@ export function useQuiz(params: {
     questionStartTimeRef.current = Date.now();
     if (isRetake) setAttemptNumber(n => n + 1);
     try {
-      const res = await fetch(`${SERVER_URL}/ibpyp/quiz`, {
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/quiz`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, grade, subject, curriculum, passageText, topicId, userEmail, role: userRole }),
       });
@@ -121,7 +122,7 @@ export function useQuiz(params: {
     const totalTimeSeconds = Math.round((Date.now() - quizStartTimeRef.current) / 1000);
 
     // Legacy analytics
-    fetch(`${SERVER_URL}/ibpyp/track-result`, {
+    fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/track-result`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userEmail, role: userRole, topic, subject, grade, score: pct, totalQuestions: questions.length, correctAnswers: finalScore, firstAttemptCorrect: finalScore, attemptNumber, perQuestionAttempts: [] }),
     }).catch(() => {});
@@ -225,7 +226,7 @@ export function useQuiz(params: {
     }
     setLoadingExplain(true);
     try {
-      const res = await fetch(`${SERVER_URL}/ibpyp/explain-wrong`, {
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/explain-wrong`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, subject, grade, question: q.question, wrongAnswer: wrong, correctAnswer: correct }),
       });

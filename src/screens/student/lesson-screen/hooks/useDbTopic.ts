@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import SERVER_URL from '../../../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { type CBSE_G6_ENGLISH_SYLLABUS } from '../../../../data/cbseG6EnglishSyllabus';
 
 // A real teacher-published topic (has a DB id) fetches its resolved
@@ -17,7 +17,7 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
     if (!topicId) { setLoadingDbTopic(false); return; }
     let cancelled = false;
     setLoadingDbTopic(true);
-    fetch(`${SERVER_URL}/teacher/syllabus/topic/${topicId}/resources`)
+    fetch(`${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/topic/${topicId}/resources`)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;

@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../config/learningPathsServerUrl';
 import { type SyllabusChapter } from '../../../data/cbseG6EnglishSyllabus';
 import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
 import type { DbUnit } from './types';
@@ -13,7 +13,7 @@ export function getCuratedSyllabus(curriculum: string, grade: string, subject: s
 }
 
 export async function fetchPublishedSyllabus(curriculum: string, grade: string, subject: string): Promise<DbUnit[]> {
-  const res = await fetch(`${SERVER_URL}/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`);
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`);
   if (!res.ok) return [];
   const data = await res.json();
   // Keep chapters that have no lessons yet. The server now returns the book's
