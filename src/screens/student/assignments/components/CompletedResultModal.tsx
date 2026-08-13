@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
 import { getAnsweredQuizHtml } from '../../../../utils/answeredQuizHtml';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { SUBJECT_ICON, SUBJECT_COLOR } from '../constants';
 import { getStamp } from '../utils';
 import type { Assignment } from '../types';
@@ -187,7 +187,7 @@ export function CompletedResultModal({
                   if (exp?.steps) { setExpandedExplain(prev => { const n = { ...prev }; delete n[i]; return n; }); return; }
                   setExpandedExplain(prev => ({ ...prev, [i]: { loading: true } }));
                   try {
-                    const r = await fetch(`${SERVER_URL}/assignments/${a.id}/explain-question`, {
+                    const r = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${a.id}/explain-question`, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ question: q.question, studentAnswer: q.studentAnswer, correctAnswer: q.correctAnswer, score: q.score, subject: a.subject, grade: a.grade }),
                     });

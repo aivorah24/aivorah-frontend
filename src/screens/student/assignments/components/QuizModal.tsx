@@ -6,6 +6,7 @@ import type { AppColors } from '../../../../theme';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useStudentData } from '../../../../context/StudentDataContext';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR } from '../constants';
 import { getStamp } from '../utils';
@@ -69,7 +70,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
     if (!currentInput) return;
     setFillValidating(true);
     try {
-      const resp = await fetch(`${SERVER_URL}/assignments/validate-fill-blank`, {
+      const resp = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/validate-fill-blank`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentAnswer: currentInput, correctAnswer: q.correct }),
       });
@@ -108,7 +109,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
       const quizAnswers = questions.map((_, i) => ({ answer: answers[i] || '' }));
       const ctrl1 = new AbortController();
       const t1 = setTimeout(() => ctrl1.abort(), 120_000);
-      const res = await fetch(`${SERVER_URL}/assignments/${assignment.id}/submit`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${assignment.id}/submit`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, quizAnswers, quizQuestions: questions }),
         signal: ctrl1.signal,

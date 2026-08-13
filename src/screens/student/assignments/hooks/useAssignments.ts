@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useStudentData } from '../../../../context/StudentDataContext';
 import { useNotification } from '../../../../context/NotificationContext';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import type { Assignment, QuizQuestion } from '../types';
 
 // True only for a brief grace period right after a page load. A refresh that
@@ -87,7 +88,7 @@ async function hydrateQuizQuestions(item: Assignment): Promise<QuizQuestion[]> {
   if (!topic) return [];
 
   try {
-    const primaryRes = await fetch(`${SERVER_URL}/assignments/generate-quiz`, {
+    const primaryRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-quiz`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -182,7 +183,7 @@ export function useAssignments(highlightId: string | undefined, navigation: any)
         if (prev[i]?.steps || prev[i]?.loading) return prev;
         return { ...prev, [i]: { loading: true } };
       });
-      fetch(`${SERVER_URL}/assignments/${viewingResult.id}/explain-question`, {
+      fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${viewingResult.id}/explain-question`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q.question, studentAnswer: q.studentAnswer, correctAnswer: q.correctAnswer, score: q.score, subject: viewingResult.subject, grade: viewingResult.grade }),
       })
@@ -194,7 +195,7 @@ export function useAssignments(highlightId: string | undefined, navigation: any)
 
   function load() {
     if (!studentId) return;
-    fetch(`${SERVER_URL}/assignments?studentId=${studentId}`)
+    fetch(`${ASSIGNMENTS_SERVER_URL}/assignments?studentId=${studentId}`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) {

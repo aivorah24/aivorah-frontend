@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { useStudentData } from '../../../../context/StudentDataContext';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import * as ImagePicker from 'expo-image-picker';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON } from '../constants';
@@ -103,7 +103,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
       const textAns = hasQuestions ? textAnswers : [];
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 120_000);
-      const res = await fetch(`${SERVER_URL}/assignments/${assignment.id}/submit`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${assignment.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, answers: textAns, questionImages }),

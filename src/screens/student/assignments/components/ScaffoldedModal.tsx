@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { useStudentData } from '../../../../context/StudentDataContext';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON, STEP_COLORS, STEP_TEXT_COLORS, STEP_ICONS } from '../constants';
 import { getStamp } from '../utils';
@@ -84,7 +84,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
       });
       const ctrl2 = new AbortController();
       const t2 = setTimeout(() => ctrl2.abort(), 120_000);
-      const res = await fetch(`${SERVER_URL}/assignments/${assignment.id}/submit`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${assignment.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, stepAnswers: normalizedAnswers, selfAssessment: selfChecked }),

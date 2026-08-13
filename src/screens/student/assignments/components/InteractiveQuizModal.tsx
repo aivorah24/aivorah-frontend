@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import type { Assignment } from '../types';
 
 // ── Interactive Quiz Modal (from PDF→Gemini pipeline) — iframe on web, ──
@@ -98,7 +98,7 @@ export function InteractiveQuizModal({
             onPress={() => {
               if (!quizProgress?.completed) return;
               setSubmittingQuiz(true);
-              fetch(`${SERVER_URL}/assignments/${assignment.id}/complete`, {
+              fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${assignment.id}/complete`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
