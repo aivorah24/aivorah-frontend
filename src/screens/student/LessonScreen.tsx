@@ -25,6 +25,7 @@ import type { AppColors } from '../../theme';
 import { CBSE_G6_ENGLISH_SYLLABUS } from '../../data/cbseG6EnglishSyllabus';
 import { getSubjectSyllabus } from '../../data/syllabusRegistry';
 import SERVER_URL from '../../config/serverUrl';
+import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 type Mode = 'read' | 'listen' | 'ask' | 'practice';
 
@@ -135,7 +136,10 @@ function subjectToBookFolder(subject: string): string {
 function bookSrc(topic: any, grade: string, subject: string): string {
   const rel = topic?.bookPath
     || `grade${grade.replace(/[^0-9]/g, '')}/${subjectToBookFolder(subject)}/${topic?.pdfFile}`;
-  return `${SERVER_URL}/data/ncert_books/${rel}`;
+  // Signed-URL redirect route lives on the auth service, not the (dead)
+  // monolith SERVER_URL — see aivorah-auth-service/index.js's
+  // /data/ncert_books/* route and its comment for why.
+  return `${AUTH_SERVER_URL}/data/ncert_books/${rel}`;
 }
 
 // The real NCERT book title varies by grade + subject — "Poorvi" is only the
