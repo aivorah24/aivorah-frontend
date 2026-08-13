@@ -178,7 +178,6 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import NotificationBanner from './src/components/common/NotificationBanner';
 import { AnnouncementProvider } from './src/features/announcements/context/AnnouncementProvider';
-import AnnouncementBanner from './src/features/announcements/components/AnnouncementBanner';
 import { colors } from './src/theme';
 import { auth } from './src/config/firebase';
 import { isStudentLocked, subscribeStudentLocked } from './src/services/lockStatus';
@@ -333,35 +332,6 @@ function NotificationBannerWrapper() {
   }
 
   return <NotificationBanner onNavigate={handleNavigate} />;
-}
-
-function AnnouncementBannerWrapper() {
-  const { isAuthenticated, user } = useAuth();
-  const navigation = useNavigation<any>();
-
-  // Same readiness gate as NotificationBannerWrapper — don't show announcements
-  // over the onboarding/verification flow.
-  const isDemoOrTest = user?.email?.endsWith('@demo.com') || user?.email?.endsWith('@test.ai');
-  const isReady = isAuthenticated &&
-    (isDemoOrTest || (user?.onboardingComplete === true && user?.emailVerified !== false)) &&
-    !user?.mustChangePassword;
-
-  if (!isReady) return null;
-
-  const announcementsScreen =
-    user?.role === 'teacher'      ? 'TeacherAnnouncements'     :
-    user?.role === 'parent'       ? 'ParentAnnouncements'      :
-    user?.role === 'school_admin' ? 'SchoolAdminAnnouncements' :
-    'Announcements';
-
-  function handleView(id: string) {
-    try { navigation.navigate(announcementsScreen, { openId: id }); } catch {}
-  }
-  function handleViewAll() {
-    try { navigation.navigate(announcementsScreen); } catch {}
-  }
-
-  return <AnnouncementBanner onView={handleView} onViewAll={handleViewAll} />;
 }
 
 const IDLE_WARN_MS   = 25 * 60 * 1000; // 25 min idle → show warning
@@ -988,7 +958,6 @@ function ThemedRoot() {
             >
               <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={c.bgDark} />
               <IdleTimeoutGuard>
-                <AnnouncementBannerWrapper />
                 <WebBackGuard>
                   <RootNavigator />
                 </WebBackGuard>
