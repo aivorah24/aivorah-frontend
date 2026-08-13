@@ -12,7 +12,7 @@ import ProfileScreen from '../screens/student/ProfileScreen';
 import LearningPathsScreen from '../screens/student/learning-paths/LearningPathsScreen';
 import AICoachScreen from '../screens/student/ai-coach/AICoachScreen';
 import ScheduleScreen from '../screens/student/schedule/ScheduleScreen';
-import AssignmentsScreen from '../screens/student/AssignmentsScreen';
+import AssignmentsScreen from '../screens/student/assignments/AssignmentsScreen';
 import ChallengesScreen from '../screens/student/challenges/ChallengesScreen';
 import LeaderboardScreen from '../screens/student/LeaderboardScreen';
 import ProgressScreen from '../screens/student/ProgressScreen';
