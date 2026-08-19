@@ -23,6 +23,7 @@ import {
   AutocompleteField, CardHeader, BBox, fetchCitySuggestions, fetchSchoolSuggestions, locateCity, locateFull,
   SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES,
 } from './OnboardingSharedFields';
+import { computeStudentCompletion } from './utils/studentCompletion';
 
 const GRADE_GROUPS = [
   { label: 'Early Years', grades: ['Nursery', 'LKG', 'UKG'] },
@@ -69,15 +70,9 @@ export default function OnboardingStudentBoxes() {
   const [learningStyle, setLearningStyle] = useState((user as any)?.learningStyle || '');
 
   // ── Per-card completion ────────────────────────────
-  const aboutYouDone = fullName.trim().length >= 2 && getAge(dob) !== null && getAge(dob)! >= 14;
-  const curriculumDone = curriculum.length > 0;
-  const schoolGradeDone = school.trim().length >= 2 && grade.length > 0;
-  const avatarDone = avatarStyle.length > 0;
-  const learningStyleDone = learningStyle.length > 0;
-
-  const requiredDone = aboutYouDone && curriculumDone && schoolGradeDone;
-  const doneCount = [aboutYouDone, curriculumDone, schoolGradeDone, avatarDone, learningStyleDone].filter(Boolean).length;
-  const completionPct = Math.round((doneCount / 5) * 100);
+  const {
+    aboutYouDone, curriculumDone, schoolGradeDone, avatarDone, learningStyleDone, requiredDone, completionPct,
+  } = computeStudentCompletion({ fullName, dob, curriculum, school, grade, avatarStyle, learningStyle });
 
   // Web: trap the browser Back button (#171 — this screen previously had no back-button
   // handling at all, so pressing browser Back silently signed the student out with no

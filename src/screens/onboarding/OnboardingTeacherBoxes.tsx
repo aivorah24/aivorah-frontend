@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import SERVER_URL from '../../config/serverUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { TEAL, DatePickerInput } from './OnboardingScreen';
+import { computeTeacherCompletion } from './utils/teacherCompletion';
 import TeachingEntriesEditor, { TeachingEntry, emptyEntry } from '../school-admin/TeachingEntriesEditor';
 import {
   AutocompleteField, CardHeader, BBox, fetchCitySuggestions, fetchSchoolSuggestions, locateCity, locateFull,
@@ -114,31 +115,10 @@ export default function OnboardingTeacherBoxes() {
   }, [user?.email]);
 
   // ── Per-card completion ────────────────────────────
-  const personalDone = fullName.trim().length >= 2 && dob.trim().length >= 6 && mobile.trim().length >= 7;
-  const schoolDone = school.trim().length >= 2 && city.trim().length >= 2 && state.trim().length >= 2 && country.trim().length >= 2;
-  const professionalDone = teacherRole.length > 0;
-
-  // Derive the save shapes from `entries`. A COMPLETE entry needs a curriculum,
-  // a grade, and at least one subject. `teaches` keeps each entry's own
-  // curriculum; the users-table `curriculum`/`grade` columns (single-valued) get
-  // the first complete entry as the teacher's primary.
-  const teachesFromEntries = entries
-    .filter(e => e.curriculum && e.grade)
-    .map(e => ({
-      curriculum: e.curriculum.trim(),
-      grade: e.grade.trim(),
-      subjects: e.subjectsInput.split(',').map(s => s.trim()).filter(Boolean),
-    }));
-  const completeEntries = teachesFromEntries.filter(t => t.subjects.length > 0);
-  const primaryCurriculum = completeEntries[0]?.curriculum || entries.find(e => e.curriculum)?.curriculum?.trim() || '';
-  const primaryGrade = completeEntries[0]?.grade || '';
-
-  const teachingDone = completeEntries.length > 0;
-  const avatarDone = avatarStyle.length > 0;
-
-  const requiredDone = personalDone && schoolDone && professionalDone && teachingDone;
-  const doneCount = [personalDone, schoolDone, professionalDone, teachingDone, avatarDone].filter(Boolean).length;
-  const completionPct = Math.round((doneCount / 5) * 100);
+  const {
+    personalDone, schoolDone, professionalDone, teachingDone, avatarDone, requiredDone, completionPct,
+    teachesFromEntries, primaryCurriculum, primaryGrade,
+  } = computeTeacherCompletion({ fullName, dob, mobile, school, city, state, country, teacherRole, entries, avatarStyle });
 
   // Saves whatever fields are filled in so far WITHOUT marking onboarding complete —
   // used by the "Save & Exit" leave-confirm path so partial progress isn't lost just

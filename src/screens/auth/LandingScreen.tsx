@@ -20,6 +20,7 @@ import { Feather } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient as SvgGrad, Stop, Rect } from 'react-native-svg';
 import { useAuth, UserRole } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { validateLoginForm, validateSignupForm } from './utils/validation';
 import SERVER_URL from '../../config/serverUrl';
 
 // ─────────────────────────────────────────────────────────
@@ -384,7 +385,8 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
     setError('');
     const emailTrim = email.replace(/\s+/g, '');
     const passTrim = pass.replace(/\s+/g, '');
-    if (!emailTrim || !passTrim) { setError('Please fill in all fields.'); return; }
+    const validation = validateLoginForm({ email: emailTrim, pass: passTrim });
+    if (!validation.valid) { setError(validation.error!); return; }
     setLoading(true);
     try { await signInEmail(emailTrim, passTrim); onClose(); }
     catch (e: any) { 
@@ -495,40 +497,13 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
 
   const showCurriculum = role === 'student' || role === 'teacher';
 
-  // Calculate age from DD/MM/YYYY
-  function getAge(dobStr: string): number | null {
-    const parts = dobStr.split('/');
-    if (parts.length !== 3) return null;
-    const [dd, mm, yyyy] = parts.map(Number);
-    if (!dd || !mm || !yyyy || yyyy < 1900) return null;
-    const birth = new Date(yyyy, mm - 1, dd);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
-  }
-
   async function submit() {
     setError('');
     const emailTrim = email.trim();
     const nameTrim  = name.trim();
 
-    if (!nameTrim)  { setError('Please enter your full name.'); return; }
-    if (!emailTrim) { setError('Please enter a valid email address.'); return; }
-    if (!/^\S+@\S+\.\S+$/.test(emailTrim)) { setError('Please enter a valid email format.'); return; }
-    if (pass.length < 6) { setError('Password must be at least 6 characters.'); return; }
-
-    // Age check for students
-    if (role === 'student') {
-      if (!dob.trim()) { setError('Please enter your date of birth.'); return; }
-      const age = getAge(dob.trim());
-      if (age === null) { setError('Please enter a valid date of birth (DD/MM/YYYY).'); return; }
-      if (age < 14) {
-        setError('Students under 14 cannot self-register. Please ask your parent or teacher to create your account.');
-        return;
-      }
-    }
+    const validation = validateSignupForm({ name: nameTrim, email: emailTrim, pass, role, dob });
+    if (!validation.valid) { setError(validation.error!); return; }
 
     setLoading(true);
     try {
