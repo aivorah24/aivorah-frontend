@@ -7,8 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 
 import DrawerContent from '../components/common/DrawerContent';
 import NotificationBanner from '../components/common/NotificationBanner';
-import DashboardScreen from '../screens/student/DashboardScreen';
-import ProfileScreen from '../screens/student/ProfileScreen';
+import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
+import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import LearningPathsScreen from '../screens/student/LearningPathsScreen';
 import AICoachScreen from '../screens/student/ai-coach/AICoachScreen';
 import ScheduleScreen from '../screens/student/schedule/ScheduleScreen';

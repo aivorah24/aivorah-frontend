@@ -5,7 +5,7 @@ import { ParentDrawerParamList } from './types';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import DashboardScreen from '../screens/student/DashboardScreen';
+import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ParentDashboardScreen from '../screens/parent/dashboard/ParentDashboardScreen';
 import ParentProfileScreen from '../screens/parent/profile/ParentProfileScreen';
 import ParentMyKidsScreen from '../screens/parent/ParentMyKidsScreen';

@@ -47,3 +47,9 @@ test-results/
 # generated native folders
 /ios
 /android
+
+# test coverage output
+coverage/
+
+# Vercel CLI local metadata
+.vercel/
