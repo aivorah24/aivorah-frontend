@@ -96,6 +96,7 @@ interface ScheduleEvent {
   studentId: string;
   createdBy: string;
   tag: string | null;
+  isAllDay?: boolean;
 }
 
 interface StudentItem {

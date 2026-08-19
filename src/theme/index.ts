@@ -22,6 +22,7 @@ export const darkColors = {
   accentPurple: '#BAA467',  // gold (landing --gold)
   accentGreen: '#9FB2A4',   // sage
   accentYellow: '#BAA467',  // gold
+  accentYellowGlow: 'rgba(186,164,103,0.14)',
   accentRed: '#C98A8A',     // muted rose
   accentCyan: '#9FB2A4',    // sage
   accentOrange: '#C9A24E',  // deep gold
@@ -51,6 +52,7 @@ export const lightColors = {
   accentPurple: '#BAA467',  // gold
   accentGreen: '#5E7566',   // sage (readable on cream)
   accentYellow: '#9A7B2E',  // deep gold (readable on cream)
+  accentYellowGlow: 'rgba(154,123,46,0.18)',
   accentRed: '#B8595F',     // muted rose
   accentCyan: '#5E7566',    // sage (readable on cream)
   accentOrange: '#B07A1E',  // amber-gold
@@ -77,6 +79,7 @@ export const radius = {
   lg: 20,
   xl: 28,
   xxl: 36,
+  full: 9999,
 };
 
 import { Platform } from 'react-native';

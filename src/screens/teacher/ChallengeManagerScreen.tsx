@@ -209,7 +209,7 @@ export default function ChallengeManagerScreen() {
                 <Text style={{ color: colors.textMain, fontWeight: '600' }}>"{deleteConfirm.title}"</Text> will be permanently removed for all students.
               </Text>
               <View style={styles.confirmBtns}>
-                <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderColor }]} onPress={() => setDeleteConfirm(null)}>
+                <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: colors.bgDark, borderWidth: 1, borderColor: colors.borderColor }]} onPress={() => setDeleteConfirm(null)}>
                   <Text style={{ color: colors.textMain, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: colors.accentRed }]} onPress={() => handleDelete(deleteConfirm)} disabled={deleting}>

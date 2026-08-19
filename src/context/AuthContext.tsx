@@ -28,6 +28,7 @@ function isCachedProfileForEmail(profile: Partial<User>, email: string) {
 export type UserRole = 'student' | 'teacher' | 'parent' | 'school_admin' | 'super_admin';
 
 export interface User {
+  id?: string;
   name: string;
   email: string;
   role: UserRole;            // always equals activeRole — used by all existing code

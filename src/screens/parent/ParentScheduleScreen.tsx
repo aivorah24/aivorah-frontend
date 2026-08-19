@@ -120,6 +120,8 @@ interface ScheduleEvent {
   note: string;
   studentId: string;
   createdBy: string;
+  tag?: string | null;
+  isAllDay?: boolean;
   assignmentId?: string | null;
   createdAt?: string;
 }

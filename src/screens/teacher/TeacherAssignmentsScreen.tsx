@@ -270,6 +270,7 @@ type Assignment = {
   quizQuestions?: any[];
   taskSteps?: any[];
   successCriteria?: string[];
+  documentUrls?: string[];
 };
 
 interface StudentItem { id: string; name: string; grade: string; curriculum?: string | null; }
@@ -562,7 +563,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
   // Extracted questions from PDF/image — editable by teacher before publishing
-  const [extractedQuestions, setExtractedQuestions] = useState<{ question: string; answer: string; comment: string }[]>([]);
+  const [extractedQuestions, setExtractedQuestions] = useState<{ question: string; answer: string; comment: string; croppedImage?: string }[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   // Crop modal state: which question index is being assigned an image
   const [cropModalIdx, setCropModalIdx] = useState<number | null>(null);

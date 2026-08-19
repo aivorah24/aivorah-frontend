@@ -57,6 +57,8 @@ interface AccessRequest {
   section: string | null;       // requested section
   studentGrade: string | null;  // grade on the student's profile
   curriculum: string | null;
+  age?: number | null;
+  isUnder14?: boolean;
   parents: { name: string | null; email: string }[];
   created_at: string;
 }

@@ -26,6 +26,9 @@ export interface PortfolioPost {
   likeCount: number;
   isLiked: boolean;
   commentCount: number;
+  folderId?: string | null;
+  folderName?: string | null;
+  folderColor?: string | null;
 }
 
 export interface PortfolioComment {
@@ -53,6 +56,7 @@ export interface PostDraft {
   status?: 'draft' | 'published';
   attachments?: { url: string; type: string; name: string; size: number }[];
   studentIds?: string[];
+  folderId?: string | null;
 }
 
 export async function createPost(draft: PostDraft): Promise<PortfolioPost> {
