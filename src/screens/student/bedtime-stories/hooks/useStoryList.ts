@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import SERVER_URL from '../../../../config/bedtimeStoriesServerUrl';
-import { PREMIUM_ENABLED } from '../constants';
 import type { StoryMeta } from '../types';
 
-export function useStoryList(isPro: boolean) {
+export function useStoryList() {
   const [stories, setStories] = useState<StoryMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
@@ -25,14 +24,5 @@ export function useStoryList(isPro: boolean) {
     return map;
   }, [stories]);
 
-  // First story in each collection is free
-  const freeIds = useMemo(() => {
-    const ids = new Set<string>();
-    Object.values(grouped).forEach(items => { if (items[0]) ids.add(items[0].id); });
-    return ids;
-  }, [grouped]);
-
-  function isLocked(storyId: string) { return PREMIUM_ENABLED && !isPro && !freeIds.has(storyId); }
-
-  return { loading, error, grouped, isLocked };
+  return { loading, error, grouped };
 }

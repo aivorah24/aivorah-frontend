@@ -9,28 +9,38 @@ import DrawerContent from '../components/common/DrawerContent';
 import NotificationBanner from '../components/common/NotificationBanner';
 import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ProfileScreen from '../screens/student/profile/ProfileScreen';
-import LearningPathsScreen from '../screens/student/LearningPathsScreen';
+import LearningPathsScreen from '../screens/student/learning-paths/LearningPathsScreen';
 import AICoachScreen from '../screens/student/ai-coach/AICoachScreen';
 import ScheduleScreen from '../screens/student/schedule/ScheduleScreen';
-import AssignmentsScreen from '../screens/student/AssignmentsScreen';
+import AssignmentsScreen from '../screens/student/assignments/AssignmentsScreen';
 import ChallengesScreen from '../screens/student/challenges/ChallengesScreen';
 import LeaderboardScreen from '../screens/student/leaderboard/LeaderboardScreen';
 import ProgressScreen from '../screens/student/ProgressScreen';
 import HelpCenterScreen from '../screens/student/helpCenter/HelpCenterScreen';
-import SettingsScreen from '../screens/student/SettingsScreen';
+import SettingsScreen from '../screens/student/settings/SettingsScreen';
 import VideoLessonScreen from '../screens/student/VideoLessonScreen';
 import VideoPlayerScreen from '../screens/student/VideoPlayerScreen';
+import NCERTChaptersScreen from '../screens/student/NCERTChaptersScreen';
 import SubjectTopicsScreen from '../screens/student/SubjectTopicsScreen';
-import SubjectSyllabusScreen from '../screens/student/SubjectSyllabusScreen';
-import LessonScreen from '../screens/student/LessonScreen';
+import SubjectSyllabusScreen from '../screens/student/subject-syllabus/SubjectSyllabusScreen';
+import LessonScreen from '../screens/student/lesson-screen/LessonScreen';
 import Learn5EScreen from '../screens/student/Learn5EScreen';
+import MathHelperScreen from '../screens/student/MathHelperScreen';
+import AIStorytellerScreen from '../screens/student/AIStorytellerScreen';
+import DrawingBuddyScreen from '../screens/student/DrawingBuddyScreen';
+import WordWizardScreen from '../screens/student/WordWizardScreen';
+import RewardsScreen from '../screens/student/RewardsScreen';
+import IBPYPQuizScreen from '../screens/student/ibpyp-quiz/IBPYPQuizScreen';
 import WorldAndYouScreen from '../screens/student/world-and-you/WorldAndYouScreen';
 import TopicLessonScreen from '../screens/student/TopicLessonScreen';
 import MathLessonScreen from '../screens/student/MathLessonScreen';
 import BhagavathaStoriesScreen from '../screens/student/bedtime-stories/BhagavathaStoriesScreen';
 import StoryReaderScreen from '../screens/student/bedtime-stories/StoryReaderScreen';
+import ReadAloudScreen from '../screens/student/ReadAloudScreen';
 import DailyHabitsScreen from '../screens/student/daily-habits/DailyHabitsScreen';
 import SubscriptionScreen from '../screens/student/SubscriptionScreen';
+import MessagesScreen from '../screens/shared/MessagesScreen';
+import AnnouncementsScreen from '../screens/student/AnnouncementsScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
 
@@ -72,21 +82,31 @@ export default function AppNavigator() {
       <Drawer.Screen name="Challenges" component={ChallengesScreen} />
       <Drawer.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Drawer.Screen name="Progress" component={ProgressScreen} />
+      <Drawer.Screen name="Rewards" component={RewardsScreen} />
       <Drawer.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
       <Drawer.Screen name="VideoLesson" component={VideoLessonScreen} />
       <Drawer.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+      <Drawer.Screen name="NCERTChapters" component={NCERTChaptersScreen} />
       <Drawer.Screen name="SubjectTopics" component={SubjectTopicsScreen} />
       <Drawer.Screen name="SubjectSyllabus" component={SubjectSyllabusScreen} />
       <Drawer.Screen name="LessonScreen" component={LessonScreen} />
       <Drawer.Screen name="Learn5E" component={Learn5EScreen} />
+      <Drawer.Screen name="MathHelper" component={MathHelperScreen} />
+      <Drawer.Screen name="AIStoryteller" component={AIStorytellerScreen} />
+      <Drawer.Screen name="DrawingBuddy" component={DrawingBuddyScreen} />
+      <Drawer.Screen name="WordWizard" component={WordWizardScreen} />
+      <Drawer.Screen name="IBPYPQuiz" component={IBPYPQuizScreen} />
       <Drawer.Screen name="WorldAndYou" component={WorldAndYouScreen} />
       <Drawer.Screen name="TopicLesson" component={TopicLessonScreen} />
       <Drawer.Screen name="MathLesson" component={MathLessonScreen} />
       <Drawer.Screen name="BhagavathaStories" component={BhagavathaStoriesScreen} />
       <Drawer.Screen name="StoryReader" component={StoryReaderScreen} />
+      <Drawer.Screen name="ReadAloud" component={ReadAloudScreen} />
       <Drawer.Screen name="DailyHabits" component={DailyHabitsScreen} />
       <Drawer.Screen name="Subscription" component={SubscriptionScreen} />
+      <Drawer.Screen name="Messages" component={MessagesScreen} />
+      <Drawer.Screen name="Announcements" component={AnnouncementsScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
     </Drawer.Navigator>

@@ -4,19 +4,12 @@ import { askAIMentorStream, type ChatHistoryTurn } from '../../../../services/ai
 import SERVER_URL from '../../../../config/aiCoachServerUrl';
 import type { Message } from '../types';
 
-interface DailyUsage { used: number; remaining: number; dailyLimit: number }
-
 interface UseAICoachChatParams {
   firstName: string;
   userGrade: string;
   userCurriculum: string;
   userEmail: string | undefined;
   userRole: string | undefined;
-  isPro: boolean;
-  dailyUsage: DailyUsage | null;
-  setDailyUsage: (u: DailyUsage) => void;
-  setLimitReached: (v: boolean) => void;
-  limitReached: boolean;
   exploreTopic: () => void;
   onScrollToEnd: (animated: boolean) => void;
 }
@@ -27,11 +20,6 @@ export function useAICoachChat({
   userCurriculum,
   userEmail,
   userRole,
-  isPro,
-  dailyUsage,
-  setDailyUsage,
-  setLimitReached,
-  limitReached,
   exploreTopic,
   onScrollToEnd,
 }: UseAICoachChatParams) {
@@ -54,7 +42,7 @@ export function useAICoachChat({
 
   async function sendMessage(text?: string) {
     const msgText = (text ?? input).trim();
-    if (!msgText || isTyping || limitReached) return;
+    if (!msgText || isTyping) return;
 
     const userMsg: Message = { id: Date.now(), role: 'user', text: msgText };
     const aiMsgId = Date.now() + 1;
@@ -73,7 +61,7 @@ export function useAICoachChat({
     const aiPlaceholder: Message = { id: aiMsgId, role: 'ai', text: '' };
     setMessages(prev => [...prev, aiPlaceholder]);
 
-    const { answer, images: answerImages, error, limitReached: hitLimit } = await askAIMentorStream(
+    const { answer, images: answerImages, error } = await askAIMentorStream(
       msgText,
       userGrade,
       undefined,
@@ -90,16 +78,7 @@ export function useAICoachChat({
       }
     );
 
-    if (!error) {
-      exploreTopic();
-      if (!isPro && dailyUsage) {
-        const newUsed = dailyUsage.used + 1;
-        const newRemaining = Math.max(0, dailyUsage.dailyLimit - newUsed);
-        setDailyUsage({ ...dailyUsage, used: newUsed, remaining: newRemaining });
-        if (newRemaining <= 0) setLimitReached(true);
-      }
-    }
-    if (hitLimit) setLimitReached(true);
+    if (!error) exploreTopic();
 
     setMessages(prev =>
       prev.map(m => m.id === aiMsgId ? {

@@ -40,6 +40,12 @@ e2e/.auth/
 # typescript
 *.tsbuildinfo
 
+# test coverage output
+coverage/
+
+# Vercel
+.vercel/
+
 # playwright test-run artifacts
 playwright-report/
 test-results/

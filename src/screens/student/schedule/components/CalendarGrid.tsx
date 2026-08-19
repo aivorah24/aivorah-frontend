@@ -113,6 +113,7 @@ export default function CalendarGrid({
                       style={[styles.allDayCol, { width: colWidth, height: allDayHeight }]}
                       onPress={() => onAllDaySlotPress(d.iso)}
                       activeOpacity={0.8}
+                      testID={`schedule-allday-col-${d.iso}`}
                     >
                       {allDayEvents.map(e => {
                         const [accent, fill, textCol] = typeColors(e.type);
@@ -226,6 +227,7 @@ export default function CalendarGrid({
                                 // @ts-ignore
                                 onMouseDown={(e: any) => e.stopPropagation?.()}
                                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                                testID={`schedule-delete-event-${event.id}`}
                               >
                                 <Feather name="x" size={10} color={accent} />
                               </TouchableOpacity>

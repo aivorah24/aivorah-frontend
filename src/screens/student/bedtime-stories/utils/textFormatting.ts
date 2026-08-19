@@ -1,8 +1,3 @@
-export function splitSentences(text: string): string[] {
-  const parts = text.match(/[^.!?]+[.!?]+[\s]*/g);
-  return parts && parts.length > 1 ? parts : [text];
-}
-
 // Split text into words, preserving trailing spaces so joined text is identical
 export function splitWords(text: string): string[] {
   return text.match(/\S+\s*/g) || [text];

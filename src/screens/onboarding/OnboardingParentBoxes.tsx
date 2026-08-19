@@ -21,6 +21,7 @@ import SERVER_URL from '../../config/serverUrl';
 import firebaseApp from '../../config/firebase';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { CURRICULA, getGradesForCurriculum, DatePickerInput } from './OnboardingScreen';
+import { computeParentCompletion } from './utils/parentCompletion';
 import {
   AutocompleteField, CardHeader, BBox, fetchCitySuggestions, locateCity, locateFull,
   SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES, PhoneCodeSelect,
@@ -304,63 +305,12 @@ export default function OnboardingParentBoxes() {
   }
 
   // ── Per-card completion ────────────────────────────
-  const personalDone = fullName.trim().length >= 2 && city.trim().length >= 2
-    && dob.trim().length > 0 && mobile.trim().length > 0;
-
   // Adding children is OPTIONAL during onboarding (client feedback, 2026-06-13):
   // a parent may skip and add kids later from the dashboard. A child only has to
   // be completed if the parent actually started adding one (entered a name).
-  const startedChildren = children.filter(c => c.name.trim().length >= 2);
-  const addingChildren = startedChildren.length > 0;
-  const childrenDone = true; // names are validated as part of "started"
-  const curriculumDone = startedChildren.every(c => c.curriculum.length > 0 && c.grade.length > 0);
-  const accountDone = startedChildren.every(c => {
-    const age = c.age ? parseInt(c.age, 10) : 0;
-    if (age >= 14) return /^\S+@\S+\.\S+$/.test(c.linkEmail.trim());
-    if (c.school.trim().length < 2) return false;
-    if (c.password.length !== 0 && c.password.length < 6) return false;
-    // If a real child email was entered, it must be OTP-verified before continuing.
-    const email = c.email.trim().toLowerCase();
-    if (email.length > 0) {
-      if (!/^\S+@\S+\.\S+$/.test(email)) return false;
-      if (c.verifiedEmail.trim().toLowerCase() !== email) return false;
-    }
-    return true;
-  });
-  const avatarDone = avatarStyle.length > 0;
-
-  // Onboarding can complete with no children at all; only the parent's own info
-  // is mandatory. Started children must be finished before continuing.
-  const requiredDone = personalDone && curriculumDone && accountDone;
-
-  // Completion ring reflects ACTUAL progress on the fields the parent fills, so it
-  // starts near 0 and only reaches 100% when the profile is genuinely complete.
-  // (Previously the default avatar + "no children" always counted as done, so a
-  // blank form already showed ~67%.) Avatar always has a default, so it isn't a
-  // step; children only count once the parent starts adding one.
-  //
-  // The child section used to be ONE bundled step (curriculumDone && accountDone),
-  // so the ring sat frozen while a parent filled in curriculum, grade, school,
-  // email — then jumped straight to 100% only once every field was done. Split
-  // into its individual sub-fields so the ring actually climbs as detail is
-  // entered, matching what a "progress" indicator should do. (client feedback)
-  const childCurriculumDone = startedChildren.every(c => c.curriculum.length > 0);
-  const childGradeDone = startedChildren.every(c => c.grade.length > 0);
-  const childSchoolOrLinkDone = startedChildren.every(c => {
-    const age = c.age ? parseInt(c.age, 10) : 0;
-    if (age >= 14) return /^\S+@\S+\.\S+$/.test(c.linkEmail.trim());
-    return c.school.trim().length >= 2;
-  });
-  const completionSteps = [
-    fullName.trim().length >= 2,                       // name
-    city.trim().length >= 2,                           // city
-    dob.trim().length > 0,                              // date of birth
-    mobile.trim().length > 0,                           // mobile number
-    ...(addingChildren ? [childCurriculumDone, childGradeDone, childSchoolOrLinkDone, accountDone] : []),
-  ];
-  const completionPct = Math.round(
-    (completionSteps.filter(Boolean).length / completionSteps.length) * 100
-  );
+  const {
+    personalDone, addingChildren, startedChildren, curriculumDone, accountDone, avatarDone, requiredDone, completionPct,
+  } = computeParentCompletion({ fullName, city, dob, mobile, children, avatarStyle });
 
   // finalize=false is the "Save & go back" path (dual-role: teacher pausing
   // partway through adding a parent profile) — it persists the fields entered
@@ -801,7 +751,7 @@ export default function OnboardingParentBoxes() {
 
           {/* Your Child(ren) */}
           <View style={[styles.card, styles.card3]}>
-            <CardHeader icon="users" title="2. Your Children" badge="Optional" subtitle="Add now, or skip and add them anytime from your dashboard." done={!addingChildren || childrenDone} styles={styles} subtitleColor={TEAL} />
+            <CardHeader icon="users" title="2. Your Children" badge="Optional" subtitle="Add now, or skip and add them anytime from your dashboard." done={true} styles={styles} subtitleColor={TEAL} />
 
             {children.length > 1 && (
               <View style={styles.chipRow}>

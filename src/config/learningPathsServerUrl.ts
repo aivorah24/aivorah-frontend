@@ -1,0 +1,13 @@
+import { Platform } from 'react-native';
+
+// Learning Path backend base URL — routed to the standalone
+// aivorah-learning-paths-service microservice instead of the monolith.
+// Serves /teacher/syllabus/* and /ibpyp/* for this flow.
+declare const __DEV__: boolean;
+
+const LIVE_LEARNING_PATHS_BACKEND = 'https://aivorah-learning-paths-service.onrender.com';
+
+const LEARNING_PATHS_SERVER_URL =
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3014' : LIVE_LEARNING_PATHS_BACKEND;
+
+export default LEARNING_PATHS_SERVER_URL;
