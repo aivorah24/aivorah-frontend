@@ -29,6 +29,7 @@ export default function ReaderBottomNav({
   return (
     <View style={[styles.bottomNav, { backgroundColor: bgDark, borderTopColor: borderColor }]}>
       <TouchableOpacity
+        testID="readerPrev"
         style={[styles.navArrow, { borderColor, backgroundColor: cardDark, opacity: isFirst ? 0.3 : 1 }]}
         onPress={onPrev} disabled={isFirst} activeOpacity={0.8}
       >
@@ -52,6 +53,7 @@ export default function ReaderBottomNav({
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
+          testID="readerNext"
           style={[styles.navArrow, { backgroundColor: pastelAccent, borderColor: 'transparent' }]}
           onPress={onNext} activeOpacity={0.85}
         >

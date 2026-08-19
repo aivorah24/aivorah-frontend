@@ -2,11 +2,7 @@ import type { VoiceOption, AmbientProfile } from './types';
 
 export const TEAL   = '#9FB2A4';  // sage
 export const FOREST = '#7E9A86';  // deep sage
-export const AMBER  = '#C5A56A';  // warm pastel gold — premium
 export const PASTEL_GOLD = '#C5A56A'; // Aivorah warm pastel gold — Auto toggle + completion badges
-
-// Premium gating temporarily OFF — flip to true to re-enable the lock + upgrade banner later.
-export const PREMIUM_ENABLED = false;
 
 export const VOICE_CONFIG: Record<VoiceOption, { label: string; icon: string; color: string }> = {
   grandmother: { label: 'Grandmother', icon: 'heart',  color: '#C08898' },  // Aivorah pastel rose
