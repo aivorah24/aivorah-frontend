@@ -26,7 +26,7 @@ export default function FeedbackStrip({ feedbackAnim, onSubmit, onDismiss, style
           </TouchableOpacity>
         ))}
       </View>
-      <TouchableOpacity onPress={onDismiss} style={styles.feedbackSkip}>
+      <TouchableOpacity testID="feedbackDismiss" onPress={onDismiss} style={styles.feedbackSkip}>
         <Feather name="x" size={14} color={colors.textDim} />
       </TouchableOpacity>
     </Animated.View>
