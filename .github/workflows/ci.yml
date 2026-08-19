@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, staging]
+  pull_request:
+    branches: [main, master, staging]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Jest tests
+        run: npx jest --ci --coverage=false
+      # No lint step: no ESLint config exists in this repo yet. Adding one
+      # and getting the codebase clean is a separate, larger task — tracked
+      # as a known gap rather than faked here.
+      # No build step: `expo export --platform web` needs build-time env
+      # vars (API keys) this workflow doesn't have access to yet. Add once
+      # Staging env vars are wired into GitHub Actions secrets.
