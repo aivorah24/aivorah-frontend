@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
+import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 const TEAL = '#5F8A86';
 
@@ -47,7 +48,7 @@ export default function SetPasswordScreen() {
     let cancelled = false;
     const check = async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
+        const res = await fetch(`${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
         if (!cancelled && res.status === 404) { logout(); }
       } catch {}
     };

@@ -1,0 +1,7 @@
+{
+  "buildCommand": "EXPO_NO_TELEMETRY=1 CI=1 npx expo export --platform web",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

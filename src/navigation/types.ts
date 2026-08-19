@@ -32,7 +32,7 @@ export type DrawerParamList = {
   AIStoryteller: { topic: string; chapterId: number; unit: string; subject?: string; grade?: string; curriculum?: string };
   DrawingBuddy: { topic: string; chapterId: number; unit: string; subject?: string; grade?: string; curriculum?: string };
   WordWizard: { topic: string; chapterId: number; unit: string } | undefined;
-  IBPYPQuiz: { topic: string; grade: string; subject: string; curriculum?: string };
+  Quiz: { topic: string; grade: string; subject: string; curriculum?: string };
   WorldAndYou: undefined;
   TopicLesson: { topic: string; grade: string; subject: string; curriculum?: string };
   BhagavathaStories: undefined;

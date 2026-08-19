@@ -1,0 +1,199 @@
+/**
+ * SubjectSyllabusScreen.tsx
+ * Textbook-first syllabus view: Subject → collapsible chapters → topics.
+ * Step 3 of the redesigned Learning Path flow:
+ *   Learning Path → Curriculum → Subject → Syllabus (this screen) → Lesson
+ *
+ * Currently backed by a curated, verified dataset for CBSE Grade 6 English
+ * (see src/data/cbseG6EnglishSyllabus.ts). Falls back to the existing flat
+ * topic list (SubjectTopicsScreen) for any subject/grade/curriculum that
+ * doesn't have curated chapter data yet.
+ */
+import React, { useMemo, useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
+  Platform, UIManager,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useTheme } from '../../../../context/ThemeContext';
+import { useStudentData } from '../../../../context/StudentDataContext';
+import Header from '../../../../components/common/Header';
+import ScreenLayout from '../../../../components/common/ScreenLayout';
+import { g6EnglishStats, type SyllabusChapter } from '../../../../data/cbseG6EnglishSyllabus';
+
+import { makeStyles } from './styles';
+import { useSyllabusChapters } from './hooks/useSyllabusChapters';
+import { useChapterExpansion } from './hooks/useChapterExpansion';
+import ChapterCard from './components/ChapterCard';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+export default function SubjectSyllabusScreen({ navigation, route }: any) {
+  const subject    = (route?.params?.subject    ?? 'English')     as string;
+  const curriculum = (route?.params?.curriculum ?? 'CBSE')        as string;
+  const grade      = (route?.params?.grade      ?? 'Grade 6')     as string;
+
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { stats: studentStats } = useStudentData();
+  const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
+
+  const { chapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+
+  // Grade 1-2 NCERT books are genuinely two levels — a Unit (e.g. "My Family
+  // and Me") directly containing individual poems/stories, with no chapter
+  // tier between them. The database still stores one row per Unit with the
+  // real poems/stories as its "topics" (no schema change was available to add
+  // a proper Unit column), so here we only relabel: the row becomes "Unit N"
+  // and its topics become "Chapter N" instead of "Topic N", matching what the
+  // printed textbook page itself shows. Every other grade keeps the real
+  // Chapter -> Topic labels unchanged.
+  const isUnitShaped = curriculum === 'CBSE' && (grade === 'Grade 1' || grade === 'Grade 2');
+
+  // A subject with no syllabus used to be auto-forwarded to the flat topic list.
+  // When that list was empty too — Hindi, and any subject whose book has not been
+  // parsed yet — the student landed on a blank screen with no explanation. Show
+  // an explicit "being prepared" state instead, and keep the topic list as an
+  // option the student can choose rather than an invisible redirect.
+  const stats = g6EnglishStats(completedSet);
+
+  const wantChapterTitle = route?.params?.chapterTitle as string | undefined;
+  const { openChapters, toggleChapter } = useChapterExpansion(chapters, wantChapterTitle);
+  const [query, setQuery] = useState('');
+
+  function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
+    const topic = chapter.topics[topicIndex] as any;
+    navigation.navigate('LessonScreen', {
+      subject, curriculum, grade,
+      chapterTitle: chapter.title,
+      chapterIndex,
+      topicIndex,
+      // Real teacher-published topic — LessonScreen fetches its resolved
+      // resources from the DB instead of the static curated dataset.
+      topicId: isDbBacked ? topic?.id : undefined,
+      topicName: isDbBacked ? topic?.name : undefined,
+    });
+  }
+
+  const q = query.trim().toLowerCase();
+  const filteredChapters = chapters
+    .map((ch, ci) => {
+      const chapterMatches = ch.title.toLowerCase().includes(q);
+      const topics = ch.topics.filter(t => !q || chapterMatches || t.name.toLowerCase().includes(q));
+      return { chapter: ch, ci, topics, chapterMatches };
+    })
+    .filter(x => !q || x.chapterMatches || x.topics.length > 0);
+
+  // If a chapter or topic matches the search, force it open.
+  const effectiveOpen = q ? new Set(filteredChapters.map(x => x.ci)) : openChapters;
+
+  const overallPct = chapters.length
+    ? Math.round((chapters.reduce((s, c) => s + c.topics.filter(t => completedSet.has(t.name)).length, 0) /
+                   chapters.reduce((s, c) => s + c.topics.length, 0)) * 100)
+    : 0;
+  const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
+
+  if (loadingDb) {
+    return (
+      <ScreenLayout>
+        <View style={styles.screen}>
+          <Header title={subject} subtitle={`${curriculum} · ${grade}`} showBack onMenuPress={() => navigation.openDrawer()} />
+          <View style={styles.emptyWrap}><ActivityIndicator color={colors.primary} /></View>
+        </View>
+      </ScreenLayout>
+    );
+  }
+
+  if (chapters.length === 0) {
+    // No curated syllabus for this subject/grade/curriculum yet — send to the
+    // existing flat topic list so nothing regresses for other subjects.
+    return (
+      <ScreenLayout>
+        <View style={styles.screen}>
+          <Header title={subject} subtitle={`${curriculum} · ${grade}`} showBack onMenuPress={() => navigation.openDrawer()} />
+          <View style={styles.emptyWrap}>
+            <Feather name={loadError ? 'alert-circle' : 'book'} size={36} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              {loadError
+                ? `We couldn't load the ${subject} syllabus just now. Please try again in a moment.`
+                : `Syllabus content for ${subject} (${grade}) is currently being processed. Check back soon!`}
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+              onPress={() => navigation.navigate('SubjectTopics', { subject, curriculum, grade })}
+            >
+              <Text style={styles.emptyBtnText}>View topic list instead</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScreenLayout>
+    );
+  }
+
+  return (
+    <ScreenLayout>
+      <View style={styles.screen}>
+        <Header
+          title={subject}
+          subtitle={`${curriculum} · ${grade} · Full syllabus`}
+          showBack
+          onMenuPress={() => navigation.openDrawer()}
+        />
+
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Search */}
+          <View style={[styles.searchBar, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+            <Feather name="search" size={15} color={colors.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.textMain }]}
+              placeholder="Search chapters or topics…"
+              placeholderTextColor={colors.textMuted}
+              value={query}
+              onChangeText={setQuery}
+            />
+            {!!query && (
+              <TouchableOpacity onPress={() => setQuery('')}>
+                <Feather name="x" size={15} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Overall progress */}
+          <View style={[styles.progressCard, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+            <View style={[styles.ring, { borderColor: colors.borderColor }]}>
+              <Text style={[styles.ringPct, { color: colors.textMain }]}>{overallPct}%</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.progressLine, { color: colors.textMain }]}>
+                {startedChapters} of {chapters.length} {isUnitShaped ? 'units' : 'chapters'} started
+              </Text>
+              <Text style={[styles.progressSub, { color: colors.textMuted }]}>
+                {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {stats.totalTopics} {isUnitShaped ? 'chapters' : 'topics'} total
+              </Text>
+            </View>
+          </View>
+
+          {/* Chapters — single column: a 2-column grid left an awkward gap
+              next to whichever card was expanded to show its topics. */}
+          {filteredChapters.map(({ chapter, ci, topics }) => (
+            <ChapterCard
+              key={chapter.title}
+              chapter={chapter}
+              ci={ci}
+              topics={topics}
+              isOpen={effectiveOpen.has(ci)}
+              completedSet={completedSet}
+              isUnitShaped={isUnitShaped}
+              colors={colors}
+              styles={styles}
+              onToggle={() => toggleChapter(ci)}
+              onOpenTopic={(ti) => openLesson(chapter, ci, ti)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    </ScreenLayout>
+  );
+}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import SERVER_URL from '../../../../config/serverUrl';
+import CHALLENGES_SERVER_URL from '../../../../config/challengesServerUrl';
 import type { Challenge, Question } from '../types';
 import { isQuestionCorrect } from '../utils/quizScoring';
 
@@ -63,7 +64,7 @@ export function useQuizSession({
       // Auto-assign if not yet assigned
       let assignmentId = ch.assignmentId;
       if (!assignmentId && studentId) {
-        const assignRes = await fetch(`${SERVER_URL}/challenges/assign`, {
+        const assignRes = await fetch(`${CHALLENGES_SERVER_URL}/challenges/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -133,7 +134,7 @@ export function useQuizSession({
     const score = Math.round((correct / questions.length) * 100);
     setQuizSubmitting(true);
     try {
-      const res = await fetch(`${SERVER_URL}/challenges/${activeChallenge.assignmentId}/complete`, {
+      const res = await fetch(`${CHALLENGES_SERVER_URL}/challenges/${activeChallenge.assignmentId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, score }),
@@ -146,7 +147,7 @@ export function useQuizSession({
         // Fetch challenge leaderboard
         setLeaderLoading(true);
         try {
-          const lb = await fetch(`${SERVER_URL}/challenges/leaderboard?grade=${encodeURIComponent(grade)}&limit=20`).then(r => r.json());
+          const lb = await fetch(`${CHALLENGES_SERVER_URL}/challenges/leaderboard?grade=${encodeURIComponent(grade)}&limit=20`).then(r => r.json());
           const rows = lb.leaderboard ?? lb; // backward compat
           if (Array.isArray(rows)) setLeaderboard(rows);
         } catch { /* ignore */ } finally { setLeaderLoading(false); }

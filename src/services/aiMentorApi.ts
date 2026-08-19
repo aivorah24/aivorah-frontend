@@ -1,4 +1,4 @@
-import SERVER_URL from '../config/serverUrl';
+import SERVER_URL from '../config/aiCoachServerUrl';
 
 export interface AskImage {
   url: string;

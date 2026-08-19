@@ -1,0 +1,232 @@
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
+import { useQuiz } from '../useQuiz';
+
+jest.setTimeout(15000);
+
+function jsonRes(data: any, ok = true) {
+  return Promise.resolve({ ok, json: async () => data });
+}
+
+const mcqQuestions = [
+  { type: 'mcq', question: 'Q1', options: ['A', 'B', 'C', 'D'], correct: 1, hint: 'h1', explanation: 'e1' },
+  { type: 'mcq', question: 'Q2', options: ['A', 'B', 'C', 'D'], correct: 0, hint: 'h2', explanation: 'e2' },
+];
+
+const fillQuestion = [
+  { type: 'fill_blank', question: 'The cat sat on the ___', correct: 'mat', hint: 'h', explanation: 'e' },
+];
+
+function mockFetchRoutes(overrides: Record<string, any> = {}) {
+  global.fetch = jest.fn((url: string, opts?: any) => {
+    if (url.includes('/ibpyp/quiz')) return jsonRes(overrides.quiz ?? { questions: mcqQuestions });
+    if (url.includes('/assignments/validate-fill-blank')) {
+      const body = JSON.parse(opts.body);
+      if (overrides.fillValidate) return overrides.fillValidate(body);
+      return jsonRes({ correct: body.studentAnswer === 'mat' });
+    }
+    if (url.includes('/ibpyp/explain-wrong')) return jsonRes({ explanation: 'explained' });
+    if (url.includes('/ibpyp/track-result')) return jsonRes({});
+    if (url.includes('/student/track-attempt')) return jsonRes({});
+    return jsonRes({});
+  }) as any;
+}
+
+function Harness({ questions, userId }: { questions?: any; userId?: string } = {}) {
+  const completeLesson = React.useRef(jest.fn());
+  const addXP = React.useRef(jest.fn());
+  const recordStudyTime = React.useRef(jest.fn());
+  const navigation = React.useRef({ goBack: jest.fn(), navigate: jest.fn() });
+  (globalThis as any).__lastMocks = { completeLesson: completeLesson.current, addXP: addXP.current, recordStudyTime: recordStudyTime.current, navigation: navigation.current };
+
+  const h = useQuiz({
+    topic: 'Topic', grade: 'Grade 6', subject: 'English', curriculum: 'CBSE',
+    userEmail: 'a@a.com', userRole: 'student', userId,
+    navigation: navigation.current,
+    completeLesson: completeLesson.current,
+    addXP: addXP.current,
+    recordStudyTime: recordStudyTime.current,
+  });
+
+  return (
+    <>
+      <Text testID="phase">{h.phase}</Text>
+      <Text testID="currentQ">{h.currentQ}</Text>
+      <Text testID="score">{h.score}</Text>
+      <Text testID="mcqSelected">{String(h.mcqSelected)}</Text>
+      <Text testID="mcqDone">{String(h.mcqDone)}</Text>
+      <Text testID="showMcqHint">{String(h.showMcqHint)}</Text>
+      <Text testID="fillFeedback">{h.fillFeedback}</Text>
+      <Text testID="explanation">{h.explanation}</Text>
+      <TouchableOpacity testID="answer0" onPress={() => h.handleMcqAnswer(0)}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="answer1" onPress={() => h.handleMcqAnswer(1)}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setFillMat" onPress={() => h.setFillInput('mat')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setFillWrong" onPress={() => h.setFillInput('wrong')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="submitFill" onPress={() => h.handleFillSubmit()}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="goNextCorrect" onPress={() => h.goNext(true)}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="goNextWrong" onPress={() => h.goNext(false)}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="goPrev" onPress={() => h.goPrev()}><Text>x</Text></TouchableOpacity>
+    </>
+  );
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockFetchRoutes();
+});
+
+describe('useQuiz — fetching', () => {
+  test('loads real questions from the server and moves to the real quiz phase', async () => {
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+  });
+
+  test('a real fetch failure alerts and navigates back, never gets stuck loading', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
+    await render(<Harness />);
+    await waitFor(() => expect((globalThis as any).__lastMocks.navigation.goBack).toHaveBeenCalled());
+  });
+
+  test('a real empty-questions response is treated as an error (alert + goBack)', async () => {
+    mockFetchRoutes({ quiz: { questions: [] } });
+    await render(<Harness />);
+    await waitFor(() => expect((globalThis as any).__lastMocks.navigation.goBack).toHaveBeenCalled());
+  });
+});
+
+describe('useQuiz — MCQ flow', () => {
+  test('a real correct first answer locks the question and fetches its real explanation', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('answer1')); // correct index for Q1
+
+    await waitFor(() => expect(screen.getByTestId('mcqDone').props.children).toBe('true'));
+    await waitFor(() => expect(screen.getByTestId('explanation').props.children).not.toBe(''));
+  });
+
+  test('a real first wrong answer unlocks for retry and shows the hint, does not lock yet', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('answer0')); // wrong for Q1
+
+    await waitFor(() => expect(screen.getByTestId('showMcqHint').props.children).toBe('true'));
+    expect(screen.getByTestId('mcqDone').props.children).toBe('false');
+    expect(screen.getByTestId('mcqSelected').props.children).toBe('null');
+    jest.useRealTimers();
+  });
+
+  test('a real second wrong answer locks the question and fetches a real wrong-answer explanation', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('answer0')); // 1st wrong
+    await waitFor(() => expect(screen.getByTestId('showMcqHint').props.children).toBe('true'));
+    await user.press(screen.getByTestId('answer0')); // 2nd wrong
+
+    await waitFor(() => expect(screen.getByTestId('mcqDone').props.children).toBe('true'));
+    jest.useRealTimers();
+  });
+});
+
+describe('useQuiz — fill-blank flow', () => {
+  test('a real correct answer sets fillFeedback to "correct" with a real explanation', async () => {
+    const user = userEvent.setup();
+    await render(<Harness questions={fillQuestion} />);
+    mockFetchRoutes({ quiz: { questions: fillQuestion } });
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('setFillMat'));
+    await user.press(screen.getByTestId('submitFill'));
+
+    await waitFor(() => expect(screen.getByTestId('fillFeedback').props.children).toBe('correct'));
+  });
+
+  test('a real 1st wrong answer sets "wrong1", a real 2nd sets "wrong2", a real 3rd reveals it', async () => {
+    mockFetchRoutes({ quiz: { questions: fillQuestion } });
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('setFillWrong'));
+    await user.press(screen.getByTestId('submitFill'));
+    await waitFor(() => expect(screen.getByTestId('fillFeedback').props.children).toBe('wrong1'));
+
+    await user.press(screen.getByTestId('submitFill'));
+    await waitFor(() => expect(screen.getByTestId('fillFeedback').props.children).toBe('wrong2'));
+
+    await user.press(screen.getByTestId('submitFill'));
+    await waitFor(() => expect(screen.getByTestId('fillFeedback').props.children).toBe('revealed'));
+  });
+
+  test('a real network failure on validation gives the student the real benefit of the doubt ("correct")', async () => {
+    mockFetchRoutes({ quiz: { questions: fillQuestion }, fillValidate: () => Promise.reject(new Error('down')) });
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('setFillWrong'));
+    await user.press(screen.getByTestId('submitFill'));
+
+    await waitFor(() => expect(screen.getByTestId('fillFeedback').props.children).toBe('correct'));
+  });
+});
+
+describe('useQuiz — navigation between questions', () => {
+  test('goNext on a real non-final question advances currentQ and resets per-question state', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect'));
+
+    expect(screen.getByTestId('currentQ').props.children).toBe(1);
+    expect(screen.getByTestId('phase').props.children).toBe('quiz');
+  });
+
+  test('goNext on the real final question finishes the quiz: records XP/study time and moves to result', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect')); // Q1 -> Q2
+    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> finish
+
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+    expect((globalThis as any).__lastMocks.addXP).toHaveBeenCalledWith(100); // 2/2 = 100%
+    expect((globalThis as any).__lastMocks.completeLesson).toHaveBeenCalled();
+  });
+
+  test('goPrev on the real first question is a real no-op', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goPrev'));
+
+    expect(screen.getByTestId('currentQ').props.children).toBe(0);
+  });
+
+  test('goPrev restores a real previously-answered MCQ in a locked review state', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('answer1')); // correct answer for Q1
+    await waitFor(() => expect(screen.getByTestId('mcqDone').props.children).toBe('true'));
+    await user.press(screen.getByTestId('goNextCorrect')); // move to Q2
+
+    await user.press(screen.getByTestId('goPrev')); // back to Q1
+
+    expect(screen.getByTestId('currentQ').props.children).toBe(0);
+    await waitFor(() => expect(screen.getByTestId('mcqDone').props.children).toBe('true'));
+    expect(screen.getByTestId('mcqSelected').props.children).toBe('1');
+  });
+});

@@ -36,13 +36,11 @@ const STUDENT_NAV_ITEMS = [
   { label: 'AI Coach', icon: 'message-circle', screen: 'AICoach', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'Schedule', group: 'MENU' },
   { label: 'The World & You', icon: 'globe', screen: 'WorldAndYou', group: 'MENU' },
-  { label: 'Read Aloud', icon: 'mic', screen: 'ReadAloud', group: 'MENU' },
-  { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: true },
+  { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
   { label: 'Daily Habits', icon: 'sun', screen: 'DailyHabits', group: 'MENU' },
-  { label: 'Announcements', icon: 'volume-2', screen: 'Announcements', group: 'MENU' },
   { label: 'My Classes', icon: 'layers', screen: 'MyClasses', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'Assignments', group: 'FOCUS', premium: false },
-  { label: 'Challenges', icon: 'target', screen: 'Challenges', group: 'FOCUS', premium: true },
+  { label: 'Challenges', icon: 'target', screen: 'Challenges', group: 'FOCUS', premium: false },
   { label: 'Leaderboard', icon: 'award', screen: 'Leaderboard', group: 'FOCUS' },
   { label: 'Progress', icon: 'bar-chart-2', screen: 'Progress', group: 'FOCUS' },
   { label: 'Rewards', icon: 'gift', screen: 'Rewards', group: 'FOCUS' },
@@ -125,7 +123,7 @@ const SCHOOL_ADMIN_NAV_ITEMS: { label: string; icon: string; screen: string; gro
   { label: 'Help & Support',     icon: 'help-circle',   screen: 'TeacherHelp',              group: 'SUPPORT' },
 ];
 
-const ROLE_DASH: Record<string, string> = { super_admin: 'ChallengeManager', school_admin: 'SchoolAdminDashboard', teacher: 'TeacherDashboard', parent: 'ParentDashboard', student: 'Dashboard' };
+const ROLE_DASH: Record<string, string> = { super_admin: 'TeacherDashboard', school_admin: 'SchoolAdminDashboard', teacher: 'TeacherDashboard', parent: 'ParentDashboard', student: 'Dashboard' };
 export default function DrawerContent(props: any) {
   const { state, navigation } = props;
   const currentRoute = state.routes[state.index]?.name;

@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
+import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 // ── Landing-page "Enchanting Forest" palette (matches the marketing/auth UI) ──
 const BG     = '#050705';
@@ -102,7 +103,7 @@ export default function VerifyEmailScreen() {
 
     const checkVerified = async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email!)}`);
+        const res = await fetch(`${AUTH_SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email!)}`);
         if (res.ok) {
           const data = await res.json();
           if (data.verified) {
@@ -175,7 +176,7 @@ export default function VerifyEmailScreen() {
       const frontendOrigin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
         : 'https://aivorah.ai';
-      await fetch(`${SERVER_URL}/user/send-verification`, {
+      await fetch(`${AUTH_SERVER_URL}/user/send-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, name: user.name || 'there', frontendOrigin }),
@@ -196,7 +197,7 @@ export default function VerifyEmailScreen() {
       // Only check our Supabase-based verification (accountStatus = 'active')
       // Do NOT fallback to Firebase emailVerified — Google SSO users are always
       // verified by Firebase but must still click the Aivorah activation link
-      const res = await fetch(`${SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`${AUTH_SERVER_URL}/user/check-verified?email=${encodeURIComponent(user.email)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.verified) {

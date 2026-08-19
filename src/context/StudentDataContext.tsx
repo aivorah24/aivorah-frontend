@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import SERVER_URL from '../config/serverUrl';
+import AUTH_SERVER_URL from '../config/authServerUrl';
 import { useAuth } from './AuthContext';
 
 // Known email → fixed UUID map (bypasses /user/sync for seeded accounts)
@@ -110,7 +111,7 @@ async function resolveStudentId(email: string): Promise<string> {
 
   // 3. Sync with server → get real UUID
   try {
-    const res = await fetch(`${SERVER_URL}/user/sync`, {
+    const res = await fetch(`${AUTH_SERVER_URL}/user/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, role: 'student' }),

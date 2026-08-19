@@ -34,7 +34,11 @@ export function normalizeQuizQuestions(rawQs: any[]): QuizQuestion[] {
     // the identical fix + comment in server/routes/daily-tidbit.js's own
     // copy of this function for why (this was corrupting real option text
     // like "Big bruise" -> "ig bruise").
-    const cleaned = opts.map(opt => String(opt || '').replace(/^\[?[A-Da-d0-4]\]?(?:[.)\-:]\s*|\s+)/, '').trim()).filter(Boolean);
+    // Strips a leading "A. "/"B) "/"[C] " letter-or-digit label. The separator
+    // (bracket close, punctuation, or whitespace) after the label is required,
+    // not optional - otherwise a plain numeric option like "022" has its
+    // leading "0" mistaken for a label prefix and stripped down to "22".
+    const cleaned = opts.map(opt => String(opt || '').replace(/^\[[A-Da-d0-4]\]\s*|^[A-Da-d0-4](?:[.)\-:]\s*|\s+)/, '').trim()).filter(Boolean);
 
     return {
       ...q,

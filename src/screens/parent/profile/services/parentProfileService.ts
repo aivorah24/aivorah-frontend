@@ -1,8 +1,10 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
+import AUTH_SERVER_URL from '../../../../config/authServerUrl';
 import { WEEK_DAYS } from '../constants';
 
 export async function syncUser(email: string): Promise<{ phone?: string; location?: string } | null> {
-  const res = await fetch(`${SERVER_URL}/user/sync`, {
+  const res = await fetch(`${AUTH_SERVER_URL}/user/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -11,7 +13,7 @@ export async function syncUser(email: string): Promise<{ phone?: string; locatio
 }
 
 export async function saveProfile(payload: { email: string; name: string; location: string; phone: string; role: string }) {
-  return fetch(`${SERVER_URL}/user/profile`, {
+  return fetch(`${PROFILE_SERVER_URL}/user/profile`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

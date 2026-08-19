@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "vercel-build": "expo export --platform web",
+    "vercel-build": "EXPO_NO_TELEMETRY=1 CI=1 expo export --platform web",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

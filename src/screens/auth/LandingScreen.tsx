@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,9 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Linking,
   ActivityIndicator,
   Alert,
   Modal,
-  Animated,
-  Easing,
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
@@ -22,6 +19,7 @@ import { useAuth, UserRole } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { validateLoginForm, validateSignupForm } from './utils/validation';
 import SERVER_URL from '../../config/serverUrl';
+import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -57,16 +55,6 @@ const SERIF   = Platform.OS === 'web' ? '"Fraunces", Georgia, serif' : 'Georgia'
 const { width: WIN_W } = Dimensions.get('window');
 const IS_WEB = Platform.OS === 'web';
 const IS_LARGE = WIN_W >= 900;
-
-function BackgroundOrbs() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      <View style={s.bgWashTop} />
-      <View style={s.bgWashMid} />
-      <View style={s.bgGrid} />
-    </View>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Google SVG Icon
@@ -696,7 +684,7 @@ function ForgotModal({ visible, onClose, onSwitchLogin }: {
     setLoading(true);
     try {
       const frontendOrigin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : 'https://aivorah.ai';
-      const res = await fetch(`${SERVER_URL}/user/send-password-reset`, {
+      const res = await fetch(`${AUTH_SERVER_URL}/user/send-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), frontendOrigin }),
@@ -733,65 +721,6 @@ function ForgotModal({ visible, onClose, onSwitchLogin }: {
 
 // (mockup removed)
 
-
-// ─────────────────────────────────────────────────────────
-// Section data
-// ─────────────────────────────────────────────────────────
-const STATS = [
-  { value: '50,000+', label: 'Active Students', icon: 'users', color: CYAN },
-  { value: '4.9 / 5', label: 'Average Rating', icon: 'star', color: AMBER },
-  { value: '200+', label: 'Courses Available', icon: 'book-open', color: GREEN },
-  { value: '95%', label: 'Satisfaction Rate', icon: 'heart', color: PURPLE },
-];
-
-const ROLES_DATA = [
-  {
-    icon: 'book-open', title: 'For Students', role: 'student' as UserRole,
-    color: CYAN, tagline: 'Learn at your own pace, guided by AI',
-    benefits: [
-      'AI Coach that explains concepts with patience',
-      'Assignments with instant AI feedback',
-      'Bedtime stories for a fun learning routine',
-      'Earn XP, badges and climb the leaderboard',
-      'Visual progress tracking across all subjects',
-    ],
-  },
-  {
-    icon: 'monitor', title: 'For Teachers', role: 'teacher' as UserRole,
-    color: PURPLE, tagline: 'Save time, teach smarter',
-    benefits: [
-      'Assign and auto-grade student work with AI',
-      'Spot struggling students before they fall behind',
-      'Real-time class performance dashboards',
-      'Schedule sessions and deadlines in one click',
-      'Topic completion rate across your class',
-    ],
-  },
-  {
-    icon: 'users', title: 'For Parents', role: 'parent' as UserRole,
-    color: GREEN, tagline: 'Stay connected to your child\'s journey',
-    benefits: [
-      'Live progress reports and milestone alerts',
-      'Understand strengths and areas to improve',
-      'Assign extra practice from home',
-      'See upcoming deadlines and schedule',
-      'Ask AI anytime for insights on your child\'s progress',
-    ],
-  },
-];
-
-const FEATURES_DATA = [
-  { icon: 'cpu', title: 'Aivorah 24/7', desc: 'An always-on intelligent assistant that explains concepts, solves problems step-by-step, and adapts to your learning style in real time.' },
-  { icon: 'zap', title: 'Adaptive Learning Paths', desc: 'The platform continuously adjusts difficulty and content based on your performance, so you\'re always learning at the right level.' },
-  { icon: 'trending-up', title: 'Real-time Analytics', desc: 'Beautiful dashboards for students, teachers, and parents that turn raw data into clear, actionable learning insights.' },
-  { icon: 'target', title: 'Gamified Challenges', desc: 'Earn XP, unlock achievements, and compete in challenges that make studying engaging and genuinely fun.' },
-];
-
-const HOW_IT_WORKS = [
-  { step: '01', icon: 'user-plus', title: 'Create your account', desc: 'Sign up in seconds. Choose your role as a student, teacher, or parent and get instant access.' },
-  { step: '02', icon: 'sliders', title: 'Set up your profile', desc: 'Tell us your subjects, grade level, and goals. Our AI builds a personalized plan tailored just for you.' },
-  { step: '03', icon: 'cpu', title: 'Start learning with AI', desc: 'Chat with your AI mentor, complete adaptive assignments, and track every milestone as you grow.' },
-];
 
 // ─────────────────────────────────────────────────────────
 // MAIN SCREEN
@@ -878,101 +807,11 @@ export default function LandingScreen() {
     }
     setShowLogin(true);
   }, [authError]);
-  const heroEnter = useRef(new Animated.Value(0)).current;
-  const sectionsEnter = useRef(new Animated.Value(0)).current;
-  const scrollRef = useRef<any>(null);
-  const sectionOffsets = useRef<Record<string, number>>({});
-
-  function scrollToSection(name: string) {
-    const offset = sectionOffsets.current[name];
-    if (offset !== undefined && scrollRef.current) {
-      scrollRef.current.scrollTo({ y: offset, animated: true });
-    }
-  }
-
   const [legalModal, setLegalModal] = useState<{ title: string; body: string } | null>(null);
-
-  const LEGAL_CONTENT: Record<string, string> = {
-    'Privacy Policy': 'Aivorah collects only the information necessary to personalise your learning experience: name, email, grade, and curriculum. We never sell your data. All data is encrypted in transit and at rest. Parents can request deletion of their child\'s data at any time by emailing aivorah24@gmail.com.',
-    'Terms of Service': 'By using Aivorah, you agree to use the platform for educational purposes only. Aivorah is provided "as is" for the 2026 pilot. We reserve the right to update these terms. Continued use of the platform constitutes acceptance of any changes.',
-    'Cookie Policy': 'Aivorah uses essential cookies only to keep you logged in and remember your preferences. We do not use advertising or tracking cookies. You can clear cookies at any time through your browser settings.',
-  };
-
-  function handleFooterLink(item: string) {
-    const scrollTargets: Record<string, string> = {
-      'Features': 'Features',
-      'About Us': 'About',
-      'Contact':  'Contact',
-    };
-    if (scrollTargets[item]) {
-      scrollToSection(scrollTargets[item]);
-      return;
-    }
-    if (LEGAL_CONTENT[item]) {
-      setLegalModal({ title: item, body: LEGAL_CONTENT[item] });
-      return;
-    }
-    // Coming soon items
-    setLegalModal({ title: item, body: `${item} is coming soon. Stay tuned for updates from Aivorah!` });
-  }
 
   function switchToSignup() { setShowLogin(false); setTimeout(() => setShowSignup(true), 200); }
   function switchToLogin()  { setShowSignup(false); setShowForgot(false); setTimeout(() => setShowLogin(true), 200); }
   function switchToForgot() { setShowLogin(false); setTimeout(() => setShowForgot(true), 200); }
-  const ADMIN_EMAILS = new Set([
-    'kannansaimohan2003@gmail.com',
-    'preddy6678@gmail.com',
-  ]);
-
-  function openAdminPanel() {
-    let adminEmail = '';
-    if (Platform.OS === 'web') {
-      const webWindow = (globalThis as any).window;
-      const entered = webWindow?.prompt?.('Enter admin email for access') || '';
-      adminEmail = String(entered).trim().toLowerCase();
-    } else {
-      Alert.alert('Admin Access', 'Open admin from web and enter your admin email.');
-      return;
-    }
-
-    if (!adminEmail) return;
-
-    if (!ADMIN_EMAILS.has(adminEmail)) {
-      Alert.alert('Access Denied', 'This email is not authorized for admin access.');
-      return;
-    }
-
-    if (Platform.OS === 'web') {
-      const win = (globalThis as any).window;
-      const adminUrl = `/admin/panel?email=${encodeURIComponent(adminEmail)}`;
-      win?.location?.assign?.(adminUrl);
-      return;
-    }
-
-    const adminUrl = `http://localhost:3001/admin/panel?email=${encodeURIComponent(adminEmail)}`;
-    Linking.openURL(adminUrl).catch(() => {
-      Alert.alert('Unable to open admin panel', `Open this URL manually:\n${adminUrl}`);
-    });
-  }
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(heroEnter, {
-        toValue: 1,
-        duration: 520,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(sectionsEnter, {
-        toValue: 1,
-        duration: 700,
-        delay: 140,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [heroEnter, sectionsEnter]);
-
-  function openSignupWithRole(_role: UserRole) { setShowSignup(true); }
 
   return (
     <View style={{ flex: 1, backgroundColor: LBG }}>

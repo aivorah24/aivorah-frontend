@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../../../config/firebase';
 import SERVER_URL from '../../../../config/serverUrl';
+import AUTH_SERVER_URL from '../../../../config/authServerUrl';
 
 export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser: boolean, closeModal: () => void, logout: () => void) {
   const [newEmail, setNewEmail] = useState('');
@@ -48,7 +49,7 @@ export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser:
       // Fail fast if that email already belongs to another Aivorah account —
       // check BEFORE asking for a password/Google popup, so the user isn't
       // walked through a whole reauth + OTP flow just to be blocked at the end.
-      const takenRes = await fetch(`${SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
+      const takenRes = await fetch(`${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
       if (takenRes.ok) {
         setEmailError('That email is already registered to another Aivorah account.');
         setModalLoading(false);

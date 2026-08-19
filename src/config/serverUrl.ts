@@ -1,7 +1,10 @@
 import { Platform } from 'react-native';
 
 // Backend base URL.
-// - Web (production): '' → same-origin (served by the Express server).
+// - Web (production): the LIVE backend. The frontend now deploys standalone
+//   on Vercel (no longer served from the same origin as the Express
+//   monolith), so this can no longer be '' (same-origin) — that resolved to
+//   the Vercel static host itself and silently 404'd/405'd every call.
 // - Web (local dev):  local Express server.
 // - Native (phone):   the LIVE backend, so Expo Go previews and shared APK builds
 //   work anywhere without being on the same Wi-Fi as the dev machine.
@@ -14,7 +17,7 @@ const LIVE_BACKEND = 'https://aivorah.ai';
 
 const SERVER_URL =
   Platform.OS === 'web'
-    ? (__DEV__ ? 'http://localhost:3006' : '')
+    ? (__DEV__ ? 'http://localhost:3006' : LIVE_BACKEND)
     : LIVE_BACKEND;
 
 export default SERVER_URL;

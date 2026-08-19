@@ -258,7 +258,7 @@ export default function VideoLessonScreen({ navigation, route }: any) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.cta, { backgroundColor: isDark ? colors.cardDark : '#fff', borderColor: colors.borderColor }]}
-                onPress={() => navigation.navigate('IBPYPQuiz', { topic, grade, subject, curriculum })}
+                onPress={() => navigation.navigate('Quiz', { topic, grade, subject, curriculum })}
                 activeOpacity={0.85}
               >
                 <Feather name="check-square" size={18} color={gold} />

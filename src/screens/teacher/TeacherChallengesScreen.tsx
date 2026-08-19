@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ScreenLayout from '../../components/common/ScreenLayout';
 import Header from '../../components/common/Header';
 import SERVER_URL from '../../config/serverUrl';
+import LEADERBOARD_SERVICE_URL from '../../config/leaderboardServiceUrl';
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Challenge {

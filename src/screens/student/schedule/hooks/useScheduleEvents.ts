@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import SERVER_URL from '../../../../config/serverUrl';
+import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
 import type { ScheduleEvent } from '../types';
 
 export function useScheduleEvents({
@@ -38,14 +39,14 @@ export function useScheduleEvents({
       // Fetch all 7 days of the week in parallel + deadlines + month dots + timetable
       const weekDates = week.map(d => d.iso);
       const dayFetches = weekDates.map(d =>
-        fetch(`${SERVER_URL}/schedule?studentId=${studentId}&date=${d}&hideCompleted=${hideCompleted}`)
+        fetch(`${SCHEDULE_SERVER_URL}/schedule?studentId=${studentId}&date=${d}&hideCompleted=${hideCompleted}`)
           .then(r => r.ok ? r.json() : [])
           .then((evs: ScheduleEvent[]) => ({ date: d, events: evs }))
           .catch(() => ({ date: d, events: [] }))
       );
       const [dlRes, monthRes, ttRes, ...dayResults] = await Promise.all([
-        fetch(`${SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=${hideCompleted}`),
-        fetch(`${SERVER_URL}/schedule/month?studentId=${studentId}&year=${calYear}&month=${calMonth}&hideCompleted=${hideCompleted}`),
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=${hideCompleted}`),
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/month?studentId=${studentId}&year=${calYear}&month=${calMonth}&hideCompleted=${hideCompleted}`),
         fetch(`${SERVER_URL}/timetable?studentId=${studentId}`),
         ...dayFetches,
       ]);
@@ -82,7 +83,7 @@ export function useScheduleEvents({
   }) {
     if (!payload.title.trim() || !studentId) return;
     try {
-      const res = await fetch(`${SERVER_URL}/schedule`, {
+      const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, studentId, createdBy: studentId }),
@@ -102,7 +103,7 @@ export function useScheduleEvents({
 
   async function removeEvent(id: string, dateStr: string) {
     try {
-      await fetch(`${SERVER_URL}/schedule/${id}`, { method: 'DELETE' });
+      await fetch(`${SCHEDULE_SERVER_URL}/schedule/${id}`, { method: 'DELETE' });
       setEventsMap(prev => ({
         ...prev,
         [dateStr]: (prev[dateStr] ?? []).filter(e => e.id !== id),

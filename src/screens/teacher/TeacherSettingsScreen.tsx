@@ -27,6 +27,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import SERVER_URL from '../../config/serverUrl';
+import AUTH_SERVER_URL from '../../config/authServerUrl';
 import { GRADES_TEACHER, CURRICULA, getGradesForCurriculum } from '../onboarding/OnboardingScreen';
 import TeachingEntriesEditor, { type TeachingEntry, emptyEntry } from '../school-admin/TeachingEntriesEditor';
 
@@ -329,7 +330,7 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   try {
     // Check if email already exists
     const takenRes = await fetch(
-      `${SERVER_URL}/user/role?email=${encodeURIComponent(email)}`
+      `${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`
     );
 
     if (takenRes.ok) {

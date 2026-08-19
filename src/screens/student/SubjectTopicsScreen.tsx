@@ -48,46 +48,46 @@ function meta(subject: string) {
 const SUBJECT_MODULES: Record<string, Array<{ label: string; icon: any; color: string; route: string }>> = {
   'Mathematics': [
     { label: 'Start Learning', icon: 'play-circle', color: '#9FB2A4', route: 'Learn5E'      },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz'  },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz'  },
     { label: 'Math Helper',    icon: 'hash',         color: '#BAA467', route: 'MathHelper'  },
   ],
   'Science': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#7E9A86', route: 'Learn5E'      },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz'   },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz'   },
     { label: 'Drawing Buddy',  icon: 'edit-3',       color: '#C9A24E', route: 'DrawingBuddy' },
   ],
   'EVS': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#9FB2A4', route: 'Learn5E'      },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz'   },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz'   },
   ],
   'English': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#C9A24E', route: 'Learn5E'   },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz' },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz' },
     { label: 'Word Wizard',    icon: 'book',         color: '#8A8358', route: 'WordWizard' },
   ],
   'Social Studies': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#8A8358', route: 'Learn5E'   },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz' },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz' },
     { label: 'Word Wizard',    icon: 'book',         color: '#C9A24E', route: 'WordWizard' },
   ],
   'Arts': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#9FB2A4', route: 'Learn5E'      },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz'   },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz'   },
     { label: 'Drawing Buddy',  icon: 'edit-3',       color: '#C9A24E', route: 'DrawingBuddy' },
   ],
   'Physical Education': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#9FB2A4', route: 'Learn5E'   },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz' },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz' },
   ],
   'ICT': [
     { label: 'Start Learning', icon: 'play-circle',  color: '#BAA467', route: 'Learn5E'   },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz' },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz' },
   ],
 };
 function subjectModules(subject: string) {
   return SUBJECT_MODULES[subject] ?? [
     { label: 'Start Learning', icon: 'play-circle',  color: '#9FB2A4', route: 'Learn5E'   },
-    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'IBPYPQuiz' },
+    { label: 'Practice Test',  icon: 'check-square', color: '#BAA467', route: 'Quiz' },
   ];
 }
 
@@ -466,8 +466,8 @@ export default function SubjectTopicsScreen({ navigation, route }: any) {
   function handleModule(routeName: string, topic: TopicItem, index: number) {
     if (routeName === 'Learn5E') {
       navigation.navigate('VideoLesson', { topic: topic.topic, grade, subject, curriculum });
-    } else if (routeName === 'IBPYPQuiz') {
-      navigation.navigate('IBPYPQuiz', { topic: topic.topic, grade, subject, curriculum });
+    } else if (routeName === 'Quiz') {
+      navigation.navigate('Quiz', { topic: topic.topic, grade, subject, curriculum });
     } else {
       navigation.navigate(routeName, {
         topic: topic.topic,

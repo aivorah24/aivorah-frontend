@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import SERVER_URL from '../../../../config/serverUrl';
+import SERVER_URL from '../../../../config/challengesServerUrl';
 import type { Challenge } from '../types';
 
 export function useChallengesList({

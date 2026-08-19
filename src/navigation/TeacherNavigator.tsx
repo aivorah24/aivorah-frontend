@@ -5,25 +5,19 @@ import { TeacherDrawerParamList } from './types';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import TeacherDashboardScreen from '../screens/teacher/TeacherDashboardScreen';
+import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
 import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
 import TeacherProgressScreen from '../screens/teacher/TeacherProgressScreen';
-import TeacherLearningPathsScreen from '../screens/teacher/TeacherLearningPathsScreen';
-import TeacherSyllabusImportScreen from '../screens/teacher/TeacherSyllabusImportScreen';
-import TeacherAchievementsScreen from '../screens/teacher/TeacherAchievementsScreen';
-import TeacherHelpScreen from '../screens/teacher/TeacherHelpScreen';
 import TeacherSettingsScreen from '../screens/teacher/TeacherSettingsScreen';
-import TeacherVideoLibraryScreen from '../screens/teacher/TeacherVideoLibraryScreen';
 import TeacherMessagesScreen from '../screens/teacher/TeacherMessagesScreen';
-import ProjectDetailsScreen from '../screens/teacher/ProjectDetailsScreen';
-import TeacherAnnouncementsScreen from '../screens/teacher/TeacherAnnouncementsScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
-import TeacherAttendanceScreen from '../screens/teacher/TeacherAttendanceScreen';
+import TimetableScreen from '../features/timetable/components/TimetableScreen';
+import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 
 const Drawer = createDrawerNavigator<TeacherDrawerParamList>();
@@ -56,19 +50,13 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
-      <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
-      <Drawer.Screen name="TeacherSyllabusImport" component={TeacherSyllabusImportScreen} />
-      <Drawer.Screen name="TeacherAchievements" component={TeacherAchievementsScreen} />
-      <Drawer.Screen name="TeacherHelp" component={TeacherHelpScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
-      <Drawer.Screen name="TeacherVideoLibrary" component={TeacherVideoLibraryScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />
-      <Drawer.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
-      <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} />
       <Drawer.Screen name="AnnouncementManager" component={AnnouncementManagerScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
-      <Drawer.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
+      <Drawer.Screen name="Timetable" component={TimetableScreen} />
+      <Drawer.Screen name="Resources" component={ResourcesScreen} />
       <Drawer.Screen name="Channels" component={ChannelsScreen} />
     </Drawer.Navigator>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 
 export function useProfilePhoto(userEmail: string | undefined, initialPhotoUrl: string | null, updateUser: (patch: any) => void) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl);
@@ -15,7 +15,7 @@ export function useProfilePhoto(userEmail: string | undefined, initialPhotoUrl: 
     if (result.canceled || !result.assets?.[0]) return;
     setUploading(true);
     try {
-      const res = await fetch(`${SERVER_URL}/user/upload-photo`, {
+      const res = await fetch(`${PROFILE_SERVER_URL}/user/upload-photo`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail, base64: result.assets[0].base64, mimeType: result.assets[0].mimeType ?? 'image/jpeg' }),
       });
