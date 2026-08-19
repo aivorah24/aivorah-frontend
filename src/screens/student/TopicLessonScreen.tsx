@@ -1662,7 +1662,7 @@ export default function TopicLessonScreen({ navigation, route }: any) {
     if (cardIdx < lesson.scenes.length - 1) {
       setCardIdx(i => i + 1);
     } else {
-      navigation.navigate('IBPYPQuiz', { topic, grade, subject, curriculum });
+      navigation.navigate('Quiz', { topic, grade, subject, curriculum });
     }
   }
 

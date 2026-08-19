@@ -15,22 +15,22 @@ import ScheduleScreen from '../screens/student/schedule/ScheduleScreen';
 import AssignmentsScreen from '../screens/student/assignments/AssignmentsScreen';
 import ChallengesScreen from '../screens/student/challenges/ChallengesScreen';
 import LeaderboardScreen from '../screens/student/leaderboard/LeaderboardScreen';
-import ProgressScreen from '../screens/student/ProgressScreen';
+import ProgressScreen from '../screens/student/progress/ProgressScreen';
 import HelpCenterScreen from '../screens/student/helpCenter/HelpCenterScreen';
 import SettingsScreen from '../screens/student/settings/SettingsScreen';
 import VideoLessonScreen from '../screens/student/VideoLessonScreen';
 import VideoPlayerScreen from '../screens/student/VideoPlayerScreen';
 import NCERTChaptersScreen from '../screens/student/NCERTChaptersScreen';
 import SubjectTopicsScreen from '../screens/student/SubjectTopicsScreen';
-import SubjectSyllabusScreen from '../screens/student/subject-syllabus/SubjectSyllabusScreen';
-import LessonScreen from '../screens/student/lesson-screen/LessonScreen';
+import SubjectSyllabusScreen from '../screens/student/learning-paths/subject-syllabus/SubjectSyllabusScreen';
+import LessonScreen from '../screens/student/learning-paths/lesson-screen/LessonScreen';
 import Learn5EScreen from '../screens/student/Learn5EScreen';
 import MathHelperScreen from '../screens/student/MathHelperScreen';
 import AIStorytellerScreen from '../screens/student/AIStorytellerScreen';
 import DrawingBuddyScreen from '../screens/student/DrawingBuddyScreen';
 import WordWizardScreen from '../screens/student/WordWizardScreen';
 import RewardsScreen from '../screens/student/RewardsScreen';
-import IBPYPQuizScreen from '../screens/student/ibpyp-quiz/IBPYPQuizScreen';
+import QuizScreen from '../screens/student/learning-paths/quiz/QuizScreen';
 import WorldAndYouScreen from '../screens/student/world-and-you/WorldAndYouScreen';
 import TopicLessonScreen from '../screens/student/TopicLessonScreen';
 import MathLessonScreen from '../screens/student/MathLessonScreen';
@@ -96,7 +96,7 @@ export default function AppNavigator() {
       <Drawer.Screen name="AIStoryteller" component={AIStorytellerScreen} />
       <Drawer.Screen name="DrawingBuddy" component={DrawingBuddyScreen} />
       <Drawer.Screen name="WordWizard" component={WordWizardScreen} />
-      <Drawer.Screen name="IBPYPQuiz" component={IBPYPQuizScreen} />
+      <Drawer.Screen name="Quiz" component={QuizScreen} />
       <Drawer.Screen name="WorldAndYou" component={WorldAndYouScreen} />
       <Drawer.Screen name="TopicLesson" component={TopicLessonScreen} />
       <Drawer.Screen name="MathLesson" component={MathLessonScreen} />

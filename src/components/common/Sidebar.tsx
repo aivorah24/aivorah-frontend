@@ -37,7 +37,7 @@ const STUDENT_NAV_ITEMS = [
     // list if a new topic-flow screen is added.
     childScreens: [
       'SubjectTopics', 'SubjectSyllabus', 'LessonScreen', 'TopicLesson',
-      'VideoLesson', 'VideoPlayer', 'IBPYPQuiz', 'Learn5E', 'MathHelper',
+      'VideoLesson', 'VideoPlayer', 'Quiz', 'Learn5E', 'MathHelper',
       'WordWizard', 'DrawingBuddy', 'AIStoryteller', 'NCERTChapters',
     ] },
   { label: 'AI Coach',         icon: 'message-circle',screen: 'AICoach',           group: 'MENU',    premium: false },

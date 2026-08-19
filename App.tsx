@@ -46,7 +46,7 @@ const LINKING_SCREENS = {
   AIStoryteller: 'ai-storyteller',
   DrawingBuddy: 'drawing-buddy',
   WordWizard: 'word-wizard',
-  IBPYPQuiz: 'quiz',
+  Quiz: 'quiz',
   WorldAndYou: 'world-and-you',
   TopicLesson: 'topic-lesson',
   MathLesson: 'math-lesson',
