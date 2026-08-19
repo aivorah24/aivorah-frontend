@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { spacing, radius } from '../../../theme';
+import { spacing } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
@@ -18,7 +18,6 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useStudentData } from '../../../context/StudentDataContext';
 
-import { useDailyUsage } from './hooks/useDailyUsage';
 import { useSuggestions } from './hooks/useSuggestions';
 import { useTextToSpeech } from './hooks/useTextToSpeech';
 import { useVoiceInput } from './hooks/useVoiceInput';
@@ -26,7 +25,6 @@ import { useAICoachChat } from './hooks/useAICoachChat';
 
 import WelcomeSection from './components/WelcomeSection';
 import MessageList from './components/MessageList';
-import UpgradeCard from './components/UpgradeCard';
 import FeedbackStrip from './components/FeedbackStrip';
 import InputBar from './components/InputBar';
 import ImageZoomModal from './components/ImageZoomModal';
@@ -38,10 +36,8 @@ export default function AICoachScreen({ navigation }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const userGrade = user?.grade || 'Grade 3';
   const userCurriculum = user?.curriculum || 'IB PYP';
-  const isPro = user?.isPro === true;
   const firstName = user?.name?.split(' ')[0] || 'there';
 
-  const { dailyUsage, setDailyUsage, limitReached, setLimitReached } = useDailyUsage(user?.email, isPro);
   const suggestions = useSuggestions(userGrade, userCurriculum);
   const { speakingId, speakMessage } = useTextToSpeech();
 
@@ -70,11 +66,6 @@ export default function AICoachScreen({ navigation }: any) {
     userCurriculum,
     userEmail: user?.email,
     userRole: user?.role,
-    isPro,
-    dailyUsage,
-    setDailyUsage,
-    setLimitReached,
-    limitReached,
     exploreTopic,
     onScrollToEnd: scrollToEnd,
   });
@@ -128,14 +119,6 @@ export default function AICoachScreen({ navigation }: any) {
             colors={colors}
           />
 
-          {limitReached && !isPro && (
-            <UpgradeCard
-              dailyLimit={dailyUsage?.dailyLimit || 10}
-              onUpgrade={() => navigation.navigate('Subscription')}
-              styles={styles}
-              colors={colors}
-            />
-          )}
         </ScrollView>
 
         {showFeedback && (
@@ -154,7 +137,6 @@ export default function AICoachScreen({ navigation }: any) {
           setInput={setInput}
           isListening={isListening}
           isTyping={isTyping}
-          limitReached={limitReached}
           showClear={messages.length > 1}
           onSend={() => sendMessage()}
           onClear={clearChat}
@@ -345,55 +327,6 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.25, backgroundColor: c.textDim },
-
-  // ── Upgrade card ──
-  upgradeCard: {
-    alignItems: 'center', gap: 14,
-    marginTop: spacing.xl, marginBottom: spacing.lg,
-    paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl,
-    borderRadius: radius.xl, borderWidth: 1,
-    borderColor: '#C5A56A30',
-    backgroundColor: c.cardDark,
-  },
-  upgradeIconWrap: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#C5A56A18',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#C5A56A30',
-  },
-  upgradeTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  upgradeSub: { fontSize: 13, lineHeight: 20, textAlign: 'center', maxWidth: 340 },
-  upgradePlans: {
-    flexDirection: 'row', gap: spacing.md,
-    width: '100%', marginTop: 4,
-  },
-  upgradePlanCard: {
-    flex: 1, padding: spacing.lg, gap: 10,
-    borderRadius: radius.lg, borderWidth: 1,
-    borderColor: '#C5A56A30',
-    backgroundColor: c.bgDark,
-  },
-  upgradePlanHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
-  upgradePlanName: { fontSize: 16, fontWeight: '800' },
-  upgradePlanBadge: {
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
-    backgroundColor: '#C5A56A',
-  },
-  upgradePlanBadgeText: { fontSize: 8, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  upgradePlanPrice: { fontSize: 22, fontWeight: '800' },
-  upgradePlanPeriod: { fontSize: 12, fontWeight: '500' },
-  upgradePlanFeatures: { gap: 6 },
-  upgradePlanFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  upgradePlanFeatureText: { fontSize: 11, fontWeight: '500' },
-  upgradePlanCta: {
-    alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 10, borderRadius: 10,
-    backgroundColor: '#C5A56A', marginTop: 4,
-  },
-  upgradePlanCtaText: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  upgradeFooter: { fontSize: 11, textAlign: 'center', marginTop: 2 },
 
   // ── Session feedback strip ──
   feedbackStrip: {

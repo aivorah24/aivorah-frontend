@@ -9,7 +9,6 @@ interface Props {
   setInput: (v: string) => void;
   isListening: boolean;
   isTyping: boolean;
-  limitReached: boolean;
   showClear: boolean;
   onSend: () => void;
   onClear: () => void;
@@ -24,7 +23,6 @@ export default function InputBar({
   setInput,
   isListening,
   isTyping,
-  limitReached,
   showClear,
   onSend,
   onClear,
@@ -54,7 +52,7 @@ export default function InputBar({
             }
           }}
           blurOnSubmit={false}
-          editable={!isTyping && !limitReached}
+          editable={!isTyping}
         />
         <View style={styles.inputActions}>
           {showClear && (
@@ -89,7 +87,7 @@ export default function InputBar({
           <TouchableOpacity
             style={[styles.sendBtn, (!input.trim() || isTyping) && styles.sendBtnDisabled]}
             onPress={onSend}
-            disabled={!input.trim() || isTyping || limitReached}
+            disabled={!input.trim() || isTyping}
             activeOpacity={0.8}
             accessible
             accessibilityRole="button"
