@@ -18,6 +18,7 @@ import { useStudentData, formatStudyTime, formatLevel, xpForNextLevel } from '..
 import { useTheme } from '../../context/ThemeContext';
 
 import SERVER_URL from '../../config/serverUrl';
+import { curriculumCacheKey, getMemoryCurriculum } from '../../utils/curriculumPrefetch';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -78,6 +79,29 @@ const SUBJECT_CONFIG: Record<string, { color: string; icon: React.ComponentProps
 function subjectColor(s: string) { return SUBJECT_CONFIG[s]?.color ?? '#9FB2A4'; }
 function subjectIcon(s: string): React.ComponentProps<typeof Feather>['name'] { return SUBJECT_CONFIG[s]?.icon ?? 'book-open'; }
 
+// ── Curriculum parsing — same shapes DashboardScreen builds from the same
+// endpoints, kept in sync so Subject Performance here matches Dashboard.
+
+function parseNCERTCurriculum(data: any, grade: string): CurriculumData {
+  const chs: { topic: string; unit?: string }[] = data.chapters || [];
+  const topics: CurriculumTopic[] = chs.map(ch => ({ grade, subject: 'Mathematics', unit: ch.unit || 'General', topic: ch.topic }));
+  const grouped: CurriculumData['grouped'] = { [grade]: { Mathematics: topics.map(t => ({ topic: t.topic, unit: t.unit })) } };
+  return { grades: [grade], topics, grouped, totalTopics: topics.length };
+}
+
+function parseIBPYPCurriculum(data: any): CurriculumData {
+  const rawTopics: { grade: string; subject: string; unit: string; topic: string }[] = data.topics || [];
+  const topics: CurriculumTopic[] = rawTopics.map(t => ({ grade: t.grade, subject: t.subject, unit: t.unit || 'General', topic: t.topic }));
+  const grouped: CurriculumData['grouped'] = {};
+  topics.forEach(t => {
+    if (!grouped[t.grade]) grouped[t.grade] = {};
+    if (!grouped[t.grade][t.subject]) grouped[t.grade][t.subject] = [];
+    grouped[t.grade][t.subject].push({ topic: t.topic, unit: t.unit });
+  });
+  const grades = [...new Set(topics.map(t => t.grade))].sort();
+  return { grades, topics, grouped, totalTopics: data.totalTopics || topics.length };
+}
+
 // ── Main Screen ───────────────────────────────────────────────
 
 export default function ProgressScreen({ navigation }: any) {
@@ -101,6 +125,40 @@ export default function ProgressScreen({ navigation }: any) {
         setLoading(false);
       });
   }, [studentId]);
+
+  // Same curriculum shape/source as DashboardScreen, so Subject Performance
+  // here matches what Dashboard shows — was previously never fetched at all,
+  // leaving this section permanently empty regardless of real progress.
+  useEffect(() => {
+    const studentGrade = user?.grade ?? 'Grade 3';
+    const isIBPYP = !user?.curriculum || user.curriculum.toLowerCase().includes('ib');
+    const cacheKey = curriculumCacheKey(isIBPYP, studentGrade);
+
+    const cached = getMemoryCurriculum(cacheKey);
+    if (cached) {
+      setCurriculum((cached.type === 'ibpyp' ? parseIBPYPCurriculum(cached.data) : parseNCERTCurriculum(cached.data, studentGrade)));
+      return;
+    }
+
+    (async () => {
+      try {
+        const isGrade3 = studentGrade === 'Grade 3' || studentGrade === 'Class 3';
+        const useUnified = isIBPYP || !isGrade3;
+        if (useUnified) {
+          const curricParam = encodeURIComponent(isIBPYP ? 'IB_PYP' : (user?.curriculum ?? 'NCERT'));
+          const res = await fetch(`${SERVER_URL}/curriculum?curriculum=${curricParam}&grade=${encodeURIComponent(studentGrade)}`);
+          if (!res.ok) throw new Error();
+          setCurriculum(parseIBPYPCurriculum(await res.json()));
+        } else {
+          const res = await fetch(`${SERVER_URL}/ncert/chapters`);
+          if (!res.ok) throw new Error();
+          setCurriculum(parseNCERTCurriculum(await res.json(), studentGrade));
+        }
+      } catch {
+        // Leave curriculum null — Subject Performance falls back to its own empty state.
+      }
+    })();
+  }, [user?.grade, user?.curriculum]);
 
   // ── Derived real values ───────────────────────────────────
 
