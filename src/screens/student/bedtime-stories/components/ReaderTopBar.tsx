@@ -31,7 +31,7 @@ export default function ReaderTopBar({
   return (
     <>
       <LinearGradient colors={pastelGrad} start={{x:0,y:0}} end={{x:1,y:0}} style={styles.topBar}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity testID="readerBack" onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
           <Feather name="arrow-left" size={16} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
