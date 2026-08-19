@@ -99,7 +99,7 @@ describe('useProfileFields — name', () => {
 });
 
 describe('useProfileFields — grade', () => {
-  test('saves the real selected grade via /user/preferences, updates locally, and closes the modal', async () => {
+  test('saves the real selected grade via the profile service\'s /user/profile, updates locally, and closes the modal', async () => {
     const user = userEvent.setup();
     await render(<Harness />);
 
@@ -108,7 +108,7 @@ describe('useProfileFields — grade', () => {
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ grade: 'Grade 5' }));
     expect(mockCloseModal).toHaveBeenCalled();
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/preferences'), expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/profile'), expect.objectContaining({
       body: JSON.stringify({ email: 'a@a.com', grade: 'Grade 5' }),
     }));
   });
@@ -165,7 +165,7 @@ describe('useProfileFields — location', () => {
     await user.press(screen.getByTestId('saveLocation'));
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ location: 'Mumbai' }));
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/preferences'), expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/profile'), expect.objectContaining({
       body: JSON.stringify({ email: 'a@a.com', location: 'Mumbai' }),
     }));
   });

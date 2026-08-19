@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import { ALL_GRADES } from '../constants';
 
 // Name / Grade / Curriculum / Location edits - each saves independently on
@@ -36,7 +36,7 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
     closeModal();
     // Persist to the users table so teacher & parent views (which read users.name) update.
     try {
-      await fetch(`${SERVER_URL}/user/profile`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, name: trimmed }),
@@ -48,7 +48,7 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
     if (!selectedGrade) return;
     setGradeLoading(true);
     try {
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, grade: selectedGrade }),
@@ -68,7 +68,7 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
     if (!selectedCurriculum) return;
     setCurriculumLoading(true);
     try {
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, curriculum: selectedCurriculum }),
@@ -87,7 +87,7 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
     const loc = newLocation.trim();
     setLocationLoading(true);
     try {
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, location: loc }),
