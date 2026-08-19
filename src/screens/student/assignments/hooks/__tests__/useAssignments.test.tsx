@@ -1,7 +1,9 @@
 import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import { render, screen, userEvent, waitFor, act } from '@testing-library/react-native';
 import { useAssignments } from '../useAssignments';
+
+jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 jest.setTimeout(15000);
 
@@ -48,16 +50,23 @@ function Harness({ highlightId }: { highlightId?: string }) {
       <Text testID="overdue">{h.overdue}</Text>
       <Text testID="activeId">{h.activeAssignment?.id ?? ''}</Text>
       <Text testID="activeQuizCount">{h.activeAssignment?.quizQuestions?.length ?? -1}</Text>
+      <Text testID="activeFillBlankCorrect">{h.activeAssignment?.quizQuestions?.[0]?.type === 'fill_blank' ? h.activeAssignment.quizQuestions[0].correct : ''}</Text>
       <Text testID="openingId">{h.openingAssignmentId ?? ''}</Text>
+      <Text testID="quizProgress">{JSON.stringify(h.quizProgress)}</Text>
+      <Text testID="expandedExplain">{JSON.stringify(h.expandedExplain)}</Text>
       {h.filtered.map(a => (
         <TouchableOpacity key={a.id} testID={`open-${a.id}`} onPress={() => h.openAssignment(a)}><Text>x</Text></TouchableOpacity>
       ))}
       <TouchableOpacity testID="setFilterCompleted" onPress={() => h.setActiveFilter('Completed')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setFilterQuizzes" onPress={() => h.setActiveFilter('Quizzes')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setFilterPending" onPress={() => h.setActiveFilter('Pending')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setQuizProgressFake" onPress={() => h.setQuizProgress({ pct: 50, completed: false, correct: 1, total: 2, attemptedCount: 1, answers: [] })}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setViewingResult" onPress={() => h.setViewingResult(viewingResultToSet)}><Text>x</Text></TouchableOpacity>
     </>
   );
 }
+
+let viewingResultToSet: any = null;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -277,5 +286,119 @@ describe('useAssignments — focus effect', () => {
     // load() runs again on focus, independent of the sPageJustLoaded grace
     // period (which only gates clearUnreadAssignments, not the refetch).
     expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(fetchCallsBeforeFocus);
+  });
+});
+
+describe('useAssignments — fill_blank quiz normalization', () => {
+  test('opening a real quiz with local fill_blank questions normalizes them, not just mcq', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue(jsonRes([baseAssignment({
+      id: 'a1', type: 'quiz',
+      quizQuestions: [{ id: 'q1', question: 'The capital of France is ___', type: 'fill_blank', correct: '  Paris  ' }],
+    })])) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('open-a1'));
+
+    await waitFor(() => expect(screen.getByTestId('activeQuizCount').props.children).toBe(1));
+    // Correct answer is trimmed, and the fill_blank type/shape survives normalization.
+    expect(screen.getByTestId('activeFillBlankCorrect').props.children).toBe('Paris');
+  });
+});
+
+describe('useAssignments — "Assignment Closed" guard', () => {
+  test('opening a real closed, not-yet-completed assignment shows a real alert and never activates it', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue(jsonRes([baseAssignment({ id: 'a1', status: 'pending', closed: true })])) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('open-a1'));
+
+    expect(Alert.alert).toHaveBeenCalledWith('Assignment Closed', 'This assignment closed on its due date and no longer accepts submissions.');
+    expect(screen.getByTestId('activeId').props.children).toBe('');
+  });
+
+  test('a real closed but already-completed assignment can still be opened (viewing results is allowed)', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue(jsonRes([baseAssignment({ id: 'a1', status: 'completed', closed: true })])) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('open-a1'));
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByTestId('activeId').props.children).toBe('a1'));
+  });
+});
+
+describe('useAssignments — interactive-quiz progress reset on native', () => {
+  test('opening a real new interactive-quiz assignment resets a real stale quizProgress from the previous one', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue(jsonRes([
+      baseAssignment({ id: 'a1', interactiveQuizHtml: '<html>quiz1</html>' }),
+      baseAssignment({ id: 'a2', interactiveQuizHtml: '<html>quiz2</html>' }),
+    ])) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('open-a1'));
+    await waitFor(() => expect(screen.getByTestId('activeId').props.children).toBe('a1'));
+    await user.press(screen.getByTestId('setQuizProgressFake'));
+    await waitFor(() => expect(screen.getByTestId('quizProgress').props.children).toContain('"pct":50'));
+
+    await user.press(screen.getByTestId('open-a2'));
+
+    await waitFor(() => expect(screen.getByTestId('activeId').props.children).toBe('a2'));
+    expect(screen.getByTestId('quizProgress').props.children).toBe('null');
+  });
+});
+
+describe('useAssignments — auto-explain effect on viewing a completed result', () => {
+  test('fetches a real explanation for each real wrong, answered question when a result is opened', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/explain-question')) return jsonRes({ steps: ['Step 1', 'Step 2'], correctAnswer: '4', tip: 'Count carefully' });
+      return jsonRes([]);
+    }) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    viewingResultToSet = baseAssignment({
+      id: 'a1', status: 'completed',
+      aiFeedback: JSON.stringify({ perQuestion: [
+        { question: 'Q1?', correct: false, answered: true, studentAnswer: '3', correctAnswer: '4', score: 0 },
+        { question: 'Q2?', correct: true, answered: true }, // correct — should NOT trigger an explain fetch
+        { question: 'Q3?', correct: false, answered: false }, // unanswered — should NOT trigger either
+      ] }),
+    });
+    await user.press(screen.getByTestId('setViewingResult'));
+
+    await waitFor(() => expect(screen.getByTestId('expandedExplain').props.children).toContain('"steps":["Step 1","Step 2"]'));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/assignments/a1/explain-question'), expect.objectContaining({
+      body: JSON.stringify({ question: 'Q1?', studentAnswer: '3', correctAnswer: '4', score: 0, subject: 'Mathematics', grade: undefined }),
+    }));
+    // Only 1 real explain call — the correct and unanswered questions are skipped.
+    const explainCalls = (global.fetch as jest.Mock).mock.calls.filter(c => String(c[0]).includes('/explain-question'));
+    expect(explainCalls).toHaveLength(1);
+  });
+
+  test('a real explain-question network failure still resolves the loading state, not stuck forever', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/explain-question')) return Promise.reject(new Error('down'));
+      return jsonRes([]);
+    }) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    viewingResultToSet = baseAssignment({
+      id: 'a1', status: 'completed',
+      aiFeedback: JSON.stringify({ perQuestion: [{ question: 'Q1?', correct: false, answered: true, studentAnswer: '3', correctAnswer: '4' }] }),
+    });
+    await user.press(screen.getByTestId('setViewingResult'));
+
+    await waitFor(() => expect(screen.getByTestId('expandedExplain').props.children).toContain('"loading":false'));
   });
 });
