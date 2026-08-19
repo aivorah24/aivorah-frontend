@@ -27,6 +27,10 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { useResponsive } from '../../../hooks/useResponsive';
 import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
+import {
+  computeRealTopicPerf, computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic,
+  computeAllBarTopics, computeMasteredTopics,
+} from '../utils/performanceStats';
 import { useDashboardData } from './hooks/useDashboardData';
 import type { CurriculumTopic, CurriculumData } from './types';
 import { BRAND, PASTEL, SUBJECT_COLORS, SUBJECT_ICONS } from './constants';
@@ -293,21 +297,10 @@ export default function DashboardScreen({ navigation, route }: any) {
   // real attributed scores from perfData instead of a flat 0%. Chapters with
   // no curated mapping yet (e.g. Mathematics) still show 0%/no-data — honest,
   // not fabricated — until that subject gets the same curated treatment.
-  const allBarTopics = useMemo(() => {
-    const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
-    return subjectChapters.flatMap(({ subject, chapters }) => {
-      const curated = getSubjectSyllabus(curriculumLabel, studentGrade, subject);
-      return chapters.map(unit => {
-        const curatedChapter = curated.find(ch => ch.title === unit);
-        if (!curatedChapter) return { label: unit, fullLabel: unit, subject, pct: 0, hasData: false, mastered: false };
-        const scored = curatedChapter.topics.map(t => perfData.topics[t.name]?.avgScore ?? 0).filter(n => n > 0);
-        const hasData = scored.length > 0 || curatedChapter.topics.some(t => (perfData.topics[t.name]?.sessions ?? 0) > 0);
-        const pct = scored.length ? Math.round(scored.reduce((s, n) => s + n, 0) / scored.length) : 0;
-        const mastered = curatedChapter.topics.every(t => completedSet.has(t.name) || (perfData.topics[t.name]?.avgScore ?? 0) >= 80);
-        return { label: unit, fullLabel: unit, subject, pct, hasData, mastered };
-      });
-    });
-  }, [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]);
+  const allBarTopics = useMemo(
+    () => computeAllBarTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet),
+    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
+  );
 
   const barSubjects = useMemo(() => ['All', ...Array.from(new Set(allBarTopics.map(t => t.subject))).sort()], [allBarTopics]);
 
@@ -319,56 +312,38 @@ export default function DashboardScreen({ navigation, route }: any) {
   // metric below the bars (average score, consistency, best score, insight text).
   // These stay accurate even though the bars themselves can't yet be attributed
   // to a specific chapter (see note on allBarTopics above).
-  const realTopicPerf = useMemo(() => {
-    if (!curriculum) return [];
-    return curriculum.topics.map(t => {
-      const perf = perfData.topics[t.topic];
-      const pct = perf?.avgScore ?? 0;
-      return { label: t.topic, fullLabel: t.topic, subject: t.subject, pct };
-    }).filter(t => t.pct > 0);
-  }, [curriculum, perfData]);
+  const realTopicPerf = useMemo(
+    () => computeRealTopicPerf(curriculum?.topics, perfData),
+    [curriculum, perfData]
+  );
 
-  const avgScore = useMemo(() => {
-    // Use real overall avg from analytics if available, else compute from per-topic scores
-    if (perfData.avgScore != null) return perfData.avgScore;
-    return realTopicPerf.length ? Math.round(realTopicPerf.reduce((sum, t) => sum + t.pct, 0) / realTopicPerf.length) : 0;
-  }, [realTopicPerf, perfData.avgScore]);
+  const avgScore = useMemo(
+    () => computeAvgScore(realTopicPerf, perfData.avgScore),
+    [realTopicPerf, perfData.avgScore]
+  );
 
   // Mastered chapters — estimated per subject as (completed topics / total topics in that
   // subject) × that subject's real chapter count, since individual topics aren't tagged
   // with which chapter they belong to yet (see note on allBarTopics). This is a genuine
   // progress-based estimate, not tied to any specific named chapter.
-  const masteredTopics = useMemo(() => {
-    if (!curriculum) return 0;
-    let total = 0;
-    subjectChapters.forEach(({ subject, chapters }) => {
-      if (!chapters.length) return;
-      const subjectTopics = curriculum.topics.filter(t => t.subject === subject);
-      if (!subjectTopics.length) return;
-      const completedInSubject = subjectTopics.filter(t => completedSet.has(t.topic)).length;
-      total += Math.floor((completedInSubject / subjectTopics.length) * chapters.length);
-    });
-    return total;
-  }, [subjectChapters, curriculum, completedSet]);
+  const masteredTopics = useMemo(
+    () => computeMasteredTopics(subjectChapters, curriculum, completedSet),
+    [subjectChapters, curriculum, completedSet]
+  );
 
   // % of attempted quizzes scoring ≥60% — always a real, live number (0% is a
   // genuine value here, not a placeholder) so it visibly moves as the student
   // takes more quizzes, same as every other stat on this card.
-  const consistency = useMemo(() => {
-    if (!realTopicPerf.length) return 0;
-    return Math.round((realTopicPerf.filter(t => t.pct >= 60).length / realTopicPerf.length) * 100);
-  }, [realTopicPerf]);
+  const consistency = useMemo(() => computeConsistency(realTopicPerf), [realTopicPerf]);
 
   // Real weekly activity — days active this week, same signal as the hero's
   // "X of 7 days active" bar. Previously this pill just re-displayed the quiz-score
   // `consistency` value above (so both pills always matched, both always 0% with
   // only one quiz attempted) instead of being its own real weekly metric.
-  const weeklyConsistency = Math.round((Math.min(stats.currentStreak, 7) / 7) * 100);
+  const weeklyConsistency = computeWeeklyConsistency(stats.currentStreak);
 
   // Best topic — only topics with real quiz data
-  const bestTopic = useMemo(() => {
-    return realTopicPerf.length ? [...realTopicPerf].sort((a, b) => b.pct - a.pct)[0] : null;
-  }, [realTopicPerf]);
+  const bestTopic = useMemo(() => computeBestTopic(realTopicPerf), [realTopicPerf]);
 
   // Real chapter that the best-scoring topic belongs to (not the raw topic name) —
   // same curated-syllabus lookup used for featuredChapter, so this stays consistent

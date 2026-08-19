@@ -54,7 +54,7 @@ export function ProfileHero({
       </TouchableOpacity>
 
       {/* Centered avatar */}
-      <TouchableOpacity style={styles.avatarWrap} onPress={onPickPhoto} activeOpacity={0.85}>
+      <TouchableOpacity testID="avatarPickButton" style={styles.avatarWrap} onPress={onPickPhoto} activeOpacity={0.85}>
         {photoUrl
           ? <Image source={{ uri: photoUrl }} style={styles.avatarPhoto} />
           : <LinearGradient colors={currentAvatar.gradient} style={styles.avatarGrad}>
