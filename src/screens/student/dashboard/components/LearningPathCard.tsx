@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import { BRAND } from '../constants';
 import { SectionHeader } from './common/SectionHeader';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface ChapterRow {
   title: string;

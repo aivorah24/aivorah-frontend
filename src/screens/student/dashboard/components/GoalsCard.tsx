@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { formatStudyTime } from '../../../../context/StudentDataContext';
 import { RingChart } from './common/icons';
 import { SectionHeader } from './common/SectionHeader';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface GoalsCardProps {
   styles: ReturnType<typeof makeStyles>;

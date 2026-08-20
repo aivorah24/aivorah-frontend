@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { AppColors } from '../../../../theme';
 import { BRAND } from '../constants';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface BarTopic {
   label: string;

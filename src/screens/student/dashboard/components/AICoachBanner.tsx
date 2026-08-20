@@ -2,7 +2,7 @@ import React from 'react';
 import { Animated, TouchableOpacity, View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface AICoachBannerProps {
   styles: ReturnType<typeof makeStyles>;

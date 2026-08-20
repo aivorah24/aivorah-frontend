@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import { RingChart } from './common/icons';
 import { SectionHeader } from './common/SectionHeader';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface FeaturedLesson {
   grade: string; subject: string; topic: string; unit: string;

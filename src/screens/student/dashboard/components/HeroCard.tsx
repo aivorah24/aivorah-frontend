@@ -6,7 +6,7 @@ import { formatLevel } from '../../../../context/StudentDataContext';
 import { BRAND } from '../constants';
 import { getGreeting } from '../utils/dashboardHelpers';
 import { HeroDots, FlameIcon } from './common/icons';
-import type { makeStyles } from '../../DashboardScreen';
+import type { makeStyles } from '../DashboardScreen';
 
 interface HeroCardProps {
   styles: ReturnType<typeof makeStyles>;

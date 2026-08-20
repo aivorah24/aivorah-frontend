@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import { SectionHead } from './common/SectionHead';
-import type { makeStyles } from '../../ProfileScreen';
+import type { makeStyles } from '../ProfileScreen';
 
 interface LearningBuddyCardProps {
   styles: ReturnType<typeof makeStyles>;
