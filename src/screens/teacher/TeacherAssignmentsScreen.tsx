@@ -2849,9 +2849,9 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
         {/* Reuse Quiz Modal */}
         <Modal visible={showReuseQuizModal} transparent animationType="slide" onRequestClose={() => setShowReuseQuizModal(false)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: colors.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
+            <View style={{ backgroundColor: colors.cardDark, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.borderColor }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text }}>Saved Quizzes</Text>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textMain }}>Saved Quizzes</Text>
                 <TouchableOpacity onPress={() => setShowReuseQuizModal(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bgDark, alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name="x" size={16} color={colors.textDim} />
                 </TouchableOpacity>
@@ -2884,7 +2884,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                     >
                       <Feather name="file-text" size={20} color={gold} />
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }} numberOfLines={1}>{q.title || 'Untitled Quiz'}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.title || 'Untitled Quiz'}</Text>
                         <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>{[q.subject, q.grade].filter(Boolean).join(' · ')}{q.created_at ? ` · ${new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</Text>
                       </View>
                       <Feather name="chevron-right" size={16} color={gold} />
@@ -4557,7 +4557,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                                     <Text style={{ fontSize: 9, color: colors.accentYellow }}>Replace</Text>
                                   </TouchableOpacity>
                                   <TouchableOpacity onPress={() => setExtractedQuestions(prev => prev.map((q, i) => i === idx ? { ...q, croppedImage: '' } : q))}>
-                                    <Text style={{ fontSize: 9, color: colors.error }}>Remove</Text>
+                                    <Text style={{ fontSize: 9, color: colors.accentRed }}>Remove</Text>
                                   </TouchableOpacity>
                                 </View>
                               </View>
@@ -4945,7 +4945,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
               {/* Header */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.borderColor }}>
                 <View>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>Select Reference Image</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textMain }}>Select Reference Image</Text>
                   <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Drag on the worksheet to select the area for this question</Text>
                 </View>
                 <TouchableOpacity onPress={() => setCropModalIdx(null)}>

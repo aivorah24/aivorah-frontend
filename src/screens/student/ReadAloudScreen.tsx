@@ -1832,7 +1832,7 @@ export default function ReadAloudScreen() {
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accentYellow + '20', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
           <Feather name="bar-chart-2" size={32} color={colors.accentYellow} />
         </View>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 8 }}>Reading Level Check</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.textMain, textAlign: 'center', marginBottom: 8 }}>Reading Level Check</Text>
         <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
           Let's find the right reading level for you! Read a short passage aloud and we'll set your Lexile level.
         </Text>

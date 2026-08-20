@@ -188,7 +188,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                     const stepColor = STEP_COLORS[q.type as StepType] || color;
                     const isFullMarks = q.score >= 100;
                     return (
-                      <View key={idx} style={{ borderRadius: 10, borderWidth: 1, borderColor: sc + '40', backgroundColor: colors.cardBg, overflow: 'hidden' }}>
+                      <View key={idx} style={{ borderRadius: 10, borderWidth: 1, borderColor: sc + '40', backgroundColor: colors.cardDark, overflow: 'hidden' }}>
                         {/* Header row */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, backgroundColor: sc + '0A', borderBottomWidth: q.studentAnswer || q.comment ? 1 : 0, borderBottomColor: colors.borderColor }}>
                           <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: stepColor, alignItems: 'center', justifyContent: 'center' }}>
