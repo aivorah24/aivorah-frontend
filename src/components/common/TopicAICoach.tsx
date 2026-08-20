@@ -449,9 +449,9 @@ export default function TopicAICoach({
                         const lineStyle = [
                           styles.bubbleText,
                           { color: colors.textMain },
-                          isStep     && { fontWeight: '700', color: colors.accentYellow, marginTop: li > 0 ? 3 : 0 },
-                          isAnswer   && { fontWeight: '700', color: '#4A9E70', marginTop: 3 },
-                          isPractice && { fontWeight: '600', color: colors.textMuted, fontStyle: 'italic', marginTop: 3 },
+                          isStep     && { fontWeight: '700' as const, color: colors.accentYellow, marginTop: li > 0 ? 3 : 0 },
+                          isAnswer   && { fontWeight: '700' as const, color: '#4A9E70', marginTop: 3 },
+                          isPractice && { fontWeight: '600' as const, color: colors.textMuted, fontStyle: 'italic' as const, marginTop: 3 },
                         ];
                         // While this message is being read aloud, highlight the
                         // word currently spoken — same karaoke-style highlight
@@ -598,7 +598,7 @@ export default function TopicAICoach({
               placeholderTextColor={colors.textDim}
               value={input}
               onChangeText={setInput}
-              onSubmitEditing={send}
+              onSubmitEditing={() => send()}
               onKeyPress={(e: any) => {
                 if (
                   Platform.OS === 'web' &&
@@ -615,7 +615,7 @@ export default function TopicAICoach({
             />
             <TouchableOpacity
               style={[styles.sendBtn, { backgroundColor: loading ? colors.cardHover : colors.accentYellow }]}
-              onPress={send}
+              onPress={() => send()}
               disabled={loading}
             >
               <Feather name="send" size={16} color="#fff" />

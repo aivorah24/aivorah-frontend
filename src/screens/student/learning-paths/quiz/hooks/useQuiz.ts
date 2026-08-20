@@ -13,7 +13,7 @@ export function useQuiz(params: {
   navigation: any;
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
-  recordStudyTime: (mins: number, source: string, subject: string) => void;
+  recordStudyTime: (mins: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
 }) {
   const { topic, grade, subject, curriculum, passageText, topicId, userEmail, userRole, userId, navigation, completeLesson, addXP, recordStudyTime } = params;
 

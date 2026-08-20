@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SERVER_URL from '../../../../config/serverUrl';
 
-export function useNotificationPrefs(userEmail: string | undefined, triggerPoll: () => void, clearUnreadAssignments: () => void, clearUnreadChallenges: () => void, muteCategory: (key: string) => void, setRecoverySaved: (v: string) => void) {
+export function useNotificationPrefs(userEmail: string | undefined, triggerPoll: () => void, clearUnreadAssignments: () => void, clearUnreadChallenges: () => void, muteCategory: (key: 'assignmentAlerts' | 'challengeUpdates') => void, setRecoverySaved: (v: string) => void) {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState(true);
   const [weeklyReport, setWeeklyReport] = useState(false);
