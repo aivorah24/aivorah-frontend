@@ -878,9 +878,8 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                   </View>
                 </View>
               </ScrollView>
+            </View>{/* end row: time col + scrollable */}
             </View>{/* end calendarContainer */}
-            </View>{/* end mainLayout */}
-          )}
 
           {/* ── Right Sidebar: Tag Filters ── */}
           <View style={styles.sideCol}>
