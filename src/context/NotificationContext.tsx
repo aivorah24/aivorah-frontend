@@ -16,7 +16,7 @@ interface LatestNotif {
 
 export interface NotifItem {
   id: string;
-  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task';
+  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio';
   // For 'event' items, the source schedule type ('challenge' | 'deadline' | 'study' …).
   // A challenge's due-date event has srcType 'challenge' so it can be gated under the
   // Challenge Updates toggle rather than Assignment Alerts.

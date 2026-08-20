@@ -200,7 +200,7 @@ export async function startVoskRecognition(opts: {
       if (!recognizer || !audioContext) return;
       try {
         const buf = audioContext.createBuffer(1, samples.length, ctxRate);
-        buf.copyToChannel(samples, 0);
+        buf.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
         recognizer.acceptWaveform(buf);
       } catch {
         // transient — ignore individual frame failures

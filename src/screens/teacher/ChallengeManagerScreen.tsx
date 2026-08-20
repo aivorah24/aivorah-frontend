@@ -149,7 +149,7 @@ export default function ChallengeManagerScreen() {
                     src={c.thumbnailUrl}
                     alt={c.title}
                     onError={(e: any) => { e.target.style.display = 'none'; }}
-                    style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: '10px 10px 0 0', marginTop: -14, marginLeft: -14, marginRight: -14, marginBottom: 10, display: 'block', width: 'calc(100% + 28px)' } as any}
+                    style={{ height: 90, objectFit: 'cover', borderRadius: '10px 10px 0 0', marginTop: -14, marginLeft: -14, marginRight: -14, marginBottom: 10, display: 'block', width: 'calc(100% + 28px)' } as any}
                   />
                 )}
                 <View style={styles.cardHeader}>
