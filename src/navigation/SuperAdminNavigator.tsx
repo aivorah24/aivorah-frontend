@@ -27,6 +27,9 @@ export type SuperAdminDrawerParamList = {
   TeacherSettings: undefined;
   TeacherMessages: undefined;
   AnnouncementManager: undefined;
+  Timetable: { grade?: string; section?: string; label?: string } | undefined;
+  Resources: undefined;
+  Channels: undefined;
 };
 
 const Drawer = createDrawerNavigator<SuperAdminDrawerParamList>();

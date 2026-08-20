@@ -44,6 +44,7 @@ export type DrawerParamList = {
   Announcements: { openId?: string } | undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
+  MathLesson: { grade?: string; subject?: string; topic?: string; curriculum?: string } | undefined;
 };
 
 export type ParentDrawerParamList = {
@@ -68,6 +69,9 @@ export type ParentDrawerParamList = {
   ParentAttendance: { childId?: string } | undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
+  Timetable: { grade?: string; section?: string; label?: string } | undefined;
+  Resources: undefined;
+  Channels: undefined;
 };
 
 export type TeacherDrawerParamList = {
@@ -90,4 +94,7 @@ export type TeacherDrawerParamList = {
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
   TeacherAttendance: undefined;
+  Timetable: { grade?: string; section?: string; label?: string } | undefined;
+  Resources: undefined;
+  Channels: undefined;
 };
