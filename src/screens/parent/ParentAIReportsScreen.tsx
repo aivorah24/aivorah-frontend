@@ -454,7 +454,7 @@ export default function ParentAIReportsScreen({ navigation, route }: any) {
       // italic 10pt — measure explicitly with matching font
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(10);
-      const lines = doc.splitTextToSize(`"${report.message_to_child}"`, TW - 16);
+      const lines: string[] = doc.splitTextToSize(`"${report.message_to_child}"`, TW - 16);
       const cardH = lines.length * 5.8 + 20;
       checkY(cardH + 4);
       // card

@@ -587,7 +587,7 @@ function SectionCard({ title, icon, iconBg, iconColor, colors, s, children, styl
 }
 
 // ── Stacked control row — expands in place, never stretches to match a sibling ──
-function ControlRow({ title, subtitle, icon, iconBg, iconColor, enabled, onToggle, colors, s, children }: any) {
+function ControlRow({ title, subtitle, icon, iconBg, iconColor, enabled, onToggle, colors, s, children }: { onToggle: (v: boolean) => void; [key: string]: any }) {
   return (
     <View style={[s.controlRow, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
       <View style={s.controlRowHead}>
