@@ -5,7 +5,7 @@ import type { AppColors } from '../../../../theme';
 import { CURRICULA, getGradesForCurriculum } from '../../../onboarding/OnboardingScreen';
 import { SelectField, locateFull } from '../../../onboarding/OnboardingSharedFields';
 import { ALL_CITIES } from '../constants';
-import type { makeStyles } from '../../ProfileScreen';
+import type { makeStyles } from '../ProfileScreen';
 
 interface EditProfileModalProps {
   styles: ReturnType<typeof makeStyles>;

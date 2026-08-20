@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { AppColors } from '../../../../theme';
 import { SectionHead } from './common/SectionHead';
-import type { makeStyles } from '../../ProfileScreen';
+import type { makeStyles } from '../ProfileScreen';
 
 interface Avatar {
   id: string;

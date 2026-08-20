@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-na
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { AppColors } from '../../../../theme';
-import type { makeStyles } from '../../ProfileScreen';
+import type { makeStyles } from '../ProfileScreen';
 
 interface Avatar {
   id: string;
