@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import {
   DatePickerInput, CURRICULA, getGradesForCurriculum, GENDERS, LEARNING_STYLES, TEAL,
@@ -108,7 +109,7 @@ export default function OnboardingStudentBoxes() {
           country: country || undefined,
         }),
       });
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,7 +165,7 @@ export default function OnboardingStudentBoxes() {
         throw new Error('Your profile could not be saved correctly. Please try again.');
       }
 
-      fetch(`${SERVER_URL}/user/preferences`, {
+      fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

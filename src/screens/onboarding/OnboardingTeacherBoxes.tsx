@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { TEAL, DatePickerInput } from './OnboardingScreen';
 import { computeTeacherCompletion } from './utils/teacherCompletion';
@@ -85,7 +86,7 @@ export default function OnboardingTeacherBoxes() {
   // save shows these as blank even though the data exists server-side.
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
       .then(r => (r.ok ? r.json() : null))
       .then((p) => {
         if (!p) return;
@@ -143,7 +144,7 @@ export default function OnboardingTeacherBoxes() {
           teaches: teachesFromEntries.length ? teachesFromEntries : undefined,
         }),
       });
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -215,7 +216,7 @@ export default function OnboardingTeacherBoxes() {
       }
       const saved = await profileRes.json().catch(() => ({}));
 
-      await fetch(`${SERVER_URL}/user/preferences`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

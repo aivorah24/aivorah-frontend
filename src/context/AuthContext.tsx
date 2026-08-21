@@ -13,6 +13,7 @@ import {
 import { auth } from '../config/firebase';
 import SERVER_URL from '../config/serverUrl';
 import AUTH_SERVER_URL from '../config/authServerUrl';
+import PROFILE_SERVER_URL from '../config/profileServerUrl';
 import { useTheme } from './ThemeContext';
 import { prefetchStudentDashboard } from '../utils/curriculumPrefetch';
 
@@ -144,7 +145,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
   } catch {}
 
   try {
-    const prefRes = await fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`);
+    const prefRes = await fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`);
     if (prefRes.ok) {
       const pref = await prefRes.json();
       if (pref && typeof pref === 'object') {
@@ -680,7 +681,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mustChangePassword: updated.mustChangePassword,
         authProvider: updated.authProvider,
       })).catch(() => {});
-      fetch(`${SERVER_URL}/user/preferences`, {
+      fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1200,7 +1201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AsyncStorage.setItem(PROFILE_KEY, JSON.stringify({ ...updated })).catch(() => {});
       // Persist activeRole to DB so it survives browser storage clears
       if (prev.email) {
-        fetch(`${SERVER_URL}/user/preferences`, {
+        fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: prev.email, activeRole: newRole }),

@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ScreenLayout from '../../components/common/ScreenLayout';
 import Header from '../../components/common/Header';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import firebaseApp from '../../config/firebase';
 
 type Student = {
@@ -307,7 +308,7 @@ export default function TeacherStudentsScreen({ navigation, route }: any) {
   useFocusEffect(useCallback(() => {
     const email = user?.email;
     if (!email) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`)
       .then(r => r.ok ? r.json() : null)
       .then(p => {
         const teaches = Array.isArray(p?.teaches) ? p.teaches : [];

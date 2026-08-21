@@ -1,4 +1,3 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 
 // Raw API calls for the Profile feature — no state, no React.
@@ -21,7 +20,7 @@ export async function saveProfileFields(patch: ProfileFieldsPatch) {
 }
 
 export async function savePreferences(patch: Record<string, any>) {
-  return fetch(`${SERVER_URL}/user/preferences`, {
+  return fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),

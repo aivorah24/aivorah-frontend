@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { useAuth } from './AuthContext';
 import SERVER_URL from '../config/serverUrl';
+import PROFILE_SERVER_URL from '../config/profileServerUrl';
 
 declare const __DEV__: boolean;
 
@@ -307,7 +308,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const email = user.email;
     (async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`);
+        const res = await fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`);
         const serverPrefs = res.ok ? await res.json() : null;
         if (serverPrefs) {
           const NK = `notifPrefs_${email}`;

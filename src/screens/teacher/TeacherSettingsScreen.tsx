@@ -28,6 +28,7 @@ import {
 import { auth } from '../../config/firebase';
 import SERVER_URL from '../../config/serverUrl';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { GRADES_TEACHER, CURRICULA, getGradesForCurriculum } from '../onboarding/OnboardingScreen';
 import TeachingEntriesEditor, { type TeachingEntry, emptyEntry } from '../school-admin/TeachingEntriesEditor';
 
@@ -93,7 +94,7 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   // load from the server profile and PATCH on every toggle so the change takes effect.
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
       .then(r => r.ok ? r.json() : null)
       .then(p => {
         if (!p) return;
@@ -106,7 +107,7 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   }, [user?.email]);
   function saveTeacherPref(key: 'autoGrading' | 'shareProgress', value: boolean) {
     if (!user?.email) return;
-    fetch(`${SERVER_URL}/user/preferences`, {
+    fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email, [key]: value }),

@@ -18,6 +18,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from 
 import { useAuth, getPendingReturnRole } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import firebaseApp from '../../config/firebase';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { CURRICULA, getGradesForCurriculum, DatePickerInput } from './OnboardingScreen';
@@ -109,7 +110,7 @@ export default function OnboardingParentBoxes() {
   // partial/complete save shows these as blank even though they're saved server-side.
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
       .then(r => (r.ok ? r.json() : null))
       .then((p) => {
         if (!p) return;
@@ -170,7 +171,7 @@ export default function OnboardingParentBoxes() {
     if (u?.location)              setCity(u.location);
 
     // Fetch preferences for fresher DB values
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
       .then(r => r.ok ? r.json() : null)
       .then(prefs => {
         if (!prefs) return;
@@ -375,7 +376,7 @@ export default function OnboardingParentBoxes() {
         ? (getPendingReturnRole() === 'teacher' ? ['teacher', 'parent'] : ['parent'])
         : undefined;
 
-      fetch(`${SERVER_URL}/user/preferences`, {
+      fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

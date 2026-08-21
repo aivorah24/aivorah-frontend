@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ScreenLayout from '../../components/common/ScreenLayout';
 import Header from '../../components/common/Header';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../config/leaderboardServiceUrl';
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -115,7 +116,7 @@ export default function TeacherChallengesScreen({ navigation }: any) {
   // focus, so a grade change in Settings is reflected instantly (no refresh).
   useFocusEffect(useCallback(() => {
     if (!user?.email) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
       .then(r => r.ok ? r.json() : null)
       .then(p => {
         const g = Array.isArray(p?.teaches)

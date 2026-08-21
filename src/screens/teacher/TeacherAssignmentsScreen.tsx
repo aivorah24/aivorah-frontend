@@ -17,6 +17,7 @@ import DatePicker from '../../components/common/DatePicker';
 import TransliterationInput, { langNameToCode } from '../../components/common/TransliterationInput';
 import { GRADES_TEACHER } from '../onboarding/OnboardingScreen';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 // @ts-ignore — pdfjs-dist v3 CommonJS import
 const pdfjsLib = Platform.OS === 'web' ? require('pdfjs-dist/build/pdf') : null;
 // @ts-ignore
@@ -731,7 +732,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   // picked up instantly when the teacher returns — no manual refresh needed.
   useFocusEffect(useCallback(() => {
     if (!teacherEmail) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(teacherEmail)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(teacherEmail)}`)
       .then(r => r.ok ? r.json() : null)
       .then(p => {
         const teaches = Array.isArray(p?.teaches) ? p.teaches : [];

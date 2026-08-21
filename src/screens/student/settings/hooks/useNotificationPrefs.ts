@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 
 export function useNotificationPrefs(userEmail: string | undefined, triggerPoll: () => void, clearUnreadAssignments: () => void, clearUnreadChallenges: () => void, muteCategory: (key: string) => void, setRecoverySaved: (v: string) => void) {
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -13,7 +13,7 @@ export function useNotificationPrefs(userEmail: string | undefined, triggerPoll:
   // Load saved preferences from server on mount
   useEffect(() => {
     if (!userEmail) return;
-    fetch(`${SERVER_URL}/user/preferences?email=${encodeURIComponent(userEmail)}`)
+    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(userEmail)}`)
       .then(r => r.ok ? r.json() : null)
       .then(prefs => {
         if (!prefs) return;
@@ -42,7 +42,7 @@ export function useNotificationPrefs(userEmail: string | undefined, triggerPoll:
     if (!userEmail) return;
     // Persist to the server profile…
     if (notifLoaded.current) {
-      fetch(`${SERVER_URL}/user/preferences`, {
+      fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userEmail, [key]: value }),

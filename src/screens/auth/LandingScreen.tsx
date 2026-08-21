@@ -19,6 +19,7 @@ import { useAuth, UserRole } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { validateLoginForm, validateSignupForm } from './utils/validation';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 // ─────────────────────────────────────────────────────────
@@ -498,7 +499,7 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
       await signUpEmail(nameTrim, emailTrim, pass, role, showCurriculum ? curriculum : undefined);
       // Persist the student's date of birth (collected here, not in onboarding).
       if (role === 'student' && dob.trim()) {
-        fetch(`${SERVER_URL}/user/preferences`, {
+        fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailTrim.toLowerCase(), role: 'student', dob: dob.trim() }),
