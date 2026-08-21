@@ -993,12 +993,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const provider = new GoogleAuthProvider();
         const cred = await withNetworkRetry(() => signInWithPopup(auth, provider));
-        const name  = cred.user.displayName || cred.user.email?.split('@')[0] || 'User';
+        // Google's own displayName — only the right value for a brand-new signup.
+        // A returning user's in-app rename must win once `profile` is fetched below,
+        // mirroring signInWithEmail's `profile.name || ...` precedence — otherwise
+        // every Google login silently reverted the student's saved name back to
+        // whatever Google has on file (or the email's local-part as a last resort).
+        const googleDisplayName = cred.user.displayName || cred.user.email?.split('@')[0] || 'User';
         const email = cred.user.email || '';
         const [profile, savedRaw] = await Promise.all([
           fetchSupabaseProfile(email),
           AsyncStorage.getItem(PROFILE_KEY).catch(() => null),
         ]);
+        const name = profile.name || googleDisplayName;
         let savedLocal: Partial<User> = {};
         try {
           if (savedRaw) {
@@ -1118,11 +1124,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('[google-sso] send-verification network error:', err.message);
           }
         } else {
-          // Returning verified user — don't overwrite the DB display name with the
-          // Google displayName (which ignores in-app renames). Echo the DB name instead.
+          // Returning verified user — `name` already prefers profile.name (see above),
+          // so this just echoes it back rather than overwriting with Google's displayName.
           fetch(`${AUTH_SERVER_URL}/user/sync`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, ...(profile.name ? { name: profile.name } : { name }), role: effectiveRole, authProvider: 'google' }),
+            body: JSON.stringify({ email, name, role: effectiveRole, authProvider: 'google' }),
           }).catch(() => {});
         }
       } catch (error: any) {

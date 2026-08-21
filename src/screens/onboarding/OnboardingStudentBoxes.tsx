@@ -14,7 +14,6 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import {
@@ -95,7 +94,7 @@ export default function OnboardingStudentBoxes() {
   async function saveProgress() {
     try {
       const email = user?.email || '';
-      await fetch(`${SERVER_URL}/user/profile`, {
+      const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,6 +108,9 @@ export default function OnboardingStudentBoxes() {
           country: country || undefined,
         }),
       });
+      if (!profileRes.ok) {
+        console.error('[saveProgress] /user/profile failed:', profileRes.status, await profileRes.text().catch(() => ''));
+      }
       await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -151,7 +153,7 @@ export default function OnboardingStudentBoxes() {
         country: country || undefined,
       };
 
-      const profileRes = await fetch(`${SERVER_URL}/user/profile`, {
+      const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

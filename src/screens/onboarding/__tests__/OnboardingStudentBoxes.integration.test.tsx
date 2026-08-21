@@ -76,6 +76,37 @@ describe('OnboardingStudentBoxes', () => {
     expect(button?.props.accessibilityState?.disabled).toBe(false);
   });
 
+  // Regression test: "Save & Exit" used to PATCH /user/profile on the old
+  // monolith (SERVER_URL) with no response-status check at all, so a failed
+  // save (e.g. name/school) was silently lost. It must now go to the
+  // migrated profile microservice instead.
+  test('"Save & go to home page" saves the real typed name and school to the profile microservice', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'Progress Saver');
+    await user.type(
+      screen.getByPlaceholderText('Type your school name (e.g. Senthil Public School)'),
+      'The Progress Academy',
+    );
+
+    await user.press(screen.getByLabelText('Back to home page'));
+    await user.press(await screen.findByText('Save & go to home page'));
+
+    await new Promise((r) => setTimeout(r, 0)); // flush the awaited saveProgress()
+
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) =>
+      String(url).includes('/user/profile'),
+    );
+    expect(profileCall).toBeTruthy();
+    const [url, options] = profileCall!;
+    expect(url).not.toContain('aivorah.ai'); // must not hit the monolith
+    expect(url).toContain('profile-service');
+    const body = JSON.parse(options.body);
+    expect(body.name).toBe('Progress Saver');
+    expect(body.school).toBe('The Progress Academy');
+  });
+
   test('under-14 date of birth blocks the About You card from completing', async () => {
     const user = userEvent.setup();
     await render(<OnboardingStudentBoxes />);
