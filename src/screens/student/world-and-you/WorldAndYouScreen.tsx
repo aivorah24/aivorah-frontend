@@ -2,7 +2,7 @@
  * WorldAndYouScreen.tsx
  * "The World & You" — GK facts, On This Day, Current Affairs
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
@@ -27,6 +27,12 @@ export default function WorldAndYouScreen({ navigation }: any) {
 
   const grade = user?.grade || 'Grade 3';
   const { loading, worldData, showAnswer, setShowAnswer, error } = useWorldData(grade);
+  // On This Day / Brain Teaser are general-knowledge/trivia content — they
+  // belong conceptually with the GK Fact tab above, not Current Affairs
+  // (real news). Tracked here (not just inside DailyTidbitCard) so this
+  // screen can hide them under the Current Affairs tab instead of always
+  // showing regardless of which tab is selected.
+  const [tidbitTab, setTidbitTab] = useState<'gk' | 'news'>('gk');
 
   return (
     <ScreenLayout>
@@ -52,35 +58,37 @@ export default function WorldAndYouScreen({ navigation }: any) {
           </View>
 
           {/* ── GK + Current Affairs card ─────────────────────── */}
-          <DailyTidbitCard grade={grade} studentId={studentId || undefined} />
+          <DailyTidbitCard grade={grade} studentId={studentId || undefined} onTabChange={setTidbitTab} />
 
-          {/* ── Loading / Error ───────────────────────────────── */}
-          {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="small" color={TEAL} />
-              <Text style={[styles.hint, { color: colors.textMuted }]}>Loading history & challenge…</Text>
-            </View>
-          ) : error ? (
-            <View style={styles.center}>
-              <Feather name="wifi-off" size={26} color={colors.textDim} />
-              <Text style={[styles.hint, { color: colors.textMuted }]}>{error}</Text>
-            </View>
-          ) : worldData ? (
-            <>
-              {worldData.onThisDay?.length > 0 && (
-                <OnThisDayCard items={worldData.onThisDay} styles={styles} colors={colors} />
-              )}
-              {worldData.funChallenge && (
-                <BrainTeaserCard
-                  challenge={worldData.funChallenge}
-                  showAnswer={showAnswer}
-                  onReveal={() => setShowAnswer(true)}
-                  styles={styles}
-                  colors={colors}
-                />
-              )}
-            </>
-          ) : null}
+          {/* ── On This Day / Brain Teaser — GK-tab content only ─ */}
+          {tidbitTab === 'gk' && (
+            loading ? (
+              <View style={styles.center}>
+                <ActivityIndicator size="small" color={TEAL} />
+                <Text style={[styles.hint, { color: colors.textMuted }]}>Loading history & challenge…</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.center}>
+                <Feather name="wifi-off" size={26} color={colors.textDim} />
+                <Text style={[styles.hint, { color: colors.textMuted }]}>{error}</Text>
+              </View>
+            ) : worldData ? (
+              <>
+                {worldData.onThisDay?.length > 0 && (
+                  <OnThisDayCard items={worldData.onThisDay} styles={styles} colors={colors} />
+                )}
+                {worldData.funChallenge && (
+                  <BrainTeaserCard
+                    challenge={worldData.funChallenge}
+                    showAnswer={showAnswer}
+                    onReveal={() => setShowAnswer(true)}
+                    styles={styles}
+                    colors={colors}
+                  />
+                )}
+              </>
+            ) : null
+          )}
 
         </ScrollView>
       </View>

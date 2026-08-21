@@ -89,6 +89,35 @@ describe('WorldAndYouScreen — loaded state', () => {
     expect(screen.getByText('Light scattering.')).toBeTruthy();
   });
 
+  // Regression test: On This Day / Brain Teaser are trivia/GK content, not
+  // Current Affairs (real news) — they used to show unconditionally
+  // regardless of which DailyTidbitCard tab was active, which read as GK
+  // content bleeding into the Current Affairs tab.
+  test('switching to the Current Affairs tab hides On This Day and Brain Teaser; switching back shows them again', async () => {
+    mockFetchRoutes({
+      tidbit: { gk: { fact: 'Octopuses have three hearts.', category: 'Animals' }, currentAffairs: { headline: 'Real headline', summary: 'Real summary' } },
+      world: {
+        date: 'August 18',
+        onThisDay: [{ year: 1969, fact: 'Moon landing.' }],
+        funChallenge: { question: 'Why is the sky blue?', answer: 'Light scattering.' },
+      },
+    });
+    const user = userEvent.setup();
+
+    await render(<WorldAndYouScreen navigation={navProp()} />);
+    await waitFor(() => expect(screen.getByText('Moon landing.')).toBeTruthy());
+    expect(screen.getByText('Why is the sky blue?')).toBeTruthy();
+
+    await user.press(screen.getByText('Current Affairs'));
+    await waitFor(() => expect(screen.getByText('Real headline')).toBeTruthy());
+    expect(screen.queryByText('Moon landing.')).toBeNull();
+    expect(screen.queryByText('Why is the sky blue?')).toBeNull();
+
+    await user.press(screen.getByText('GK Fact'));
+    await waitFor(() => expect(screen.getByText('Moon landing.')).toBeTruthy());
+    expect(screen.getByText('Why is the sky blue?')).toBeTruthy();
+  });
+
   test('an empty onThisDay array hides the OnThisDayCard entirely', async () => {
     mockFetchRoutes({
       tidbit: { gk: { fact: 'A fact', category: 'Science' }, currentAffairs: { headline: 'H', summary: 'S' } },

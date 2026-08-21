@@ -18,12 +18,13 @@ import QuizSection from './QuizSection';
 interface Props {
   grade: string;
   studentId?: string;
+  onTabChange?: (tab: 'gk' | 'news') => void;
 }
 
-export default function DailyTidbitCard({ grade, studentId }: Props) {
+export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props) {
   const { colors, isDark } = useTheme();
   const { resetQuiz, ...quiz } = useTidbitQuiz({ grade, studentId });
-  const { tab, setTab, data, loading, error, loadTidbit } = useDailyTidbit(grade, resetQuiz);
+  const { tab, setTab, data, loading, error, loadTidbit } = useDailyTidbit(grade, resetQuiz, onTabChange);
 
   // ── Theme tokens ─────────────────────────────────────────────────
   const teal        = '#BAA467';
