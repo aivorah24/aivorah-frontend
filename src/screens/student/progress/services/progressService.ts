@@ -1,7 +1,8 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 
 export async function fetchWeeklyActivity(studentId: string) {
-  return fetch(`${SERVER_URL}/student/${studentId}/weekly`)
+  return fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/weekly`)
     .then(r => r.json())
     .catch(() => ({ days: [] }));
 }

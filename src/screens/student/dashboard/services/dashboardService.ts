@@ -1,4 +1,5 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
 // Each function throws/rejects on failure; callers (useDashboardData) decide
@@ -27,6 +28,6 @@ export async function fetchUpcomingDeadlines(studentId: string) {
 }
 
 export async function fetchPerformance(studentId: string, email: string) {
-  const res = await fetch(`${SERVER_URL}/student/${studentId}/performance?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/performance?email=${encodeURIComponent(email)}`);
   return res.json();
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, BackHandler, Platform } from 'react-native';
 import SERVER_URL from '../../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
+import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
 import { computeCappedQuizMinutes } from '../../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound } from '../utils';
 import type { Question, QuizPhase } from '../types';
@@ -129,7 +130,7 @@ export function useQuiz(params: {
 
     // Issue #121 — detailed attempt tracking
     if (userId) {
-      fetch(`${SERVER_URL}/student/track-attempt`, {
+      fetch(`${LEADERBOARD_SERVICE_URL}/student/track-attempt`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: userId,

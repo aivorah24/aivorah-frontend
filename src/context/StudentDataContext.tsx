@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import SERVER_URL from '../config/serverUrl';
 import AUTH_SERVER_URL from '../config/authServerUrl';
+import LEADERBOARD_SERVICE_URL from '../config/leaderboardServiceUrl';
 import { useAuth } from './AuthContext';
 
 // Known email → fixed UUID map (bypasses /user/sync for seeded accounts)
@@ -169,7 +169,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       const id = await resolveStudentId(user!.email);
       setStudentId(id);
       try {
-        const res = await fetch(`${SERVER_URL}/student/${id}`);
+        const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${id}`);
         if (res.ok) {
           const data = await res.json();
           setStats({ ...ZERO_STATS, ...data });
@@ -192,7 +192,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
     // Local backup
     AsyncStorage.setItem(`@stats_${studentId}`, JSON.stringify(stats)).catch(() => {});
     // Server sync (fire-and-forget)
-    fetch(`${SERVER_URL}/student/${studentId}`, {
+    fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}`, {
       method:  'PUT',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(stats),
@@ -218,7 +218,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       lastActiveDate:      todayISO(),
     }));
     // Also push to server
-    fetch(`${SERVER_URL}/student/${studentId}/study-time`, {
+    fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/study-time`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ minutes: mins, source, subject }),
@@ -241,7 +241,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
 
   function completeLesson(topic: string, subject?: string, grade?: string, curriculum?: string) {
     // Call server to record completion
-    fetch(`${SERVER_URL}/student/${studentId}/complete-lesson`, {
+    fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/complete-lesson`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ topic, subject, grade, curriculum }),
