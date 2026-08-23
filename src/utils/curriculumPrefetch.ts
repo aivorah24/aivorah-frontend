@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SERVER_URL from '../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
 
 // Warms the Dashboard's curriculum data the MOMENT a student's session is
 // resolved (login, or a persisted session restored on app open) — instead of
@@ -18,8 +19,13 @@ export type CachedSubjectChapters = { subject: string; chapters: string[] }[];
 const memCurriculum = new Map<string, CachedCurriculum>();
 const memSubjects = new Map<string, CachedSubjectChapters>();
 
-export function curriculumCacheKey(isIBPYP: boolean, grade: string): string {
-  return `dashboard_curriculum_${isIBPYP ? 'ibpyp' : 'ncert'}_${grade}_v1`;
+// `curriculum` used to be omitted (just an isIBPYP boolean) — every non-IB-PYP
+// curriculum collapsed onto the same "ncert" bucket, so e.g. a CBSE Grade 11
+// student and an IB DP Grade 11 student would silently share (and overwrite)
+// the exact same cache entry. Keying on the real curriculum string avoids that.
+export function curriculumCacheKey(isIBPYP: boolean, grade: string, curriculum?: string): string {
+  const bucket = isIBPYP ? 'ibpyp' : (curriculum || 'ncert').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `dashboard_curriculum_${bucket}_${grade}_v1`;
 }
 
 export function getMemoryCurriculum(key: string): CachedCurriculum | undefined {
@@ -39,14 +45,38 @@ export async function prefetchStudentDashboard(user: { role?: string; grade?: st
     if (user.role !== 'student') return;
     const studentGrade = user.grade || 'Grade 3';
     if (NO_CONTENT_GRADES.includes(studentGrade)) return;
-    const isIBPYP = !user.curriculum || user.curriculum.toLowerCase().includes('ib');
+    // Only real IB PYP matches this path — was `.includes('ib')`, which also
+    // caught IB DP/MYP and routed them through the wrong grade range/backend,
+    // then cached that failure under a cache key the real Dashboard fetch
+    // (useDashboardData.ts, fixed the same way) never looks under — so the
+    // stale/empty cache from here was invisible until it silently shadowed
+    // real data typed under a DIFFERENT, correct cache key. Both must agree.
+    const isIBPYP = !user.curriculum || /^ib.?pyp$/i.test(user.curriculum.trim());
+    const isIBDP = !!user.curriculum && /^ib.?dp$/i.test(user.curriculum.trim());
     const isGrade3 = studentGrade === 'Grade 3' || studentGrade === 'Class 3';
-    const useUnified = isIBPYP || !isGrade3;
-    const cacheKey = curriculumCacheKey(isIBPYP, studentGrade);
+    const useUnified = isIBPYP || isIBDP || !isGrade3;
+    const cacheKey = curriculumCacheKey(isIBPYP, studentGrade, user.curriculum);
 
     let data: any;
     let type: 'ibpyp' | 'ncert';
-    if (useUnified) {
+    if (isIBDP) {
+      // IB DP has no data on the monolith's /curriculum or /curriculum/subjects
+      // — its content lives in Qdrant via aivorah-learning-paths-service (same
+      // source useDashboardData.ts reads for the real fetch on-screen).
+      const gradeParam = encodeURIComponent(studentGrade);
+      const curricParam = encodeURIComponent(user.curriculum!);
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/subjects?grade=${gradeParam}&curriculum=${curricParam}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      if (!Array.isArray(d.subjects)) return;
+      memSubjects.set(cacheKey, d.subjects.map((s: any) => ({
+        subject: s.subject,
+        chapters: (s.chapters?.length ? s.chapters.map((c: any) => c.title) : s.units) || [],
+      })));
+      const topics = d.subjects.flatMap((s: any) => (s.topics || []).map((t: any) => ({ grade: t.grade || studentGrade, subject: s.subject, unit: t.unit || 'General', topic: t.topic })));
+      data = { topics, totalTopics: topics.length };
+      type = 'ibpyp';
+    } else if (useUnified) {
       const curricParam = encodeURIComponent(isIBPYP ? 'IB_PYP' : (user.curriculum ?? 'NCERT'));
       const gradeParam = encodeURIComponent(studentGrade);
       const res = await fetch(`${SERVER_URL}/curriculum?curriculum=${curricParam}&grade=${gradeParam}`);

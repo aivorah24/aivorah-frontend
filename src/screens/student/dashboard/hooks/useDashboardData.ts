@@ -66,7 +66,7 @@ export function useDashboardData({
   // instead of fetchCurriculum, so it never silently falls back to the
   // static Class 3 mock curriculum.
   const isIBDP = /^ib.?dp$/i.test((childCurriculum ?? '').trim());
-  const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade);
+  const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade, childCurriculum);
   const prefetchedCurriculum = !childOverride ? getMemoryCurriculum(CACHE_KEY) : undefined;
   const prefetchedSubjects = !childOverride ? getMemorySubjectChapters(CACHE_KEY) : undefined;
 
