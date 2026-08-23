@@ -67,7 +67,8 @@ export function useDashboardData({
   // static Class 3 mock curriculum.
   const isIBDP = /^ib.?dp$/i.test((childCurriculum ?? '').trim());
   const isIBMYP = /^ib.?myp$/i.test((childCurriculum ?? '').trim());
-  const needsLearningPathsService = isIBDP || isIBMYP;
+  const isCambridgeQdrant = /^cambridge$/i.test((childCurriculum ?? '').trim()) && parseInt(studentGrade.replace(/\D/g, ''), 10) >= 6;
+  const needsLearningPathsService = isIBDP || isIBMYP || isCambridgeQdrant;
   const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade, childCurriculum);
   const prefetchedCurriculum = !childOverride ? getMemoryCurriculum(CACHE_KEY) : undefined;
   const prefetchedSubjects = !childOverride ? getMemorySubjectChapters(CACHE_KEY) : undefined;

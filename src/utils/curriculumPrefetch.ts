@@ -54,7 +54,8 @@ export async function prefetchStudentDashboard(user: { role?: string; grade?: st
     const isIBPYP = !user.curriculum || /^ib.?pyp$/i.test(user.curriculum.trim());
     const isIBDP = !!user.curriculum && /^ib.?dp$/i.test(user.curriculum.trim());
     const isIBMYP = !!user.curriculum && /^ib.?myp$/i.test(user.curriculum.trim());
-    const needsLearningPathsService = isIBDP || isIBMYP;
+    const isCambridgeQdrant = !!user.curriculum && /^cambridge$/i.test(user.curriculum.trim()) && parseInt(studentGrade.replace(/\D/g, ''), 10) >= 6;
+    const needsLearningPathsService = isIBDP || isIBMYP || isCambridgeQdrant;
     const isGrade3 = studentGrade === 'Grade 3' || studentGrade === 'Class 3';
     const useUnified = isIBPYP || needsLearningPathsService || !isGrade3;
     const cacheKey = curriculumCacheKey(isIBPYP, studentGrade, user.curriculum);

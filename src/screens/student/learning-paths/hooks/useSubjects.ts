@@ -10,6 +10,13 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
   // either. Every other curriculum keeps hitting the monolith as before.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
+  // Cambridge Grades 1-5 (Primary) already have real data on the monolith;
+  // Grade 6 and up (Primary Stage 6 onward, Lower Secondary, IGCSE, AS/A
+  // Level) live in Qdrant via aivorah-learning-paths-service instead, since
+  // the monolith has nothing for them.
+  const isCambridge = /^cambridge$/i.test(curriculum.trim());
+  const gradeNum = parseInt(grade.replace(/\D/g, ''), 10);
+  const isCambridgeQdrant = isCambridge && gradeNum >= 6;
   // Server (Qdrant) is the source of truth for subjects. We no longer pre-seed a
   // stale static IB PYP list — that painted first then got swapped for the real
   // set (different topic counts + extra subjects), which looked like a flicker.
@@ -24,7 +31,7 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
 
     // For CBSE, query Qdrant with curriculum=CBSE
     const queryCurriculum = isCBSE ? 'CBSE' : curriculum;
-    const base = (isIBDP || isIBMYP) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+    const base = (isIBDP || isIBMYP || isCambridgeQdrant) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
 
     fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
       .then((r) => r.json())
