@@ -13,7 +13,14 @@ export function getCuratedSyllabus(curriculum: string, grade: string, subject: s
 }
 
 export async function fetchPublishedSyllabus(curriculum: string, grade: string, subject: string): Promise<DbUnit[]> {
-  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`);
+  // IB DP has no teacher-uploaded syllabus_chapters rows — its content lives
+  // in Qdrant (see aivorah-learning-paths-service routes/curriculum.js), so
+  // it reads from a different endpoint. Every other curriculum is unchanged.
+  const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
+  const path = isIBDP
+    ? `/curriculum/syllabus?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`
+    : `/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`;
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}${path}`);
   if (!res.ok) return [];
   const data = await res.json();
   // Keep chapters that have no lessons yet. The server now returns the book's

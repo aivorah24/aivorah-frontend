@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import SERVER_URL from '../../../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { getIBPYPStaticSubjects } from '../utils';
 import type { SubjectData } from '../types';
 
 export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, isPYP: boolean) {
+  // IB DP subjects come from aivorah-learning-paths-service (Qdrant-backed) —
+  // the monolith's /curriculum/subjects was never migrated for this curriculum.
+  // Every other curriculum keeps hitting the monolith exactly as before.
+  const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   // Server (Qdrant) is the source of truth for subjects. We no longer pre-seed a
   // stale static IB PYP list — that painted first then got swapped for the real
   // set (different topic counts + extra subjects), which looked like a flicker.
@@ -18,8 +23,9 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
 
     // For CBSE, query Qdrant with curriculum=CBSE
     const queryCurriculum = isCBSE ? 'CBSE' : curriculum;
+    const base = isIBDP ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
 
-    fetch(`${SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
+    fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
       .then((r) => r.json())
       .then((data: { subjects: SubjectData[] }) => {
         if (cancelled) return;
