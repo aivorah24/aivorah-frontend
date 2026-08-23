@@ -19,7 +19,7 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { useStudentData } from '../../../../context/StudentDataContext';
 import Header from '../../../../components/common/Header';
 import ScreenLayout from '../../../../components/common/ScreenLayout';
-import { g6EnglishStats, type SyllabusChapter } from '../../../../data/cbseG6EnglishSyllabus';
+import { type SyllabusChapter } from '../../../../data/cbseG6EnglishSyllabus';
 
 import { makeStyles } from './styles';
 import { useSyllabusChapters } from './hooks/useSyllabusChapters';
@@ -57,8 +57,6 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   // parsed yet — the student landed on a blank screen with no explanation. Show
   // an explicit "being prepared" state instead, and keep the topic list as an
   // option the student can choose rather than an invisible redirect.
-  const stats = g6EnglishStats(completedSet);
-
   const wantChapterTitle = route?.params?.chapterTitle as string | undefined;
   const { openChapters, toggleChapter } = useChapterExpansion(chapters, wantChapterTitle);
   const [query, setQuery] = useState('');
@@ -94,6 +92,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
                    chapters.reduce((s, c) => s + c.topics.length, 0)) * 100)
     : 0;
   const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
+  const totalTopicsCount = chapters.reduce((s, c) => s + c.topics.length, 0);
 
   if (loadingDb) {
     return (
@@ -170,7 +169,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
                 {startedChapters} of {chapters.length} {isUnitShaped ? 'units' : 'chapters'} started
               </Text>
               <Text style={[styles.progressSub, { color: colors.textMuted }]}>
-                {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {stats.totalTopics} {isUnitShaped ? 'chapters' : 'topics'} total
+                {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {totalTopicsCount} {isUnitShaped ? 'chapters' : 'topics'} total
               </Text>
             </View>
           </View>

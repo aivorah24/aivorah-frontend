@@ -12,6 +12,11 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
   // not a hardcoded flat template.
   const [rawPayload, setRawPayload] = useState<any>(null);
   const [loadingDbTopic, setLoadingDbTopic] = useState(!!topicId);
+  // Whether the Learn (AI_EXPLANATION) resource is actually READY — as
+  // opposed to COMING_SOON/UNDER_REVIEW/NOT_AVAILABLE, or no topicId at all
+  // (curated topics are always considered ready). Lets the Learn tab show an
+  // honest "Coming Soon" state instead of silently rendering an empty lesson.
+  const [contentReady, setContentReady] = useState(!topicId);
 
   useEffect(() => {
     if (!topicId) { setLoadingDbTopic(false); return; }
@@ -32,6 +37,7 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
         // image exists.
         const p = explanation?.status === 'READY' ? (explanation.payload || {}) : {};
         setRawPayload(p);
+        setContentReady(explanation?.status === 'READY');
         const hasRich = Array.isArray(p.body) && p.body.length > 0;
         const realImg = images?.status === 'READY' ? images.payload?.items?.[0]?.description : undefined;
         setDbTopic({
@@ -69,9 +75,9 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
         } as any);
         setLoadingDbTopic(false);
       })
-      .catch(() => { if (!cancelled) setLoadingDbTopic(false); });
+      .catch(() => { if (!cancelled) { setContentReady(false); setLoadingDbTopic(false); } });
     return () => { cancelled = true; };
   }, [topicId]);
 
-  return { dbTopic, rawPayload, loadingDbTopic };
+  return { dbTopic, rawPayload, loadingDbTopic, contentReady };
 }

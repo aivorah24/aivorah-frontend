@@ -26,6 +26,7 @@ import AskTab from './components/AskTab';
 import ListenTab from './components/ListenTab';
 import PracticeTab from './components/PracticeTab';
 import FullBookOverlay from './components/FullBookOverlay';
+import ComingSoonPane from './components/ComingSoonPane';
 
 export default function LessonScreen({ navigation, route }: any) {
   const subject = (route?.params?.subject ?? 'English') as string;
@@ -39,7 +40,7 @@ export default function LessonScreen({ navigation, route }: any) {
   const topicId = route?.params?.topicId as string | undefined;
   const chapterTitleParam = route?.params?.chapterTitle as string | undefined;
 
-  const { dbTopic, rawPayload, loadingDbTopic } = useDbTopic(topicId, route?.params?.topicName);
+  const { dbTopic, rawPayload, loadingDbTopic, contentReady } = useDbTopic(topicId, route?.params?.topicName);
 
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -188,84 +189,93 @@ export default function LessonScreen({ navigation, route }: any) {
           )}
         </View>
 
-        {mode === 'read' && (
-          <ReadTab
-            topic={topic}
-            rawPayload={rawPayload}
-            grade={grade}
-            subject={subject}
-            colors={colors}
-            styles={styles}
-            onZoomImage={setZoomImage}
-            onReadFullBook={() => setFullBookView(true)}
-          />
-        )}
-
-        <FullBookOverlay
-          visible={fullBookView}
-          topic={topic}
-          grade={grade}
-          subject={subject}
-          colors={colors}
-          styles={styles}
-          onClose={() => setFullBookView(false)}
-        />
-
-        {mode === 'ask' && (
-          <AskTab
-            topic={topic}
-            chapter={chapter}
-            grade={grade}
-            subject={subject}
-            curriculum={curriculum}
-            chapterIndex={chapterIndex}
-            colors={colors}
-            styles={styles}
-            onReadFullBook={() => setFullBookView(true)}
-          />
-        )}
-
-        {mode === 'listen' && (
-          <ListenTab
-            topic={topic}
-            isMath={isMath}
-            listenSteps={listenSteps}
-            colors={colors}
-            styles={styles}
-            narration={narration}
-            fontLarge={fontLarge}
-            setFontLarge={setFontLarge}
-            vocab={vocab}
-            vocabIndex={vocabIndex}
-            setVocabIndex={setVocabIndex}
-            pauseAnswer={pauseAnswer}
-            setPauseAnswer={setPauseAnswer}
-            whyOpen={whyOpen} setWhyOpen={setWhyOpen}
-            explainOpen={explainOpen} setExplainOpen={setExplainOpen}
-            hintOpen={hintOpen} setHintOpen={setHintOpen}
-            exampleOpen={exampleOpen} setExampleOpen={setExampleOpen}
-            setMode={setMode}
-            setZoomImage={setZoomImage}
-          />
-        )}
-
-        {mode !== 'read' && mode !== 'ask' && mode !== 'listen' && (
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {mode === 'practice' && (
-              <PracticeTab
+        {!contentReady ? (
+          // No real content exists for this topic yet — every tab shows the
+          // same honest "Coming soon" state instead of a blank/partially
+          // working Learn, Listen, Ask, or Practice screen.
+          <ComingSoonPane topicName={topic.name} colors={colors} styles={styles} />
+        ) : (
+          <>
+            {mode === 'read' && (
+              <ReadTab
                 topic={topic}
+                rawPayload={rawPayload}
+                grade={grade}
+                subject={subject}
+                colors={colors}
+                styles={styles}
+                onZoomImage={setZoomImage}
+                onReadFullBook={() => setFullBookView(true)}
+              />
+            )}
+
+            <FullBookOverlay
+              visible={fullBookView}
+              topic={topic}
+              grade={grade}
+              subject={subject}
+              colors={colors}
+              styles={styles}
+              onClose={() => setFullBookView(false)}
+            />
+
+            {mode === 'ask' && (
+              <AskTab
+                topic={topic}
+                chapter={chapter}
                 grade={grade}
                 subject={subject}
                 curriculum={curriculum}
                 chapterIndex={chapterIndex}
-                topicIndex={topicIndex}
-                topicId={topicId}
                 colors={colors}
                 styles={styles}
-                navigation={navigation}
+                onReadFullBook={() => setFullBookView(true)}
               />
             )}
-          </ScrollView>
+
+            {mode === 'listen' && (
+              <ListenTab
+                topic={topic}
+                isMath={isMath}
+                listenSteps={listenSteps}
+                colors={colors}
+                styles={styles}
+                narration={narration}
+                fontLarge={fontLarge}
+                setFontLarge={setFontLarge}
+                vocab={vocab}
+                vocabIndex={vocabIndex}
+                setVocabIndex={setVocabIndex}
+                pauseAnswer={pauseAnswer}
+                setPauseAnswer={setPauseAnswer}
+                whyOpen={whyOpen} setWhyOpen={setWhyOpen}
+                explainOpen={explainOpen} setExplainOpen={setExplainOpen}
+                hintOpen={hintOpen} setHintOpen={setHintOpen}
+                exampleOpen={exampleOpen} setExampleOpen={setExampleOpen}
+                setMode={setMode}
+                setZoomImage={setZoomImage}
+              />
+            )}
+
+            {mode !== 'read' && mode !== 'ask' && mode !== 'listen' && (
+              <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                {mode === 'practice' && (
+                  <PracticeTab
+                    topic={topic}
+                    grade={grade}
+                    subject={subject}
+                    curriculum={curriculum}
+                    chapterIndex={chapterIndex}
+                    topicIndex={topicIndex}
+                    topicId={topicId}
+                    colors={colors}
+                    styles={styles}
+                    navigation={navigation}
+                  />
+                )}
+              </ScrollView>
+            )}
+          </>
         )}
       </View>
       <ImageZoomModal
