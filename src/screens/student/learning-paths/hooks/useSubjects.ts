@@ -5,10 +5,11 @@ import { getIBPYPStaticSubjects } from '../utils';
 import type { SubjectData } from '../types';
 
 export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, isPYP: boolean) {
-  // IB DP subjects come from aivorah-learning-paths-service (Qdrant-backed) —
-  // the monolith's /curriculum/subjects was never migrated for this curriculum.
-  // Every other curriculum keeps hitting the monolith exactly as before.
+  // IB DP and IB MYP subjects come from aivorah-learning-paths-service
+  // (Qdrant-backed) — the monolith's /curriculum/subjects has nothing for
+  // either. Every other curriculum keeps hitting the monolith as before.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
+  const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
   // Server (Qdrant) is the source of truth for subjects. We no longer pre-seed a
   // stale static IB PYP list — that painted first then got swapped for the real
   // set (different topic counts + extra subjects), which looked like a flicker.
@@ -23,7 +24,7 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
 
     // For CBSE, query Qdrant with curriculum=CBSE
     const queryCurriculum = isCBSE ? 'CBSE' : curriculum;
-    const base = isIBDP ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+    const base = (isIBDP || isIBMYP) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
 
     fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
       .then((r) => r.json())

@@ -60,12 +60,14 @@ export function useDashboardData({
   navigation,
 }: UseDashboardDataParams) {
   const noContentGrade = ['Nursery', 'LKG', 'UKG'].includes(studentGrade);
-  // IB DP has no flat /curriculum endpoint on the monolith (its content
-  // lives in Qdrant via aivorah-learning-paths-service) — the effects below
-  // route it through fetchCurriculumSubjects + curriculumFromSubjects
-  // instead of fetchCurriculum, so it never silently falls back to the
+  // IB DP and IB MYP have no flat /curriculum endpoint on the monolith (their
+  // content lives in Qdrant via aivorah-learning-paths-service) — the effects
+  // below route them through fetchCurriculumSubjects + curriculumFromSubjects
+  // instead of fetchCurriculum, so they never silently fall back to the
   // static Class 3 mock curriculum.
   const isIBDP = /^ib.?dp$/i.test((childCurriculum ?? '').trim());
+  const isIBMYP = /^ib.?myp$/i.test((childCurriculum ?? '').trim());
+  const needsLearningPathsService = isIBDP || isIBMYP;
   const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade, childCurriculum);
   const prefetchedCurriculum = !childOverride ? getMemoryCurriculum(CACHE_KEY) : undefined;
   const prefetchedSubjects = !childOverride ? getMemorySubjectChapters(CACHE_KEY) : undefined;
@@ -88,7 +90,7 @@ export function useDashboardData({
   useEffect(() => {
     (async () => {
       try {
-        if (isIBDP) {
+        if (needsLearningPathsService) {
           // No cache path — this is Qdrant-backed, not the legacy monolith
           // /curriculum cache scheme above, and there's no stale-cache risk
           // worth the extra complexity here yet.
@@ -126,7 +128,7 @@ export function useDashboardData({
         setLoading(false);
       }
     })();
-  }, [studentGrade, childCurriculum, childOverride?.curriculum, childOverride?.grade, isIBDP]);
+  }, [studentGrade, childCurriculum, childOverride?.curriculum, childOverride?.grade, needsLearningPathsService]);
 
   // ── Real chapter counts + names across all subjects for this grade ──
   useEffect(() => {

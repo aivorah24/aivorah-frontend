@@ -53,16 +53,19 @@ export async function prefetchStudentDashboard(user: { role?: string; grade?: st
     // real data typed under a DIFFERENT, correct cache key. Both must agree.
     const isIBPYP = !user.curriculum || /^ib.?pyp$/i.test(user.curriculum.trim());
     const isIBDP = !!user.curriculum && /^ib.?dp$/i.test(user.curriculum.trim());
+    const isIBMYP = !!user.curriculum && /^ib.?myp$/i.test(user.curriculum.trim());
+    const needsLearningPathsService = isIBDP || isIBMYP;
     const isGrade3 = studentGrade === 'Grade 3' || studentGrade === 'Class 3';
-    const useUnified = isIBPYP || isIBDP || !isGrade3;
+    const useUnified = isIBPYP || needsLearningPathsService || !isGrade3;
     const cacheKey = curriculumCacheKey(isIBPYP, studentGrade, user.curriculum);
 
     let data: any;
     let type: 'ibpyp' | 'ncert';
-    if (isIBDP) {
-      // IB DP has no data on the monolith's /curriculum or /curriculum/subjects
-      // — its content lives in Qdrant via aivorah-learning-paths-service (same
-      // source useDashboardData.ts reads for the real fetch on-screen).
+    if (needsLearningPathsService) {
+      // IB DP and IB MYP have no data on the monolith's /curriculum or
+      // /curriculum/subjects — their content lives in Qdrant via
+      // aivorah-learning-paths-service (same source useDashboardData.ts
+      // reads for the real fetch on-screen).
       const gradeParam = encodeURIComponent(studentGrade);
       const curricParam = encodeURIComponent(user.curriculum!);
       const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/subjects?grade=${gradeParam}&curriculum=${curricParam}`);

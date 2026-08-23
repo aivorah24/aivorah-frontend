@@ -13,11 +13,13 @@ export function getCuratedSyllabus(curriculum: string, grade: string, subject: s
 }
 
 export async function fetchPublishedSyllabus(curriculum: string, grade: string, subject: string): Promise<DbUnit[]> {
-  // IB DP has no teacher-uploaded syllabus_chapters rows — its content lives
-  // in Qdrant (see aivorah-learning-paths-service routes/curriculum.js), so
-  // it reads from a different endpoint. Every other curriculum is unchanged.
+  // IB DP and IB MYP have no teacher-uploaded syllabus_chapters rows — their
+  // content lives in Qdrant (see aivorah-learning-paths-service
+  // routes/curriculum.js), so they read from a different endpoint. Every
+  // other curriculum is unchanged.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
-  const path = isIBDP
+  const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
+  const path = (isIBDP || isIBMYP)
     ? `/curriculum/syllabus?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`
     : `/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`;
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}${path}`);

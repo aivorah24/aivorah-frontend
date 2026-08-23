@@ -19,11 +19,13 @@ export async function fetchNcertChapters() {
 }
 
 export async function fetchCurriculumSubjects(curriculum: string, grade: string) {
-  // IB DP has no data on the monolith's /curriculum/subjects — its content
-  // lives in Qdrant via aivorah-learning-paths-service (same routing as the
-  // Learning Path screen's useSubjects.ts). Every other curriculum unchanged.
+  // IB DP and IB MYP have no data on the monolith's /curriculum/subjects —
+  // their content lives in Qdrant via aivorah-learning-paths-service (same
+  // routing as the Learning Path screen's useSubjects.ts). Every other
+  // curriculum unchanged.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
-  const base = isIBDP ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+  const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
+  const base = (isIBDP || isIBMYP) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
   const res = await fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`);
   return res.json();
 }
