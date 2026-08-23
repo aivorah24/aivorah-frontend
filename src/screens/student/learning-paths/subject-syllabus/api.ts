@@ -31,8 +31,13 @@ export async function fetchPublishedSyllabus(curriculum: string, grade: string, 
   // put Class 11 Maths straight from Ch 1 Sets to Ch 3 Trigonometric Functions —
   // Ch 2 Relations and Functions, Ch 5 and Ch 11 simply vanished, which reads as
   // a missing syllabus rather than "not written yet".
-  const units = (data.units || []);
-  // If the server sent nothing usable at all, treat the subject as unpublished
-  // so the caller still falls back to the curated syllabus.
-  return units.some((u: DbUnit) => u.topics?.length > 0) ? units : [];
+  // The server already returns an empty array when it has no real book/chapter
+  // match for this subject+grade at all — that's the only case that should fall
+  // back to the curated syllabus. Previously this also discarded the WHOLE list
+  // whenever every chapter happened to be pending (no lessons generated yet for
+  // any of them), which hid subjects like Grade 11 Sociology entirely behind a
+  // generic "being processed" screen instead of showing their real chapter
+  // titles as pending — the exact anti-pattern the per-chapter `pending` flag
+  // above was already introduced to avoid.
+  return data.units || [];
 }

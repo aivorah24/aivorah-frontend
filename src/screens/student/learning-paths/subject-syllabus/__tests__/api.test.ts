@@ -39,11 +39,14 @@ describe('fetchPublishedSyllabus', () => {
     expect(result).toEqual(units);
   });
 
-  test('returns a real empty array when the server sends units but none have any real topics at all', async () => {
-    const units = [{ title: 'Chapter 1', topics: [] }, { title: 'Chapter 2', topics: [] }];
+  test('keeps real units even when every single one is pending (no lessons generated for any yet) — a subject like Grade 11 Sociology must still show its real chapter titles, not a generic "being processed" screen', async () => {
+    const units = [
+      { title: 'Sociology and Society', topics: [], pending: true },
+      { title: 'Introducing Sociology', topics: [], pending: true },
+    ];
     global.fetch = jest.fn().mockResolvedValue(jsonRes({ units })) as any;
 
-    expect(await fetchPublishedSyllabus('CBSE', 'Grade 6', 'English')).toEqual([]);
+    expect(await fetchPublishedSyllabus('CBSE', 'Grade 11', 'Sociology')).toEqual(units);
   });
 
   test('a real request includes the real curriculum/grade/subject as query params', async () => {
