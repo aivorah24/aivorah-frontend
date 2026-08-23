@@ -13,9 +13,15 @@ export function usePracticeRedirect(
     grade: string; subject: string; curriculum: string; topicId: string | undefined;
     chapterIndex: number; topicIndex: number;
   },
+  contentReady: boolean = true,
 ) {
   useEffect(() => {
     if (mode !== 'practice' || !topic) return;
+    // No real content for this topic — stay on 'practice' so LessonScreen's
+    // ComingSoonPane renders instantly instead of navigating into a Quiz
+    // screen that would spin on "Preparing your practice test…" generating
+    // questions from nothing.
+    if (!contentReady) return;
     setMode('read');
     navigation.navigate('Quiz', {
       topic: topic.name, grade: params.grade, subject: params.subject, curriculum: params.curriculum, topicId: params.topicId,
@@ -25,5 +31,5 @@ export function usePracticeRedirect(
       returnTo: 'LessonScreen',
       returnParams: { subject: params.subject, curriculum: params.curriculum, grade: params.grade, chapterIndex: params.chapterIndex, topicIndex: params.topicIndex },
     });
-  }, [mode, topic]);
+  }, [mode, topic, contentReady]);
 }

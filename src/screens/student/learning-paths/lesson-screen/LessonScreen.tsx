@@ -106,7 +106,7 @@ export default function LessonScreen({ navigation, route }: any) {
 
   usePracticeRedirect(mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
-  });
+  }, contentReady);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson
   // itself changes, so switching topics never leaves stale playback/answer
