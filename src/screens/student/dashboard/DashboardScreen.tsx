@@ -84,7 +84,12 @@ export default function DashboardScreen({ navigation, route }: any) {
   // ── Derived identity/curriculum params — plain values, no fetching here.
   // Passed into useDashboardData below, which owns all caching/fetching.
   const childCurriculum = childOverride?.curriculum ?? user?.curriculum;
-  const isIBPYP = !childCurriculum || childCurriculum.toLowerCase().includes('ib');
+  // Was `.includes('ib')`, which also matched IB DP and IB MYP — routing
+  // those students' dashboards through the IB PYP fetch path (wrong grade
+  // range, wrong data), which failed and fell back to static Class 3 mock
+  // content. Only match IB PYP itself; every other curriculum (including
+  // IB DP/MYP) falls through to the real-curriculum path below instead.
+  const isIBPYP = !childCurriculum || /^ib.?pyp$/i.test(childCurriculum.trim());
   const studentGrade = childOverride?.grade ?? user?.grade ?? 'Grade 3';
 
   const [searchQuery, setSearchQuery] = useState('');

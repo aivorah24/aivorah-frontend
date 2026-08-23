@@ -1,4 +1,5 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
@@ -18,7 +19,12 @@ export async function fetchNcertChapters() {
 }
 
 export async function fetchCurriculumSubjects(curriculum: string, grade: string) {
-  const res = await fetch(`${SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`);
+  // IB DP has no data on the monolith's /curriculum/subjects — its content
+  // lives in Qdrant via aivorah-learning-paths-service (same routing as the
+  // Learning Path screen's useSubjects.ts). Every other curriculum unchanged.
+  const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
+  const base = isIBDP ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+  const res = await fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`);
   return res.json();
 }
 

@@ -9,7 +9,24 @@ import {
   fetchUpcomingDeadlines,
   fetchPerformance,
 } from '../services/dashboardService';
-import type { CurriculumData, PerfData, SubjectChapters, UpcomingDeadline } from '../types';
+import type { CurriculumData, CurriculumTopic, PerfData, SubjectChapters, UpcomingDeadline } from '../types';
+
+// Reshapes a /curriculum/subjects response (per-subject topic lists, used by
+// the Learning Path screen) into the flat CurriculumData shape this hook's
+// consumers expect — used for IB DP, which has no equivalent flat /curriculum
+// endpoint on the monolith (its data lives in Qdrant, not there).
+function curriculumFromSubjects(data: { subjects?: { subject: string; topics: { topic: string; unit: string; grade?: string }[] }[] }, grade: string): CurriculumData {
+  const topics: CurriculumTopic[] = (data.subjects || []).flatMap((s) =>
+    s.topics.map((t) => ({ grade: t.grade || grade, subject: s.subject, unit: t.unit || 'General', topic: t.topic, content_type: 'text' }))
+  );
+  const grouped: CurriculumData['grouped'] = {};
+  topics.forEach((t) => {
+    if (!grouped[t.grade]) grouped[t.grade] = {};
+    if (!grouped[t.grade][t.subject]) grouped[t.grade][t.subject] = [];
+    grouped[t.grade][t.subject].push({ topic: t.topic, unit: t.unit });
+  });
+  return { grades: [grade], topics, grouped, totalTopics: topics.length };
+}
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
@@ -43,6 +60,12 @@ export function useDashboardData({
   navigation,
 }: UseDashboardDataParams) {
   const noContentGrade = ['Nursery', 'LKG', 'UKG'].includes(studentGrade);
+  // IB DP has no flat /curriculum endpoint on the monolith (its content
+  // lives in Qdrant via aivorah-learning-paths-service) — the effects below
+  // route it through fetchCurriculumSubjects + curriculumFromSubjects
+  // instead of fetchCurriculum, so it never silently falls back to the
+  // static Class 3 mock curriculum.
+  const isIBDP = /^ib.?dp$/i.test((childCurriculum ?? '').trim());
   const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade);
   const prefetchedCurriculum = !childOverride ? getMemoryCurriculum(CACHE_KEY) : undefined;
   const prefetchedSubjects = !childOverride ? getMemorySubjectChapters(CACHE_KEY) : undefined;
@@ -65,6 +88,16 @@ export function useDashboardData({
   useEffect(() => {
     (async () => {
       try {
+        if (isIBDP) {
+          // No cache path — this is Qdrant-backed, not the legacy monolith
+          // /curriculum cache scheme above, and there's no stale-cache risk
+          // worth the extra complexity here yet.
+          const subjectsData = await fetchCurriculumSubjects(childCurriculum!, studentGrade);
+          setCurriculum(curriculumFromSubjects(subjectsData, studentGrade));
+          setLoading(false);
+          return;
+        }
+
         const isGrade3 = studentGrade === 'Grade 3' || studentGrade === 'Class 3';
         const useUnified = childOverride || isIBPYP || !isGrade3;
 
@@ -93,7 +126,7 @@ export function useDashboardData({
         setLoading(false);
       }
     })();
-  }, [studentGrade, childCurriculum, childOverride?.curriculum, childOverride?.grade]);
+  }, [studentGrade, childCurriculum, childOverride?.curriculum, childOverride?.grade, isIBDP]);
 
   // ── Real chapter counts + names across all subjects for this grade ──
   useEffect(() => {
