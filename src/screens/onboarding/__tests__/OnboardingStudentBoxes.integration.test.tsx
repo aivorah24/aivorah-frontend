@@ -121,3 +121,109 @@ describe('OnboardingStudentBoxes', () => {
     expect(screen.getByText('Complete About You, Curriculum and School & Grade to continue')).toBeTruthy();
   });
 });
+
+// DOB <-> Grade mismatch warning + hard block on Complete Setup.
+describe('OnboardingStudentBoxes — DOB/Grade consistency', () => {
+  const warningFor = (grade: string) => new RegExp(`doesn't match ${grade}`);
+
+  test('mismatched DOB + Grade shows an inline warning', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15)); // ~15yo
+    await user.press(await screen.findByText('Grade 3')); // expects age 6-10
+
+    expect(screen.getByText(warningFor('Grade 3'))).toBeTruthy();
+  });
+
+  test('matching DOB + Grade shows no warning', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(8)); // ~8yo, fits Grade 3
+    await user.press(await screen.findByText('Grade 3'));
+
+    expect(screen.queryByText(warningFor('Grade 3'))).toBeNull();
+  });
+
+  test('changing Grade after a mismatch updates (clears) the warning', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15));
+    await user.press(await screen.findByText('Grade 3'));
+    expect(screen.getByText(warningFor('Grade 3'))).toBeTruthy();
+
+    await user.press(await screen.findByText('Grade 9')); // ~15yo fits Grade 9 (12-16)
+    expect(screen.queryByText(warningFor('Grade 3'))).toBeNull();
+    expect(screen.queryByText(warningFor('Grade 9'))).toBeNull();
+  });
+
+  test('changing DOB after a mismatch updates (clears) the warning', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.press(screen.getByText('CBSE'));
+    const dobInput = screen.getByPlaceholderText('DD/MM/YYYY');
+    await user.type(dobInput, agedDob(15));
+    await user.press(await screen.findByText('Grade 3'));
+    expect(screen.getByText(warningFor('Grade 3'))).toBeTruthy();
+
+    await user.clear(dobInput);
+    await user.type(dobInput, agedDob(8)); // now fits Grade 3
+    expect(screen.queryByText(warningFor('Grade 3'))).toBeNull();
+  });
+
+  test('mismatched DOB + Grade blocks Complete Setup and never calls /user/profile or /user/preferences', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'A Student');
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15)); // 15yo -> passes the under-14 gate
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('Type your school name (e.g. Senthil Public School)'), 'Hyderabad International School');
+    await user.press(await screen.findByText('Grade 3')); // but 15yo doesn't fit Grade 3
+
+    const button = screen.getByText('Complete Setup').parent;
+    expect(button?.props.accessibilityState?.disabled).toBe(false); // required-fields gate alone doesn't catch this
+
+    (global.fetch as jest.Mock).mockClear();
+    await user.press(screen.getByText('Complete Setup'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getAllByText(warningFor('Grade 3')).length).toBeGreaterThan(0); // error surfaced via saveError (and the live warning)
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    const prefsCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/preferences'));
+    expect(profileCall).toBeUndefined();
+    expect(prefsCall).toBeUndefined();
+  });
+
+  test('matching DOB + Grade lets Complete Setup submit normally', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'A Student');
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15)); // 15yo
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('Type your school name (e.g. Senthil Public School)'), 'Hyderabad International School');
+    await user.press(await screen.findByText('Grade 9')); // 15yo fits Grade 9 (12-16)
+
+    (global.fetch as jest.Mock).mockClear();
+    (global.fetch as jest.Mock).mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: async () => (String(url).includes('/user/profile') ? { grade: 'Grade 9', curriculum: 'CBSE' } : []),
+        text: async () => '',
+      }),
+    );
+
+    await user.press(screen.getByText('Complete Setup'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    expect(profileCall).toBeTruthy();
+  });
+});
