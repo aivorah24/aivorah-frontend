@@ -95,6 +95,8 @@ export default function VerifyEmailScreen() {
   const [resendSuccess, setResendSuccess] = useState(false);
   const [checking, setChecking] = useState(false);
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
+  const verifiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (verifiedTimeoutRef.current) clearTimeout(verifiedTimeoutRef.current); }, []);
 
   // Poll every 2s — the moment user clicks the email link (any browser/device),
   // server marks them verified and this screen auto-advances to Onboarding.
@@ -107,7 +109,19 @@ export default function VerifyEmailScreen() {
         if (res.ok) {
           const data = await res.json();
           if (data.verified) {
-            updateUser({ emailVerified: true });
+            // A plain updateUser() merge only flips emailVerified on the
+            // already-cached user object — onboardingComplete stays whatever
+            // was cached (possibly stale), which can send a genuinely new
+            // user to the wrong screen. A full reload re-triggers Firebase's
+            // onAuthStateChanged, which re-derives onboardingComplete fresh
+            // from Supabase — the same authoritative path Google sign-in
+            // already uses (see VerifySuccessPage.goToApp in App.tsx, the
+            // proven-working equivalent of this flow).
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              window.location.reload();
+            } else {
+              updateUser({ emailVerified: true });
+            }
           }
         }
       } catch {}
@@ -202,7 +216,19 @@ export default function VerifyEmailScreen() {
         const data = await res.json();
         if (data.verified) {
           setVerifiedSuccess(true);
-          setTimeout(() => updateUser({ emailVerified: true }), 1200);
+          // See the poll handler above for why a reload (not a plain
+          // updateUser merge) is needed on web to get a correct
+          // onboardingComplete instead of a possibly-stale cached value.
+          // Tracked in a ref and cleared on unmount so it can't fire after
+          // this screen is gone (e.g. in tests, or if the user navigates
+          // away in the 1.2s window) and touch stale/torn-down state.
+          verifiedTimeoutRef.current = setTimeout(() => {
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              window.location.reload();
+            } else {
+              updateUser({ emailVerified: true });
+            }
+          }, 1200);
           return;
         }
       }
