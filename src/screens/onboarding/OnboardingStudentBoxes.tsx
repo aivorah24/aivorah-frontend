@@ -24,6 +24,7 @@ import {
   SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES,
 } from './OnboardingSharedFields';
 import { computeStudentCompletion } from './utils/studentCompletion';
+import { checkDobGradeConsistency } from './utils/dobGradeValidation';
 
 const GRADE_GROUPS = [
   { label: 'Early Years', grades: ['Nursery', 'LKG', 'UKG'] },
@@ -129,10 +130,15 @@ export default function OnboardingStudentBoxes() {
   }
 
   const underAge = dob.length >= 10 && getAge(dob) !== null && getAge(dob)! < 14;
+  const dobGradeCheck = checkDobGradeConsistency(dob, grade);
 
   async function handleFinish() {
     if (!requiredDone) {
       setSaveError('Please complete About You, Curriculum, and School & Grade before continuing.');
+      return;
+    }
+    if (!dobGradeCheck.valid) {
+      setSaveError(dobGradeCheck.message || 'Your date of birth and grade don\'t match. Please check both.');
       return;
     }
     setSaving(true);
@@ -406,6 +412,9 @@ export default function OnboardingStudentBoxes() {
                 );
               })}
             </View>
+            {!dobGradeCheck.valid && (
+              <Text style={styles.warnTxt}>{dobGradeCheck.message}</Text>
+            )}
           </View>
         </View>
 
@@ -488,7 +497,7 @@ export default function OnboardingStudentBoxes() {
               style={styles.confirmPrimary}
               activeOpacity={0.85}
               disabled={saving}
-              onPress={async () => { setSaving(true); await saveProgress(); setSaving(false); setShowLeaveConfirm(false); logout(); }}
+              onPress={async () => { setSaving(true); await saveProgress(); setSaving(false); setShowLeaveConfirm(false); await logout(); }}
             >
               <Text style={styles.confirmPrimaryTxt}>{saving ? 'Saving...' : 'Save & go to home page'}</Text>
             </TouchableOpacity>
@@ -496,7 +505,7 @@ export default function OnboardingStudentBoxes() {
               style={styles.confirmSecondary}
               activeOpacity={0.7}
               disabled={saving}
-              onPress={() => { setShowLeaveConfirm(false); logout(); }}
+              onPress={async () => { setShowLeaveConfirm(false); await logout(); }}
             >
               <Text style={styles.confirmSecondaryTxt}>Leave without saving</Text>
             </TouchableOpacity>

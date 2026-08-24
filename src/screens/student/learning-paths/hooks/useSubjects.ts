@@ -5,9 +5,10 @@ import { getIBPYPStaticSubjects } from '../utils';
 import type { SubjectData } from '../types';
 
 export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, isPYP: boolean) {
-  // IB DP and IB MYP subjects come from aivorah-learning-paths-service
-  // (Qdrant-backed) — the monolith's /curriculum/subjects has nothing for
-  // either. Every other curriculum keeps hitting the monolith as before.
+  // IB DP, IB MYP and CBSE subjects come from aivorah-learning-paths-service
+  // (CBSE from its book-derived chapter data, IB DP/MYP from Qdrant) — the
+  // monolith's /curriculum/subjects has nothing reliable for any of these.
+  // Every other curriculum keeps hitting the monolith as before.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
   // Cambridge Grades 1-5 (Primary) already have real data on the monolith;
@@ -31,7 +32,7 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
 
     // For CBSE, query Qdrant with curriculum=CBSE
     const queryCurriculum = isCBSE ? 'CBSE' : curriculum;
-    const base = (isIBDP || isIBMYP || isCambridgeQdrant) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+    const base = (isIBDP || isIBMYP || isCambridgeQdrant || isCBSE) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
 
     fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
       .then((r) => r.json())
