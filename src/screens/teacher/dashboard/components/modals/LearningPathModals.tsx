@@ -24,7 +24,7 @@ export function renderLearningPathModal(tileIndex: number, ctx: ModalRenderCtx) 
               <Text style={[styles.modalStat, { color: tile.color }]}>{stuck.length} Students</Text>
               <Text style={styles.modalHeading}>Need Support</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -103,7 +103,7 @@ export function renderLearningPathModal(tileIndex: number, ctx: ModalRenderCtx) 
               <Text style={[styles.modalStat, { color: tile.color }]}>Leaderboard</Text>
               <Text style={styles.modalHeading}>All Students Ranked by Progress</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -239,7 +239,7 @@ export function renderLearningPathModal(tileIndex: number, ctx: ModalRenderCtx) 
               <Text style={[styles.modalStat, { color: tile.color }]}>{inactive.length} Students</Text>
               <Text style={styles.modalHeading}>Inactive for 3+ Days</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -296,7 +296,7 @@ export function renderLearningPathModal(tileIndex: number, ctx: ModalRenderCtx) 
               <Text style={[styles.modalStat, { color: tile.color }]}>{formatStudyTime(totalStudyMins)}</Text>
               <Text style={styles.modalHeading}>Total Study Time Across Class</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>

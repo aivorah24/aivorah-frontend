@@ -83,11 +83,11 @@ export default function TeacherDashboardScreen({ navigation }: any) {
           subtitle={`Your Class · ${totalStudents} Student${totalStudents !== 1 ? 's' : ''}`}
           searchPlaceholder="Search students, assignments..."
           onMenuPress={() => navigation.openDrawer()}
-          onProfilePress={() => navigation.navigate('TeacherSettings' as any)}
           notificationCount={allNeedsAttention.length || undefined}
         />
 
         <ScrollView
+          testID="dashboard-scroll"
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -151,7 +151,7 @@ export default function TeacherDashboardScreen({ navigation }: any) {
       </View>
 
       {/* ── Insight Detail Modal ───────────────────────── */}
-      <Modal visible={!!insightModal} transparent animationType="fade" onRequestClose={() => setInsightModal(null)}>
+      <Modal testID="insight-modal" visible={!!insightModal} transparent animationType="fade" onRequestClose={() => setInsightModal(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, [1, 4, 6].includes(insightModal?.tileIndex as number) && { maxWidth: 720 }]}>
             {insightModal && renderInsightModalContent(insightModal.tileIndex)}

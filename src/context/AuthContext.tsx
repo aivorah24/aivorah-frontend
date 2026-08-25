@@ -174,6 +174,8 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
 let _pendingRole: UserRole = 'student';
 let _pendingRoleSet = false; // true only when role was explicitly chosen this session (not the default)
 let _isAddingRole = false; // true when an existing user is adding a second role (teacher↔parent only)
+const GOOGLE_SIGN_IN_PENDING = '__google_sign_in_pending__';
+let _googleSignInResolvingEmail: string | null = null;
 
 // The in-memory `_isAddingRole` flag is lost on a page reload, which dropped a
 // teacher mid "add parent profile" back to the teacher dashboard on refresh.
@@ -346,6 +348,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       firebaseConfirmed.current = true;
       if (firebaseUser) {
         const email = firebaseUser.email || '';
+        if (
+          _googleSignInResolvingEmail === GOOGLE_SIGN_IN_PENDING ||
+          _googleSignInResolvingEmail === normalizeEmail(email)
+        ) {
+          setLoading(false);
+          return;
+        }
 
         // Load saved local profile + fetch Supabase profile (needed to detect parent-activated accounts)
         let supaProfile: Partial<User> & { _syncOk?: boolean; _accountExists?: boolean } = {};
@@ -469,14 +478,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (pendingVerifyEmail === email && allowParentActivated) {
           await AsyncStorage.removeItem(PENDING_VERIFY_KEY).catch(() => {});
         }
-        // Email verification is monotonic — once an account is verified it never
-        // reverts. If the cached profile for THIS email already says verified,
-        // stay verified. This prevents a transient flash back to the "Check your
-        // inbox" screen when onAuthStateChanged re-fires right after the user
-        // verifies but before the DB's accountStatus='active' write is readable.
+        // Email verification is monotonic for cached password/legacy sessions,
+        // but Google SSO must trust fresh Aivorah accountStatus when available.
+        // Google's Firebase emailVerified is always true, so stale local cache
+        // must not bypass an authoritative pending_verification server state.
+        const serverHasAccountStatus = supaProfile.accountStatus !== undefined;
         const emailVerified =
-          savedLocal.emailVerified === true ||
-          (!requiresVerification && (firebaseUser.emailVerified || allowAutoGen || allowParentActivated));
+          isGoogleProvider && serverHasAccountStatus
+            ? supaProfile.accountStatus === 'active'
+            : savedLocal.emailVerified === true ||
+              (!requiresVerification && (firebaseUser.emailVerified || allowAutoGen || allowParentActivated));
         const baseUser: User = {
           name:          firebaseUser.displayName?.split('|')[0] || firebaseUser.displayName || 'User',
           email,
@@ -532,12 +543,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           _pendingReturnRole = 'teacher';
         }
 
+        const serverHasOnboardingComplete = supaProfile.onboardingComplete !== undefined;
         const onboardingComplete = isAddingNewRole ? false : (
           allowAutoGen ||
           isParentCreatedStudent ||
-          supaProfile.onboardingComplete === true ||
-          // Only trust local cache if DB didn't explicitly say false (prevents stale cache bypassing onboarding after account deletion)
-          (supaProfile.onboardingComplete !== false && savedLocal.onboardingComplete === true)
+          (serverHasOnboardingComplete
+            ? supaProfile.onboardingComplete === true
+            : savedLocal.onboardingComplete === true)
         );
         // On refresh, honour the role the user last switched to (saved in AsyncStorage).
         // Only fall back to DB resolvedRole if no local activeRole is saved, or if we're
@@ -766,10 +778,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     // Clear local state + cache FIRST so logout works even if signOut() hangs
     // on a flaky network (otherwise setUser(null) would never run).
+    _googleSignInResolvingEmail = null;
     setUser(null);
     try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('aivorah_auth_this_session'); } catch {}
     try { if (typeof localStorage !== 'undefined') localStorage.removeItem('aivorah_last_active_ts'); } catch {}
     await AsyncStorage.removeItem(PROFILE_KEY).catch(() => {});
+    await AsyncStorage.removeItem(PENDING_VERIFY_KEY).catch(() => {});
     await signOut(auth).catch(() => {});
   }
 
@@ -990,9 +1004,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     _pendingRoleSet = false;
     markAuthAction();
     if (Platform.OS === 'web') {
+      let resolvingEmail: string | null = null;
       try {
+        _googleSignInResolvingEmail = GOOGLE_SIGN_IN_PENDING;
         const provider = new GoogleAuthProvider();
         const cred = await withNetworkRetry(() => signInWithPopup(auth, provider));
+        resolvingEmail = normalizeEmail(cred.user.email);
+        _googleSignInResolvingEmail = resolvingEmail;
         // Google's own displayName — only the right value for a brand-new signup.
         // A returning user's in-app rename must win once `profile` is fetched below,
         // mirroring signInWithEmail's `profile.name || ...` precedence — otherwise
@@ -1046,9 +1064,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // untouched by this flow.
         const effectiveRole: UserRole = existingRole || role || 'student';
 
-        const onboardingComplete =
-          profile.onboardingComplete === true ||
-          savedLocal.onboardingComplete === true;
+        const serverHasOnboardingComplete = profile.onboardingComplete !== undefined;
+        const onboardingComplete = serverHasOnboardingComplete
+          ? profile.onboardingComplete === true
+          : savedLocal.onboardingComplete === true;
 
         // isAlreadyVerified must be computed from AIVORAH's own accountStatus
         // (not cred.user.emailVerified, which is Google's flag and is true for
@@ -1142,6 +1161,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           message = 'Network error. Please check your connection.';
         }
         throw new Error(message);
+      } finally {
+        if (
+          !resolvingEmail ||
+          _googleSignInResolvingEmail === resolvingEmail ||
+          _googleSignInResolvingEmail === GOOGLE_SIGN_IN_PENDING
+        ) {
+          _googleSignInResolvingEmail = null;
+        }
       }
     } else {
       demoLogin(role || 'student');

@@ -360,7 +360,7 @@ export default function OnboardingParentBoxes() {
           })),
       };
 
-      const profileRes = await fetch(`${SERVER_URL}/user/profile`, {
+      const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -404,7 +404,7 @@ export default function OnboardingParentBoxes() {
         if (isAddingParent) {
           cancelAddParentProfile();
         } else {
-          logout();
+          await logout();
         }
         return;
       }
@@ -1138,7 +1138,7 @@ export default function OnboardingParentBoxes() {
                 <TouchableOpacity
                   style={[styles.confirmSecondary, { marginBottom: 10 }]}
                   activeOpacity={0.7}
-                  onPress={() => { setShowLeaveConfirm(false); logout(); }}
+                  onPress={async () => { setShowLeaveConfirm(false); await logout(); }}
                 >
                   <Text style={styles.confirmSecondaryTxt}>Discard draft & sign out</Text>
                 </TouchableOpacity>

@@ -51,7 +51,6 @@ interface HeaderProps {
   onMenuPress?: () => void;
   onSearchChange?: (text: string) => void;
   onNotificationPress?: () => void;
-  onProfilePress?: () => void;
   notificationCount?: number;
 }
 
@@ -217,7 +216,7 @@ const [editingName, setEditingName] = useState(false);
             <Feather name="arrow-left" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         ) : isMobile && (
-          <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress}>
+          <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress} testID="header-menu-button">
             <Feather name="menu" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         )}

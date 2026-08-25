@@ -26,7 +26,7 @@ export function renderAssignmentModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>{noSubs.length} Students</Text>
               <Text style={styles.modalHeading}>No Assignments Submitted Yet</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -90,7 +90,7 @@ export function renderAssignmentModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>{classAvgScore != null ? `${classAvgScore}%` : '—'}</Text>
               <Text style={styles.modalHeading}>Assignment Scores by Student</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -145,7 +145,7 @@ export function renderAssignmentModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>{studentsWithSubmissions} Students</Text>
               <Text style={styles.modalHeading}>Assignment Submissions Overview</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>

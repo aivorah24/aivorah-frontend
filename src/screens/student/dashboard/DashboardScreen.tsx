@@ -93,7 +93,9 @@ export default function DashboardScreen({ navigation, route }: any) {
   const studentGrade = childOverride?.grade ?? user?.grade ?? 'Grade 3';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [barSubjectFilter, setBarSubjectFilter] = useState<string>('All');
+  // '' = not chosen yet — effectiveBarSubjectFilter below picks the first
+  // real subject as the default instead of a generic "All".
+  const [barSubjectFilter, setBarSubjectFilter] = useState<string>('');
   // '' = not chosen yet — effectiveLessonSubjectFilter below picks the most
   // recently studied subject as the real default instead of a generic "All".
   const [lessonSubjectFilter, setLessonSubjectFilter] = useState<string>('');
@@ -307,11 +309,15 @@ export default function DashboardScreen({ navigation, route }: any) {
     [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
   );
 
-  const barSubjects = useMemo(() => ['All', ...Array.from(new Set(allBarTopics.map(t => t.subject))).sort()], [allBarTopics]);
+  // No "All" chip — same reasoning as lessonSubjects above: a flat "All" view
+  // across every subject's chapters isn't useful, so only real subjects are listed.
+  const barSubjects = useMemo(() => Array.from(new Set(allBarTopics.map(t => t.subject))).sort(), [allBarTopics]);
+
+  const effectiveBarSubjectFilter = barSubjects.includes(barSubjectFilter) ? barSubjectFilter : (barSubjects[0] ?? '');
 
   const barTopics = useMemo(() =>
-    barSubjectFilter === 'All' ? allBarTopics : allBarTopics.filter(t => t.subject === barSubjectFilter),
-  [allBarTopics, barSubjectFilter]);
+    allBarTopics.filter(t => t.subject === effectiveBarSubjectFilter),
+  [allBarTopics, effectiveBarSubjectFilter]);
 
   // Real per-topic quiz results (independent of chapter grouping) — drives every
   // metric below the bars (average score, consistency, best score, insight text).
@@ -481,7 +487,6 @@ export default function DashboardScreen({ navigation, route }: any) {
   showBack={!!childOverride}
   onBack={childOverride ? () => navigation.navigate('ParentMyKids') : undefined}
   onMenuPress={childOverride ? () => navigation.goBack() : () => navigation.openDrawer()}
-  onProfilePress={childOverride ? undefined : () => navigation.navigate('Profile')}
   notificationCount={childOverride ? 0 : unreadCount}
 />
 
@@ -560,7 +565,7 @@ export default function DashboardScreen({ navigation, route }: any) {
                   bestChapter={bestChapter}
                   weeklyConsistency={weeklyConsistency}
                   barSubjects={barSubjects}
-                  barSubjectFilter={barSubjectFilter}
+                  barSubjectFilter={effectiveBarSubjectFilter}
                   setBarSubjectFilter={setBarSubjectFilter}
                   barTopics={barTopics}
                   perfInsight={perfInsight}

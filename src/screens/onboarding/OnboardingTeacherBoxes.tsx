@@ -14,7 +14,6 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { TEAL, DatePickerInput } from './OnboardingScreen';
@@ -127,7 +126,7 @@ export default function OnboardingTeacherBoxes() {
   async function saveProgress() {
     try {
       const email = user?.email || '';
-      await fetch(`${SERVER_URL}/user/profile`, {
+      await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,7 +204,7 @@ export default function OnboardingTeacherBoxes() {
         teaches: teachesFromEntries,
       };
 
-      const profileRes = await fetch(`${SERVER_URL}/user/profile`, {
+      const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -524,7 +523,7 @@ export default function OnboardingTeacherBoxes() {
               style={styles.confirmPrimary}
               activeOpacity={0.85}
               disabled={saving}
-              onPress={async () => { setSaving(true); await saveProgress(); setSaving(false); setShowLeaveConfirm(false); logout(); }}
+              onPress={async () => { setSaving(true); await saveProgress(); setSaving(false); setShowLeaveConfirm(false); await logout(); }}
             >
               <Text style={styles.confirmPrimaryTxt}>{saving ? 'Saving...' : 'Save & go to home page'}</Text>
             </TouchableOpacity>
@@ -532,7 +531,7 @@ export default function OnboardingTeacherBoxes() {
               style={styles.confirmSecondary}
               activeOpacity={0.7}
               disabled={saving}
-              onPress={() => { setShowLeaveConfirm(false); logout(); }}
+              onPress={async () => { setShowLeaveConfirm(false); await logout(); }}
             >
               <Text style={styles.confirmSecondaryTxt}>Leave without saving</Text>
             </TouchableOpacity>
