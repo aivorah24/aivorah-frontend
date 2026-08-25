@@ -601,7 +601,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           <View style={{ flex: 1 }}>
             <Header title="Class Schedule" subtitle="Create sessions and deadlines for students." />
           </View>
-          <TouchableOpacity style={styles.addEventBtnTop} onPress={() => openModal()} activeOpacity={0.8}>
+          <TouchableOpacity testID="teacher-schedule-add-event-button" style={styles.addEventBtnTop} onPress={() => openModal()} activeOpacity={0.8}>
             <Feather name="plus" size={15} color="white" />
             <Text style={styles.addEventBtnTopText}>New Event</Text>
           </TouchableOpacity>
@@ -617,16 +617,16 @@ export default function TeacherScheduleScreen({ navigation }: any) {
 
           {/* ── Week navigation bar ── */}
           <View style={styles.weekNavBar}>
-            <TouchableOpacity style={styles.navArrow} onPress={() => { const d = new Date(weekBase); d.setDate(d.getDate() - 7); setWeekBase(d); }}>
+            <TouchableOpacity testID="teacher-schedule-prev-week" style={styles.navArrow} onPress={() => { const d = new Date(weekBase); d.setDate(d.getDate() - 7); setWeekBase(d); }}>
               <Feather name="chevron-left" size={18} color={colors.textMuted} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.todayBtn} onPress={goToday}>
+            <TouchableOpacity testID="teacher-schedule-today-button" style={styles.todayBtn} onPress={goToday}>
               <Text style={styles.todayBtnText}>Today</Text>
             </TouchableOpacity>
-            <Text style={styles.weekLabel}>
+            <Text testID="teacher-schedule-week-label" style={styles.weekLabel}>
               {week[0].day} {week[0].date} — {week[6].day} {week[6].date}
             </Text>
-            <TouchableOpacity style={styles.navArrow} onPress={() => { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }}>
+            <TouchableOpacity testID="teacher-schedule-next-week" style={styles.navArrow} onPress={() => { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }}>
               <Feather name="chevron-right" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
@@ -702,6 +702,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                       return (
                         <TouchableOpacity
                           key={d.iso}
+                          testID={`teacher-schedule-allday-col-${d.iso}`}
                           style={[styles.allDayCol, { width: colWidth, height: allDayHeight }]}
                           onPress={() => openModal(d.iso, undefined, true, 'Holidays and vacations')}
                           activeOpacity={0.8}
@@ -736,6 +737,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                       return (
                         <View
                           key={d.iso}
+                          testID={`teacher-schedule-day-col-${d.iso}`}
                           style={[styles.dayCol, { width: colWidth, height: gridHeight }]}
                           // @ts-ignore
                           onMouseDown={(e: any) => {
@@ -781,6 +783,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                           {TIMES.map((t, idx) => (
                             <TouchableOpacity
                               key={t}
+                              testID={`teacher-schedule-slot-${d.iso}-${t}`}
                               style={[styles.hourCell, { top: idx * HOUR_HEIGHT }]}
                               onPress={() => openModal(d.iso, t)}
                               activeOpacity={0.3}
@@ -829,6 +832,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                             return (
                               <div
                                 key={event.id}
+                                data-testid={`teacher-schedule-event-${event.id}`}
                                 data-eid={event.id}
                                 data-edate={d.iso}
                                 data-etop={String(origTop)}
@@ -865,6 +869,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                                 <div style={{ fontFamily: fonts.sans, fontSize: 10, fontWeight: 600, color: textCol, opacity: 0.8, marginTop: 1, lineHeight: '13px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{studentLabel}</div>
                                 <div
                                   data-delbtn="1"
+                                  data-testid={`teacher-schedule-event-delete-${event.id}`}
                                   onClick={() => removeEvent(event.id, d.iso)}
                                   style={{ position: 'absolute', top: 3, right: 3, cursor: 'pointer', padding: 2 }}
                                 >
@@ -888,6 +893,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
             {/* ── Tag Filter Panel ── */}
             <View style={styles.sideCard}>
               <TouchableOpacity
+                testID="teacher-schedule-tag-filters-toggle"
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: showTagPanel ? spacing.md : 0 }}
                 onPress={() => setShowTagPanel(!showTagPanel)}
                 activeOpacity={0.7}
@@ -923,6 +929,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                     return (
                       <TouchableOpacity
                         key={tag.key}
+                        testID={`teacher-schedule-tag-filter-${tag.key}`}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, paddingLeft: 4 }}
                         onPress={() => toggleAssignmentTag(tag.key)}
                         activeOpacity={0.7}
@@ -962,6 +969,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                     return (
                       <TouchableOpacity
                         key={tag.key}
+                        testID={`teacher-schedule-tag-filter-${tag.key}`}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, paddingLeft: 4 }}
                         onPress={() => toggleEventTag(tag.key)}
                         activeOpacity={0.7}
@@ -1001,6 +1009,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
               {/* Scrollable Form Content */}
               <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
                 <TextInput
+                  testID="teacher-schedule-modal-title-input"
                   style={[styles.modalInput, saveError && !newTitle.trim() && { borderColor: colors.accentRed }]}
                   placeholder="Event title *"
                   placeholderTextColor={saveError && !newTitle.trim() ? colors.accentRed : colors.textDim}
@@ -1008,6 +1017,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                   onChangeText={(t) => { setNewTitle(t); if (t.trim()) setSaveError(''); }}
                 />
                 <TextInput
+                  testID="teacher-schedule-modal-note-input"
                   style={[styles.modalInput, { fontSize: 12 }]}
                   placeholder="Note for students (optional)..."
                   placeholderTextColor={colors.textDim}
@@ -1019,6 +1029,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                   {ASSIGNMENT_TAGS.concat(EVENT_TAGS).map(t => (
                     <TouchableOpacity
                       key={t.key}
+                      testID={`teacher-schedule-modal-tag-${t.key}`}
                       style={[
                         styles.timeChip,
                         { flexDirection: 'row', alignItems: 'center' },
@@ -1032,6 +1043,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                   ))}
                 </ScrollView>
                 <TouchableOpacity
+                  testID="teacher-schedule-modal-allday-checkbox"
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, marginTop: 4 }}
                   onPress={() => {
                     const next = !isAllDay;
@@ -1077,12 +1089,14 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                 <Text style={styles.modalLabel}>Assign to:</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TouchableOpacity
+                    testID="teacher-schedule-modal-target-all"
                     style={[styles.timeChip, targetStudents === 'all' && styles.timeChipActive]}
                     onPress={() => { setTargetStudents('all'); setSelectedStudent(null); }}
                   >
                     <Text style={[styles.timeChipText, targetStudents === 'all' && { color: gold }]}>All students</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    testID="teacher-schedule-modal-target-specific"
                     style={[styles.timeChip, targetStudents === 'specific' && styles.timeChipActive]}
                     onPress={() => setTargetStudents('specific')}
                   >
@@ -1102,6 +1116,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                     ) : (
                       <>
                         <TextInput
+                          testID="teacher-schedule-modal-student-search"
                           style={styles.studentSearch}
                           placeholder="Search student by name..."
                           placeholderTextColor={colors.textDim}
@@ -1125,6 +1140,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                             filteredStudents.map(s => (
                               <TouchableOpacity
                                 key={s.id}
+                                testID={`teacher-schedule-modal-student-${s.id}`}
                                 style={styles.studentRow}
                                 onPress={() => { setSelectedStudent(s); setStudentSearch(''); }}
                                 activeOpacity={0.7}
@@ -1156,10 +1172,10 @@ export default function TeacherScheduleScreen({ navigation }: any) {
 
               {/* Bottom Fixed Footer (Always visible without scrolling) */}
               <View style={[styles.modalBtns, { paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderColor, marginTop: 12 }]}>
-                <TouchableOpacity style={styles.modalCancel} onPress={closeModal}>
+                <TouchableOpacity testID="teacher-schedule-modal-cancel-button" style={styles.modalCancel} onPress={closeModal}>
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalConfirm} onPress={saveEvent} disabled={saving}>
+                <TouchableOpacity testID="teacher-schedule-modal-confirm-button" style={styles.modalConfirm} onPress={saveEvent} disabled={saving}>
                   <Text style={styles.modalConfirmText}>{saving ? 'Saving…' : (editingEventId ? 'Save Changes' : 'Create Event')}</Text>
                 </TouchableOpacity>
               </View>
