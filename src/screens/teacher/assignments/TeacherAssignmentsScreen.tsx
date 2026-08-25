@@ -6,522 +6,29 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import { spacing, radius } from '../../theme';
-import type { AppColors } from '../../theme';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
+import { spacing, radius } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import Header from '../../components/common/Header';
-import DatePicker from '../../components/common/DatePicker';
-import TransliterationInput, { langNameToCode } from '../../components/common/TransliterationInput';
-import { GRADES_TEACHER } from '../onboarding/OnboardingScreen';
-import SERVER_URL from '../../config/serverUrl';
-import PROFILE_SERVER_URL from '../../config/profileServerUrl';
-// @ts-ignore — pdfjs-dist v3 CommonJS import
-const pdfjsLib = Platform.OS === 'web' ? require('pdfjs-dist/build/pdf') : null;
-// @ts-ignore
-const pdfjsWorker = Platform.OS === 'web' ? require('pdfjs-dist/build/pdf.worker.entry') : null;
-if (pdfjsLib && typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-  (window as any).__pdfjsLib = pdfjsLib;
-}
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import Header from '../../../components/common/Header';
+import DatePicker from '../../../components/common/DatePicker';
+import TransliterationInput, { langNameToCode } from '../../../components/common/TransliterationInput';
+import SERVER_URL from '../../../config/serverUrl';
 
-/** Convert a PDF file (base64) into per-page JPEG images using browser canvas */
-async function pdfToImages(pdfBase64: string): Promise<{ base64: string; mime: string; name: string }[]> {
-  if (Platform.OS !== 'web') return [];
-  try {
-    console.log('[pdfToImages] Starting, pdfjs version:', pdfjsLib.version);
-    const raw = atob(pdfBase64);
-    const data = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) data[i] = raw.charCodeAt(i);
-
-    const doc = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
-    console.log('[pdfToImages] PDF parsed, pages:', doc.numPages);
-
-    const pages: { base64: string; mime: string; name: string }[] = [];
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { console.error('[pdfToImages] No canvas context for page', i); continue; }
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      const jpegUrl = canvas.toDataURL('image/jpeg', 0.85);
-      pages.push({ base64: jpegUrl.split(',')[1], mime: 'image/jpeg', name: `page-${i}.jpg` });
-      console.log('[pdfToImages] Rendered page', i, '/', doc.numPages);
-    }
-    return pages;
-  } catch (err: any) {
-    console.error('[pdfToImages] FAILED:', err?.message || err, err?.stack);
-    return [];
-  }
-}
-
-/** Combine several worksheet page IMAGES (base64) into ONE multi-page PDF, so a
- *  multi-image upload can go through the exact same all-pages PDF quiz pipeline
- *  a real PDF uses — instead of only the first image being read (the previous
- *  behaviour, which silently dropped pages 2+). Web-only (uses the DOM Image +
- *  jsPDF), which is fine since this teacher tool runs in the browser. */
-async function imagesToPdfBase64(images: { base64: string; mime: string }[]): Promise<string | null> {
-  if (Platform.OS !== 'web' || images.length === 0) return null;
-  try {
-    const { jsPDF } = require('jspdf');
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    // Re-encode each page through a canvas capped at MAX_PX on its longest side,
-    // as JPEG. Directly embedding the raw uploaded images (e.g. multi-MB phone
-    // photos) blew past the server's 4MB PDF cap — the job then failed with
-    // "File too large". ~2000px keeps 3-digit arithmetic crisply readable while
-    // keeping the combined PDF small.
-    const MAX_PX = 2000;
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      const dataUri = `data:${img.mime};base64,${img.base64}`;
-      const el = await new Promise<any>((resolve, reject) => {
-        const im = new (window as any).Image();
-        im.onload = () => resolve(im);
-        im.onerror = () => reject(new Error('image decode failed'));
-        im.src = dataUri;
-      });
-      const srcW = el.width || pageW;
-      const srcH = el.height || pageH;
-      const scale = Math.min(1, MAX_PX / Math.max(srcW, srcH));
-      const cw = Math.round(srcW * scale);
-      const ch = Math.round(srcH * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = cw; canvas.height = ch;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) continue;
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); // flatten any transparency
-      ctx.drawImage(el, 0, 0, cw, ch);
-      const jpeg = canvas.toDataURL('image/jpeg', 0.82);
-      // Fit inside the A4 page, preserving aspect ratio.
-      const ratio = Math.min(pageW / cw, pageH / ch);
-      const w = cw * ratio;
-      const h = ch * ratio;
-      const x = (pageW - w) / 2;
-      const y = (pageH - h) / 2;
-      if (i > 0) doc.addPage();
-      doc.addImage(jpeg, 'JPEG', x, y, w, h);
-    }
-    return (doc.output('datauristring') as string).split(',')[1] || null;
-  } catch (err: any) {
-    console.error('[imagesToPdfBase64] FAILED:', err?.message || err);
-    return null;
-  }
-}
-
-/** Flatten a question answer (which may be a plain string, number, array, or a
- *  structured object like { table: [...] } for "organise the data" activity tasks)
- *  into readable, editable text for the Edit Answers screen. Prevents structured
- *  answers from rendering as "[object Object]" / appearing empty. */
-function answerToEditText(a: any): string {
-  if (a == null) return '';
-  if (typeof a === 'string') return a;
-  if (typeof a === 'number' || typeof a === 'boolean') return String(a);
-  // Structured table answer → one readable line per row.
-  const rows = Array.isArray(a) ? a : (Array.isArray(a?.table) ? a.table : null);
-  if (rows && rows.length && typeof rows[0] === 'object') {
-    return rows
-      .map((r: any) => Object.values(r).map((v) => (v == null ? '' : String(v))).join(' — '))
-      .join('\n');
-  }
-  if (Array.isArray(a)) return a.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ');
-  try { return JSON.stringify(a, null, 2); } catch { return String(a); }
-}
-
-/**
- * Pre-publish validation for the interactive quiz (issue #6). Returns a blocking
- * error when the quiz must NOT be published:
- *  1. Wrong worksheet — the selected files changed after the quiz was generated
- *     (guards the "uploaded Telugu, got a Math quiz" mixup: file-ID must equal the
- *     processed file's ID).
- *  2. Empty task card — a task with a heading but no questions and no visual
- *     content (chart/table/pyramid/passage/diagram/matching/image), i.e. content
- *     was lost during extraction (the "Task 4 shows only a heading" bug).
- */
-function validateInteractiveQuizForPublish(
-  quiz: any,
-  docFiles: { name: string; url?: string }[],
-): { ok: true } | { ok: false; error: string } {
-  if (!quiz) return { ok: true };
-
-  // 1) Correct-worksheet check: the file set must be identical to the one the
-  //    quiz was generated from. If the teacher swapped/added/removed a worksheet
-  //    after generating (or the quiz is stale from a previous upload), re-generate.
-  if (quiz._sourceDocKey != null) {
-    const currentKey = (docFiles || []).map((f) => f.url || f.name).sort().join('|');
-    if (currentKey !== quiz._sourceDocKey) {
-      return { ok: false, error: 'The selected worksheet has changed since this quiz was generated. Tap "Generate Interactive Quiz" again so the quiz matches the uploaded worksheet before publishing.' };
-    }
-  }
-
-  // 2) No empty task cards — every task must carry renderable content.
-  const tasks = Array.isArray(quiz.tasks) ? quiz.tasks : [];
-  if (tasks.length === 0) {
-    return { ok: false, error: 'This quiz has no tasks. Please re-generate before publishing.' };
-  }
-  const taskHasContent = (t: any): boolean => {
-    if (Array.isArray(t.questions) && t.questions.length > 0) return true;
-    if (t.chart && Array.isArray(t.chart.bars) && t.chart.bars.length) return true;
-    if (Array.isArray(t.tables) && t.tables.length) return true;
-    if (t.table && Array.isArray(t.table.rows) && t.table.rows.length) return true;
-    if (Array.isArray(t.pyramids) && t.pyramids.length) return true;
-    if (Array.isArray(t.diagramFillBlanks) && t.diagramFillBlanks.length) return true;
-    if (t._matchTask || t.sharedImage) return true;
-    if (t.passage && String(t.passage).trim()) return true;
-    return false;
-  };
-  const emptyTasks = tasks.filter((t: any) => !taskHasContent(t));
-  if (emptyTasks.length > 0) {
-    const names = emptyTasks.map((t: any) => (t.title || 'Untitled task').replace(/\s+/g, ' ').trim().slice(0, 60)).join('; ');
-    return { ok: false, error: `Some tasks are empty (content was not extracted): ${names}. Please re-generate — do not publish an incomplete quiz.` };
-  }
-
-  return { ok: true };
-}
-
-/** Generate a standalone interactive HTML quiz for browser preview — Aivorah Enchanted Forest dark theme */
-function generateQuizHTMLPreview(quiz: any): string {
-  const totalQ = quiz.tasks?.reduce((s: number, t: any) => s + (t.questions?.length || 0), 0) || 0;
-  const fmt = (t: string) => (t || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  const tierColors: Record<string, { bg: string; border: string; label: string }> = {
-    'MUST DO': { bg: 'rgba(147,176,172,0.08)', border: '#93B0AC', label: '#93B0AC' },
-    'COULD DO': { bg: 'rgba(197,189,150,0.08)', border: '#C5BD96', label: '#C5BD96' },
-    'ENRICHMENT': { bg: 'rgba(239,209,212,0.08)', border: '#EFD1D4', label: '#EFD1D4' },
-  };
-  const skipUnits = ['comparison', 'symbol', 'n/a', 'none', 'fraction', 'text', 'yes/no', 'explanation'];
-  const answersMap: Record<string, any> = {};
-  let qHTML = '', qIdx = 0;
-  for (const task of (quiz.tasks || [])) {
-    const c = tierColors[task.tier] || tierColors['MUST DO'];
-    qHTML += `<div style="border-left:5px solid ${c.border};background:${c.bg};border-radius:12px;padding:20px 24px;margin:28px 0">
-      <span style="display:inline-block;background:${c.border}20;color:${c.label};font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;padding:4px 12px;border-radius:4px;margin-bottom:6px">${task.tier}</span>
-      <h2 style="font-size:18px;color:#F0EEEC;margin:6px 0 18px;font-weight:700">${fmt(task.title || '')}</h2>`;
-    if (task.diagramHTML) {
-      qHTML += `<div style="margin:0 0 20px;padding:16px;background:#252525;border-radius:10px;border:1px solid rgba(195,220,216,0.12);text-align:center">${task.diagramHTML}</div>`;
-    }
-    for (const q of (task.questions || [])) {
-      qIdx++;
-      const qId = `q${qIdx}`;
-      const isFraction = typeof q.answer === 'string' && /^\d+\/\d+$/.test(q.answer);
-      const isNum = !isFraction && (q.type === 'numeric' || typeof q.answer === 'number');
-      answersMap[qId] = { answer: q.answer, isNum, range: q.acceptRange || null };
-      const qLabel = q.id && /^[a-z0-9]/i.test(q.id) && q.id.length <= 3 ? `${q.id})` : `Q${qIdx}.`;
-      const displayUnit = q.unit && !skipUnits.includes((q.unit || '').toLowerCase()) ? q.unit : '';
-      const imgTag = q.imageUrl ? `<div style="margin-bottom:14px"><img src="${q.imageUrl.startsWith('http') ? q.imageUrl : SERVER_URL + q.imageUrl}" alt="${q.diagramDescription || 'Worksheet diagram'}" style="max-width:100%;border-radius:8px;border:1px solid rgba(195,220,216,0.12)"></div>` : '';
-      qHTML += `<div style="background:#1C1C1C;padding:20px 24px;border-radius:10px;margin:14px 0;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:1px solid rgba(195,220,216,0.12)">
-        <p style="font-size:15px;color:#F0EEEC;margin-bottom:14px;line-height:1.6"><strong style="color:#C3DCD8">${qLabel}</strong> ${fmt(q.question)}</p>
-        ${imgTag}
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-          <strong style="font-size:14px;color:#A8B5B3">Answer =</strong>
-          <input type="text" id="${qId}-i" placeholder="?" style="width:130px;padding:10px 12px;border:2px solid rgba(195,220,216,0.25);border-radius:8px;font-size:16px;text-align:center;background:#252525;color:#F0EEEC">
-          ${displayUnit ? `<span style="color:#A8B5B3;font-size:14px">${displayUnit}</span>` : ''}
-          <button onclick="check('${qId}')" style="background:#93B0AC;color:#0F0F0F;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px">Check</button>
-          <button onclick="hint('${qId}')" style="background:#C5BD96;color:#0F0F0F;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">Hint</button>
-        </div>
-        <div id="${qId}-h" style="display:none;margin-top:12px;padding:14px 16px;background:rgba(197,189,150,0.1);border-radius:8px;border-left:4px solid #C5BD96;color:#C5BD96;font-size:14px">${fmt(q.hint || '')}</div>
-        <div id="${qId}-r" style="margin-top:8px;min-height:6px"></div>
-        <div id="${qId}-s" style="display:none;margin-top:12px;padding:16px 18px;background:rgba(147,176,172,0.1);border-radius:8px;border-left:4px solid #93B0AC;color:#93B0AC;font-size:14px;line-height:1.7"><strong>Solution:</strong><br>${fmt((q.solution || '').replace(/Step (\d)/g, '<br>Step $1').replace(/Answer:/g, '<br><strong>Answer:</strong>'))}</div>
-        <button id="${qId}-sb" onclick="sol('${qId}')" style="display:none;margin-top:10px;background:#93B0AC;color:#0F0F0F;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px">Show Answer</button>
-      </div>`;
-    }
-    qHTML += `</div>`;
-  }
-  let conceptsHTML = '';
-  if (quiz.concepts?.length) {
-    const cColors = ['#93B0AC', '#C5BD96', '#D4A898', '#C3DCD8'];
-    conceptsHTML = `<div style="display:flex;gap:16px;margin:24px 0;flex-wrap:wrap">` +
-      quiz.concepts.map((cc: any, i: number) => `<div style="flex:1;min-width:220px;padding:20px;border-radius:12px;background:${cColors[i % cColors.length]}18;border:1px solid ${cColors[i % cColors.length]}40;color:#F0EEEC"><h3 style="font-size:18px;font-weight:800;margin-bottom:6px;color:${cColors[i % cColors.length]}">${cc.term}</h3><p style="font-size:13px;color:#A8B5B3;line-height:1.5">${cc.definition}</p>${cc.unit ? `<p style="margin-top:8px;font-size:12px;color:#5A6B69">Measured in<br><strong style="color:#C3DCD8">${cc.unit}</strong></p>` : ''}</div>`).join('') + `</div>`;
-  }
-  const answersJSON = JSON.stringify(answersMap).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${quiz.title || 'Quiz'} - Aivorah</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#0F0F0F;color:#F0EEEC;line-height:1.6}.hdr{background:linear-gradient(135deg,#1C1C1C 0%,#252525 100%);color:#F0EEEC;padding:28px 40px;position:relative;border-bottom:1px solid rgba(195,220,216,0.12)}.hdr-sub{font-size:13px;color:#5A6B69;margin-bottom:4px}.hdr h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;color:#C3DCD8}.hdr-meta{font-size:13px;color:#5A6B69;margin-top:4px}.ctr{max-width:960px;margin:0 auto;padding:0 24px 60px}.sc{position:fixed;top:20px;right:24px;width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#93B0AC,#7AADA8);color:#0F0F0F;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(147,176,172,0.3);z-index:100}.sc-n{font-size:22px;font-weight:800;line-height:1}.sc-l{font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:0.7;margin-top:2px}.pw{padding:20px 0 4px}.pw-t{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5A6B69;margin-bottom:8px}.pb{background:#252525;border-radius:6px;height:12px;overflow:hidden;border:1px solid rgba(195,220,216,0.08)}.pf{background:linear-gradient(90deg,#93B0AC,#C3DCD8);height:100%;border-radius:6px;transition:width .6s ease}.pp{text-align:right;font-size:12px;color:#93B0AC;font-weight:600;margin-top:4px}input:focus{outline:none;border-color:#93B0AC!important;box-shadow:0 0 0 3px rgba(147,176,172,0.2)}button:hover{opacity:0.85;transform:translateY(-1px)}@media(max-width:640px){.hdr{padding:20px}.hdr h1{font-size:20px}.ctr{padding:0 14px 40px}.sc{width:60px;height:60px;top:14px;right:14px}.sc-n{font-size:18px}}</style></head>
-<body><div class="hdr"><div class="hdr-sub">${quiz.school || 'Aivorah'} &middot; ${quiz.grade || ''}</div><h1>${fmt(quiz.title || 'Interactive Quiz')}</h1><div class="hdr-meta">Subject: ${quiz.subject || 'Mathematics'} &nbsp;|&nbsp; Powered by Aivorah</div></div>
-<div class="sc"><span class="sc-n" id="sn">0/${totalQ}</span><span class="sc-l">Score</span></div><div class="ctr"><div class="pw"><div class="pw-t">Quiz Progress</div><div class="pb"><div class="pf" id="pf" style="width:0%"></div></div><div class="pp" id="pp">0% complete</div></div>${conceptsHTML}${qHTML}</div>
-<script>let sc=0;const tot=${totalQ};const dn=new Set();const ans=${answersJSON};
-function up(){document.getElementById('sn').textContent=sc+'/'+tot;const p=Math.round(dn.size/tot*100);document.getElementById('pf').style.width=p+'%';document.getElementById('pp').textContent=p+'% complete'}
-function check(id){const a=ans[id];if(!a)return;const inp=document.getElementById(id+'-i');const val=inp.value.trim();if(!val){inp.style.borderColor='#C5BD96';return}const r=document.getElementById(id+'-r');let ok=false;if(a.isNum){const v=parseFloat(val);if(isNaN(v)){inp.style.borderColor='#C5BD96';return}ok=a.range?(v>=a.range[0]&&v<=a.range[1]):Math.abs(v-a.answer)<0.01}else{ok=val.replace(/\\s+/g,'').toLowerCase()===String(a.answer).replace(/\\s+/g,'').toLowerCase()}if(ok){r.innerHTML='<span style="color:#93B0AC;font-weight:700">&#10004; Correct!</span>';inp.style.borderColor='#93B0AC';inp.style.background='rgba(147,176,172,0.1)';if(!dn.has(id)){sc++;dn.add(id)}document.getElementById(id+'-s').style.display='block'}else{r.innerHTML='<span style="color:#EFD1D4;font-weight:700">Not quite. Try again!</span>';inp.style.borderColor='#EFD1D4';document.getElementById(id+'-sb').style.display='inline-block'}up()}
-function hint(id){const e=document.getElementById(id+'-h');e.style.display=e.style.display==='none'?'block':'none'}
-function sol(id){const e=document.getElementById(id+'-s');e.style.display=e.style.display==='none'?'block':'none'}</script></body></html>`;
-}
-
-type Assignment = {
-  id: string;
-  title: string;
-  subject: string;
-  chapter: string;
-  dueDate: string;
-  type: 'assignment' | 'quiz';
-  note: string;
-  studentId: string | null;
-  createdBy: string;
-  status: 'pending' | 'completed';
-  score: number | null;
-  createdAt: string;
-  completedAt?: string | null;
-  grade?: string | null;
-  curriculum?: string | null;
-  aiFeedback?: string | null;
-  questions?: any[];
-  quizQuestions?: any[];
-  taskSteps?: any[];
-  successCriteria?: string[];
-  documentUrls?: string[];
-};
-
-interface StudentItem { id: string; name: string; grade: string; curriculum?: string | null; }
-
-type StepType =
-  | 'brainstorm' | 'drawing' | 'structured_writing' | 'problem_solving'
-  | 'tuning_in' | 'math_reflection' | 'prior_knowledge'
-  | 'text_connection' | 'reading_comprehension' | 'writing_reflection'
-  | 'language_culture' | 'language_practice' | 'communication'
-  | 'social_inquiry' | 'research_notes' | 'social_synthesis'
-  | 'artistic_exploration' | 'art_creation' | 'artistic_reflection'
-  | 'digital_awareness' | 'tech_skill_practice' | 'digital_citizenship'
-  | 'movement_exploration' | 'skill_practice' | 'physical_reflection';
-
-interface TaskStep {
-  id: string;
-  type: StepType;
-  label: string;
-  instructions: string;
-  sections: string[];
-  wordBank: string[];
-  problems?: string[];
-  reflectionPrompts?: string[];
-  provocation?: string;
-}
-
-const STEP_DEFAULTS: Record<StepType, Partial<TaskStep>> = {
-  brainstorm:           { label: 'Thinking Clouds',         instructions: 'Write keywords that come to mind.', sections: [], wordBank: [] },
-  drawing:              { label: 'Draw Your Answer',         instructions: 'Draw and label your answer.', sections: [], wordBank: [] },
-  structured_writing:   { label: 'Write a Response',        instructions: 'Write with a clear beginning, middle, and end.', sections: ['Beginning', 'Middle', 'End'], wordBank: [] },
-  problem_solving:      { label: 'Practice Problems',        instructions: 'Solve each problem. Show your working.', sections: [], wordBank: [], problems: [] },
-  tuning_in:            { label: 'Tuning In',                instructions: 'Read the scenario and write your initial thinking.', sections: [], wordBank: [], provocation: '' },
-  math_reflection:      { label: 'Math Reflection',          instructions: 'Reflect using the three prompts below.', sections: ['My Strategy', 'What Was Tricky', 'Real Life Connection'], wordBank: [], reflectionPrompts: [] },
-  prior_knowledge:      { label: 'Prior Knowledge',          instructions: 'Write what you know and what you predict.', sections: ['What I Already Know', 'What I Predict'], wordBank: [] },
-  text_connection:      { label: 'Text Connection',          instructions: 'Read and write your personal connection to the text.', sections: [], wordBank: [], provocation: '' },
-  reading_comprehension:{ label: 'Reading Comprehension',    instructions: 'Answer the questions about the text.', sections: ['What Happened?', 'Reading Between the Lines', 'My Thinking'], wordBank: [] },
-  writing_reflection:   { label: 'Writing Reflection',       instructions: 'Reflect on your reading using the three prompts.', sections: ['Most Important Idea', 'Connection to Our Unit', 'My Question for the Author'], wordBank: [], reflectionPrompts: [] },
-  language_culture:     { label: 'Language & Culture',        instructions: 'Explore the language and cultural connection.', sections: [], wordBank: [], provocation: '' },
-  language_practice:    { label: 'Language Practice',         instructions: 'Practise vocabulary and write in the target language.', sections: ['Vocabulary Practice', 'My Sentences', 'Cultural Connection'], wordBank: [] },
-  communication:        { label: 'Communication',             instructions: 'Write a paragraph and reflect on your language learning.', sections: ['My Paragraph', 'Favourite Word or Phrase', 'Cultural Comparison'], wordBank: [], reflectionPrompts: [] },
-  social_inquiry:       { label: 'Social Inquiry',            instructions: 'Observe and wonder about the provocation.', sections: [], wordBank: [], provocation: '' },
-  research_notes:       { label: 'Research Notes',            instructions: 'Research and record notes in each section.', sections: ['Key Facts', 'People and Perspectives', 'Cause and Effect'], wordBank: [] },
-  social_synthesis:     { label: 'Social Synthesis',          instructions: 'Synthesise your learning using the three prompts.', sections: ['What I Learned and Why It Matters', 'Connection to Our World', 'Taking Action'], wordBank: [], reflectionPrompts: [] },
-  artistic_exploration: { label: 'Art Exploration',           instructions: 'Observe the artwork and write your response.', sections: [], wordBank: [], provocation: '' },
-  art_creation:         { label: 'Art Creation',              instructions: 'Create your artwork and upload a photo.', sections: [], wordBank: [] },
-  artistic_reflection:  { label: 'Artist Statement',          instructions: 'Reflect on your artwork using the three prompts.', sections: ['About My Artwork', 'What I Was Trying to Express', 'Challenges and Improvements'], wordBank: [], reflectionPrompts: [] },
-  digital_awareness:    { label: 'Digital Awareness',         instructions: 'Explore technology use and write your response.', sections: [], wordBank: [], provocation: '' },
-  tech_skill_practice:  { label: 'Tech Skill Practice',       instructions: 'Complete the digital task and describe your creation.', sections: ['Step-by-Step Task', 'My Digital Creation', 'How I Checked My Sources'], wordBank: [] },
-  digital_citizenship:  { label: 'Digital Citizenship',       instructions: 'Reflect on responsible technology use.', sections: ['What I Learned to Do', 'Being a Responsible Digital Citizen', 'Technology for Good'], wordBank: [], reflectionPrompts: [] },
-  movement_exploration: { label: 'Movement Exploration',      instructions: 'Write about the movement concept.', sections: [], wordBank: [], provocation: '' },
-  skill_practice:       { label: 'Skill Practice',            instructions: 'Describe and record your physical practice.', sections: ['Key Skill Steps', 'My Practice Record', 'Teamwork and Fairness'], wordBank: [] },
-  physical_reflection:  { label: 'PE Reflection',             instructions: 'Reflect on your physical learning and set goals.', sections: ['What I Did Well', 'My Next Step', 'Health and Wellbeing Connection'], wordBank: [], reflectionPrompts: [] },
-};
-const STEP_ICONS: Record<StepType, string> = {
-  brainstorm: 'cloud', drawing: 'edit-3', structured_writing: 'align-left', problem_solving: 'hash',
-  tuning_in: 'zap', math_reflection: 'rotate-ccw', prior_knowledge: 'bookmark',
-  text_connection: 'book-open', reading_comprehension: 'search', writing_reflection: 'feather',
-  language_culture: 'globe', language_practice: 'message-circle', communication: 'edit-3',
-  social_inquiry: 'compass', research_notes: 'file-text', social_synthesis: 'layers',
-  artistic_exploration: 'eye', art_creation: 'edit-3', artistic_reflection: 'aperture',
-  digital_awareness: 'monitor', tech_skill_practice: 'cpu', digital_citizenship: 'shield',
-  movement_exploration: 'activity', skill_practice: 'trending-up', physical_reflection: 'heart',
-};
-const STEP_COLORS: Record<StepType, string> = {
-  brainstorm: '#C5BD96', drawing: '#D4A898', structured_writing: '#93B0AC', problem_solving: '#C3DCD8',
-  tuning_in: '#D8C4E8', math_reflection: '#B8D4C8', prior_knowledge: '#EBD5B8',
-  text_connection: '#EAD4D8', reading_comprehension: '#D8C4E8', writing_reflection: '#C5BD96',
-  language_culture: '#D4C4A8', language_practice: '#B8CCD4', communication: '#C8D4A8',
-  social_inquiry: '#D8C8A8', research_notes: '#B8C8D8', social_synthesis: '#C4D0C4',
-  artistic_exploration: '#E8D4C4', art_creation: '#D4A898', artistic_reflection: '#DCC8D4',
-  digital_awareness: '#C4D4E0', tech_skill_practice: '#B8D8D0', digital_citizenship: '#C0CCD8',
-  movement_exploration: '#C8D8B8', skill_practice: '#B8D4BC', physical_reflection: '#D0D8C0',
-};
-
-const TABS = ['All', 'Active', 'Completed'];
-const SUBJECTS = [
-  'Mathematics', 'Science', 'English', 'Social Studies', 'Language Acquisition',
-  'Visual Arts', 'ICT', 'Physical Education',
-];
-const ALL_GRADES = ['Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-const IB_GRADES  = ['Grade 3', 'Grade 4', 'Grade 5'];
-const LANGUAGES = ['Telugu', 'Hindi', 'Tamil', 'Kannada', 'French', 'Spanish', 'Mandarin', 'Arabic'];
-const TYPES = ['assignment', 'quiz'];
-// Aivorah gold — matches the gold theme applied across teacher/parent/student screens
-const AIVORAH_GOLD = '#BAA467';
-const SUBJECT_COLORS: Record<string, string> = {
-  Mathematics:    AIVORAH_GOLD,
-  Science:        AIVORAH_GOLD,
-  English:        AIVORAH_GOLD,
-  'Social Studies': AIVORAH_GOLD,
-  'Language Acquisition': AIVORAH_GOLD,
-  'Visual Arts':          AIVORAH_GOLD,
-  'ICT':                  AIVORAH_GOLD,
-  'Physical Education':   AIVORAH_GOLD,
-};
-
-// Polls a queued job (see server/services/jobQueue.js) until it's done/failed,
-// instead of blocking a single long-lived request — used by the worksheet
-// upload/classify and quiz-generation steps so the browser tab (and any load
-// balancer/proxy in front of it) never has to hold one connection open for
-// the full AI pipeline duration.
-async function pollJob(jobId: string, { intervalMs = 1500, timeoutMs = 360000 } = {}): Promise<any> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const res = await fetch(`${SERVER_URL}/jobs/${jobId}`);
-    const job = await res.json().catch(() => ({}));
-    if (job.status === 'done') return job.result;
-    if (job.status === 'failed') throw new Error(job.error || 'Processing failed. Please try again.');
-    await new Promise(r => setTimeout(r, intervalMs));
-  }
-  throw new Error('Timed out waiting for processing to finish. Please try again.');
-}
-
-function daysUntil(dateStr: string) {
-  const diff = new Date(dateStr).getTime() - Date.now();
-  const days = Math.ceil(diff / 86400000);
-  if (days < 0) return { label: `${Math.abs(days)}d overdue`, overdue: true };
-  if (days === 0) return { label: 'Due today', overdue: false };
-  return { label: `Due in ${days}d`, overdue: false };
-}
-
-function getAnsweredQuizHtml(originalHtml: string, submission: any) {
-  if (!originalHtml) return '';
-  // Interactive-quiz completions (PUT /assignments/:id/complete) store answers
-  // under submission_text as { perQuestion: [{qId, answer, correct, ...}] } —
-  // there is no separate top-level "answers" map. submission.studentAnswers is
-  // always empty for this submission type, so building the qId→answer lookup
-  // from it (as before) meant the injected script's loop never ran and the
-  // "answered sheet" preview always rendered blank.
-  const pq = Array.isArray(submission.perQuestion) ? submission.perQuestion : [];
-  const answersMap: Record<string, any> = {};
-  for (const q of pq) {
-    if (q && q.qId != null) answersMap[q.qId] = q.answer;
-  }
-  const answersJson = JSON.stringify(answersMap);
-  const perQuestionJson = JSON.stringify(pq);
-  const scriptToInject = `
-    <script>
-      window.addEventListener('load', function() {
-        const answers = ${answersJson};
-        const pq = ${perQuestionJson};
-        for (const [qId, ans] of Object.entries(answers)) {
-          const inputEl = document.getElementById(qId + '-input') || document.getElementById(qId);
-          if (inputEl) {
-            inputEl.value = ans;
-            inputEl.disabled = true;
-            const qInfo = pq.find(x => x.qId === qId);
-            if (qInfo) {
-              const correct = qInfo.correct ?? (qInfo.score >= 70);
-              inputEl.style.borderColor = correct ? '#8bc34a' : '#e57373';
-              inputEl.style.backgroundColor = correct ? 'rgba(139,195,74,0.1)' : 'rgba(229,115,115,0.1)';
-            }
-            continue;
-          }
-          const radios = document.getElementsByName(qId);
-          if (radios.length > 0) {
-            for (const radio of radios) {
-              if (radio.value === ans) radio.checked = true;
-              radio.disabled = true;
-            }
-            continue;
-          }
-          // Venn diagrams have no single "-input" element — 3 separate textareas
-          // (qId-left/-center/-right), and the stored answer is one combined
-          // string like "left: a, b | center: c | right: d" (checkVenn's own
-          // snapshot format). Split it back out per region.
-          const leftEl = document.getElementById(qId + '-left');
-          if (leftEl && typeof ans === 'string') {
-            const parts = ans.split('|').map(function(s) { return s.trim(); });
-            parts.forEach(function(part) {
-              const m = part.match(/^(left|center|right):\\s*(.*)$/i);
-              if (!m) return;
-              const el = document.getElementById(qId + '-' + m[1].toLowerCase());
-              if (el) { el.value = m[2]; el.disabled = true; }
-            });
-          }
-        }
-        document.querySelectorAll('button').forEach(btn => btn.disabled = true);
-
-        // The score badge and progress bar are normally only updated by the
-        // in-page up() function, which this review script never calls (it sets
-        // input values directly, bypassing the check pipeline) — so they stayed
-        // frozen at their initial "0/total, 0%" state even though the answers
-        // below were correctly populated. Set them directly from the real
-        // completed submission instead.
-        const totalQ = pq.length;
-        const correctQ = pq.filter(function(x) { return x.correct === true; }).length;
-        const scoreEl = document.getElementById('score-num');
-        if (scoreEl && totalQ > 0) scoreEl.textContent = correctQ + '/' + totalQ;
-        const pf = document.getElementById('pf');
-        if (pf) pf.style.width = '100%';
-        const pp = document.getElementById('pp');
-        if (pp) pp.textContent = '100% complete';
-      });
-    </script>
-  `;
-  return originalHtml.replace('</body>', scriptToInject + '</body>');
-}
-
-// Publishes a worksheet-extraction job to the swappable db/Kafka queue (server
-// polls it — see server/index.js) instead of blocking on the synchronous AI
-// call directly. The point isn't just "don't freeze this tab" (the old
-// sequential-for-loop already handled that for one teacher's own batch) — it's
-// that a synchronous call gives the SERVER no coordination point across
-// DIFFERENT teachers uploading at the same moment, only within one teacher's
-// own request. Routing through the queue means every worksheet, from every
-// teacher, funnels through the same drain (server/services/jobQueue.js
-// runWorkerOnce), which is the actual "handle concurrent teacher uploads
-// reliably" property. Falls back to the old synchronous endpoint if the queue
-// call itself fails to enqueue, so a queue outage never blocks uploads outright.
-// The extraction AI is instructed not to use a program/series banner (e.g. a
-// grade label like "PYP: 4") as the title/chapter, but doesn't always follow
-// that — grade already has its own dedicated field, so strip a leading
-// "PYP <n>" / "PYP: <n>" / "Grade <n>" prefix if the model echoed it anyway.
-function stripGradePrefix(text: string): string {
-  return (text || '').replace(/^\s*(PYP|Grade|Class)\s*:?\s*\d+\s*[:\-–]?\s*/i, '').trim();
-}
-
-async function extractViaQueue(serverUrl: string, body: any): Promise<any> {
-  try {
-    const enqueueRes = await fetch(`${serverUrl}/assignments/extract-questions-async`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    const enqueueData = await enqueueRes.json();
-    if (!enqueueRes.ok || !enqueueData.jobId) throw new Error(enqueueData.error || 'Could not queue extraction');
-
-    const deadline = Date.now() + 3 * 60 * 1000; // 3 min — matches the vision-call fallback-chain budget
-    while (Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 2000));
-      const statusRes = await fetch(`${serverUrl}/jobs/${enqueueData.jobId}`);
-      const statusData = await statusRes.json();
-      if (statusData.status === 'done') return statusData.result;
-      if (statusData.status === 'failed') throw new Error(statusData.error || 'Extraction job failed');
-      // 'pending' or 'processing' — keep polling
-    }
-    throw new Error('Extraction timed out waiting for the queue to process it');
-  } catch (queueErr: any) {
-    console.log('[extractViaQueue] queue path failed, falling back to synchronous extraction:', queueErr?.message);
-    const fallbackRes = await fetch(`${serverUrl}/assignments/extract-questions`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    const fallbackData = await fallbackRes.json();
-    if (!fallbackRes.ok) throw new Error(fallbackData.error || 'Extraction failed');
-    return fallbackData;
-  }
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+import type { Assignment, StudentItem, StepType, TaskStep, BulkItem } from './types';
+import {
+  TABS, SUBJECTS, ALL_GRADES, LANGUAGES, TYPES,
+  AIVORAH_GOLD, SUBJECT_COLORS, STEP_DEFAULTS, STEP_ICONS, STEP_COLORS,
+} from './constants';
+import { pdfToImages, imagesToPdfBase64 } from './utils/pdfHelpers';
+import { answerToEditText, validateInteractiveQuizForPublish } from './utils/validation';
+import { generateQuizHTMLPreview, getAnsweredQuizHtml } from './utils/quizHtml';
+import { daysUntil, formatDate, stripGradePrefix } from './utils/helpers';
+import { pollJob, extractViaQueue } from './services/jobsService';
+import { useTeacherCurriculumGrade } from './hooks/useTeacherCurriculumGrade';
+import { useBulkUpload } from './hooks/useBulkUpload';
 
 export default function TeacherAssignmentsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -538,10 +45,14 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   // Form state
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Mathematics');
-  const teacherCurriculum = user?.teaches?.[0]?.curriculum || user?.curriculum || '';
-  const defaultGrade = user?.teaches?.[0]?.grade || 'Grade 3';
-  const [grade, setGrade] = useState(defaultGrade);
-  const [curriculum, setCurriculum] = useState(teacherCurriculum);
+  const {
+    teacherCurriculum, defaultGrade,
+    grade, setGrade, curriculum, setCurriculum,
+    teacherEmail, isIBPYP,
+    gradeOptions, effectiveGrade,
+    curriculumOptions, effectiveCurriculum,
+    availableTopics, topicsLoading,
+  } = useTeacherCurriculumGrade(user, subject);
   const [chapter, setChapter] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [type, setType] = useState<'assignment' | 'quiz'>('assignment');
@@ -603,23 +114,9 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   // single-item wizard): 'classify' (preview + edit subject/grade/title for
   // ALL worksheets at once) → 'generate' (quiz generated + previewable for
   // ALL worksheets) → 'assign' (choose assign-to per worksheet, one Publish
-  // All action). Every worksheet is a BulkItem tracked independently.
-  type BulkItem = {
-    id: string; name: string; mime: string; base64: string;
-    pages: { name: string; base64: string; mime: string }[];
-    status: 'extracting' | 'ready' | 'error'; error?: string;
-    title: string; subject: string; grade: string; curriculum: string; chapter: string; language: string;
-    quiz: any | null; quizHtml: string; quizStatus: 'idle' | 'generating' | 'done' | 'error'; quizError?: string;
-    assignTo: 'all' | 'specific'; selectedStudentId: string | null;
-    publishStatus: 'idle' | 'publishing' | 'done' | 'error'; publishError?: string;
-  };
-  const [bulkPhase, setBulkPhase] = useState<'pick' | 'classify' | 'generate' | 'assign'>('pick');
-  const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
-  const [bulkDueDate, setBulkDueDate] = useState('');
-
-  function updateBulkItem(id: string, patch: Partial<BulkItem>) {
-    setBulkItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
-  }
+  // All action). Every worksheet is a BulkItem tracked independently (type
+  // imported from ./types). See useBulkUpload(), called below once `load`
+  // is defined.
   // Upload wizard step: 1=Upload & Classify, 2=Generate & Review, 3=Assign & Publish
   const [uploadStep, setUploadStep] = useState<1 | 2 | 3>(1);
   const uploadScrollRef = React.useRef<ScrollView>(null);
@@ -652,10 +149,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   // English and extraction correctly declined to guess a language for it.
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [unitOfInquiry, setUnitOfInquiry] = useState('');
-  // Available syllabus topics for the selected grade + subject (from ingested
-  // RAG content) — teacher can tap one to fill Chapter/Topic, or type their own.
-  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
-  const [topicsLoading, setTopicsLoading] = useState(false);
   const [ibPurpose, setIbPurpose] = useState('');
   const [ibLearningOutcomes, setIbLearningOutcomes] = useState<string[]>(['']);
   const [ibWordBank, setIbWordBank] = useState<string[]>([]);
@@ -676,110 +169,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   const [assignTo, setAssignTo] = useState<'all' | 'specific'>('all');
   const [selectedStudent, setSelectedStudent] = useState<StudentItem | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
-  // Grades + curricula this teacher handles — fetched authoritatively from their
-  // saved preferences (teaches[]), since user.teaches on the cached profile can be stale.
-  const [fetchedGrades, setFetchedGrades] = useState<string[]>([]);
-  const [fetchedCurricula, setFetchedCurricula] = useState<string[]>([]);
-
-  const teacherEmail = user?.email || 'teacher@demo.com';
-  const isIBPYP = (curriculum || teacherCurriculum || '').toLowerCase().includes('ib');
-
-  // Grade pills: only show grades the teacher handles. Prefer the freshly-fetched
-  // teaches[] grades; fall back to user.teaches; only show the full list if we
-  // genuinely have no info for this teacher.
-  const teachesGrades = Array.isArray(user?.teaches) && user.teaches.length > 0
-    ? user.teaches.map((t: any) => t.grade || t).filter(Boolean)
-    : [];
-  const teacherGrades = fetchedGrades.length > 0 ? fetchedGrades : teachesGrades;
-  const fullGradeList = isIBPYP ? IB_GRADES : ALL_GRADES;
-  // Show exactly the grades this teacher handles (ordered by the full teacher grade
-  // list so e.g. UKG sorts before Grade 4). Don't intersect with ALL_GRADES — that
-  // list only spans Grade 3–9 and would drop Nursery/LKG/UKG/Grade 1-2/10-12.
-  const orderedTeacherGrades = GRADES_TEACHER.filter(g => teacherGrades.includes(g));
-  const baseGradeOptions = teacherGrades.length > 0
-    ? (orderedTeacherGrades.length > 0 ? orderedTeacherGrades : teacherGrades)
-    : fullGradeList;
-  // The worksheet's own auto-extracted grade must always be selectable, even if
-  // it falls outside the teacher's configured teaching grades — restricting the
-  // list to only "grades this teacher teaches" was silently hiding the real
-  // extracted grade (e.g. a Grade 4 worksheet) and defaulting to gradeOptions[0]
-  // instead, which showed the WRONG grade with no way to pick the right one.
-  const gradeOptions = (grade && !baseGradeOptions.includes(grade))
-    ? [...baseGradeOptions, grade]
-    : baseGradeOptions;
-  // Render-derived selected grade — always a valid option even if `grade` state is
-  // momentarily stale, so a pill is always highlighted (no effect-timing gaps).
-  const effectiveGrade = gradeOptions.includes(grade) ? grade : (gradeOptions[0] || grade);
-
-  // Curricula this teacher handles (selectable when they teach more than one).
-  const teachesCurricula = Array.isArray(user?.teaches) && user.teaches.length > 0
-    ? [...new Set(user.teaches.map((t: any) => t.curriculum).filter(Boolean))] as string[]
-    : [];
-  const baseCurriculumOptions = fetchedCurricula.length > 0
-    ? fetchedCurricula
-    : (teachesCurricula.length > 0 ? teachesCurricula : (teacherCurriculum ? [teacherCurriculum] : []));
-  // Same fix as gradeOptions above — the worksheet's own extracted curriculum
-  // must always be selectable, never silently overridden by a restricted list.
-  const curriculumOptions = (curriculum && !baseCurriculumOptions.includes(curriculum))
-    ? [...baseCurriculumOptions, curriculum]
-    : baseCurriculumOptions;
-  const effectiveCurriculum = curriculumOptions.includes(curriculum)
-    ? curriculum
-    : (curriculumOptions[0] || curriculum);
-
-  // Fetch the teacher's grades + curricula authoritatively from their saved
-  // preferences. Runs on every focus (not just mount) so a change in Settings is
-  // picked up instantly when the teacher returns — no manual refresh needed.
-  useFocusEffect(useCallback(() => {
-    if (!teacherEmail) return;
-    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(teacherEmail)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(p => {
-        const teaches = Array.isArray(p?.teaches) ? p.teaches : [];
-        const g = [...new Set(teaches.map((t: any) => t.grade).filter(Boolean))] as string[];
-        const c = [...new Set(teaches.map((t: any) => t.curriculum).filter(Boolean))] as string[];
-        // Only populate the option list here — do NOT force-reset grade/curriculum
-        // to the teacher's default. This effect used to unconditionally stomp
-        // grade/curriculum back to the teacher's own teaching list on every
-        // screen focus, silently overwriting a worksheet's correctly auto-filled
-        // grade (e.g. Grade 4) just because that teacher normally teaches
-        // Grade 3/5 — the worksheet's real extracted grade must never be
-        // silently overridden like that.
-        if (g.length > 0) setFetchedGrades(g);
-        if (c.length > 0) setFetchedCurricula(c);
-      })
-      .catch(() => {});
-  }, [teacherEmail]));
-
-  // Keep `grade`/`curriculum` state in sync with the clamped effective values so the
-  // publish payload and AI-generate calls always use grades/curricula the teacher teaches.
-  useEffect(() => {
-    if (grade !== effectiveGrade) setGrade(effectiveGrade);
-  }, [effectiveGrade]);
-  useEffect(() => {
-    if (effectiveCurriculum && curriculum !== effectiveCurriculum) setCurriculum(effectiveCurriculum);
-  }, [effectiveCurriculum]);
-
-  // Fetch the syllabus topics available for the selected grade + subject so the
-  // teacher can pick from what the curriculum actually covers (or type their own).
-  useEffect(() => {
-    let cancelled = false;
-    if (!subject || !effectiveGrade) { setAvailableTopics([]); return; }
-    setTopicsLoading(true);
-    fetch(`${SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(effectiveGrade)}&curriculum=${encodeURIComponent(effectiveCurriculum)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (cancelled) return;
-        const match = (data?.subjects || []).find((s: any) => s.subject === subject);
-        const topics = (match?.topics || [])
-          .map((t: any) => String(t.topic || '').trim())
-          .filter(Boolean);
-        setAvailableTopics(Array.from(new Set(topics)) as string[]);
-      })
-      .catch(() => { if (!cancelled) setAvailableTopics([]); })
-      .finally(() => { if (!cancelled) setTopicsLoading(false); });
-    return () => { cancelled = true; };
-  }, [subject, effectiveGrade, effectiveCurriculum]);
 
   const load = useCallback(async () => {
     try {
@@ -792,6 +181,15 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   }, [teacherEmail]);
 
   useEffect(() => { load(); }, [load]);
+
+  const {
+    bulkPhase, setBulkPhase, bulkItems, setBulkItems, bulkDueDate, setBulkDueDate,
+    updateBulkItem, pickBulkDocs, generateOneBulkQuiz, generateAllBulkQuizzes, publishAllBulkItems,
+    resetBulkState,
+  } = useBulkUpload({
+    user, teacherEmail, effectiveGrade, effectiveCurriculum, gradeOptions,
+    setAssignments, reloadAssignments: load,
+  });
 
   // Fetch Quiz Library quizzes when tab is active or filters change
   const fetchLibraryQuizzes = useCallback(async () => {
@@ -1167,7 +565,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
               // find a grade this teacher doesn't normally teach (e.g. Grade 4
               // when they teach Grade 3/5) — it would silently no-op. Always fall
               // back to the worksheet's own literal extracted grade instead.
-              const matchGrade = gradeOptions.find(g => (gradeStr && g.includes(gradeStr)) || g.toLowerCase() === rawGrade.toLowerCase());
+              const matchGrade = gradeOptions.find((g: string) => (gradeStr && g.includes(gradeStr)) || g.toLowerCase() === rawGrade.toLowerCase());
               if (matchGrade) setGrade(matchGrade);
               else if (gradeStr) setGrade(`Grade ${gradeStr}`);
               else setGrade(rawGrade);
@@ -1208,179 +606,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     input.click();
   }
 
-  // ── Bulk upload: PHASE 1 — pick files, extract+classify ALL of them ───────
-  // Files are read and extracted sequentially (not Promise.all) — deliberately,
-  // so N worksheets don't all hit the AI vision endpoint in the same instant
-  // and trip a rate limit. Each becomes a BulkItem the teacher can see and
-  // correct (title/subject/grade) before moving to the next phase.
-  function pickBulkDocs() {
-    if (typeof document === 'undefined') return;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    input.multiple = true;
-    input.onchange = async (e: any) => {
-      const files: File[] = Array.from(e.target.files || []);
-      if (files.length === 0) return;
-      const readFile = (f: File): Promise<{ name: string; base64: string; mime: string }> =>
-        new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const result = ev.target?.result as string;
-            resolve({ name: f.name, base64: result.split(',')[1], mime: f.type });
-          };
-          reader.readAsDataURL(f);
-        });
-      const picked = await Promise.all(files.map(readFile));
-
-      const initialItems: BulkItem[] = picked.map((f, i) => ({
-        id: `${Date.now()}-${i}`, name: f.name, mime: f.mime, base64: f.base64,
-        pages: [], status: 'extracting',
-        title: '', subject: 'Mathematics', grade: effectiveGrade, curriculum: effectiveCurriculum, chapter: '', language: '',
-        quiz: null, quizHtml: '', quizStatus: 'idle',
-        assignTo: 'all', selectedStudentId: null,
-        publishStatus: 'idle',
-      }));
-      setBulkItems(initialItems);
-      setBulkPhase('classify');
-
-      for (const item of initialItems) {
-        try {
-          let working: { name: string; base64: string; mime: string } = { name: item.name, base64: item.base64, mime: item.mime };
-          if (working.mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const dRes = await fetch(`${SERVER_URL}/assignments/docx-to-pdf`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileBase64: working.base64 }),
-            });
-            const dData = await dRes.json();
-            if (dRes.ok && dData.pdfBase64) {
-              working = { name: working.name.replace(/\.docx$/i, '.pdf'), base64: dData.pdfBase64, mime: 'application/pdf' };
-            } else {
-              // Previously fell through silently and treated the RAW (unconverted)
-              // Word bytes as an "image" page, which can never work — it just
-              // failed again downstream with a confusing, delayed error at the
-              // Generate step instead of here, at Classify, where the real cause
-              // (docx conversion failure) actually happened.
-              throw new Error(dData.error || 'Could not read this Word document. Please export it to PDF and upload that.');
-            }
-          }
-          const pages = working.mime === 'application/pdf' ? await pdfToImages(working.base64) : [working];
-          const pageFiles = pages.length > 0 ? pages : [working];
-          const fileList = pageFiles.map(p => ({ base64: p.base64, mimeType: p.mime }));
-
-          const eData = await extractViaQueue(SERVER_URL,
-            fileList.length === 1 ? { fileBase64: fileList[0].base64, mimeType: fileList[0].mimeType } : { files: fileList }
-          );
-
-          const extractedSubj = eData.subject
-            ? (SUBJECTS.find(s => s.toLowerCase().includes(String(eData.subject).toLowerCase()) || String(eData.subject).toLowerCase().includes(s.toLowerCase())) || String(eData.subject))
-            : 'Mathematics';
-          const rawGrade = eData.grade ? String(eData.grade).trim() : '';
-          const gradeStr = rawGrade.replace(/[^0-9]/g, '');
-          const resolvedGrade = rawGrade ? (gradeOptions.find(g => (gradeStr && g.includes(gradeStr)) || g.toLowerCase() === rawGrade.toLowerCase()) || (gradeStr ? `Grade ${gradeStr}` : rawGrade)) : effectiveGrade;
-          const resolvedTitle = stripGradePrefix(eData.title || eData.chapter || item.name.replace(/\.[^.]+$/, ''));
-          const matchLang = eData.language ? LANGUAGES.find(l => l.toLowerCase() === String(eData.language).toLowerCase()) : undefined;
-
-          updateBulkItem(item.id, {
-            // name MUST be updated alongside mime/base64 when docx→pdf converts —
-            // the server's /quiz/generate re-detects "is this a docx?" from the
-            // FILENAME extension, not just the mimetype. Leaving the old ".docx"
-            // name here made it re-attempt a docx→pdf conversion on bytes that
-            // were ALREADY a PDF, which mammoth can't parse, producing
-            // "Could not read this Word document" even though the file was fine.
-            name: working.name, mime: working.mime, base64: working.base64,
-            pages: pageFiles, status: 'ready',
-            title: resolvedTitle, chapter: stripGradePrefix(eData.chapter) || resolvedTitle,
-            subject: extractedSubj, grade: resolvedGrade, language: matchLang || '',
-          });
-        } catch (err: any) {
-          updateBulkItem(item.id, { status: 'error', error: err.message || 'Extraction failed' });
-        }
-      }
-    };
-    input.click();
-  }
-
-  // Generates (or re-generates) the quiz for ONE bulk item. Pulled out of
-  // generateAllBulkQuizzes so a single failed worksheet (e.g. a one-off "AI
-  // returned invalid JSON" — a known occasional flakiness in the underlying
-  // vision pipeline, not specific to bulk upload) can be retried on its own
-  // without re-running the whole batch.
-  async function generateOneBulkQuiz(item: BulkItem) {
-    updateBulkItem(item.id, { quizStatus: 'generating', quizError: undefined });
-    try {
-      const isImage = item.mime.startsWith('image/');
-      const formData = new FormData();
-      const byteChars = atob(item.base64);
-      const byteArray = new Uint8Array(byteChars.length);
-      for (let b = 0; b < byteChars.length; b++) byteArray[b] = byteChars.charCodeAt(b);
-      const blob = new Blob([byteArray], { type: item.mime });
-      formData.append(isImage ? 'image' : 'pdf', blob, item.name);
-      formData.append('grade', item.grade || 'Grade 3');
-      formData.append('subject', item.subject || 'Mathematics');
-      formData.append('school', user?.school || '');
-      const qRes = await fetch(`${SERVER_URL}${isImage ? '/quiz/generate-image' : '/quiz/generate'}`, { method: 'POST', body: formData });
-      const qData = await qRes.json();
-      if (!qRes.ok || !qData.quiz) throw new Error(qData.error || 'Quiz generation failed');
-
-      // Force school/curriculum to the teacher's REAL account values on the
-      // STORED quiz object itself — never trust quiz.school as returned by the
-      // AI. It's asked to echo back the passed school name, but can instead
-      // read a school name/logo physically PRINTED on the worksheet page and
-      // put THAT there instead, which silently breaks the branding lookup
-      // (exact-name match) on every later re-fetch (e.g. re-opening Preview).
-      const brandedQuiz = { ...qData.quiz, school: user?.school || '', curriculum: item.curriculum || effectiveCurriculum };
-      let previewHTML = '';
-      try {
-        const pRes = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: brandedQuiz }) });
-        if (pRes.ok) previewHTML = await pRes.text();
-      } catch {}
-      updateBulkItem(item.id, { quiz: brandedQuiz, quizHtml: previewHTML, quizStatus: 'done' });
-    } catch (err: any) {
-      updateBulkItem(item.id, { quizStatus: 'error', quizError: err.message || 'Failed' });
-    }
-  }
-
-  // ── PHASE 2 — generate the interactive quiz for every ready item ──────────
-  async function generateAllBulkQuizzes() {
-    setBulkPhase('generate');
-    const items = bulkItems.filter(it => it.status === 'ready');
-    for (const item of items) {
-      await generateOneBulkQuiz(item);
-    }
-  }
-
-  // ── PHASE 3 — publish every item that has a generated quiz ────────────────
-  async function publishAllBulkItems() {
-    const items = bulkItems.filter(it => it.quizStatus === 'done');
-    for (const item of items) {
-      updateBulkItem(item.id, { publishStatus: 'publishing' });
-      try {
-        const cRes = await fetch(`${SERVER_URL}/assignments`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: item.title, subject: item.subject, chapter: item.chapter,
-            dueDate: bulkDueDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-            type: 'assignment',
-            studentId: item.assignTo === 'specific' ? item.selectedStudentId : null,
-            createdById: teacherEmail, createdByRole: 'teacher',
-            grade: item.grade, curriculum: item.curriculum,
-            interactiveQuiz: item.quiz, interactiveQuizHtml: item.quizHtml || null,
-            language: item.subject === 'Language Acquisition' ? item.language : null,
-            documentUrls: [],
-          }),
-        });
-        if (!cRes.ok) { const cErr = await cRes.json().catch(() => ({})); throw new Error(cErr.error || 'Publish failed'); }
-        const created = await cRes.json();
-        setAssignments(prev => [created, ...prev]);
-        updateBulkItem(item.id, { publishStatus: 'done' });
-      } catch (err: any) {
-        updateBulkItem(item.id, { publishStatus: 'error', publishError: err.message || 'Failed' });
-      }
-    }
-    load();
-  }
-
   function resetForm() {
     setTitle(''); setChapter(''); setDueDate(''); setNote('');
     setSubject('Mathematics');
@@ -1393,7 +618,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     setSelectedLanguage(''); setUnitOfInquiry(''); setIbPurpose('');
     setIbLearningOutcomes(['']); setIbWordBank([]); setIbStamps([]);
     setIbCentralIdea(''); setIbLinesOfInquiry([]); setIbLearnerProfile(''); setIbAtlSkill(''); setIbKeyConcept('');
-    setBulkPhase('pick'); setBulkItems([]); setBulkDueDate('');
+    resetBulkState();
   }
 
   // Generate interactive quiz via Mistral (PDF/image → structured quiz with answers, hints, solutions)
@@ -1557,11 +782,11 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     }
     setGeneratingSteps(true);
     try {
-      console.log('[generateSteps] Calling API with topic:', topic, 'grade:', grade, 'curriculum:', curriculum, 'SERVER_URL:', SERVER_URL);
+      console.log('[generateSteps] Calling API with topic:', topic, 'grade:', effectiveGrade, 'curriculum:', effectiveCurriculum, 'SERVER_URL:', SERVER_URL);
       const res = await fetch(`${SERVER_URL}/assignments/generate-steps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, subject, grade, curriculum }),
+        body: JSON.stringify({ topic, subject, grade: effectiveGrade, curriculum: effectiveCurriculum }),
       });
       const data = await res.json();
       console.log('[generateSteps] response:', JSON.stringify(data));
@@ -1597,8 +822,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
         body: JSON.stringify({
           topic,
           subject,
-          grade,
-          curriculum,
+          grade: effectiveGrade,
+          curriculum: effectiveCurriculum,
           language: subject === 'Language Acquisition' ? selectedLanguage : undefined,
           unitOfInquiry: unitOfInquiry.trim() || undefined,
         }),
@@ -2850,9 +2075,9 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
         {/* Reuse Quiz Modal */}
         <Modal visible={showReuseQuizModal} transparent animationType="slide" onRequestClose={() => setShowReuseQuizModal(false)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: colors.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
+            <View style={{ backgroundColor: colors.cardDark, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.borderColor }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text }}>Saved Quizzes</Text>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textMain }}>Saved Quizzes</Text>
                 <TouchableOpacity onPress={() => setShowReuseQuizModal(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bgDark, alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name="x" size={16} color={colors.textDim} />
                 </TouchableOpacity>
@@ -2885,7 +2110,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                     >
                       <Feather name="file-text" size={20} color={gold} />
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }} numberOfLines={1}>{q.title || 'Untitled Quiz'}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.title || 'Untitled Quiz'}</Text>
                         <Text style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>{[q.subject, q.grade].filter(Boolean).join(' · ')}{q.created_at ? ` · ${new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</Text>
                       </View>
                       <Feather name="chevron-right" size={16} color={gold} />
@@ -3520,7 +2745,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                                         (gradeOptions) — same fix as single-worksheet upload. Without
                                         this, a worksheet correctly extracted as e.g. Grade 6 would have
                                         no pill to select at all if the teacher only teaches Grade 3-5. */}
-                                    {(item.grade && !gradeOptions.includes(item.grade) ? [...gradeOptions, item.grade] : gradeOptions).map(g => (
+                                    {(item.grade && !gradeOptions.includes(item.grade) ? [...gradeOptions, item.grade] : gradeOptions).map((g: string) => (
                                       <TouchableOpacity key={g} style={[styles.chip, item.grade === g && { backgroundColor: gold + '18', borderColor: gold }]} onPress={() => updateBulkItem(item.id, { grade: g })} activeOpacity={0.75}>
                                         <Text style={[styles.chipText, item.grade === g && { color: gold }]}>{g}</Text>
                                       </TouchableOpacity>
@@ -3827,7 +3052,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
 
                   <Text style={styles.fieldLabel}>Grade {isIBPYP && <Text style={{ color: '#BAA467', fontSize: 10, fontWeight: '600' }}> · IB PYP (3–5)</Text>}</Text>
                   <View style={styles.chipRow}>
-                    {gradeOptions.map((g) => (
+                    {gradeOptions.map((g: string) => (
                       <TouchableOpacity
                         key={g}
                         style={[styles.chip, effectiveGrade === g && { backgroundColor: gold + '18', borderColor: gold }]}
@@ -4025,20 +3250,34 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                     )}
                     <TouchableOpacity
                       style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-                        padding: 14, borderRadius: 12, backgroundColor: generatingIB ? colors.borderColor : '#BAA467' }}
-                      onPress={generateIBAssignment}
+                        padding: 14, borderRadius: 12, backgroundColor: (generatingIB || generatingSteps) ? colors.borderColor : '#BAA467' }}
+                      // Bug fix: this button previously always called
+                      // generateIBAssignment() (→ /assignments/generate-ibpyp)
+                      // regardless of curriculum, even though its own label reads
+                      // "Generate {curriculum} Assignment" for non-IB teachers.
+                      // generateSteps() (→ the curriculum-correct
+                      // /assignments/generate-steps) was fully implemented but had
+                      // no caller anywhere. Route by isIBPYP so the endpoint
+                      // actually matches the curriculum shown on screen.
+                      onPress={isIBPYP ? generateIBAssignment : generateSteps}
                       activeOpacity={0.85}
-                      disabled={generatingIB}
+                      disabled={generatingIB || generatingSteps}
                     >
-                      {generatingIB
+                      {(generatingIB || generatingSteps)
                         ? <ActivityIndicator size="small" color="#fff" />
                         : <Feather name="cpu" size={16} color="#fff" />}
                       <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
-                        {generatingIB
+                        {(generatingIB || generatingSteps)
                           ? 'Generating Assignment...'
                           : isIBPYP ? 'Generate Full IB PYP Assignment' : `Generate ${curriculum || 'AI'} Assignment`}
                       </Text>
                     </TouchableOpacity>
+                    {!!stepsError && !isIBPYP && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 8, backgroundColor: '#ef444418', borderWidth: 1, borderColor: '#ef444440' }}>
+                        <Feather name="alert-circle" size={13} color="#ef4444" />
+                        <Text style={{ flex: 1, fontSize: 12, color: '#ef4444', lineHeight: 17 }}>{stepsError}</Text>
+                      </View>
+                    )}
 
                     {/* Generated IB fields preview */}
                     {!!ibPurpose && (
@@ -4558,7 +3797,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                                     <Text style={{ fontSize: 9, color: colors.accentYellow }}>Replace</Text>
                                   </TouchableOpacity>
                                   <TouchableOpacity onPress={() => setExtractedQuestions(prev => prev.map((q, i) => i === idx ? { ...q, croppedImage: '' } : q))}>
-                                    <Text style={{ fontSize: 9, color: colors.error }}>Remove</Text>
+                                    <Text style={{ fontSize: 9, color: colors.accentRed }}>Remove</Text>
                                   </TouchableOpacity>
                                 </View>
                               </View>
@@ -4946,7 +4185,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
               {/* Header */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: colors.borderColor }}>
                 <View>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>Select Reference Image</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textMain }}>Select Reference Image</Text>
                   <Text style={{ fontSize: 10, color: colors.textDim, marginTop: 2 }}>Drag on the worksheet to select the area for this question</Text>
                 </View>
                 <TouchableOpacity onPress={() => setCropModalIdx(null)}>

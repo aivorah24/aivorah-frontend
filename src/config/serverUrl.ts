@@ -17,7 +17,7 @@ const LIVE_BACKEND = 'https://aivorah.ai';
 
 const SERVER_URL =
   Platform.OS === 'web'
-    ? (__DEV__ ? 'http://localhost:3006' : LIVE_BACKEND)
+    ? (__DEV__ ? 'http://localhost:3007' : LIVE_BACKEND)
     : LIVE_BACKEND;
 
 export default SERVER_URL;

@@ -8,7 +8,7 @@ import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
 import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/TeacherScheduleScreen';
-import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScreen';
+import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
 import TeacherProgressScreen from '../screens/teacher/TeacherProgressScreen';
 import TeacherSettingsScreen from '../screens/teacher/TeacherSettingsScreen';
