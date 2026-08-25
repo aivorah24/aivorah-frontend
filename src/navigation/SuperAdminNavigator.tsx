@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
 import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
-import TeacherScheduleScreen from '../screens/teacher/TeacherScheduleScreen';
+import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
 import TeacherProgressScreen from '../screens/teacher/TeacherProgressScreen';

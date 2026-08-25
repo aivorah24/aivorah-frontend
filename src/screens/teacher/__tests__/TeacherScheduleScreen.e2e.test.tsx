@@ -58,7 +58,7 @@
 
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
-import TeacherScheduleScreen from '../TeacherScheduleScreen';
+import TeacherScheduleScreen from '../schedule/TeacherScheduleScreen';
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => void | (() => void)) => {
