@@ -39,7 +39,7 @@ import StoryReaderScreen from '../screens/student/bedtime-stories/StoryReaderScr
 import ReadAloudScreen from '../screens/student/ReadAloudScreen';
 import DailyHabitsScreen from '../screens/student/daily-habits/DailyHabitsScreen';
 import SubscriptionScreen from '../screens/student/SubscriptionScreen';
-import MessagesScreen from '../screens/shared/MessagesScreen';
+import MessagesScreen from '../screens/shared/messages/MessagesScreen';
 import AnnouncementsScreen from '../screens/student/AnnouncementsScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';

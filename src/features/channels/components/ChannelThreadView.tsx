@@ -132,8 +132,8 @@ export default function ChannelThreadView({ channel, onBack }: {
 
       {canPost ? (
         <View style={styles.composer}>
-          <TextInput style={styles.composerInput} value={draft} onChangeText={setDraft} placeholder="Write a message…" placeholderTextColor={colors.textDim} multiline />
-          <TouchableOpacity style={[styles.sendBtn, (!draft.trim() || sending) && { opacity: 0.5 }]} disabled={!draft.trim() || sending} onPress={send}>
+          <TextInput testID="messages-channel-input" style={styles.composerInput} value={draft} onChangeText={setDraft} placeholder="Write a message…" placeholderTextColor={colors.textDim} multiline />
+          <TouchableOpacity testID="messages-channel-send-button" style={[styles.sendBtn, (!draft.trim() || sending) && { opacity: 0.5 }]} disabled={!draft.trim() || sending} onPress={send}>
             {sending ? <ActivityIndicator size="small" color="#fff" /> : <Feather name="send" size={16} color="#fff" />}
           </TouchableOpacity>
         </View>

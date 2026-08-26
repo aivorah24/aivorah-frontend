@@ -142,18 +142,18 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.head}><Text style={styles.title}>New channel</Text><TouchableOpacity onPress={onClose}><Feather name="x" size={18} color={colors.textMuted} /></TouchableOpacity></View>
+        <View testID="messages-create-channel-modal" style={styles.card}>
+          <View style={styles.head}><Text style={styles.title}>New channel</Text><TouchableOpacity testID="messages-create-channel-close" onPress={onClose}><Feather name="x" size={18} color={colors.textMuted} /></TouchableOpacity></View>
 
           <ScrollView style={styles.cardScroll} contentContainerStyle={styles.cardScrollContent} nestedScrollEnabled showsVerticalScrollIndicator={false}>
           <View style={styles.modeRow}>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'class' && styles.modeBtnActive]} onPress={() => setMode('class')}>
+            <TouchableOpacity testID="messages-channel-mode-class" style={[styles.modeBtn, mode === 'class' && styles.modeBtnActive]} onPress={() => setMode('class')}>
               <Text style={[styles.modeText, mode === 'class' && styles.modeTextActive]}>Class channel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'family' && styles.modeBtnActive]} onPress={() => setMode('family')}>
+            <TouchableOpacity testID="messages-channel-mode-family" style={[styles.modeBtn, mode === 'family' && styles.modeBtnActive]} onPress={() => setMode('family')}>
               <Text style={[styles.modeText, mode === 'family' && styles.modeTextActive]}>Family room</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'group' && styles.modeBtnActive]} onPress={() => setMode('group')}>
+            <TouchableOpacity testID="messages-channel-mode-group" style={[styles.modeBtn, mode === 'group' && styles.modeBtnActive]} onPress={() => setMode('group')}>
               <Text style={[styles.modeText, mode === 'group' && styles.modeTextActive]}>Create group</Text>
             </TouchableOpacity>
           </View>
@@ -161,7 +161,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
           {mode === 'class' && (
             <>
               <Text style={styles.label}>Channel name</Text>
-              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. PYP 5 Parents - 2026-27" placeholderTextColor={colors.textDim} autoFocus />
+              <TextInput testID="messages-channel-name-input" style={styles.input} value={name} onChangeText={setName} placeholder="e.g. PYP 5 Parents - 2026-27" placeholderTextColor={colors.textDim} autoFocus />
 
               <Text style={styles.label}>Icon</Text>
               <View style={styles.iconRow}>
@@ -174,10 +174,10 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
               <Text style={styles.label}>Scope</Text>
               <View style={styles.modeRow}>
-                <TouchableOpacity style={[styles.scopeBtn, scope === 'class' && styles.modeBtnActive]} onPress={() => setScope('class')}>
+                <TouchableOpacity testID="messages-channel-scope-class" style={[styles.scopeBtn, scope === 'class' && styles.modeBtnActive]} onPress={() => setScope('class')}>
                   <Text style={[styles.modeText, scope === 'class' && styles.modeTextActive]}>Class</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.scopeBtn, scope === 'staff' && styles.modeBtnActive]} onPress={() => setScope('staff')}>
+                <TouchableOpacity testID="messages-channel-scope-staff" style={[styles.scopeBtn, scope === 'staff' && styles.modeBtnActive]} onPress={() => setScope('staff')}>
                   <Text style={[styles.modeText, scope === 'staff' && styles.modeTextActive]}>Staff Room</Text>
                 </TouchableOpacity>
               </View>
@@ -252,8 +252,8 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
                 </>
               )}
 
-              {!!error && <Text style={styles.error}>{error}</Text>}
-              <TouchableOpacity style={[styles.createBtn, (!name.trim() || busy) && { opacity: 0.6 }]} disabled={!name.trim() || busy} onPress={submitClass}>
+              {!!error && <Text testID="messages-channel-error" style={styles.error}>{error}</Text>}
+              <TouchableOpacity testID="messages-create-channel-submit" style={[styles.createBtn, (!name.trim() || busy) && { opacity: 0.6 }]} disabled={!name.trim() || busy} onPress={submitClass}>
                 {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.createBtnText}>Create channel</Text>}
               </TouchableOpacity>
             </>

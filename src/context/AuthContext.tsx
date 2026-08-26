@@ -140,6 +140,15 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
         roles:              Array.isArray(data.roles) ? data.roles : undefined,
         isPro:              data.isPro === true,
         mustChangePassword: data.mustChangePassword === true,
+        // dob/gender/state/country: added 2026-08-26. These are now real
+        // `users` columns (see aivorah-profile-service), returned by this
+        // same reliable /user/sync call instead of living ONLY in
+        // user_preferences — a single failed/slow GET /user/preferences
+        // used to silently drop them while everything else here never did.
+        dob:                data.dob     || undefined,
+        gender:             data.gender  || undefined,
+        state:              data.state   || undefined,
+        country:            data.country || undefined,
       });
     }
   } catch {}
@@ -159,10 +168,13 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
           children: Array.isArray(pref.children) && pref.children.length > 0 ? pref.children : undefined,
           roles: Array.isArray(pref.roles) && pref.roles.length > 0 ? pref.roles : undefined,
           activeRole: pref.activeRole || undefined,
-          dob: pref.dob || undefined,
-          gender: pref.gender || undefined,
-          state: pref.state || undefined,
-          country: pref.country || undefined,
+          // Fall back to whatever /user/sync already set above (never blank
+          // it out to undefined just because this second, best-effort call
+          // came back without a value — that's exactly the bug this fixes).
+          dob: pref.dob || combined.dob,
+          gender: pref.gender || combined.gender,
+          state: pref.state || combined.state,
+          country: pref.country || combined.country,
         });
       }
     }
@@ -857,6 +869,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailVerified:      cred.user.emailVerified || allowAutoGen || allowParentActivated || isLocalDev,
         accountStatus:      profile.accountStatus,
         mustChangePassword: profile.mustChangePassword === true,
+        // dob/gender/state/country: added 2026-08-26 — see fetchSupabaseProfile.
+        // This explicit field list previously omitted them entirely (same class
+        // of bug as the one fetchSupabaseProfile itself had), so they'd still
+        // read as missing on this screen until the next onAuthStateChanged
+        // pass corrected it moments later.
+        dob:                profile.dob     || undefined,
+        gender:             profile.gender  || undefined,
+        state:              profile.state   || undefined,
+        country:            profile.country || undefined,
       };
       setUser(newUser);
       prefetchStudentDashboard(newUser);
@@ -1111,6 +1132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // and do not swap this back to cred.user.emailVerified.
           emailVerified: isLocalDev ? true : (existingRole ? isAlreadyVerified : false),
           authProvider: 'google',
+          // dob/gender/state/country: added 2026-08-26 — see fetchSupabaseProfile.
+          dob:                profile.dob     || undefined,
+          gender:             profile.gender  || undefined,
+          state:              profile.state   || undefined,
+          country:            profile.country || undefined,
         };
         setUser(newUser);
         prefetchStudentDashboard(newUser);

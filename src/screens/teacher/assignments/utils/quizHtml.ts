@@ -144,3 +144,14 @@ function getAnsweredQuizHtmlImpl(originalHtml: string, submission: any) {
 }
 
 export const getAnsweredQuizHtml = getAnsweredQuizHtmlImpl;
+
+/** Strip every internal `_`-prefixed field (e.g. `_previewHTML`, `_editMode`,
+ * `_normalized`, `_sourceDocKey`) from a quiz object before persisting it —
+ * these are UI-only bookkeeping fields, never meant to reach the server. */
+export function stripInternalQuizFields(quiz: any): any {
+  const clean: any = {};
+  for (const k of Object.keys(quiz)) {
+    if (!k.startsWith('_')) clean[k] = quiz[k];
+  }
+  return clean;
+}

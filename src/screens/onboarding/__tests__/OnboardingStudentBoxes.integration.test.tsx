@@ -107,6 +107,28 @@ describe('OnboardingStudentBoxes', () => {
     expect(body.school).toBe('The Progress Academy');
   });
 
+  // Regression test for the "Gender/DOB/State missing on re-login" bug
+  // (2026-08-26) — same fix, "Save & Exit" path.
+  test('"Save & go to home page" sends the real typed dob AND gender on the primary /user/profile PATCH', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'Progress Saver');
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15));
+    await user.press(screen.getByText('Female'));
+
+    await user.press(screen.getByLabelText('Back to home page'));
+    await user.press(await screen.findByText('Save & go to home page'));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    expect(profileCall).toBeTruthy();
+    const body = JSON.parse(profileCall![1].body);
+    expect(body.dob).toBe(agedDob(15));
+    expect(body.gender).toBe('Female');
+  });
+
   test('under-14 date of birth blocks the About You card from completing', async () => {
     const user = userEvent.setup();
     await render(<OnboardingStudentBoxes />);
@@ -225,5 +247,40 @@ describe('OnboardingStudentBoxes — DOB/Grade consistency', () => {
 
     const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
     expect(profileCall).toBeTruthy();
+  });
+
+  // Regression test for the "Gender/DOB/State missing on re-login" bug
+  // (2026-08-26): dob/gender used to be sent ONLY on the un-awaited
+  // /user/preferences PATCH, never on this primary, awaited /user/profile
+  // PATCH — so a failed/slow preferences call silently lost them even when
+  // the profile save itself succeeded. They must now be on both.
+  test('Complete Setup sends the real typed dob AND gender on the primary (awaited) /user/profile PATCH', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'A Student');
+    await user.type(screen.getByPlaceholderText('DD/MM/YYYY'), agedDob(15));
+    await user.press(screen.getByText('Male'));
+    await user.press(screen.getByText('CBSE'));
+    await user.type(screen.getByPlaceholderText('Type your school name (e.g. Senthil Public School)'), 'Hyderabad International School');
+    await user.press(await screen.findByText('Grade 9')); // 15yo fits Grade 9 (12-16)
+
+    (global.fetch as jest.Mock).mockClear();
+    (global.fetch as jest.Mock).mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: async () => (String(url).includes('/user/profile') ? { grade: 'Grade 9', curriculum: 'CBSE' } : []),
+        text: async () => '',
+      }),
+    );
+
+    await user.press(screen.getByText('Complete Setup'));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    expect(profileCall).toBeTruthy();
+    const body = JSON.parse(profileCall![1].body);
+    expect(body.dob).toBe(agedDob(15));
+    expect(body.gender).toBe('Male');
   });
 });

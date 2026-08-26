@@ -1,2 +1,2 @@
-import MessagesScreen from '../shared/MessagesScreen';
+import MessagesScreen from '../shared/messages/MessagesScreen';
 export default MessagesScreen;

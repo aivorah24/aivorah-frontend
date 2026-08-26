@@ -35,12 +35,12 @@
 - Good news (2026-08-24): the monolith's source in `ai-mentor` is very likely recoverable — `git status` shows a huge staged (uncommitted) deletion across the whole repo, and `git log -- server` confirms the code existed (commit `79af30a`). Not yet restored (pending user confirmation to run `git restore --staged --worktree .`), but it means "the source is genuinely missing" is no longer the real blocker — the rule above is now the only reason it's out of scope.
 - 🚨 Also found: `ai-mentor`'s git remote has a live GitHub token embedded in the URL (`https://user:TOKEN@github.com/...`). Flagged to the user to rotate — don't display or reuse that token.
 
-## Critical blocker: the monolith's real source is missing locally
+## Monolith source — RESOLVED (confirmed 2026-08-25, was previously blocking)
 
-- `C:\Users\Asus\Desktop\ai-mentor\server\` (where `package.json`'s `node server/index.js` points) has **no real code** — only a couple of stray/misnamed files, no `index.js`, no `routes/`.
-- `ai-mentor\backend\` is a **different, unrelated** Python/FastAPI service (RAG/ingestion, Qdrant) — do not confuse it with the Node monolith.
-- **Until the real monolith source is restored/located**, we cannot: extract any new microservice from it, or write/run backend unit tests for any feature still living on it.
-- This blocker was hit repeatedly (Teacher Dashboard backend, E2E local run). Check with the user for the real source location before assuming this is fixed.
+- `C:\Users\Asus\Desktop\ai-mentor\server\` **now has real code** — confirmed present: `index.js` (307 lines), full `routes/` directory (assignments.js, challenges.js, curriculum.js, habits.js, etc.), `git status --short server` clean. The earlier "no real code" blocker below is stale — someone restored it since it was last hit.
+- `ai-mentor\backend\` is still a **different, unrelated** Python/FastAPI service (RAG/ingestion, Qdrant) — do not confuse it with the Node monolith.
+- Practical implication: it can now be run locally (`node server/index.js`, port 3007 per frontend's dev-mode `serverUrl.ts`) to unblock local E2E runs for any feature still partially depending on it (e.g. auth/profile-completeness routing) — this is just *running* it as a dependency, not editing/extracting it, so it doesn't violate the "don't touch incidentally" rule below.
+- If this turns out wrong again (re-deleted, moved, etc.), re-verify before assuming either state.
 
 ## Test file structure convention (adopted 2026-08-24, going forward)
 
@@ -54,7 +54,7 @@
 - 23 Jest integration tests (supertest + a chainable Supabase mock, same pattern as `aivorah-assignments-service`'s tests), all passing. Final coverage on `routes/student.js`: **99.69% statements, 100% functions, 100% lines, 77.77% branches**. The branch gap is accepted as final — every remaining uncovered branch is a trivial `??`/`||` default-value fallback (~70 of them), not real logic; user confirmed stopping here (2026-08-24) rather than writing ~40-60 more tests to force each one.
 - One known cross-test gotcha hit while writing these: the module-level `_topicCountCache` Map (30-min TTL, keyed by `curriculum|grade|subject`) persists across ALL tests in the same file. Reusing a curriculum/grade/subject combo across tests can silently serve a stale cached count instead of calling Qdrant — give each test a distinct combo when asserting on `totalTopics`/Qdrant call behavior.
 - Frontend now points at it: `src/config/teacherDashboardServerUrl.ts` (new file) → `src/screens/teacher/dashboard/services/teacherDashboardService.ts` (updated to import it instead of `serverUrl.ts`).
-- **Not yet deployed** — `teacherDashboardServerUrl.ts`'s `LIVE_SERVICE` URL (`https://aivorah-teacher-dashboard-service.onrender.com`) is a placeholder following the naming convention of the other Render services, not a real deployment yet. To actually work end-to-end: deploy this new repo (e.g. to Render, matching the other 12 services), set its real env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`), and update the placeholder URL once known. For local dev, run it on port 3016 (`npm start` in that repo) — `teacherDashboardServerUrl.ts` already points web-dev builds there.
+- **Deployed** (confirmed 2026-08-25) — `teacherDashboardServerUrl.ts`'s `LIVE_SERVICE` URL (`https://aivorah-teacher-dashboard-service.onrender.com`) is a real, live deployment on Render (verified via a live request that hit Supabase and returned a real DB error, not a connection failure) — the note below about it being an undeployed placeholder is stale, corrected here. For local dev, run it on port 3016 (`npm start` in that repo) — `teacherDashboardServerUrl.ts` already points web-dev builds there.
 - The heatmap route (`GET /student/by-teacher/:teacherId/heatmap`) also lives in the same monolith file but isn't called by the current frontend — left in the monolith, not extracted (nothing depends on it yet).
 - This was NOT an "incidental monolith touch" — it was the explicit, deliberate, scoped extraction task the user asked for, per the "don't touch incidentally" rule.
 

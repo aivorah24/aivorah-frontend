@@ -107,6 +107,8 @@ export default function OnboardingStudentBoxes() {
           curriculum: curriculum.trim() || undefined,
           state: stateProv || undefined,
           country: country || undefined,
+          dob: dob || undefined,
+          gender: gender || undefined,
         }),
       });
       if (!profileRes.ok) {
@@ -157,6 +159,12 @@ export default function OnboardingStudentBoxes() {
         curriculum: curriculum.trim(),
         state: stateProv || undefined,
         country: country || undefined,
+        // dob/gender added 2026-08-26 — previously only ever reached the
+        // backend via the un-awaited /user/preferences PATCH below, so a
+        // failed/slow preferences call silently lost them even though this
+        // primary, awaited profile save otherwise succeeded.
+        dob: dob || undefined,
+        gender: gender || undefined,
       };
 
       const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
