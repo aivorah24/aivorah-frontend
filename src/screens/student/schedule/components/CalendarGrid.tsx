@@ -18,7 +18,7 @@ interface Props {
   allDayHeight: number;
   gridHeight: number;
   colWidth: number;
-  hScrollRef: React.RefObject<ScrollView>;
+  hScrollRef: React.RefObject<ScrollView | null>;
   didInitialScrollRef: React.MutableRefObject<boolean>;
   scrollToToday: (colWidth: number) => void;
   dragPreview: DragPreview | null;

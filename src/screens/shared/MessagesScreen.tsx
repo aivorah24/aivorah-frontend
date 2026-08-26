@@ -13,6 +13,7 @@ import {
   Modal,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { spacing, radius, typography } from '../../theme';

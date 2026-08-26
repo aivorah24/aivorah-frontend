@@ -3,7 +3,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import InsightsColumns from '../../components/InsightsColumns';
 
 function tile(label: string) {
-  return { icon: 'book-open', color: '#FFD700', stat: '1', label, title: label, body: 'x' };
+  return { icon: 'book-open', color: '#FFD700', stat: '1', label, title: label, body: 'x', screen: 'TeacherLearningPaths' };
 }
 
 describe('InsightsColumns', () => {

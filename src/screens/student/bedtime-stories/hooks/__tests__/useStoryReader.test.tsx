@@ -15,7 +15,7 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => ({
 const mockPlayPageFlip = jest.fn();
 const mockSilenceAllAmbient = jest.fn();
 const mockAmbientInstance = { pause: jest.fn(), resume: jest.fn(), stop: jest.fn() };
-const mockCreateAmbient = jest.fn(() => mockAmbientInstance);
+const mockCreateAmbient = jest.fn((..._args: any[]) => mockAmbientInstance);
 jest.mock('../../utils/ambientAudio', () => ({
   playPageFlip: (...args: any[]) => mockPlayPageFlip(...args),
   silenceAllAmbient: (...args: any[]) => mockSilenceAllAmbient(...args),

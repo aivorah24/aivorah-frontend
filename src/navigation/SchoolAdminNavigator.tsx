@@ -55,6 +55,7 @@ export type SchoolAdminDrawerParamList = {
   SchoolAdminSettings: undefined;
   TeacherSettings: undefined;
   Messages: undefined;
+  Channels: undefined;
 };
 
 const Drawer = createDrawerNavigator<SchoolAdminDrawerParamList>();

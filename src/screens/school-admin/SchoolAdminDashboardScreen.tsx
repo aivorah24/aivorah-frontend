@@ -61,6 +61,7 @@ interface AccessRequest {
   isUnder14?: boolean;
   parents: { name: string | null; email: string }[];
   created_at: string;
+  phone?: string | null;
 }
 
 interface ManageRow {

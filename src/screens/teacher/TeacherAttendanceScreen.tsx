@@ -568,7 +568,7 @@ function makeStyles(colors: AppColors) {
       borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm,
       padding: 4, zIndex: 100, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8
     },
-    dropdownOption: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.xs },
+    dropdownOption: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: radius.sm },
     dropdownOptionText: { fontFamily: fonts.serif, fontSize: 13, color: colors.textHeading },
     dateSelector: {
       flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cardDark,

@@ -17,7 +17,7 @@ export function useQuizSession({
   grade: string;
   userEmail: string | undefined;
   addXP: (xp: number) => void;
-  recordStudyTime: (minutes: number, source: string) => void;
+  recordStudyTime: (minutes: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
   onChallengeCompleted: (challengeId: string, score: number, xpAwarded: number) => void;
 }) {
   const [quizVisible, setQuizVisible] = useState(false);

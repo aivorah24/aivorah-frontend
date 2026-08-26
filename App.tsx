@@ -122,7 +122,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, View, ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, Modal } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
-import { applyActionCode, onAuthStateChanged } from 'firebase/auth';
+import { applyActionCode, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
 // Set browser tab title
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -235,7 +235,7 @@ function VerifySuccessPage({ onComplete }: { onComplete: () => void }) {
       // them to '/?signin=1' instead of onboarding (the reported "verify → bounces
       // to Sign In" bug). Wait for Firebase's own first onAuthStateChanged callback
       // (with a short timeout fallback) so we check the real, settled state.
-      const settledUser = auth.currentUser ?? await new Promise<typeof auth.currentUser>((resolve) => {
+      const settledUser = auth.currentUser ?? await new Promise<FirebaseUser | null>((resolve) => {
         const timer = setTimeout(() => resolve(auth.currentUser), 2500);
         const unsub = onAuthStateChanged(auth, (u) => { clearTimeout(timer); unsub(); resolve(u); });
       });

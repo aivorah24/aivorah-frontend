@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
-import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
+import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
@@ -27,6 +27,9 @@ export type SuperAdminDrawerParamList = {
   TeacherSettings: undefined;
   TeacherMessages: undefined;
   AnnouncementManager: undefined;
+  Timetable: undefined;
+  Resources: undefined;
+  Channels: undefined;
 };
 
 const Drawer = createDrawerNavigator<SuperAdminDrawerParamList>();

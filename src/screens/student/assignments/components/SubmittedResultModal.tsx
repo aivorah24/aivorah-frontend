@@ -95,7 +95,7 @@ export function SubmittedResultModal({
               {pq.filter(Boolean).map((q: any, idx: number) => {
                 const qsc = q.score >= 80 ? colors.accentGreen : q.score >= 50 ? colors.accentYellow : colors.accentRed;
                 return (
-                  <View key={idx} style={{ borderRadius: 10, borderWidth: 1, borderColor: qsc + '40', backgroundColor: colors.cardBg, overflow: 'hidden' }}>
+                  <View key={idx} style={{ borderRadius: 10, borderWidth: 1, borderColor: qsc + '40', backgroundColor: colors.cardDark, overflow: 'hidden' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, backgroundColor: qsc + '0A' }}>
                       <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.question || q.stepLabel || `Step ${idx + 1}`}</Text>
                       <View style={{ backgroundColor: qsc + '25', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>

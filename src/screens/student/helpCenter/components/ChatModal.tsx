@@ -16,7 +16,7 @@ interface ChatModalProps {
   chatInput: string;
   setChatInput: (v: string) => void;
   sendSupportMessage: (text?: string) => void;
-  chatScrollRef: React.RefObject<ScrollView>;
+  chatScrollRef: React.RefObject<ScrollView | null>;
 }
 
 export default function ChatModal({

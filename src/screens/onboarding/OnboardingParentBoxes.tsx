@@ -1298,7 +1298,6 @@ function useStyles(colors: any) {
     hintBox: { borderRadius: 10, padding: 12, borderWidth: 1 },
     hintBoxFill: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
     hintBoxRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    hintBoxRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     fillCenter: { flex: 1, justifyContent: 'center', gap: 12 },
     fieldRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
     fieldThird: { flexBasis: '30%', flexGrow: 1, minWidth: 240 },

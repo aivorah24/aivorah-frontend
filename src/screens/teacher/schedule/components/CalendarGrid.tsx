@@ -18,7 +18,7 @@ interface Props {
   allDayHeight: number;
   colWidth: number;
   gridHeight: number;
-  hScrollRef: React.RefObject<ScrollView>;
+  hScrollRef: React.RefObject<ScrollView | null>;
   onGridContentSizeChange: () => void;
   nowTime: Date;
   students: StudentItem[];
