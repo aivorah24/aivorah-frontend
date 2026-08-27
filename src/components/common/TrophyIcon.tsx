@@ -3,7 +3,7 @@
  * Animated SVG trophy for quiz results — replaces emoji.
  * Scales up with a bounce on mount.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Animated, Easing } from 'react-native';
 import Svg, { Path, Rect, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
@@ -20,8 +20,8 @@ const TIER_COLORS = {
 };
 
 export default function TrophyIcon({ size = 80, tier = 'gold' }: Props) {
-  const scale = useRef(new Animated.Value(0)).current;
-  const glow  = useRef(new Animated.Value(0)).current;
+  const scale = useMemo(() => new Animated.Value(0), []);
+  const glow  = useMemo(() => new Animated.Value(0), []);
   const t = TIER_COLORS[tier];
 
   useEffect(() => {

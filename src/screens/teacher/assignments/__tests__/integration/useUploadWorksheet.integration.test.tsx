@@ -85,7 +85,7 @@ describe('useUploadWorksheet.generateInteractiveQuiz integration', () => {
     let hookRef: any;
     function CaptureHarness({ docFiles }: { docFiles: any[] }) {
       const h = useUploadWorksheet(BASE_ARGS);
-      hookRef = h;
+      React.useEffect(() => { hookRef = h; });
       React.useEffect(() => { h.setDocFiles(docFiles); }, []); // eslint-disable-line react-hooks/exhaustive-deps
       return <TouchableOpacity testID="generate" onPress={() => h.generateInteractiveQuiz()} />;
     }

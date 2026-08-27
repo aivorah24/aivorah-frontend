@@ -6,12 +6,12 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useEventForm } from '../../hooks/useEventForm';
 import type { StudentItem } from '../../types';
+import { createEvent, updateEvent } from '../../services/scheduleService';
 
 jest.mock('../../services/scheduleService', () => ({
   createEvent: jest.fn(),
   updateEvent: jest.fn(),
 }));
-import { createEvent, updateEvent } from '../../services/scheduleService';
 
 const STUDENTS: StudentItem[] = [{ id: 's1', name: 'Aarav Sharma', grade: 'Grade 6' }];
 

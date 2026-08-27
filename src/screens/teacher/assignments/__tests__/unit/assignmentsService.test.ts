@@ -1,6 +1,6 @@
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
-
 import { buildUploadedExtractedQuestions, buildAssignmentPayload, postCreateAssignment } from '../../services/assignmentsService';
+
+jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
 
 const baseArgs = {
   title: '  Area & Perimeter  ', subject: 'Maths', chapter: '  Ch 3  ', dueDate: '2026-04-01', type: 'assignment' as const,

@@ -25,7 +25,7 @@ jest.mock('@react-navigation/native', () => {
   return {
     useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
     useRoute: () => ({ key: 'TeacherStudents', name: 'TeacherStudents' }),
-    useFocusEffect: (cb: any) => { ReactLib.useEffect(() => { cb(); }, []); }, // eslint-disable-line react-hooks/rules-of-hooks
+    useFocusEffect: (cb: any) => { ReactLib.useEffect(() => { cb(); }, []); },  
   };
 });
 

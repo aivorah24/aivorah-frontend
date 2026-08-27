@@ -50,12 +50,12 @@ export default function AIWeeklyInsightCard({
           </View>
 
           <View style={s.insightRec}>
-            <Text style={s.insightRecLabel}>Today's Recommendation</Text>
+            <Text style={s.insightRecLabel}>Today&apos;s Recommendation</Text>
             <View style={s.insightRecRow}>
               <Feather name="book-open" size={14} color={colors.textMuted} />
               <Text style={s.insightRecText}>
                 Spend 15 minutes on{'\n'}
-                <Text style={{ color: colors.textMain, fontWeight: '600' }}>"{insightTopic}"</Text>
+                <Text style={{ color: colors.textMain, fontWeight: '600' }}>&quot;{insightTopic}&quot;</Text>
               </Text>
             </View>
           </View>

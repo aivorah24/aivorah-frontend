@@ -59,3 +59,8 @@ coverage/
 
 # Vercel CLI local metadata
 .vercel/
+
+# scratch scripts / one-off admin SQL — may contain real user data, never commit
+.scratch/
+fix.js
+fix_teacher.js

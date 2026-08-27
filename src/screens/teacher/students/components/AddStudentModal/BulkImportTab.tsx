@@ -151,7 +151,7 @@ export default function BulkImportTab({
           )}
 
           <Text style={styles.modalNote}>
-            Nothing has been created yet. Uncheck anyone you don't want to import, then tap "Import Selected".
+            Nothing has been created yet. Uncheck anyone you don&apos;t want to import, then tap &quot;Import Selected&quot;.
           </Text>
 
           <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>

@@ -95,7 +95,7 @@ export default function AssignmentsScreen({ navigation, route }: any) {
             <View testID="assignments-error-state" style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
               <Feather name="alert-triangle" size={36} color={colors.accentRed} />
               <Text style={[styles.sectionTitle, { color: colors.textMuted, fontWeight: '400', textAlign: 'center' }]}>
-                Couldn't load your assignments. Check your connection and try again.
+                Couldn&apos;t load your assignments. Check your connection and try again.
               </Text>
               <TouchableOpacity
                 testID="assignments-retry-button"

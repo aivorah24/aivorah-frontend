@@ -109,6 +109,7 @@ export default function AnnouncementsScreen({ navigation, route }: any) {
   useEffect(() => {
     const openId = route?.params?.openId;
     if (openId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to deep-link nav param, external sync
       setActiveId(openId);
       if (isMobile) setMobileShowDetail(true);
     }

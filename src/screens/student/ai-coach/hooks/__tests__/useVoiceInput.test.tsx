@@ -1,14 +1,14 @@
+import React from 'react';
+import { Text, TouchableOpacity, Alert } from 'react-native';
+import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { useVoiceInput } from '../useVoiceInput';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
   OS: 'web',
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
-
-import React from 'react';
-import { Text, TouchableOpacity, Alert } from 'react-native';
-import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
-import { useVoiceInput } from '../useVoiceInput';
 
 class MockRecognition {
   lang = ''; interimResults = false; continuous = false; maxAlternatives = 1;

@@ -2,7 +2,7 @@
  * NotificationBanner — slides in from the top when a new notification arrives.
  * Shows for 5 seconds then auto-dismisses. Tapping it navigates to the source.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -25,8 +25,8 @@ export default function NotificationBanner({ onNavigate }: Props) {
   const { colors } = useTheme();
   const { user } = useAuth();
 
-  const slideY  = useRef(new Animated.Value(-20)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const slideY  = useMemo(() => new Animated.Value(-20), []);
+  const opacity = useMemo(() => new Animated.Value(0), []);
   const [visible, setVisible] = useState(false);
 
   const role = user?.role ?? 'student';
@@ -36,6 +36,8 @@ export default function NotificationBanner({ onNavigate }: Props) {
 
   useEffect(() => {
     if (toastVisible) {
+      // external sync (kicks off an Animated sequence) — not derivable state, see react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true);
       Animated.parallel([
         Animated.spring(slideY, { toValue: 0, useNativeDriver: true, tension: 80, friction: 10 }),
@@ -149,7 +151,7 @@ export default function NotificationBanner({ onNavigate }: Props) {
 }
 
 function AutoProgressBar({ color, duration, onComplete }: { color: string; duration: number; onComplete: () => void }) {
-  const width = useRef(new Animated.Value(1)).current;
+  const width = useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     const anim = Animated.timing(width, {

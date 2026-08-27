@@ -118,6 +118,7 @@ export default function TimetableScreen({ navigation, route }: any) {
   }, [loadClasses, loadTimetable, selected]));
   // Also re-fetch the timetable whenever the selected class changes (covers
   // the initial load and when the user taps a different class chip).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on class-selection change, external sync
   useEffect(() => { if (selected) loadTimetable(selected); }, [selected, loadTimetable]);
 
   const classLabel = selected ? selected.label : 'Timetable';

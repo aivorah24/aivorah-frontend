@@ -96,9 +96,10 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
 
   // Deep-link entry points from the Overview launcher's Quick Actions/Tools.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to deep-link nav params, external sync
     if (route?.params?.openComposer) { setEditTarget(null); setShowComposer(true); }
     if (route?.params?.statusTab) setStatusTab(route.params.statusTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [route?.params?.openComposer, route?.params?.statusTab]);
 
   const load = useCallback(async () => {

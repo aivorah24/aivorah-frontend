@@ -70,6 +70,8 @@ export function useScheduleEvents({
   }, [studentId, week, calYear, calMonth, hideCompleted]);
 
   useEffect(() => {
+    // data fetching effect — setState happens inside fetchEvents, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
     const interval = setInterval(() => fetchEvents(), 30 * 1000);
     return () => clearInterval(interval);

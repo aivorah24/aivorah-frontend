@@ -215,6 +215,9 @@ export default function TopicAICoach({
   // Greeting message when panel opens for the first time
   useEffect(() => {
     if (open && messages.length === 0) {
+      // one-time initialization when the panel first opens — not derivable from
+      // props alone (must not re-fire once the user has sent messages)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([{
         role: 'ai',
         text: `Hi! I'm your Aivorah AI Coach for "${topic}". Ask me anything about this topic and I'll help you understand it!`,

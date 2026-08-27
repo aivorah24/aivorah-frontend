@@ -81,12 +81,12 @@ export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props
       {loading ? (
         <View style={s.loadingBox}>
           <ActivityIndicator size="small" color={activeTab} />
-          <Text style={[s.loadingText, { color: mutedColor }]}>Fetching today's tidbit...</Text>
+          <Text style={[s.loadingText, { color: mutedColor }]}>Fetching today&apos;s tidbit...</Text>
         </View>
       ) : error ? (
         <View style={s.loadingBox}>
           <Feather name="wifi-off" size={20} color={mutedColor} />
-          <Text style={[s.loadingText, { color: mutedColor }]}>Couldn't load. Tap refresh to try again.</Text>
+          <Text style={[s.loadingText, { color: mutedColor }]}>Couldn&apos;t load. Tap refresh to try again.</Text>
         </View>
       ) : data ? (
         tab === 'gk' ? (

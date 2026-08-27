@@ -29,7 +29,11 @@ export function useAssignmentsList({ teacherEmail }: UseAssignmentsListArgs) {
     }
   }, [teacherEmail]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // data fetching effect — setState happens inside load, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   async function markComplete(id: string) {
     try {

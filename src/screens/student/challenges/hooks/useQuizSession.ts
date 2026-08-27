@@ -159,6 +159,8 @@ export function useQuizSession({
   // Auto-submit when timer expires
   useEffect(() => {
     if (timeLeft === 0 && !quizResult && !quizLoading && questions.length > 0) {
+      // external sync (timer-driven auto-submit) — setState happens inside submitQuiz, not synchronously here
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       submitQuiz();
     }
   }, [timeLeft]);

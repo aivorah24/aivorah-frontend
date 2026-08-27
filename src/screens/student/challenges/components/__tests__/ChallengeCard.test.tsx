@@ -1,9 +1,9 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import ChallengeCard from '../ChallengeCard';
 import type { Challenge } from '../../types';
+
+jest.setTimeout(15000);
 
 const styles: any = new Proxy({}, { get: () => ({}) }); // any style key resolves to an empty style object
 const colors: any = { accentYellow: '#fa0', accentGreen: '#0a0', textDim: '#666' };

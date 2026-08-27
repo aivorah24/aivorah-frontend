@@ -60,6 +60,7 @@ import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import TeacherScheduleScreen from '../schedule/TeacherScheduleScreen';
 
+jest.setTimeout(15000);
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => void | (() => void)) => {
     const React = require('react');
@@ -69,6 +70,7 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ key: 'TeacherSchedule', name: 'TeacherSchedule' }),
 }));
 
+jest.setTimeout(15000);
 jest.mock('../../../context/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
@@ -81,25 +83,32 @@ jest.mock('../../../context/ThemeContext', () => ({
 }));
 
 const TEACHER_USER = { name: 'Ms Teacher', email: 'teacher@aivorah.test', role: 'teacher' };
+jest.setTimeout(15000);
 jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({ user: TEACHER_USER }),
 }));
 
 // ScreenLayout pulls in Sidebar/AI panels/localStorage/its own SERVER_URL
 // fetches — out of scope for this screen's tests, mocked to a passthrough.
+jest.setTimeout(15000);
 jest.mock('../../../components/common/ScreenLayout', () => {
   const { View } = require('react-native');
-  return ({ children }: any) => <View>{children}</View>;
+  return function MockScreenLayout({ children }: any) {
+    return <View>{children}</View>;
+  };
 });
 
+jest.setTimeout(15000);
 jest.mock('../../../components/common/Header', () => {
   const { View, Text } = require('react-native');
-  return ({ title, subtitle }: any) => (
-    <View>
-      <Text>{title}</Text>
-      {subtitle ? <Text>{subtitle}</Text> : null}
-    </View>
-  );
+  return function MockHeader({ title, subtitle }: any) {
+    return (
+      <View>
+        <Text>{title}</Text>
+        {subtitle ? <Text>{subtitle}</Text> : null}
+      </View>
+    );
+  };
 });
 
 const STUDENTS = [

@@ -32,7 +32,7 @@ export default function RecoveryModal({
       {recoveryStep === 'email' ? (
         <>
           <Text style={styles.modalNote}>
-            We'll send a 6-digit code to verify this email before saving it.
+            We&apos;ll send a 6-digit code to verify this email before saving it.
           </Text>
           <Text style={styles.modalFieldLabel}>Recovery Email</Text>
           <View style={styles.modalInput}>

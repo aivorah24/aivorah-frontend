@@ -66,6 +66,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
   useEffect(() => {
     if (!visible) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets form + kicks off data fetch below on modal open, external sync
     setMode('class'); setName(''); setScope('class'); setStaffOnly(true); setAutoGrade(''); setAutoSection('');
     setSelectedStudent(null); setError(''); setIcon('users');
     setGroupName(''); setGroupGrade(''); setGroupSection(''); setPeopleQuery(''); setPeopleResults([]); setPickedPeople([]);
@@ -81,6 +82,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
   const groupSectionsForGrade = gradesSections.find((g) => g.name === groupGrade)?.sections || [];
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced-search effect's early-return reset, external sync
     if (mode !== 'group' || !groupGrade) { setPeopleResults([]); return; }
     const t = setTimeout(() => {
       searchPeople(email, { grade: groupGrade, section: groupSection || undefined, q: peopleQuery.trim() || undefined })
@@ -198,7 +200,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
                   <Text style={styles.label}>Auto-add parents of grade &amp; section (optional)</Text>
                   {!!myHomerooms.length && (
-                    <Text style={styles.hint}>Pre-filled from your homeroom{myHomerooms.length > 1 ? 's' : ''} — change if you're creating this for a different class.</Text>
+                    <Text style={styles.hint}>Pre-filled from your homeroom{myHomerooms.length > 1 ? 's' : ''} — change if you&apos;re creating this for a different class.</Text>
                   )}
                   <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
@@ -282,7 +284,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
               )}
               {!!selectedStudent && (
                 <Text style={styles.hint}>
-                  Creates "Family of {selectedStudent.name}" with you and all of {selectedStudent.name}'s linked parents — everyone can post.
+                  Creates &quot;Family of {selectedStudent.name}&quot; with you and all of {selectedStudent.name}&apos;s linked parents — everyone can post.
                 </Text>
               )}
 

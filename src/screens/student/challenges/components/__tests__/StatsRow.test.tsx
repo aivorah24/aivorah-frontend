@@ -1,8 +1,8 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import StatsRow from '../StatsRow';
+
+jest.setTimeout(15000);
 
 const styles: any = new Proxy({}, { get: () => ({}) });
 const colors: any = { accentYellow: '#fa0', accentGreen: '#0a0', accentRed: '#f00' };

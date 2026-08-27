@@ -286,11 +286,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       if (__DEV__) console.debug(`[NotifCtx] poll(${reason}) → msg:${msgCount} assign:${assignCount} challenge:${challengeCount}`);
     },
-    [user?.email]
+    [user]
   );
 
   useEffect(() => {
     if (!user?.email) {
+      // reset tied to the same effect that owns the polling subscription below — external sync, see react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0);
       setLatestNotif(null); setToastVisible(false);
       prevMsgRef.current = 0; prevAssignRef.current = 0; prevChallengeRef.current = 0; prevEventRef.current = 0;
@@ -329,7 +331,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (pollRef.current) clearInterval(pollRef.current);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
-  }, [user?.email, poll]);
+  }, [user, poll]);
 
   // ── School-admin only: poll pending B2C→B2B join requests for the bell badge ──
   // Kept separate from the messages poll above (different endpoint + audience) so
@@ -337,6 +339,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const role = user?.role;
     const isAdmin = role === 'school_admin' || role === 'super_admin';
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset tied to the polling-subscription effect below, external sync
     if (!user?.email || !isAdmin) { setUnreadJoinRequests(0); return; }
     let cancelled = false;
     const fetchCount = async () => {
@@ -387,7 +390,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!ok) { staleGuardUntil.current = 0; markReadCutoff.current = null; }
     }
     await poll({ reason: 'post-mark-read', allowDuringMarkRead: true, silent: true });
-  }, [poll, user?.email]);
+  }, [poll, user]);
 
   const clearUnreadAssignments = useCallback(async () => {
     if (!user?.email) return;
@@ -409,7 +412,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       if (__DEV__) console.warn('[NotifCtx] clearUnreadAssignments failed:', err);
     }
-  }, [user?.email, poll]);
+  }, [user, poll]);
 
   const clearUnreadChallenges = useCallback(async () => {
     if (!user?.email) return;
@@ -428,7 +431,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       if (__DEV__) console.warn('[NotifCtx] clearUnreadChallenges failed:', err);
     }
-  }, [user?.email, poll]);
+  }, [user, poll]);
 
   const clearUnreadEvents = useCallback(async () => {
     if (!user?.email) return;
@@ -440,7 +443,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       if (__DEV__) console.warn('[NotifCtx] clearUnreadEvents failed:', err);
     }
-  }, [user?.email, poll]);
+  }, [user, poll]);
 
   const refresh = useCallback(async () => {
     await poll({ reason: 'manual-refresh', allowDuringMarkRead: true });

@@ -46,11 +46,13 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
   const [openPostId, setOpenPostId] = useState<string | null>(initialOpenPostId || null);
   const [showComposer, setShowComposer] = useState(false);
 
-  useEffect(() => {
-    if (initialOpenPostId) {
-      setOpenPostId(initialOpenPostId);
-    }
-  }, [initialOpenPostId]);
+  // Sync openPostId when the deep-link prop changes (render-time adjustment
+  // instead of an effect — see React docs "Adjusting state when a prop changes").
+  const [prevInitialOpenPostId, setPrevInitialOpenPostId] = useState(initialOpenPostId);
+  if (initialOpenPostId !== prevInitialOpenPostId) {
+    setPrevInitialOpenPostId(initialOpenPostId);
+    if (initialOpenPostId) setOpenPostId(initialOpenPostId);
+  }
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('all');

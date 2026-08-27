@@ -9,6 +9,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-teacher-dashboard-service.onrender.com';
 
 const TEACHER_DASHBOARD_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3016' : LIVE_SERVICE;
+   LIVE_SERVICE;
 
 export default TEACHER_DASHBOARD_SERVER_URL;

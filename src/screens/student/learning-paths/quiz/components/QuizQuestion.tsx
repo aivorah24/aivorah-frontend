@@ -158,7 +158,7 @@ export default function QuizQuestion({
                 <View style={[styles.hintBanner, { backgroundColor: accent + '10', borderColor: accent + '40' }]}>
                   <Feather name="zap" size={12} color="#fff" />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.hintBannerLabel}>Aivorah's Hint</Text>
+                    <Text style={styles.hintBannerLabel}>Aivorah&apos;s Hint</Text>
                     <Text style={styles.hintBannerText}>{q.hint || 'Think carefully before your next attempt!'}</Text>
                   </View>
                   <View style={[styles.retryChip, { backgroundColor: accent + '20', borderColor: accent + '40' }]}>

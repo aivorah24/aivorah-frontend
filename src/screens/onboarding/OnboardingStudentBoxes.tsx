@@ -25,6 +25,7 @@ import {
 } from './OnboardingSharedFields';
 import { computeStudentCompletion } from './utils/studentCompletion';
 import { checkDobGradeConsistency } from './utils/dobGradeValidation';
+import { resolveOnboardingSaveResult } from './utils/resolveOnboardingSaveResult';
 
 const GRADE_GROUPS = [
   { label: 'Early Years', grades: ['Nursery', 'LKG', 'UKG'] },
@@ -180,6 +181,12 @@ export default function OnboardingStudentBoxes() {
       if (!saved.grade || !saved.curriculum) {
         throw new Error('Your profile could not be saved correctly. Please try again.');
       }
+      // Trust the server's own onboardingComplete field rather than assuming
+      // success from a 200 status — see BUGS_AND_FIXES.md Bug #1.
+      const saveResult = resolveOnboardingSaveResult(saved);
+      if (!saveResult.ok) {
+        throw new Error(saveResult.error);
+      }
 
       fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
@@ -205,7 +212,7 @@ export default function OnboardingStudentBoxes() {
         name: fullName.trim(),
         school,
         location: city,
-        onboardingComplete: true,
+        onboardingComplete: saveResult.onboardingComplete,
         avatarStyle,
         learningStyle: learningStyle || undefined,
         gender: gender || undefined,
@@ -259,7 +266,7 @@ export default function OnboardingStudentBoxes() {
               <Text style={{ color: TEAL, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>Student Onboarding</Text>
             </View>
           </View>
-          <Text style={styles.greetMain}>Nice — let's personalise your learning experience</Text>
+          <Text style={styles.greetMain}>Nice — let&apos;s personalise your learning experience</Text>
           <Text style={styles.greetSub}>Fill in each box to help us tailor stories, examples and explanations just for you.</Text>
         </View>
 
@@ -498,8 +505,8 @@ export default function OnboardingStudentBoxes() {
             </View>
             <Text style={styles.confirmTitle}>Return to the home page?</Text>
             <Text style={styles.confirmBody}>
-              You'll be signed out and taken back to the Aivorah home page. We can save what
-              you've entered so far so it's still here next time you sign in.
+              You&apos;ll be signed out and taken back to the Aivorah home page. We can save what
+              you&apos;ve entered so far so it&apos;s still here next time you sign in.
             </Text>
             <TouchableOpacity
               style={styles.confirmPrimary}

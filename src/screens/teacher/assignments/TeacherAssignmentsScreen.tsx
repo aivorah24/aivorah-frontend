@@ -518,7 +518,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
             <View style={styles.empty}>
               <Feather name="check-square" size={36} color={colors.textDim} />
               <Text style={styles.emptyTitle}>No assignments yet</Text>
-              <Text style={styles.emptyText}>Tap "New" to create your first assignment</Text>
+              <Text style={styles.emptyText}>Tap &quot;New&quot; to create your first assignment</Text>
             </View>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>

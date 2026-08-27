@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
@@ -17,9 +17,14 @@ export default function TeacherPromoteDialog({ visible, selectedStudents, colors
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
 
-  useEffect(() => {
+  // Reset the form fields whenever the dialog opens — adjusted during render
+  // (React's documented "adjusting state when a prop changes" pattern)
+  // instead of an effect.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) { setTargetGrade(''); setTargetProgram(''); setErr(''); }
-  }, [visible]);
+  }
 
   const currentGrades = useMemo(() => Array.from(new Set(selectedStudents.map((s) => s.grade).filter(Boolean))), [selectedStudents]);
   const maxCurrentGradeNum = useMemo(() => {

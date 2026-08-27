@@ -367,6 +367,7 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
   // Show external error (e.g. role mismatch from Google SSO) and re-open modal
   useEffect(() => {
     // Don't show internal signals as error text — LandingScreen handles these via Alert
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs an externally-owned error signal, external sync
     if (externalError && !externalError.startsWith('TEACHER_ADD_PARENT:')) setError(externalError);
   }, [externalError]);
 
@@ -452,7 +453,7 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
 
       <GradientButton label="Sign In" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
       <View style={s.formFooter}>
-        <Text style={s.footerText}>Don't have an account? </Text>
+        <Text style={s.footerText}>Don&apos;t have an account? </Text>
         <TouchableOpacity onPress={onSwitchSignup}><Text style={s.linkText}>Sign up free</Text></TouchableOpacity>
       </View>
     </AuthModal>
@@ -585,13 +586,13 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
           </View>
           <Text style={[s.modalTitle, { textAlign: 'center' }]}>Check your email</Text>
           <Text style={[s.modalSubtitle, { textAlign: 'center', lineHeight: 22 }]}>
-            We've sent a verification link to{'\n'}
+            We&apos;ve sent a verification link to{'\n'}
             <Text style={{ color: CYAN, fontWeight: '700' }}>{email.trim()}</Text>
             {'\n\n'}Click the link in the email to activate your account before signing in.
           </Text>
           <View style={{ backgroundColor: '#f59e0b18', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#f59e0b40' }}>
             <Text style={{ color: '#f59e0b', fontSize: 12, lineHeight: 18, textAlign: 'center' }}>
-              Didn't receive it? Check your spam folder or try signing up again.
+              Didn&apos;t receive it? Check your spam folder or try signing up again.
             </Text>
           </View>
           <GradientButton label="Go to Sign In" onPress={() => { setEmailSent(false); onClose(); onSwitchLogin(); }} style={{ width: '100%', marginTop: 4 }} />
@@ -606,7 +607,7 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
       <Text style={s.modalTitle}>Create your account</Text>
 
       {/* Role FIRST — chosen before Google SSO (and used for email signup too) */}
-      <Text style={[s.formLabel, { marginBottom: 8 }]}>I'm creating an account as</Text>
+      <Text style={[s.formLabel, { marginBottom: 8 }]}>I&apos;m creating an account as</Text>
       <RoleChips selected={role} onSelect={r => { setRole(r); setError(''); setDob(''); }} />
 
       {/* Under-14 notice — shown when student role selected */}
@@ -700,7 +701,7 @@ function ForgotModal({ visible, onClose, onSwitchLogin }: {
   return (
     <AuthModal visible={visible} onClose={onClose}>
       <Text style={s.modalTitle}>Reset your password</Text>
-      <Text style={s.modalSubtitle}>Enter your email and we'll send you a reset link</Text>
+      <Text style={s.modalSubtitle}>Enter your email and we&apos;ll send you a reset link</Text>
       {sent ? (
         <View style={s.successBox}>
           <Feather name="check-circle" size={16} color={GREEN} />
@@ -742,6 +743,7 @@ export default function LandingScreen() {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('signin') === '1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from URL on mount, external sync
       setShowLogin(true);
       // Clean the URL so a refresh doesn't keep re-opening it.
       window.history.replaceState(null, '', '/');
@@ -801,6 +803,7 @@ export default function LandingScreen() {
     if (authError.startsWith('TEACHER_ADD_PARENT:')) {
       const teacherEmail = authError.replace('TEACHER_ADD_PARENT:', '');
       clearAuthError();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs an externally-owned auth-error signal, external sync
       setShowLogin(false);
       setShowSignup(false);
       setTeacherAddParentEmail(teacherEmail);

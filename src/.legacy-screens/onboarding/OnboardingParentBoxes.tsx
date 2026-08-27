@@ -21,14 +21,15 @@ import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import firebaseApp from '../../config/firebase';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
-import { CURRICULA, getGradesForCurriculum, DatePickerInput } from './OnboardingScreen';
-import { computeParentCompletion } from './utils/parentCompletion';
+import { CURRICULA, getGradesForCurriculum, DatePickerInput } from '../../screens/onboarding/OnboardingScreen';
+import { computeParentCompletion } from '../../screens/onboarding/utils/parentCompletion';
+import { resolveOnboardingSaveResult } from '../../screens/onboarding/utils/resolveOnboardingSaveResult';
 import {
   AutocompleteField, CardHeader, BBox, fetchCitySuggestions, locateCity, locateFull,
   SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES, PhoneCodeSelect,
-} from './OnboardingSharedFields';
-import { PhoneOtpModal } from './phoneOtpVerification';
-import { useMobileOtpVerification, MOBILE_VERIFICATION_ENABLED } from './mobileOtpVerification';
+} from '../../screens/onboarding/OnboardingSharedFields';
+import { PhoneOtpModal } from '../../screens/onboarding/phoneOtpVerification';
+import { useMobileOtpVerification, MOBILE_VERIFICATION_ENABLED } from '../../screens/onboarding/mobileOtpVerification';
 
 const FOREST = '#5A8A70';
 // Override imported TEAL with Aivorah gold for parent onboarding
@@ -369,6 +370,16 @@ export default function OnboardingParentBoxes() {
         const errText = await profileRes.text().catch(() => '');
         throw new Error(`Profile save failed (${profileRes.status}): ${errText.slice(0, 200)}`);
       }
+      const saved = await profileRes.json().catch(() => ({}));
+      // Trust the server's own onboardingComplete field on a real finalize
+      // rather than assuming success from a 200 status — see
+      // BUGS_AND_FIXES.md Bug #1. A "Save & go back" draft never sends
+      // complete:true, so it's exempt from this check (handled by the early
+      // `!finalize` return below, before onboardingComplete is ever set).
+      const saveResult = finalize ? resolveOnboardingSaveResult(saved) : null;
+      if (finalize && !saveResult!.ok) {
+        throw new Error(saveResult!.error);
+      }
 
       // Only grant the parent role/switch-profile access on a real "Complete
       // Setup" (finalize) — a "Save & go back" must not add "parent" to roles.
@@ -415,7 +426,7 @@ export default function OnboardingParentBoxes() {
         avatarStyle,
         role: getPendingReturnRole() === 'teacher' ? 'teacher' : 'parent',
         activeRole: getPendingReturnRole() === 'teacher' ? 'teacher' : 'parent',
-        onboardingComplete: true,
+        onboardingComplete: saveResult!.onboardingComplete,
         roles: mergedRoles,
       };
 

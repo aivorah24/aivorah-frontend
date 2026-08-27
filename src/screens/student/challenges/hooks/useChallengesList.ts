@@ -21,9 +21,13 @@ export function useChallengesList({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  // Re-sync the tab when initialTab changes — adjusted during render (React's
+  // documented "adjusting state when a prop changes" pattern) instead of an effect.
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab);
     if (initialTab === 'assigned') setActiveTab('Assigned');
-  }, [initialTab]);
+  }
 
   const fetchChallenges = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -55,6 +59,8 @@ export function useChallengesList({
   }, [grade, curriculum, studentId]);
 
   useEffect(() => {
+    // data fetching effect — setState happens inside fetchChallenges, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChallenges();
     // isRefresh=true so the periodic poll doesn't blank the list back to the
     // full-screen spinner every 30s (that was the "challenge blinking off" bug).

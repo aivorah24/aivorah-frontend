@@ -34,19 +34,21 @@ function mockFetchRoutes(overrides: Record<string, any> = {}) {
 }
 
 function Harness({ questions, userId }: { questions?: any; userId?: string } = {}) {
-  const completeLesson = React.useRef(jest.fn());
-  const addXP = React.useRef(jest.fn());
-  const recordStudyTime = React.useRef(jest.fn());
-  const navigation = React.useRef({ goBack: jest.fn(), navigate: jest.fn() });
-  (globalThis as any).__lastMocks = { completeLesson: completeLesson.current, addXP: addXP.current, recordStudyTime: recordStudyTime.current, navigation: navigation.current };
+  const completeLesson = React.useMemo(() => jest.fn(), []);
+  const addXP = React.useMemo(() => jest.fn(), []);
+  const recordStudyTime = React.useMemo(() => jest.fn(), []);
+  const navigation = React.useMemo(() => ({ goBack: jest.fn(), navigate: jest.fn() }), []);
+  React.useEffect(() => {
+    (globalThis as any).__lastMocks = { completeLesson, addXP, recordStudyTime, navigation };
+  }, [completeLesson, addXP, recordStudyTime, navigation]);
 
   const h = useQuiz({
     topic: 'Topic', grade: 'Grade 6', subject: 'English', curriculum: 'CBSE',
     userEmail: 'a@a.com', userRole: 'student', userId,
-    navigation: navigation.current,
-    completeLesson: completeLesson.current,
-    addXP: addXP.current,
-    recordStudyTime: recordStudyTime.current,
+    navigation,
+    completeLesson,
+    addXP,
+    recordStudyTime,
   });
 
   return (

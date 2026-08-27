@@ -22,6 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 
@@ -112,6 +113,7 @@ export default function Header({
   const [profileVisible, setProfileVisible] = useState(false);
 
 const [editingName, setEditingName] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -174,18 +176,28 @@ const [editingName, setEditingName] = useState(false);
 
   async function handleSaveName() {
     const newName = nameInput.trim();
-    if (!newName || !user?.email) return;
-    // Update local state immediately
-    updateUser({ name: newName });
-    setEditingName(false);
-    // Persist to DB
+    if (!newName || !user?.email || savingName) return;
+    // Persist to DB FIRST — only declare success (update local state, close
+    // the edit UI) once the server has actually confirmed the write. Closing
+    // immediately used to let a refresh shortly after saving race the
+    // in-flight PATCH: the request would be cancelled by navigation before
+    // the server ever received it, so the name silently reverted on the next
+    // load with no error shown (see BUGS_AND_FIXES.md Bug #2).
+    setSavingName(true);
     try {
-      await fetch(`${SERVER_URL}/user/profile`, {
+      const res = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, name: newName }),
       });
-    } catch {}
+      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      updateUser({ name: newName });
+      setEditingName(false);
+    } catch {
+      Alert.alert('Error', 'Could not save your name. Please try again.');
+    } finally {
+      setSavingName(false);
+    }
   }
 
   function renderAvatarCircle(size: number) {
@@ -478,7 +490,7 @@ const [editingName, setEditingName] = useState(false);
                     <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accentYellow + '15', borderWidth: 1, borderColor: colors.accentYellow + '30', alignItems: 'center', justifyContent: 'center' }}>
                       <Feather name="bell-off" size={24} color={colors.accentYellow} />
                     </View>
-                    <Text style={styles.noNotifText}>You're all caught up!</Text>
+                    <Text style={styles.noNotifText}>You&apos;re all caught up!</Text>
                     <Text style={[styles.notifPreview, { textAlign: 'center', paddingHorizontal: 16 }]}>
                       New assignments and messages will appear here
                     </Text>
@@ -623,10 +635,10 @@ const [editingName, setEditingName] = useState(false);
                       autoFocus
                       autoCapitalize="words"
                     />
-                    <TouchableOpacity onPress={handleSaveName} activeOpacity={0.8} style={styles.nameSaveBtn}>
-                      <Feather name="check" size={14} color="#0B0B0B" />
+                    <TouchableOpacity onPress={handleSaveName} activeOpacity={0.8} style={styles.nameSaveBtn} testID="header-name-save-button" disabled={savingName}>
+                      {savingName ? <ActivityIndicator size="small" color="#0B0B0B" /> : <Feather name="check" size={14} color="#0B0B0B" />}
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setEditingName(false)} activeOpacity={0.8}>
+                    <TouchableOpacity onPress={() => setEditingName(false)} activeOpacity={0.8} disabled={savingName}>
                       <Feather name="x" size={14} color={colors.textMuted} />
                     </TouchableOpacity>
                   </View>

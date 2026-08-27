@@ -68,6 +68,25 @@ describe('SubjectSyllabusScreen — states', () => {
     await waitFor(() => expect(screen.getByText(/currently being processed/)).toBeTruthy());
   });
 
+  // Regression: real chapters with zero real topics (all pending — e.g. the
+  // reported Grade 11 Accountancy case, chapters with only book-derived
+  // `subtopics`, no DB `topics` yet) divided 0/0 and rendered "NaN%" instead
+  // of 0%. See BUGS_AND_FIXES.md follow-up to Bug #11.
+  test('real chapters with zero total topics show 0%, never "NaN%"', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      units: [
+        { unitNo: 1, title: 'Learning Objectives', subtopics: ['Meaning of Accounting'], topics: [], pending: true },
+        { unitNo: 2, title: 'Theory Base of Accounting', subtopics: ['Basis of Accounting'], topics: [], pending: true },
+      ],
+    })) as any;
+
+    await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp({ subject: 'Accountancy', curriculum: 'CBSE', grade: 'Grade 11' })} />);
+
+    await waitFor(() => expect(screen.getByText(/0 of 2/)).toBeTruthy());
+    expect(screen.queryByText(/NaN/)).toBeNull();
+    expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
+  });
+
   test('shows a real error message (not the generic "being processed" text) when the DB fetch fails', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
     await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp({ subject: 'Mathematics', curriculum: 'IB PYP', grade: 'Grade 4' })} />);
@@ -113,6 +132,51 @@ describe('SubjectSyllabusScreen — navigation', () => {
 
     expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
       subject: 'English', curriculum: 'CBSE', grade: 'Grade 6', chapterIndex: 0, topicIndex: 0,
+    }));
+  });
+
+  // Regression for Bug #11's third finding (BUGS_AND_FIXES.md): a real
+  // Qdrant-sourced topic (kind: 'qdrant', synthetic "qdrant:..." id, no
+  // syllabus_topics DB row) used to be sent as `topicId` — LessonScreen then
+  // fetched from the wrong (DB-id) route and found nothing, showing
+  // "Content coming soon" for a topic with real content.
+  test('opening a real Qdrant-sourced topic sends byNameTopic, not its synthetic id as topicId', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      units: [{
+        unitNo: 9, title: 'Biomolecules', pending: false,
+        topics: [{ id: 'qdrant:NCERT:Grade 11:Biology:Nucleic Acids Building Blocks', name: 'Nucleic Acids Building Blocks', kind: 'qdrant', page: '' }],
+      }],
+    })) as any;
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Biology', grade: 'Grade 11' })} />);
+    await waitFor(() => expect(screen.getByText(/Nucleic Acids Building Blocks/)).toBeTruthy());
+
+    await user.press(screen.getByText(/Nucleic Acids Building Blocks/));
+
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      byNameTopic: 'Nucleic Acids Building Blocks',
+      topicName: 'Nucleic Acids Building Blocks',
+      topicId: undefined,
+    }));
+  });
+
+  test('opening a real DB-backed (teacher-uploaded) topic still sends its real topicId', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      units: [{
+        unitNo: 1, title: 'Chapter One', pending: false,
+        topics: [{ id: 'db-topic-1', name: 'A Real DB Topic', kind: 'lesson', page: 'p.1' }],
+      }],
+    })) as any;
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp()} />);
+    await waitFor(() => expect(screen.getByText(/A Real DB Topic/)).toBeTruthy());
+
+    await user.press(screen.getByText(/A Real DB Topic/));
+
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      topicId: 'db-topic-1', topicName: 'A Real DB Topic', byNameTopic: undefined,
     }));
   });
 

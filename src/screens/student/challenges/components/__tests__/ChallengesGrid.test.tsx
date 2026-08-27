@@ -1,9 +1,9 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import ChallengesGrid from '../ChallengesGrid';
 import type { Challenge } from '../../types';
+
+jest.setTimeout(15000);
 
 const styles: any = new Proxy({}, { get: () => ({}) });
 const colors: any = { accentYellow: '#fa0', accentGreen: '#0a0', textDim: '#666' };

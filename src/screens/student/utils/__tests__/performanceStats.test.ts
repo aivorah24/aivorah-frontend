@@ -1,5 +1,6 @@
 import {
   computeRealTopicPerf, computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic,
+  computeLessonSubjects,
 } from '../performanceStats';
 
 const perfData = {
@@ -105,5 +106,51 @@ describe('computeBestTopic', () => {
       { label: 'Algebra', fullLabel: 'Algebra', subject: 'Math', pct: 40 },
     ];
     expect(computeBestTopic(topics)?.label).toBe('Area');
+  });
+});
+
+// Regression for Bug #7/#12 (BUGS_AND_FIXES.md): Learning Path's subject
+// chips used to come from raw ingested topics, disagreeing with Performance's
+// chips (from subjectChapters) — e.g. a stray "Social Science" and a
+// duplicate bare "Physical Education" alongside "Physical Education and Well
+// Being" that matched zero real chapters when tapped.
+describe('computeLessonSubjects', () => {
+  const REAL_GRADE9_SUBJECT_CHAPTERS = [
+    { subject: 'English', chapters: ['Ch 1'] },
+    { subject: 'Hindi', chapters: ['Ch 1'] },
+    { subject: 'Mathematics', chapters: ['Ch 1'] },
+    { subject: 'Physical Education and Well Being', chapters: ['Ch 1'] },
+    { subject: 'Science', chapters: ['Ch 1'] },
+  ];
+
+  test('matches Performance\'s subject set exactly — no stray subjects from raw ingestion', () => {
+    const subjects = computeLessonSubjects(REAL_GRADE9_SUBJECT_CHAPTERS, undefined);
+    expect(subjects).toEqual(['English', 'Hindi', 'Mathematics', 'Physical Education and Well Being', 'Science']);
+    expect(subjects).not.toContain('Social Science');
+    expect(subjects).not.toContain('Physical Education'); // the un-suffixed duplicate
+  });
+
+  test('a subject with zero real chapters never appears, even if raw topics exist for it elsewhere', () => {
+    // subjectChapters (the canonical source) has no "Social Science" entry —
+    // computeLessonSubjects must never invent one regardless of what else
+    // might exist in raw ingested data.
+    const subjects = computeLessonSubjects(REAL_GRADE9_SUBJECT_CHAPTERS, undefined);
+    expect(subjects).not.toContain('Social Science');
+  });
+
+  test('the recently-studied subject leads the list when present', () => {
+    const subjects = computeLessonSubjects(REAL_GRADE9_SUBJECT_CHAPTERS, 'Science');
+    expect(subjects[0]).toBe('Science');
+    expect(subjects).toHaveLength(5);
+  });
+
+  test('a "recent" subject not in subjectChapters is ignored, not injected', () => {
+    const subjects = computeLessonSubjects(REAL_GRADE9_SUBJECT_CHAPTERS, 'Social Science');
+    expect(subjects[0]).not.toBe('Social Science');
+    expect(subjects).not.toContain('Social Science');
+  });
+
+  test('no subjectChapters at all -> empty list, not a crash', () => {
+    expect(computeLessonSubjects([], undefined)).toEqual([]);
   });
 });

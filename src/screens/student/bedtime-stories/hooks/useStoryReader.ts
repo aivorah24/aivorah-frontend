@@ -43,6 +43,8 @@ export function useStoryReader(storyId: string) {
     didResume.current = true;
     const idx = story.pages.findIndex(p => !donePages.has(p.pageNumber));
     if (idx > 0) {                 // -1 (all done) or 0 (at start) → no resume needed
+      // one-time async resume (depends on story + AsyncStorage load), not derivable state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentPage(idx);
       setResumedFrom(idx + 1);     // 1-based page number for the banner
     }
@@ -69,7 +71,13 @@ export function useStoryReader(storyId: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId]);
 
-  useEffect(() => { setWordIndex(0); }, [currentPage]);
+  // Reset word highlight when the page changes — adjusted during render (React's
+  // documented "adjusting state when a prop changes" pattern) instead of an effect.
+  const [wordIndexPage, setWordIndexPage] = useState(currentPage);
+  if (wordIndexPage !== currentPage) {
+    setWordIndexPage(currentPage);
+    setWordIndex(0);
+  }
 
   // Apply playback rate change to audio that's already playing
   useEffect(() => {

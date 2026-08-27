@@ -11,6 +11,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-students-service.onrender.com';
 
 const STUDENTS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3017' : LIVE_SERVICE;
+   LIVE_SERVICE;
 
 export default STUDENTS_SERVER_URL;

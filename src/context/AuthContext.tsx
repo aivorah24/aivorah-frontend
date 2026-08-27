@@ -348,6 +348,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const raw = inline || window.localStorage.getItem('ai_mentor_user_profile');
             if (raw) prof = JSON.parse(raw);
           } catch {}
+          // one-time init from URL/localStorage on mount (QA harness bypass) — external sync, see react-hooks/set-state-in-effect
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           if (prof?.email) { setUser(prof); }
           setLoading(false);
           console.log('[QA preview] authenticated as', prof?.email || '(no profile)');

@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Animated, Easing } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 
 export default function ThinkingIndicator({ colors }: { colors: AppColors }) {
-  const shimmer = useRef(new Animated.Value(0)).current;
+  const shimmer = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     const anim = Animated.loop(

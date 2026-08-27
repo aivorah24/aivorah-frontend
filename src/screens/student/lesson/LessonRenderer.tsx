@@ -52,7 +52,7 @@ function renderComponent(c: LessonComponent, s: any, colors: AppColors) {
     case 'LearningGoalCard':
       return (
         <View style={[s.card, s.goal]}>
-          <Text style={[s.label, { color: colors.accentGreen }]}>What you'll learn</Text>
+          <Text style={[s.label, { color: colors.accentGreen }]}>What you&apos;ll learn</Text>
           {(c.slots.items || []).map((it: string, i: number) => (
             <View key={i} style={s.goalRow}>
               <Feather name="check" size={14} color={colors.accentGreen} />

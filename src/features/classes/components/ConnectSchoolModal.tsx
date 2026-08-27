@@ -42,6 +42,7 @@ export default function ConnectSchoolModal({ visible, onClose }: { visible: bool
   // When a school is picked, load its grades + sections for the dropdowns and
   // reset any previously-chosen grade/section (they belong to the old school).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets + kicks off data fetch below on schoolId change, external sync
     setGrade(''); setSection(''); setOpenPicker(null); setStructure([]);
     if (!schoolId) return;
     setLoadingStructure(true);
@@ -57,6 +58,7 @@ export default function ConnectSchoolModal({ visible, onClose }: { visible: bool
   useEffect(() => {
     if (!visible) return;
     // Reset each time it opens so a re-open starts clean.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets + kicks off data fetch below on modal open, external sync
     setSchoolId(null); setGrade(''); setSection(''); setParentEmail(''); setError(''); setDone(null);
     setLoadingSchools(true);
     fetch(`${SERVER_URL}/user/schools`)
@@ -115,7 +117,7 @@ export default function ConnectSchoolModal({ visible, onClose }: { visible: bool
             </View>
           ) : (
             <>
-              <Text style={styles.subtitle}>Pick your school and (optionally) your grade & section. Your request goes to the school's admin for approval.</Text>
+              <Text style={styles.subtitle}>Pick your school and (optionally) your grade & section. Your request goes to the school&apos;s admin for approval.</Text>
 
               <Text style={styles.fieldLabel}>School</Text>
               {loadingSchools ? (
@@ -140,7 +142,7 @@ export default function ConnectSchoolModal({ visible, onClose }: { visible: bool
                 loadingStructure ? (
                   <ActivityIndicator color={colors.accentYellow} style={{ marginVertical: 12 }} />
                 ) : structure.length === 0 ? (
-                  <Text style={styles.emptyHint}>This school hasn't published its grades yet — an admin will assign your class on approval.</Text>
+                  <Text style={styles.emptyHint}>This school hasn&apos;t published its grades yet — an admin will assign your class on approval.</Text>
                 ) : (
                   <View style={styles.gradeRow}>
                     {/* Grade dropdown — the school's real grades (programme is baked

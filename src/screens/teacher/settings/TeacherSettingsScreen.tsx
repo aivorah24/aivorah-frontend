@@ -1,36 +1,35 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Switch, Modal, ActivityIndicator, Platform, Image, Alert,
+  TextInput, Modal, ActivityIndicator, Platform, Image,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { spacing, radius } from '../../theme';
-import type { AppColors } from '../../theme';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import ConnectSchoolBanner from '../../features/classes/components/ConnectSchoolBanner';
-import { useAuth } from '../../context/AuthContext';
-import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
-import { useTheme } from '../../context/ThemeContext';
-import { useNotification } from '../../context/NotificationContext';
-import {
-  updatePassword,
-  EmailAuthProvider,
-  GoogleAuthProvider,
-  reauthenticateWithCredential,
-  reauthenticateWithPopup,
-  signInWithPopup,
-  deleteUser,
-} from 'firebase/auth';
-import { auth } from '../../config/firebase';
-import SERVER_URL from '../../config/serverUrl';
-import AUTH_SERVER_URL from '../../config/authServerUrl';
-import PROFILE_SERVER_URL from '../../config/profileServerUrl';
-import { GRADES_TEACHER, CURRICULA, getGradesForCurriculum } from '../onboarding/OnboardingScreen';
-import TeachingEntriesEditor, { type TeachingEntry, emptyEntry } from '../school-admin/TeachingEntriesEditor';
+import { spacing, radius } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import ConnectSchoolBanner from '../../../features/classes/components/ConnectSchoolBanner';
+import { useAuth } from '../../../context/AuthContext';
+import { getAvatarGradient, getAvatarIcon } from '../../../constants/avatarStyles';
+import { useTheme } from '../../../context/ThemeContext';
+import { useNotification } from '../../../context/NotificationContext';
+import { auth } from '../../../config/firebase';
+import { GRADES_TEACHER, CURRICULA, getGradesForCurriculum } from '../../onboarding/OnboardingScreen';
+import TeachingEntriesEditor, { type TeachingEntry, emptyEntry } from '@legacy/school-admin/TeachingEntriesEditor';
+import { useNotificationPreferences } from './hooks/useNotificationPreferences';
+import { useTeacherPreferences } from './hooks/useTeacherPreferences';
+import { useProfilePhoto } from './hooks/useProfilePhoto';
+import { useBrandingLogos } from './hooks/useBrandingLogos';
+import { useProfileFields } from './hooks/useProfileFields';
+import { useEmailChange } from './hooks/useEmailChange';
+import { usePasswordChange } from './hooks/usePasswordChange';
+import { useDeleteAccount } from './hooks/useDeleteAccount';
+import { useParentProfile } from './hooks/useParentProfile';
+import SectionHeader from './components/SectionHeader';
+import NotificationsSection from './components/NotificationsSection';
+import BrandingLogosCard from './components/BrandingLogosCard';
+import TeacherPreferencesCard from './components/TeacherPreferencesCard';
 
 // Grade levels — mirrors the student onboarding grade selector so the teacher's
 // "Grades you teach" picker groups grades by level instead of a flat list.
@@ -51,146 +50,40 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // Notifications — persisted to AsyncStorage under the SAME key/keys the
-  // notification bell reads (notifPrefs_<email>: assignmentAlerts / teacherMessages /
-  // challengeUpdates). Previously these toggles only changed local state, so turning
-  // "Parent Messages" off had no effect and the bell still notified.
-  const NOTIF_KEY = `notifPrefs_${user?.email ?? 'guest'}`;
-  const [submissionAlerts,  setSubmissionAlerts]  = useState(true);   // assignmentAlerts
-  const [parentMessages,    setParentMessages]    = useState(true);   // teacherMessages
-  const [weeklyReport,      setWeeklyReport]      = useState(true);
-  const [aiInsights,        setAiInsights]        = useState(true);
-  const [challengeAlerts,   setChallengeAlerts]   = useState(false);  // challengeUpdates
+  // notification bell reads. See src/screens/teacher/settings/hooks/
+  // useNotificationPreferences.ts — extracted 2026-08-27, behavior unchanged
+  // (unit-tested there, E2E-covered by teacher/settings/settings.spec.js).
+  // Only Parent Messages is a live toggle (see NotificationsSection.tsx) —
+  // submissionAlerts/weeklyReport/aiInsights/challengeAlerts still load/save
+  // via saveNotifPrefs's closure inside the hook, just not read here.
+  const { parentMessages, setParentMessages, saveNotifPrefs } = useNotificationPreferences(user?.email, triggerPoll);
 
-  useEffect(() => {
-    AsyncStorage.getItem(NOTIF_KEY).then(raw => {
-      if (!raw) return;
-      try {
-        const p = JSON.parse(raw);
-        if (p.assignmentAlerts != null) setSubmissionAlerts(p.assignmentAlerts);
-        if (p.teacherMessages  != null) setParentMessages(p.teacherMessages);
-        if (p.challengeUpdates != null) setChallengeAlerts(p.challengeUpdates);
-        if (p.weeklyReport     != null) setWeeklyReport(p.weeklyReport);
-        if (p.aiInsights       != null) setAiInsights(p.aiInsights);
-      } catch {}
-    }).catch(() => {});
-  }, [NOTIF_KEY]);
+  // Teaching prefs enforced server-side (AI Auto-Grading, Share Progress).
+  // See useTeacherPreferences.ts — extracted 2026-08-27, same call/behavior.
+  const {
+    autoGrading, setAutoGrading,
+    shareProgress, setShareProgress,
+    teacherRoleVal, experienceVal,
+    saveTeacherPref,
+  } = useTeacherPreferences(user?.email);
 
-  // Persist all current notification prefs (mapping teacher labels → bell keys) and
-  // poll immediately so the change takes effect without waiting for the next cycle.
-  const saveNotifPrefs = useCallback((override: Record<string, boolean>) => {
-    const prefs = {
-      assignmentAlerts: submissionAlerts,
-      teacherMessages:  parentMessages,
-      challengeUpdates: challengeAlerts,
-      weeklyReport,
-      aiInsights,
-      ...override,
-    };
-    AsyncStorage.setItem(NOTIF_KEY, JSON.stringify(prefs)).catch(() => {});
-    triggerPoll();
-  }, [NOTIF_KEY, submissionAlerts, parentMessages, challengeAlerts, weeklyReport, aiInsights, triggerPoll]);
-
-  // Teaching prefs that are ENFORCED server-side (AI Auto-Grading, Share Progress) —
-  // load from the server profile and PATCH on every toggle so the change takes effect.
-  useEffect(() => {
-    if (!user?.email) return;
-    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(p => {
-        if (!p) return;
-        if (p.autoGrading != null)  setAutoGrading(p.autoGrading);
-        if (p.shareProgress != null) setShareProgress(p.shareProgress);
-        if (p.teacherRole != null) setTeacherRoleVal(p.teacherRole);
-        if (p.experience != null)  setExperienceVal(p.experience);
-      })
-      .catch(() => {});
-  }, [user?.email]);
-  function saveTeacherPref(key: 'autoGrading' | 'shareProgress', value: boolean) {
-    if (!user?.email) return;
-    fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, [key]: value }),
-    }).catch(() => {});
-  }
-
-  // Profile photo — same upload flow as the student profile (shared for all roles).
-  const [photoUrl,  setPhotoUrl]  = useState<string | null>((user as any)?.photoUrl ?? null);
-  const [uploading, setUploading] = useState(false);
-  async function handlePickPhoto() {
-    if (!user?.email) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow access to your photo library.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
-    if (result.canceled || !result.assets?.[0]) return;
-    setUploading(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/user/upload-photo`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail: user.email, base64: result.assets[0].base64, mimeType: result.assets[0].mimeType ?? 'image/jpeg' }),
-      });
-      const data = await res.json();
-      const url = data.photoUrl || data.url;
-      if (url) { setPhotoUrl(url); updateUser({ photoUrl: url } as any); }
-      else Alert.alert('Upload failed', data.error || 'Could not upload photo.');
-    } catch { Alert.alert('Upload failed', 'Could not upload photo. Please try again.'); }
-    finally { setUploading(false); }
-  }
+  // Profile photo — same upload flow as the student profile (shared for all
+  // roles). See useProfilePhoto.ts — extracted 2026-08-27, same behavior.
+  const { photoUrl, uploading, handlePickPhoto } = useProfilePhoto(
+    user?.email, (user as any)?.photoUrl ?? null, updateUser,
+  );
 
   // School + curriculum logo — uploaded once here, reused on every worksheet
-  // for this school/curriculum (not auto-detected per-PDF).
-  const [schoolLogoUrl, setSchoolLogoUrl] = useState<string | null>(null);
-  const [curriculumLogoUrl, setCurriculumLogoUrl] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState<'school' | 'curriculum' | null>(null);
-
-  useEffect(() => {
-    const school = user?.school, curriculum = (user as any)?.curriculum;
-    if (!school && !curriculum) return;
-    const params = new URLSearchParams();
-    if (school) params.set('school', school);
-    if (curriculum) params.set('curriculum', curriculum);
-    fetch(`${SERVER_URL}/branding/logos?${params.toString()}`)
-      .then(r => r.json())
-      .then(data => {
-        setSchoolLogoUrl(data.schoolLogoUrl || null);
-        setCurriculumLogoUrl(data.curriculumLogoUrl || null);
-      })
-      .catch(() => {});
-  }, [user?.school, (user as any)?.curriculum]);
-
-  async function handlePickLogo(kind: 'school' | 'curriculum') {
-    const name = kind === 'school' ? user?.school : (user as any)?.curriculum;
-    if (!name) { Alert.alert(`Set your ${kind} first`, `Add your ${kind} in Profile & Account before uploading its logo.`); return; }
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow access to your photo library.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.9, base64: true });
-    if (result.canceled || !result.assets?.[0]) return;
-    setUploadingLogo(kind);
-    try {
-      const res = await fetch(`${SERVER_URL}/branding/logo`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, name, base64: result.assets[0].base64, mimeType: result.assets[0].mimeType ?? 'image/png' }),
-      });
-      const data = await res.json();
-      if (data.logoUrl) { kind === 'school' ? setSchoolLogoUrl(data.logoUrl) : setCurriculumLogoUrl(data.logoUrl); }
-      else Alert.alert('Upload failed', data.error || 'Could not upload logo.');
-    } catch { Alert.alert('Upload failed', 'Could not upload logo. Please try again.'); }
-    finally { setUploadingLogo(null); }
-  }
-
-  // Teaching prefs
-  const [autoGrading,       setAutoGrading]       = useState(true);
-  const [shareProgress,     setShareProgress]     = useState(true);
-  const [teacherRoleVal,    setTeacherRoleVal]    = useState<string | null>(null);
-  const [experienceVal,     setExperienceVal]     = useState<string | null>(null);
-
+  // for this school/curriculum. See useBrandingLogos.ts — extracted
+  // 2026-08-27, same behavior.
+  const { schoolLogoUrl, curriculumLogoUrl, uploadingLogo, handlePickLogo } = useBrandingLogos(
+    user?.school, (user as any)?.curriculum,
+  );
   const isDualRole = (user?.roles?.length ?? 0) > 1;
 
   // Parent onboarding modal state
   const [parentModal,   setParentModal]   = useState(false);
   const [parentStep,    setParentStep]    = useState<'choose' | 'create' | 'link'>('choose');
-  const [parentLoading, setParentLoading] = useState(false);
-  const [parentError,   setParentError]   = useState('');
   const [childName,       setChildName]       = useState('');
   const [childEmail,      setChildEmail]      = useState('');
   const [childPassword,   setChildPassword]   = useState('');
@@ -200,8 +93,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
 
   // Edit modals
   const [activeModal,   setActiveModal]   = useState<ModalType>(null);
-  const [modalLoading,  setModalLoading]  = useState(false);
-  const [modalError,    setModalError]    = useState('');
   const [newName,       setNewName]       = useState(user?.name || '');
   const [newEmail,      setNewEmail]      = useState('');
   const [emailPassword, setEmailPassword] = useState('');
@@ -240,330 +131,128 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
 
   // Provider-aware account deletion: password users confirm with password, Google
   // SSO users confirm via Google popup. The server removes Supabase + Firebase Auth.
   const isGoogleUser   = user?.authProvider === 'google' || (auth.currentUser?.providerData ?? []).some(p => p.providerId === 'google.com');
   const isPasswordUser = !isGoogleUser;
 
-  async function confirmDeleteAccount() {
-    setDeleteError('');
-    if (isPasswordUser && !deletePassword) { setDeleteError('Please enter your password to confirm.'); return; }
-    setDeleteLoading(true);
-    try {
-      const firebaseUser = auth.currentUser;
-      if (firebaseUser && firebaseUser.email) {
-        if (isPasswordUser) {
-          const cred = EmailAuthProvider.credential(firebaseUser.email, deletePassword);
-          await reauthenticateWithCredential(firebaseUser, cred);
-        } else if (isGoogleUser) {
-          await reauthenticateWithPopup(firebaseUser, new GoogleAuthProvider());
-        }
-        await fetch(`${SERVER_URL}/user/delete-account`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: firebaseUser.email }),
-        });
-        try { await deleteUser(firebaseUser); } catch (_) { /* already deleted server-side */ }
-      }
-      logout();
-    } catch (e: any) {
-      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
-        setDeleteError('Incorrect password. Please try again.');
-      } else if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        setDeleteError('Google confirmation was cancelled. Please try again.');
-      } else {
-        setDeleteError('Could not delete account. Please try again.');
-      }
-    } finally {
-      setDeleteLoading(false);
-    }
+  // Extracted 2026-08-27 — see hooks/useDeleteAccount.ts (unit-tested there).
+  // Uses the hook's OWN loading/error state directly (not mirrored into
+  // local state) — mirroring via `setDeleteError(hook.error)` right after an
+  // awaited call would read a stale closure value, since the hook's setError
+  // only takes effect on ITS next render, not synchronously within this call.
+  const { loading: deleteLoading, error: deleteError, setError: setDeleteError, confirmDelete } = useDeleteAccount(isPasswordUser, isGoogleUser, logout);
+  function confirmDeleteAccount() {
+    confirmDelete(deletePassword);
+  }
+
+  // Extracted 2026-08-27 — see hooks/useProfileFields.ts, useEmailChange.ts,
+  // usePasswordChange.ts (all unit-tested there). `modalError`/`modalLoading`
+  // used to be one shared useState pair every modal handler wrote into —
+  // since only one modal is visible at a time (gated by `activeModal`), they
+  // now derive directly from whichever hook owns the currently-open modal,
+  // reading each hook's OWN live state (same non-stale reasoning as the
+  // delete-account hook above) instead of a separate mirrored copy.
+  const profileFields = useProfileFields(user?.email, updateUser);
+  const emailChangeHook = useEmailChange(user?.email, user?.name, isPasswordUser, isGoogleUser);
+  const passwordChangeHook = usePasswordChange();
+
+  const modalLoading =
+    activeModal === 'name' || activeModal === 'school' || activeModal === 'curriculum' ? profileFields.saving :
+    activeModal === 'email' ? emailChangeHook.loading :
+    activeModal === 'password' ? passwordChangeHook.saving :
+    false;
+  const modalError =
+    activeModal === 'name' || activeModal === 'school' || activeModal === 'curriculum' ? profileFields.error :
+    activeModal === 'email' ? emailChangeHook.error :
+    activeModal === 'password' ? passwordChangeHook.error :
+    '';
+  function setModalError(message: string) {
+    profileFields.setError(message);
+    emailChangeHook.setError(message);
+    passwordChangeHook.setError(message);
   }
 
   function openModal(type: ModalType) {
     setNewName(user?.name || '');
     setNewEmail(''); setEmailPassword('');
-    setEmailStep('form'); setEmailOtp('');
     setCurrentPw(''); setNewPw(''); setConfirmPw('');
     setNewSchool(user?.school || '');
     setEditEntries(teachesToEntries());
     setOpenDropdown(null);
+    emailChangeHook.reset();
     setModalError('');
     setActiveModal(type);
   }
-  function closeModal() { setActiveModal(null); setModalLoading(false); setModalError(''); }
+  function closeModal() { setActiveModal(null); setModalError(''); }
 
   // Google-SSO "change email" = migrate the account onto a DIFFERENT Google
   // account the teacher owns (same flow as the student settings). No typed email
   // or OTP: they prove ownership via a Google popup and the server moves all data
   // onto it (POST /user/change-email-google). Editing the Firebase top-level email
   // for a Google account (the old path) corrupts it — this is the correct fix.
+  //
+  // All 6 handlers below are now thin wrappers around the extracted hooks
+  // (useProfileFields/useEmailChange/usePasswordChange, see comment above) —
+  // logic + its own tests live there; these just bridge hook calls to the
+  // existing modal JSX (closeModal/setFeedback/setLogoutAfterFeedback etc.).
   async function handleSendEmailOtp() {
-  setModalError('');
-
-  const email = newEmail.trim().toLowerCase();
-
-  if (!email) {
-    setModalError('Please enter your new email.');
-    return;
+    await emailChangeHook.sendOtp(newEmail, emailPassword);
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    setModalError('Please enter a valid email address.');
-    return;
-  }
-
-  if (email === (user?.email || '').toLowerCase()) {
-    setModalError('That is already your current email.');
-    return;
-  }
-
-  if (isPasswordUser && !emailPassword) {
-    setModalError('Please enter your current password.');
-    return;
-  }
-
-  setModalLoading(true);
-  setModalError('');
-
-  try {
-    // Check if email already exists
-    const takenRes = await fetch(
-      `${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`
-    );
-
-    if (takenRes.ok) {
-      setModalError(
-        'That email is already registered to another Aivorah account.'
-      );
-      setModalLoading(false);
-      return;
-    }
-
-    const firebaseUser = auth.currentUser;
-
-    if (firebaseUser && firebaseUser.email) {
-      if (isPasswordUser) {
-        const cred = EmailAuthProvider.credential(
-          firebaseUser.email,
-          emailPassword
-        );
-
-        await reauthenticateWithCredential(firebaseUser, cred);
-      } else if (isGoogleUser) {
-        await reauthenticateWithPopup(
-          firebaseUser,
-          new GoogleAuthProvider()
-        );
-      }
-    }
-
-    const res = await fetch(`${SERVER_URL}/user/email-otp/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        name: user?.name,
-      }),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not send the verification code.');
-    }
-
-    setEmailStep('otp');
-  } catch (e: any) {
-    if (
-      e.code === 'auth/wrong-password' ||
-      e.code === 'auth/invalid-credential'
-    ) {
-      setModalError('Incorrect password. Please try again.');
-    } else if (
-      e.code === 'auth/popup-closed-by-user' ||
-      e.code === 'auth/cancelled-popup-request'
-    ) {
-      setModalError('Google confirmation was cancelled. Please try again.');
-    } else {
-      setModalError(
-        e.message || 'Failed to send verification code.'
-      );
-    }
-  } finally {
-    setModalLoading(false);
-  }
-}
-
-async function handleVerifyEmailOtp() {
-  setModalError('');
-
-  if (!emailOtp.trim()) {
-    setModalError('Please enter the code.');
-    return;
-  }
-
-  setModalLoading(true);
-
-  try {
-    const changedTo = newEmail.trim().toLowerCase();
-
-    const res = await fetch(`${SERVER_URL}/user/change-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        currentEmail: user?.email,
-        newEmail: changedTo,
-        otp: emailOtp.trim(),
-      }),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not update your email.');
-    }
-
+  async function handleVerifyEmailOtp() {
+    const result = await emailChangeHook.verifyOtp(newEmail, emailOtp);
+    if (!result.ok) return;
     closeModal();
     setLogoutAfterFeedback(true);
     setFeedback({
       title: 'Email Updated',
-      message: `Your email has been changed to ${changedTo}. For security, please sign in again with your new email.`,
+      message: `Your email has been changed to ${result.newEmail}. For security, please sign in again with your new email.`,
     });
-  } catch (e: any) {
-    setModalError(e.message || 'Failed to update email.');
-  } finally {
-    setModalLoading(false);
   }
-}
+
   async function handleSwitchGoogleAccount() {
-    setModalError('');
-    setModalLoading(true);
-    try {
-      const currentEmail = (user?.email || '').toLowerCase();
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider);
-      const newEmailAddr = (result.user.email || '').toLowerCase();
-      if (!newEmailAddr) throw new Error('That Google account has no email address.');
-      if (newEmailAddr === currentEmail) throw new Error('That is the same Google account you already use. Pick a different one.');
-
-      const idToken = await result.user.getIdToken();
-      const res = await fetch(`${SERVER_URL}/user/change-email-google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentEmail, idToken }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || 'Could not switch your Google account.');
-
-      closeModal();
-      setLogoutAfterFeedback(true);
-      setFeedback({
-        title: 'Email Updated',
-        message: `Your account is now linked to ${d.newEmail || newEmailAddr}. For security, please sign in again with your new Google account.`,
-      });
-    } catch (e: any) {
-      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-        setModalError('Google selection was cancelled. Please try again.');
-      } else {
-        setModalError(e.message || 'Failed to switch Google account.');
-      }
-    } finally { setModalLoading(false); }
+    const result = await emailChangeHook.switchGoogleAccount();
+    if (!result.ok) return;
+    closeModal();
+    setLogoutAfterFeedback(true);
+    setFeedback({
+      title: 'Email Updated',
+      message: `Your account is now linked to ${result.newEmail}. For security, please sign in again with your new Google account.`,
+    });
   }
 
   async function handleSaveName() {
-    if (!newName.trim()) { setModalError('Please enter a name.'); return; }
-    setModalLoading(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/user/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email, name: newName.trim() }),
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to save'); }
-      updateUser({ name: newName.trim() });
-      closeModal();
-      setFeedback({ title: 'Updated', message: 'Your display name has been updated.' });
-    } catch (e: any) {
-      setModalError(e.message || 'Failed to update name.');
-    } finally { setModalLoading(false); }
+    const ok = await profileFields.saveName(newName);
+    if (!ok) return;
+    closeModal();
+    setFeedback({ title: 'Updated', message: 'Your display name has been updated.' });
   }
 
   async function handleSaveSchool() {
-    setModalLoading(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/user/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email, school: newSchool.trim() }),
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to save'); }
-      updateUser({ school: newSchool.trim() });
-      closeModal();
-      setFeedback({ title: 'Updated', message: 'School / Institution has been saved.' });
-    } catch (e: any) {
-      setModalError(e.message || 'Failed to update school.');
-    } finally { setModalLoading(false); }
+    const ok = await profileFields.saveSchool(newSchool);
+    if (!ok) return;
+    closeModal();
+    setFeedback({ title: 'Updated', message: 'School / Institution has been saved.' });
   }
 
   async function handleSaveCurriculum() {
-    const validEntries = editEntries.filter(e => e.curriculum && e.grade);
-    if (validEntries.length === 0) { setModalError('Please add at least one curriculum + grade.'); return; }
-    setModalLoading(true);
-    try {
-      // Each row is an INDEPENDENT curriculum+grade the teacher actually
-      // teaches (e.g. IB MYP/Grade 7 and CBSE/Grade 9) — no cross-product.
-      // The users columns hold the first row's values for legacy consumers.
-      const teaches = validEntries.map(e => ({
-        grade: e.grade, curriculum: e.curriculum,
-        subjects: e.subjectsInput.split(',').map(s => s.trim()).filter(Boolean),
-      }));
-      const primaryCurriculum = teaches[0].curriculum;
-      const primaryGrade = teaches[0].grade;
-      const res = await fetch(`${SERVER_URL}/user/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email, curriculum: primaryCurriculum, grade: primaryGrade, teaches }),
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to save'); }
-      updateUser({ curriculum: primaryCurriculum, grade: primaryGrade, teaches: teaches as any });
-      closeModal();
-      setFeedback({ title: 'Updated', message: 'Curriculum and grades have been saved.' });
-    } catch (e: any) {
-      setModalError(e.message || 'Failed to update curriculum.');
-    } finally { setModalLoading(false); }
+    const ok = await profileFields.saveCurriculum(editEntries);
+    if (!ok) return;
+    closeModal();
+    setFeedback({ title: 'Updated', message: 'Curriculum and grades have been saved.' });
   }
 
   async function handleChangePassword() {
-    // Strip all whitespace to match the login screen (pass.replace(/\s+/g,'')),
-    // so a copy-pasted current password with a stray space still re-authenticates. (#154)
-    const curPwClean = (currentPw || '').replace(/\s+/g, '');
-    const newPwClean = (newPw || '').replace(/\s+/g, '');
-    const confirmPwClean = (confirmPw || '').replace(/\s+/g, '');
-    if (!curPwClean) { setModalError('Enter your current password.'); return; }
-    if (newPwClean.length < 6) { setModalError('New password must be at least 6 characters.'); return; }
-    if (newPwClean !== confirmPwClean) { setModalError('Passwords do not match.'); return; }
-    setModalLoading(true);
-    try {
-      const firebaseUser = auth.currentUser;
-      if (firebaseUser && firebaseUser.email) {
-        const cred = EmailAuthProvider.credential(firebaseUser.email, curPwClean);
-        await reauthenticateWithCredential(firebaseUser, cred);
-        await updatePassword(firebaseUser, newPwClean);
-      }
-      closeModal();
-      setFeedback({ title: 'Password Changed', message: 'Your password has been updated successfully.' });
-    } catch (e: any) {
-      setModalError(e.message || 'Failed to change password.');
-    } finally { setModalLoading(false); }
+    const ok = await passwordChangeHook.changePassword(currentPw, newPw, confirmPw);
+    if (!ok) return;
+    closeModal();
+    setFeedback({ title: 'Password Changed', message: 'Your password has been updated successfully.' });
   }
+
+  // Extracted 2026-08-27 — see hooks/useParentProfile.ts (unit-tested there).
+  const { loading: parentLoading, error: parentError, setError: setParentError, createChild, linkChild } = useParentProfile(user?.email, updateUser);
 
   function openParentOnboarding() {
     setParentStep('choose');
@@ -575,48 +264,14 @@ async function handleVerifyEmailOtp() {
   }
 
   async function submitParentOnboarding() {
-    if (!user?.email) return;
-    setParentLoading(true);
-    setParentError('');
-    try {
-      const roleRes = await fetch(`${SERVER_URL}/user/add-role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, role: 'parent' }),
-      });
-      if (!roleRes.ok) throw new Error('Failed to add parent role');
-      const roleData = await roleRes.json();
-
-      if (parentStep === 'create') {
-        if (!childName.trim()) {
-          setParentError('Child\'s name is required.'); setParentLoading(false); return;
-        }
-        const r = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(user.email)}/children/create-student`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: childName.trim(), email: childEmail.trim() || undefined, password: childPassword.trim() || undefined, grade: childGrade, curriculum: childCurriculum, school: user.school || '' }),
-        });
-        const d = await r.json();
-        if (!r.ok) { setParentError(d.error || 'Could not create student account.'); setParentLoading(false); return; }
-      } else if (parentStep === 'link') {
-        if (!linkEmail.trim()) { setParentError('Please enter the student email.'); setParentLoading(false); return; }
-        const r = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(user.email)}/children`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ childEmail: linkEmail.trim() }),
-        });
-        const d = await r.json();
-        if (!r.ok) { setParentError(d.error || 'Could not link student.'); setParentLoading(false); return; }
-      }
-
-      updateUser({ roles: roleData.roles as any });
-      setParentModal(false);
-      setFeedback({ title: 'Parent Profile Ready', message: "Switch to your Parent profile from the sidebar to view your child's progress and assign work." });
-    } catch (e: any) {
-      setParentError(e.message || 'Something went wrong. Please try again.');
-    } finally {
-      setParentLoading(false);
-    }
+    const ok = parentStep === 'create'
+      ? await createChild({ name: childName.trim(), email: childEmail.trim() || undefined, password: childPassword.trim() || undefined, grade: childGrade, curriculum: childCurriculum, school: user?.school || '' })
+      : parentStep === 'link'
+      ? await linkChild(linkEmail.trim())
+      : false;
+    if (!ok) return;
+    setParentModal(false);
+    setFeedback({ title: 'Parent Profile Ready', message: "Switch to your Parent profile from the sidebar to view your child's progress and assign work." });
   }
 
   function handleSignOut() {
@@ -677,7 +332,7 @@ async function handleVerifyEmailOtp() {
                   </View>
                 </View>
                 <View style={styles.divider} />
-                <FieldRow label="Display Name" sub={user?.name || '—'} btnLabel="Change" onPress={() => openModal('name')} styles={styles} />
+                <FieldRow label="Display Name" sub={user?.name || '—'} btnLabel="Change" onPress={() => openModal('name')} styles={styles} testID="teacher-settings-name-change-button" />
                 <View style={styles.divider} />
                 <FieldRow label="Email Address" sub={user?.email || '—'} btnLabel="Change" onPress={() => openModal('email')} styles={styles} />
                 <View style={styles.divider} />
@@ -709,43 +364,12 @@ async function handleVerifyEmailOtp() {
               </View>
 
               {/* ── Branding (school + curriculum logo, reused on every worksheet) ── */}
-              <SectionHeader icon="image" label="Worksheet Branding" color={gold} styles={styles} />
-              <View style={styles.card}>
-                <View style={styles.fieldRow}>
-                  <TouchableOpacity onPress={() => handlePickLogo('school')} activeOpacity={0.85}
-                    style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.bgDark, borderWidth: 1, borderColor: colors.borderColor, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    {uploadingLogo === 'school' ? <ActivityIndicator size="small" color={gold} />
-                      : schoolLogoUrl ? <Image source={{ uri: schoolLogoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-                      : <Feather name="upload" size={16} color={colors.textDim} />}
-                  </TouchableOpacity>
-                  <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <Text style={styles.fieldLabel}>School Logo</Text>
-                    <Text style={styles.fieldSub}>{user?.school || 'Set your school in Profile & Account first'}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.changeBtn} onPress={() => handlePickLogo('school')} activeOpacity={0.7}>
-                    <Text style={styles.changeBtnText}>{schoolLogoUrl ? 'Change' : 'Upload'}</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.fieldRow}>
-                  <TouchableOpacity onPress={() => handlePickLogo('curriculum')} activeOpacity={0.85}
-                    style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.bgDark, borderWidth: 1, borderColor: colors.borderColor, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    {uploadingLogo === 'curriculum' ? <ActivityIndicator size="small" color={gold} />
-                      : curriculumLogoUrl ? <Image source={{ uri: curriculumLogoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-                      : <Feather name="upload" size={16} color={colors.textDim} />}
-                  </TouchableOpacity>
-                  <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <Text style={styles.fieldLabel}>Curriculum Logo</Text>
-                    <Text style={styles.fieldSub}>{(user as any)?.curriculum || 'Set your curriculum in Profile & Account first'}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.changeBtn} onPress={() => handlePickLogo('curriculum')} activeOpacity={0.7}>
-                    <Text style={styles.changeBtnText}>{curriculumLogoUrl ? 'Change' : 'Upload'}</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={[styles.fieldSub, { marginTop: spacing.sm, fontStyle: 'italic' }]}>
-                  These two logos appear on every worksheet header for your school/curriculum.
-                </Text>
-              </View>
+              <BrandingLogosCard
+                school={user?.school} curriculum={(user as any)?.curriculum}
+                schoolLogoUrl={schoolLogoUrl} curriculumLogoUrl={curriculumLogoUrl}
+                uploadingLogo={uploadingLogo} handlePickLogo={handlePickLogo}
+                colors={colors} gold={gold} styles={styles}
+              />
 
               {/* ── Security ── */}
               <SectionHeader icon="shield" label="Security" color={colors.accentGreen} styles={styles} />
@@ -789,96 +413,20 @@ async function handleVerifyEmailOtp() {
             {/* ── Right column ── */}
             <View style={styles.col}>
               {/* ── Teaching Preferences ── */}
-              <SectionHeader icon="settings" label="Teaching Preferences" color={colors.accentBlue} styles={styles} />
-              <View style={styles.card}>
-                <View style={styles.toggleRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>AI Auto-Grading</Text>
-                    <Text style={styles.fieldSub}>Let AI grade assignments automatically</Text>
-                  </View>
-                  <Switch value={autoGrading} onValueChange={(v) => { setAutoGrading(v); saveTeacherPref('autoGrading', v); }} trackColor={{ false: colors.borderColor, true: gold }} thumbColor="white" />
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.toggleRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Share Progress with Parents</Text>
-                    <Text style={styles.fieldSub}>Parents can see their child's scores and activity</Text>
-                  </View>
-                  <Switch value={shareProgress} onValueChange={(v) => { setShareProgress(v); saveTeacherPref('shareProgress', v); }} trackColor={{ false: colors.borderColor, true: gold }} thumbColor="white" />
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.fieldRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Curriculum</Text>
-                    <Text style={styles.fieldSub}>{(() => {
-                      const teaches = Array.isArray(user?.teaches) ? user.teaches : [];
-                      const tCurricula = teaches.length > 0
-                        ? [...new Set(teaches.map((t: any) => t.curriculum).filter(Boolean))]
-                        : (user?.curriculum ? [user.curriculum] : ['IB PYP']);
-                      const tGrades = teaches.length > 0
-                        ? [...new Set(teaches.map((t: any) => t.grade).filter(Boolean))]
-                        : (user?.grade ? [user.grade] : []);
-                      const cLabel = tCurricula.join(', ');
-                      if (tGrades.length === 0) return cLabel || 'Not set — tap Update to add your grades';
-                      const gLabel = tGrades.map((g: string) => g.replace('Grade ', '')).join(', ');
-                      return `${cLabel} · Grade${tGrades.length > 1 ? 's' : ''} ${gLabel}`;
-                    })()}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.changeBtn} onPress={() => openModal('curriculum')} activeOpacity={0.7}>
-                    <Text style={styles.changeBtnText}>Update</Text>
-                  </TouchableOpacity>
-                </View>
-                {(teacherRoleVal || experienceVal) && (
-                  <>
-                    <View style={styles.divider} />
-                    <View style={styles.fieldRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.fieldLabel}>Role &amp; Experience</Text>
-                        <Text style={styles.fieldSub}>
-                          {[teacherRoleVal, experienceVal].filter(Boolean).join(' · ') || 'Not set'}
-                        </Text>
-                      </View>
-                    </View>
-                  </>
-                )}
-              </View>
+              <TeacherPreferencesCard
+                user={user} autoGrading={autoGrading} setAutoGrading={setAutoGrading}
+                shareProgress={shareProgress} setShareProgress={setShareProgress}
+                saveTeacherPref={saveTeacherPref} teacherRoleVal={teacherRoleVal} experienceVal={experienceVal}
+                onOpenCurriculumModal={() => openModal('curriculum')}
+                colors={colors} gold={gold} styles={styles}
+              />
 
               {/* ── Notifications ── */}
-              <SectionHeader icon="bell" label="Notifications" color={colors.accentYellow} styles={styles} />
-              <View style={styles.card}>
-                {[
-                  { key: 'teacherMessages',  label: 'Parent Messages', sub: 'New messages from parents', val: parentMessages, set: setParentMessages },
-                  { key: 'weeklyReport',     label: 'Weekly Class Report', sub: 'Summary of class activity each week', soon: true },
-                  { key: 'aiInsights',       label: 'AI Class Insights', sub: 'Smart suggestions for your class', soon: true },
-                ].map((item: any, i) => (
-                  <View key={item.label}>
-                    {i > 0 && <View style={styles.divider} />}
-                    <View style={styles.toggleRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.fieldLabel}>{item.label}</Text>
-                        <Text style={styles.fieldSub}>{item.sub}</Text>
-                      </View>
-                      {item.soon ? (
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: gold + '18' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: gold }}>Soon</Text>
-                        </View>
-                      ) : (
-                      <Switch
-                        value={item.val}
-                        onValueChange={(v) => {
-                          item.set(v);
-                          saveNotifPrefs({ [item.key]: v });
-                          // Turning ON dismisses the OFF-period backlog so it doesn't replay.
-                          if (v && item.key === 'challengeUpdates') clearUnreadChallenges();
-                        }}
-                        trackColor={{ false: colors.borderColor, true: gold }}
-                        thumbColor="white"
-                      />
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
+              <NotificationsSection
+                parentMessages={parentMessages} setParentMessages={setParentMessages}
+                saveNotifPrefs={saveNotifPrefs} clearUnreadChallenges={clearUnreadChallenges}
+                colors={colors} gold={gold} styles={styles}
+              />
 
               {/* ── Appearance ── */}
               <SectionHeader icon="moon" label="Appearance" color={colors.accentPurple} styles={styles} />
@@ -910,18 +458,19 @@ async function handleVerifyEmailOtp() {
       </View>
 
       {/* Change Name Modal */}
-      <AppModal visible={activeModal === 'name'} title="Change Display Name" onClose={closeModal} styles={styles} colors={colors}>
+      <AppModal visible={activeModal === 'name'} title="Change Display Name" onClose={closeModal} styles={styles} colors={colors} testID="teacher-settings-name-modal">
         <Text style={styles.modalFieldLabel}>New Name</Text>
         <View style={styles.modalInput}>
           <Feather name="user" size={15} color={colors.textDim} />
           <TextInput
+            testID="teacher-settings-name-input"
             style={styles.modalTextInput} value={newName} onChangeText={setNewName}
             placeholder="Your name" placeholderTextColor={colors.textDim}
             autoCapitalize="words" autoFocus
           />
         </View>
-        {modalError ? <Text style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
-        <ModalButtons onCancel={closeModal} onSave={handleSaveName} loading={modalLoading} styles={styles} />
+        {modalError ? <Text testID="teacher-settings-name-error" style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
+        <ModalButtons onCancel={closeModal} onSave={handleSaveName} loading={modalLoading} styles={styles} saveTestID="teacher-settings-name-save-button" />
       </AppModal>
 
       {/* Change Email Modal — two steps: (1) confirm identity + enter new email,
@@ -931,8 +480,8 @@ async function handleVerifyEmailOtp() {
           <>
             <Text style={styles.modalNote}>
               Your account signs in with Google, so its email is your Google account. To use a different
-              address, switch to another Google account you own — we'll move your account and all its data
-              onto it. You'll pick the account in a Google window.
+              address, switch to another Google account you own — we&apos;ll move your account and all its data
+              onto it. You&apos;ll pick the account in a Google window.
             </Text>
             <View style={[styles.modalInput, { opacity: 0.7 }]}>
               <Feather name="mail" size={15} color={colors.textDim} />
@@ -993,19 +542,8 @@ async function handleVerifyEmailOtp() {
             <TouchableOpacity
               disabled={modalLoading}
               onPress={async () => {
-                setModalError('');
-                try {
-                  const res = await fetch(`${SERVER_URL}/user/email-otp/send`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: newEmail.trim().toLowerCase(), name: user?.name }),
-                  });
-                  const d = await res.json().catch(() => ({}));
-                  if (!res.ok) throw new Error(d.error || 'Could not resend the code.');
-                  setFeedback({ title: 'Code Resent', message: `A new code was sent to ${newEmail.trim()}.` });
-                } catch (e: any) {
-                  setModalError(e.message || 'Failed to resend code.');
-                }
+                const result = await emailChangeHook.resendOtp(newEmail);
+                if (result.ok) setFeedback({ title: 'Code Resent', message: result.message! });
               }}
             >
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.accentYellow, marginTop: 4 }}>Resend code</Text>
@@ -1124,7 +662,7 @@ async function handleVerifyEmailOtp() {
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Add Parent Profile</Text>
-                  <Text style={[styles.fieldSub, { marginTop: 0 }]}>Monitor your child's learning on Aivorah</Text>
+                  <Text style={[styles.fieldSub, { marginTop: 0 }]}>Monitor your child&apos;s learning on Aivorah</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => setParentModal(false)}><Feather name="x" size={20} color={colors.textMuted} /></TouchableOpacity>
@@ -1135,20 +673,20 @@ async function handleVerifyEmailOtp() {
                 <Text style={[styles.fieldLabel, { marginBottom: 4 }]}>How would you like to add your child?</Text>
                 <TouchableOpacity
                   style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }]}
-                  onPress={() => setParentStep('create')} activeOpacity={0.8}
+                  onPress={() => { setParentError(''); setParentStep('create'); }} activeOpacity={0.8}
                 >
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: gold + '20', alignItems: 'center', justifyContent: 'center' }}>
                     <Feather name="user-plus" size={18} color={gold} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.fieldLabel}>Create new student account</Text>
-                    <Text style={styles.fieldSub}>My child doesn't have an Aivorah account yet</Text>
+                    <Text style={styles.fieldSub}>My child doesn&apos;t have an Aivorah account yet</Text>
                   </View>
                   <Feather name="chevron-right" size={16} color={colors.textDim} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }]}
-                  onPress={() => setParentStep('link')} activeOpacity={0.8}
+                  onPress={() => { setParentError(''); setParentStep('link'); }} activeOpacity={0.8}
                 >
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentBlue + '20', alignItems: 'center', justifyContent: 'center' }}>
                     <Feather name="link" size={18} color={colors.accentBlue} />
@@ -1168,9 +706,9 @@ async function handleVerifyEmailOtp() {
                   <Feather name="arrow-left" size={14} color={colors.textMuted} />
                   <Text style={[styles.fieldSub, { color: colors.textMuted }]}>Back</Text>
                 </TouchableOpacity>
-                <Text style={styles.fieldLabel}>Child's Full Name *</Text>
+                <Text style={styles.fieldLabel}>Child&apos;s Full Name *</Text>
                 <TextInput style={styles.modalTextInput} value={childName} onChangeText={setChildName} placeholder="e.g. Arjun" placeholderTextColor={colors.textDim} autoCapitalize="words" />
-                <Text style={styles.fieldLabel}>Child's Email <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
+                <Text style={styles.fieldLabel}>Child&apos;s Email <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
                 <TextInput style={styles.modalTextInput} value={childEmail} onChangeText={setChildEmail} placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim} keyboardType="email-address" autoCapitalize="none" />
                 <Text style={styles.fieldLabel}>Password <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
                 <TextInput style={styles.modalTextInput} value={childPassword} onChangeText={setChildPassword} placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim} secureTextEntry />
@@ -1216,7 +754,7 @@ async function handleVerifyEmailOtp() {
                   <Feather name="arrow-left" size={14} color={colors.textMuted} />
                   <Text style={[styles.fieldSub, { color: colors.textMuted }]}>Back</Text>
                 </TouchableOpacity>
-                <Text style={styles.fieldLabel}>Child's Aivorah Email</Text>
+                <Text style={styles.fieldLabel}>Child&apos;s Aivorah Email</Text>
                 <Text style={styles.fieldSub}>Enter the email address your child uses to log into Aivorah</Text>
                 <TextInput style={styles.modalTextInput} value={linkEmail} onChangeText={setLinkEmail} placeholder="child@example.com" placeholderTextColor={colors.textDim} keyboardType="email-address" autoCapitalize="none" />
                 {parentError ? <Text style={{ color: colors.accentRed, fontSize: 13 }}>{parentError}</Text> : null}
@@ -1286,7 +824,7 @@ async function handleVerifyEmailOtp() {
               <View style={[styles.modalInput, { gap: 8 }]}>
                 <Feather name="shield" size={15} color={colors.textDim} />
                 <Text style={[styles.modalTextInput, { flex: 1, color: colors.textMuted }]} numberOfLines={2}>
-                  You'll confirm with Google to delete your account.
+                  You&apos;ll confirm with Google to delete your account.
                 </Text>
               </View>
             )}
@@ -1338,28 +876,19 @@ async function handleVerifyEmailOtp() {
 
 // ── Sub-components ──
 
-function SectionHeader({ icon, label, color, styles }: { icon: any; label: string; color: string; styles: any }) {
-  return (
-    <View style={styles.sectionLabelRow}>
-      <Feather name={icon} size={15} color={color} />
-      <Text style={styles.sectionLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function FieldRow({ label, sub, btnLabel, onPress, styles, badgeOnly }: { label: string; sub: string; btnLabel: string; onPress: () => void; styles: any; badgeOnly?: boolean }) {
+function FieldRow({ label, sub, btnLabel, onPress, styles, badgeOnly, testID }: { label: string; sub: string; btnLabel: string; onPress: () => void; styles: any; badgeOnly?: boolean; testID?: string }) {
   return (
     <View style={styles.fieldRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.fieldLabel}>{label}</Text>
-        <Text style={styles.fieldSub} numberOfLines={1}>{sub}</Text>
+        <Text style={styles.fieldSub} numberOfLines={1} testID={testID ? `${testID}-value` : undefined}>{sub}</Text>
       </View>
       {badgeOnly ? (
-        <TouchableOpacity style={[styles.changeBtn, { borderColor: styles.comingSoonBadge?.borderColor || '#E5A93C40', backgroundColor: styles.comingSoonBadge?.backgroundColor || '#E5A93C18' }]} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity testID={testID} style={[styles.changeBtn, { borderColor: styles.comingSoonBadge?.borderColor || '#E5A93C40', backgroundColor: styles.comingSoonBadge?.backgroundColor || '#E5A93C18' }]} onPress={onPress} activeOpacity={0.7}>
           <Text style={styles.changeBtnText}>{btnLabel}</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={styles.changeBtn} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity testID={testID} style={styles.changeBtn} onPress={onPress} activeOpacity={0.7}>
           <Text style={styles.changeBtnText}>{btnLabel}</Text>
         </TouchableOpacity>
       )}
@@ -1367,11 +896,11 @@ function FieldRow({ label, sub, btnLabel, onPress, styles, badgeOnly }: { label:
   );
 }
 
-function AppModal({ visible, title, onClose, children, styles, colors }: { visible: boolean; title: string; onClose: () => void; children: React.ReactNode; styles: any; colors: AppColors }) {
+function AppModal({ visible, title, onClose, children, styles, colors, testID }: { visible: boolean; title: string; onClose: () => void; children: React.ReactNode; styles: any; colors: AppColors; testID?: string }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalBox}>
+        <View style={styles.modalBox} testID={testID}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose}><Feather name="x" size={20} color={colors.textMuted} /></TouchableOpacity>
@@ -1385,13 +914,13 @@ function AppModal({ visible, title, onClose, children, styles, colors }: { visib
   );
 }
 
-function ModalButtons({ onCancel, onSave, loading, saveLabel = 'Save Changes', cancelLabel = 'Cancel', styles }: { onCancel: () => void; onSave: () => void; loading: boolean; saveLabel?: string; cancelLabel?: string; styles: any }) {
+function ModalButtons({ onCancel, onSave, loading, saveLabel = 'Save Changes', cancelLabel = 'Cancel', styles, saveTestID }: { onCancel: () => void; onSave: () => void; loading: boolean; saveLabel?: string; cancelLabel?: string; styles: any; saveTestID?: string }) {
   return (
     <View style={styles.modalBtns}>
       <TouchableOpacity style={styles.modalCancelBtn} onPress={onCancel}>
         <Text style={styles.modalCancelText}>{cancelLabel}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.modalSaveBtn} onPress={onSave} disabled={loading}>
+      <TouchableOpacity testID={saveTestID} style={styles.modalSaveBtn} onPress={onSave} disabled={loading}>
         {loading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.modalSaveText}>{saveLabel}</Text>}
       </TouchableOpacity>
     </View>

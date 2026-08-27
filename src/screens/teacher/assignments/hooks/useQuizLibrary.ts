@@ -39,6 +39,8 @@ export function useQuizLibrary({ activeTab, teacherEmail }: UseQuizLibraryArgs) 
   }, [librarySubject, libraryGrade, teacherEmail]);
 
   useEffect(() => {
+    // data fetching effect — setState happens inside fetchLibraryQuizzes, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (activeTab === 'Quiz Library') fetchLibraryQuizzes();
   }, [activeTab, fetchLibraryQuizzes]);
 

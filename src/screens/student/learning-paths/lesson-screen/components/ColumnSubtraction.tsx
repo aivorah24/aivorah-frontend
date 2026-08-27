@@ -3,6 +3,18 @@ import { View, Text } from 'react-native';
 import { radius } from '../../../../../theme';
 import type { AppColors } from '../../../../../theme';
 
+function Cell({ children, style }: any) {
+  return (
+    <View style={{ width: 44, alignItems: 'center', justifyContent: 'center', ...style }}>{children}</View>
+  );
+}
+
+function Digit({ v, color }: any) {
+  return (
+    <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] as any }}>{v}</Text>
+  );
+}
+
 export default function ColumnSubtraction({ top, bottom, colors }: { top: number; bottom: number; colors: AppColors }) {
   const tT = Math.floor(top / 10), tO = top % 10;
   const bT = Math.floor(bottom / 10), bO = bottom % 10;
@@ -12,12 +24,6 @@ export default function ColumnSubtraction({ top, bottom, colors }: { top: number
   const ans = top - bottom;
   const aT = Math.floor(ans / 10), aO = ans % 10;
   const green = colors.accentGreen, rose = '#C1666B', dim = colors.textDim, main = colors.textMain;
-  const Cell = ({ children, style }: any) => (
-    <View style={{ width: 44, alignItems: 'center', justifyContent: 'center', ...style }}>{children}</View>
-  );
-  const Digit = ({ v, color = main }: any) => (
-    <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] as any }}>{v}</Text>
-  );
   return (
     <View style={{ alignSelf: 'flex-start', backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.lg, padding: 16, gap: 2 }}>
       {/* column headers */}
@@ -37,15 +43,15 @@ export default function ColumnSubtraction({ top, bottom, colors }: { top: number
         <Cell>
           {borrow
             ? <Text style={{ fontSize: 30, fontWeight: '800', color: rose, textDecorationLine: 'line-through' }}>{tT}</Text>
-            : <Digit v={tT} />}
+            : <Digit v={tT} color={main} />}
         </Cell>
-        <Cell><Digit v={tO} /></Cell>
+        <Cell><Digit v={tO} color={main} /></Cell>
       </View>
       {/* minus bottom number */}
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Cell><Text style={{ fontSize: 26, fontWeight: '800', color: main }}>−</Text></Cell>
-        <Cell><Digit v={bT} /></Cell>
-        <Cell><Digit v={bO} /></Cell>
+        <Cell><Digit v={bT} color={main} /></Cell>
+        <Cell><Digit v={bO} color={main} /></Cell>
       </View>
       {/* line */}
       <View style={{ height: 3, backgroundColor: main, marginLeft: 44, borderRadius: 2 }} />

@@ -236,7 +236,7 @@ export function AssignmentDetailModal({
                   <View style={{ alignItems: 'center', paddingVertical: 32, gap: 8 }}>
                     <Feather name="users" size={32} color={colors.textDim} />
                     <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>No submissions yet.</Text>
-                    <Text style={{ fontSize: 12, color: colors.textDim, textAlign: 'center' }}>Students haven't started this assignment.</Text>
+                    <Text style={{ fontSize: 12, color: colors.textDim, textAlign: 'center' }}>Students haven&apos;t started this assignment.</Text>
                   </View>
                 ) : (
                   <View style={{ gap: 10 }}>
@@ -387,7 +387,7 @@ export function AssignmentDetailModal({
                                       activeOpacity={0.8}
                                     >
                                       <Feather name="eye" size={14} color={colors.accentCyan} />
-                                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.accentCyan }}>View Student's Answered Sheet</Text>
+                                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.accentCyan }}>View Student&apos;s Answered Sheet</Text>
                                     </TouchableOpacity>
                                   ) : null}
                                 </View>

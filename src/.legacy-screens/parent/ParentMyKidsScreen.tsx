@@ -15,7 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
 import firebaseApp from '../../config/firebase';
-import { CURRICULA, getGradesForCurriculum } from '../onboarding/OnboardingScreen';
+import { CURRICULA, getGradesForCurriculum } from '../../screens/onboarding/OnboardingScreen';
 
 function formatStudyTime(minutes: number) {
   const h = Math.floor(minutes / 60);

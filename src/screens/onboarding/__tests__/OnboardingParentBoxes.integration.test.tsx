@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import OnboardingParentBoxes from '../OnboardingParentBoxes';
+import OnboardingParentBoxes from '@legacy/onboarding/OnboardingParentBoxes';
 
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(), deleteApp: jest.fn() }));
 jest.mock('firebase/auth', () => ({

@@ -8,12 +8,12 @@ import { useEventForm } from '../../hooks/useEventForm';
 import { makeStyles } from '../../styles';
 import { darkColors } from '../../../../../theme';
 import type { ScheduleEvent, StudentItem } from '../../types';
+import { createEvent } from '../../services/scheduleService';
 
 jest.mock('../../services/scheduleService', () => ({
   createEvent: jest.fn(),
   updateEvent: jest.fn(),
 }));
-import { createEvent } from '../../services/scheduleService';
 
 const STUDENTS: StudentItem[] = [
   { id: 's1', name: 'Aarav Sharma', grade: 'Grade 6' },

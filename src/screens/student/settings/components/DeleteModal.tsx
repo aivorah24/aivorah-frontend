@@ -51,7 +51,7 @@ export default function DeleteModal({ visible, onClose, isPasswordUser, deletePa
             <View style={[styles.modalInput, { gap: 8 }]}>
               <Feather name="shield" size={15} color={colors.textDim} />
               <Text style={[styles.modalTextInput, { flex: 1, color: colors.textMuted }]} numberOfLines={2}>
-                You'll confirm with Google to delete your account.
+                You&apos;ll confirm with Google to delete your account.
               </Text>
             </View>
           )}

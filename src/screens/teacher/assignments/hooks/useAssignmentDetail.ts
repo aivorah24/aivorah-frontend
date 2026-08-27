@@ -18,7 +18,17 @@ export function useAssignmentDetail() {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
   useEffect(() => {
-    if (!detailAssignment) { setDetailSubmissions([]); setDetailTotalLinked(0); setDetailTab('overview'); setExpandedStudent(null); setTeacherFeedback(''); return; }
+    if (!detailAssignment) {
+      // reset when the detail modal closes — the effect also owns the fetch
+      // path below when it's open, so this stays as one effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDetailSubmissions([]);
+      setDetailTotalLinked(0);
+      setDetailTab('overview');
+      setExpandedStudent(null);
+      setTeacherFeedback('');
+      return;
+    }
     setLoadingSubmissions(true);
     fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${detailAssignment.id}/submissions`)
       .then(r => r.ok ? r.json() : { submissions: [], totalLinked: 0 })

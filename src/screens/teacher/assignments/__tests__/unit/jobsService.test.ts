@@ -1,6 +1,6 @@
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
-
 import { pollJob, extractViaQueue } from '../../services/jobsService';
+
+jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
 
 describe('pollJob', () => {
   const realFetch = global.fetch;

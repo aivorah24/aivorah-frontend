@@ -16,7 +16,7 @@ export function useDragToMove(setEventsMap: React.Dispatch<React.SetStateAction<
   } | null>(null);
   const wasDragRef = useRef(false);
   const setEventsMapRef = useRef(setEventsMap);
-  setEventsMapRef.current = setEventsMap;
+  useEffect(() => { setEventsMapRef.current = setEventsMap; }, [setEventsMap]);
 
   const startDrag = useCallback((el: HTMLElement, clientY: number) => {
     const eventId  = el.getAttribute('data-eid') || '';

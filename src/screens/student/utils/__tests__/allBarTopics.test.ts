@@ -1,9 +1,9 @@
+import { getSubjectSyllabus } from '../../../../data/syllabusRegistry';
+import { computeAllBarTopics, computeMasteredTopics } from '../performanceStats';
+
 jest.mock('../../../../data/syllabusRegistry', () => ({
   getSubjectSyllabus: jest.fn(),
 }));
-
-import { getSubjectSyllabus } from '../../../../data/syllabusRegistry';
-import { computeAllBarTopics, computeMasteredTopics } from '../performanceStats';
 
 const mockGetSubjectSyllabus = getSubjectSyllabus as jest.Mock;
 

@@ -133,7 +133,13 @@ export function useDashboardData({
 
   // ── Real chapter counts + names across all subjects for this grade ──
   useEffect(() => {
-    if (noContentGrade) { setSubjectChapters([]); return; }
+    if (noContentGrade) {
+      // reset for a grade with no content — not derivable inline since the effect
+      // also owns the async fetch path below for other grades
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSubjectChapters([]);
+      return;
+    }
     const curricParam = isIBPYP ? 'IB_PYP' : (childCurriculum ?? 'NCERT');
     fetchCurriculumSubjects(curricParam, studentGrade)
       .then(d => {

@@ -17,6 +17,9 @@ export function useSubjectPerformance(userGrade: string | undefined, userCurricu
 
     const cached = getMemoryCurriculum(cacheKey);
     if (cached) {
+      // syncing to an external in-memory cache — not derivable state, and the
+      // effect also owns the async fetch path below for the uncached case
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurriculum(cached.type === 'ibpyp' ? parseIBPYPCurriculum(cached.data) : parseNCERTCurriculum(cached.data, studentGrade));
       return;
     }

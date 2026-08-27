@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, RefreshControl,
@@ -42,9 +42,13 @@ export default function TeacherStudentsScreen({ navigation, route }: any) {
   // Re-apply the requested tab whenever navigation passes a new initialTab — the
   // screen instance can be reused (not remounted) when re-navigating from the
   // dashboard, so a useState initializer alone would only apply on first mount.
-  useEffect(() => {
+  // Adjusted during render (React's documented "adjusting state when a prop
+  // changes" pattern) instead of an effect.
+  const [prevInitialTab, setPrevInitialTab] = useState(route?.params?.initialTab);
+  if (prevInitialTab !== route?.params?.initialTab) {
+    setPrevInitialTab(route?.params?.initialTab);
     if (route?.params?.initialTab) setActiveTab(route.params.initialTab);
-  }, [route?.params?.initialTab]);
+  }
 
   const {
     students, loading, refreshing, setRefreshing, load,

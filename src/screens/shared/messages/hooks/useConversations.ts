@@ -48,6 +48,7 @@ export function useConversations(userEmail: string, userRole: string, activeConv
     try { setChannels(await fetchChannels(userEmail)); } catch {}
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount, external sync
   useEffect(() => { loadConversations(); loadChannels(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalUnread = conversations.reduce((s, c) => s + (c.unreadCount || 0), 0);

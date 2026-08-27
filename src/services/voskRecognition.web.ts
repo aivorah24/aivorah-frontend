@@ -169,7 +169,7 @@ export async function startVoskRecognition(opts: {
     // misread, same as a true [unk]. Partial results don't carry confidence.
     const emitFinal = (message: any) => {
       const r = message?.result;
-      const wordList: Array<{ word: string; conf?: number }> | undefined = r?.result;
+      const wordList: { word: string; conf?: number }[] | undefined = r?.result;
       if (Array.isArray(wordList) && wordList.length) {
         const words: string[] = [];
         for (const w of wordList) {

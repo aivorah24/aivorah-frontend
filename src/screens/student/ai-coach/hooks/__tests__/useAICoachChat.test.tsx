@@ -2,15 +2,15 @@
 // (services/aiMentorApi.ts) used elsewhere too, and its own SSE-parsing logic
 // is out of scope for this hook's tests.
 
-const mockAskAIMentorStream = jest.fn();
-jest.mock('../../../../../services/aiMentorApi', () => ({
-  askAIMentorStream: (...args: any[]) => mockAskAIMentorStream(...args),
-}));
-
 import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useAICoachChat } from '../useAICoachChat';
+
+const mockAskAIMentorStream = jest.fn();
+jest.mock('../../../../../services/aiMentorApi', () => ({
+  askAIMentorStream: (...args: any[]) => mockAskAIMentorStream(...args),
+}));
 
 function Harness({ exploreTopic }: { exploreTopic: () => void }) {
   const hook = useAICoachChat({

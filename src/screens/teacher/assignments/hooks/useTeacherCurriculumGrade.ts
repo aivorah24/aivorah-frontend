@@ -96,18 +96,31 @@ export function useTeacherCurriculumGrade(user: any, subject: string) {
 
   // Keep `grade`/`curriculum` state in sync with the clamped effective values so the
   // publish payload and AI-generate calls always use grades/curricula the teacher teaches.
-  useEffect(() => {
+  // Keep grade/curriculum synced to their clamped effective values — adjusted
+  // during render (React's documented "adjusting state when a prop changes"
+  // pattern) instead of an effect.
+  const [prevEffectiveGrade, setPrevEffectiveGrade] = useState(effectiveGrade);
+  if (prevEffectiveGrade !== effectiveGrade) {
+    setPrevEffectiveGrade(effectiveGrade);
     if (grade !== effectiveGrade) setGrade(effectiveGrade);
-  }, [effectiveGrade]);
-  useEffect(() => {
+  }
+  const [prevEffectiveCurriculum, setPrevEffectiveCurriculum] = useState(effectiveCurriculum);
+  if (prevEffectiveCurriculum !== effectiveCurriculum) {
+    setPrevEffectiveCurriculum(effectiveCurriculum);
     if (effectiveCurriculum && curriculum !== effectiveCurriculum) setCurriculum(effectiveCurriculum);
-  }, [effectiveCurriculum]);
+  }
 
   // Fetch the syllabus topics available for the selected grade + subject so the
   // teacher can pick from what the curriculum actually covers (or type their own).
   useEffect(() => {
     let cancelled = false;
-    if (!subject || !effectiveGrade) { setAvailableTopics([]); return; }
+    if (!subject || !effectiveGrade) {
+      // reset when there's nothing to fetch — the effect also owns the fetch
+      // path below, so this stays as one effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAvailableTopics([]);
+      return;
+    }
     setTopicsLoading(true);
     fetch(`${SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(effectiveGrade)}&curriculum=${encodeURIComponent(effectiveCurriculum)}`)
       .then((r) => (r.ok ? r.json() : null))

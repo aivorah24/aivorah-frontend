@@ -9,6 +9,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-auth-service.onrender.com';
 
 const AUTH_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:4001' : LIVE_SERVICE;
+   LIVE_SERVICE;
 
 export default AUTH_SERVER_URL;

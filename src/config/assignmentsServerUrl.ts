@@ -8,6 +8,6 @@ declare const __DEV__: boolean;
 const LIVE_ASSIGNMENTS_BACKEND = 'https://aivorah-assignments-service.onrender.com';
 
 const ASSIGNMENTS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3015' : LIVE_ASSIGNMENTS_BACKEND;
+   LIVE_ASSIGNMENTS_BACKEND;
 
 export default ASSIGNMENTS_SERVER_URL;

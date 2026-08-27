@@ -45,6 +45,8 @@ export function useTeacherDashboardData(teacherEmail: string | undefined) {
   // (Previously 5s — far more aggressive than every other screen's polling and
   // a real contributor to database connection pressure under load.)
   useEffect(() => {
+    // data fetching effect — setState happens inside fetchStudents, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStudents();
     const interval = setInterval(fetchStudents, 30 * 1000);
     return () => clearInterval(interval);

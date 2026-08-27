@@ -63,7 +63,7 @@ export function BulkUploadFlow({
       {bulkPhase === 'pick' && (
         <>
           <Text style={{ fontSize: 13, color: colors.textDim, lineHeight: 18 }}>
-            Select several worksheet files (PDF, image, or DOCX). You'll see and edit ALL of them together at each step — classify, then generate quizzes, then assign & publish.
+            Select several worksheet files (PDF, image, or DOCX). You&apos;ll see and edit ALL of them together at each step — classify, then generate quizzes, then assign & publish.
           </Text>
           <TouchableOpacity
             style={{ padding: 20, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: gold + '60', alignItems: 'center', gap: 8 }}

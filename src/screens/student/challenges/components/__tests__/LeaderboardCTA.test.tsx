@@ -1,8 +1,8 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import LeaderboardCTA from '../LeaderboardCTA';
+
+jest.setTimeout(15000);
 
 const styles: any = new Proxy({}, { get: () => ({}) });
 const colors: any = { accentYellow: '#fa0' };

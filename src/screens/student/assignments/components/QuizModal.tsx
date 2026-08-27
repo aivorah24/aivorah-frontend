@@ -132,6 +132,26 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
     finally { setSubmitting(false); }
   }
 
+  async function explainWrong(idx: number, q: QuizQuestion, studentAns: string) {
+    try {
+      const res = await fetch(`${SERVER_URL}/ibpyp/explain-wrong`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: assignment.chapter,
+          subject: assignment.subject,
+          grade: assignment.grade || 'Grade 4',
+          question: q.question,
+          wrongAnswer: studentAns,
+          correctAnswer: q.correct,
+        }),
+      });
+      const data = await res.json();
+      setAiExplanations(prev => ({ ...prev, [idx]: data.explanation || q.explanation || 'The correct answer is shown above.' }));
+    } catch {
+      setAiExplanations(prev => ({ ...prev, [idx]: q.explanation || 'The correct answer is shown above.' }));
+    }
+  }
+
   // Auto-fetch explanations for all wrong answers when result arrives.
   // MUST be declared before any conditional return to keep hook order stable (React error #300).
   useEffect(() => {
@@ -162,26 +182,6 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
       </View>
     </Modal>
   );
-
-  async function explainWrong(idx: number, q: QuizQuestion, studentAns: string) {
-    try {
-      const res = await fetch(`${SERVER_URL}/ibpyp/explain-wrong`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: assignment.chapter,
-          subject: assignment.subject,
-          grade: assignment.grade || 'Grade 4',
-          question: q.question,
-          wrongAnswer: studentAns,
-          correctAnswer: q.correct,
-        }),
-      });
-      const data = await res.json();
-      setAiExplanations(prev => ({ ...prev, [idx]: data.explanation || q.explanation || 'The correct answer is shown above.' }));
-    } catch {
-      setAiExplanations(prev => ({ ...prev, [idx]: q.explanation || 'The correct answer is shown above.' }));
-    }
-  }
 
   // Results
   if (result) return (

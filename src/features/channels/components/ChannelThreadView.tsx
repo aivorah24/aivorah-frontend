@@ -52,6 +52,7 @@ export default function ChannelThreadView({ channel, onBack }: {
     } catch {} finally { setLoading(false); }
   }, [email, channel.id]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/channel change, external sync
   useEffect(() => { load(); }, [load]);
 
   const send = async () => {
@@ -76,6 +77,7 @@ export default function ChannelThreadView({ channel, onBack }: {
   // WhatsApp-style: search students/parents by name and tap to pick, instead
   // of typing raw email addresses.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced-search effect's early-return reset, external sync
     if (!showAdd || !addQuery.trim()) { setAddResults([]); return; }
     const memberEmails = new Set(members.map((m) => m.email));
     const t = setTimeout(() => {

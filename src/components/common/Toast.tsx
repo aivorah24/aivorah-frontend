@@ -5,7 +5,7 @@
  *   showToast({ title: 'Saved!', subtitle: 'Changes applied.', type: 'success' });
  *   return <View>...{ToastComponent}</View>
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,7 +26,7 @@ const TYPE_CONFIG: Record<ToastType, { icon: string; color: string }> = {
 };
 
 function ProgressBar({ color, duration, onComplete }: { color: string; duration: number; onComplete: () => void }) {
-  const width = useRef(new Animated.Value(1)).current;
+  const width = useMemo(() => new Animated.Value(1), []);
   useEffect(() => {
     const anim = Animated.timing(width, { toValue: 0, duration, useNativeDriver: false });
     anim.start(({ finished }) => { if (finished) onComplete(); });
@@ -41,8 +41,8 @@ function ProgressBar({ color, duration, onComplete }: { color: string; duration:
 
 function ToastView({ title, subtitle, type = 'success', duration = 4000, onDismiss }: ToastOptions & { onDismiss: () => void }) {
   const { colors } = useTheme();
-  const slideY  = useRef(new Animated.Value(-24)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const slideY  = useMemo(() => new Animated.Value(-24), []);
+  const opacity = useMemo(() => new Animated.Value(0), []);
   const { icon, color } = TYPE_CONFIG[type];
 
   useEffect(() => {

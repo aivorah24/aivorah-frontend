@@ -159,7 +159,7 @@ export default function ConversationList({
           banner previously did nothing in that case). */}
       <TouchableOpacity testID="messages-aivorah-banner" style={styles.aivBanner} activeOpacity={0.8} onPress={onAivorahBannerPress}>
         <View style={styles.aivBannerIcon}><Feather name="cpu" size={22} color={colors.accentYellow} /></View>
-        <Text style={styles.aivBannerText}>Aivorah is here to <Text style={{ color: colors.accentYellow, fontWeight: '700' }}>support</Text>{'\n'}your child's learning journey.</Text>
+        <Text style={styles.aivBannerText}>Aivorah is here to <Text style={{ color: colors.accentYellow, fontWeight: '700' }}>support</Text>{'\n'}your child&apos;s learning journey.</Text>
         <Feather name="chevron-right" size={16} color={colors.accentYellow} />
       </TouchableOpacity>
     </View>

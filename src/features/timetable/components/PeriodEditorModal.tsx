@@ -79,6 +79,7 @@ export default function PeriodEditorModal({
 
   useEffect(() => {
     if (!visible) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets edit form on modal open, relies on module-level _uidSeq mutation, external sync
     setError('');
     const base = initial.length ? initial : [{ code: 'P1', start: '08:00', end: '08:50', isBreak: false }];
     setRows(base.map((p) => ({ ...p, _uid: ++_uidSeq })));

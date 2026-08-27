@@ -103,7 +103,7 @@ export default function LearningPathsScreen({ navigation }: any) {
               Content for {grade} is on the way
             </Text>
             <Text style={[styles.dimText, { textAlign: 'center', maxWidth: 440, lineHeight: 21 }]}>
-              We're carefully crafting age-appropriate learning content for {grade}. It will appear here as soon as it's ready. Thank you for your patience!
+              We&apos;re carefully crafting age-appropriate learning content for {grade}. It will appear here as soon as it&apos;s ready. Thank you for your patience!
             </Text>
           </View>
         </View>

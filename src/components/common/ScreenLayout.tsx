@@ -94,15 +94,15 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
   };
 
   // On mount, restore a break that was active before a refresh
-  const restoredSecsLeft = (() => {
+  const computeRestoredSecsLeft = () => {
     const endsAt = getBreakEndsAt();
     if (!endsAt) return 0;
     const secsLeft = Math.round((endsAt - Date.now()) / 1000);
     return secsLeft > 0 ? secsLeft : 0;
-  })();
+  };
 
-  const [breakActive, setBreakActive] = useState(restoredSecsLeft > 0);
-  const [breakSecondsLeft, setBreakSecondsLeft] = useState(restoredSecsLeft);
+  const [breakActive, setBreakActive] = useState(() => computeRestoredSecsLeft() > 0);
+  const [breakSecondsLeft, setBreakSecondsLeft] = useState(computeRestoredSecsLeft);
   const lastBreakThresholdRef = useRef<number>(getLastBreakThreshold());
   const breakTimerRef = useRef<any>(null);
   const controlsIntervalRef = useRef<any>(null);
@@ -216,7 +216,7 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
           </View>
           <Text style={[styles.overlayTitle, { color: '#FFFFFF' }]}>Break Time!</Text>
           <Text style={[styles.overlayDesc, { color: '#AAAAAA' }]}>
-            You've been studying hard.{'\n'}Stretch, drink some water.
+            You&apos;ve been studying hard.{'\n'}Stretch, drink some water.
           </Text>
           <View style={[styles.timerBadge, { backgroundColor: '#93B0AC20' }]}>
             <Text style={{ color: '#93B0AC', fontWeight: '800', fontSize: 28 }}>
@@ -232,7 +232,7 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
           </View>
           <Text style={[styles.overlayTitle, { color: '#FFFFFF' }]}>See you tomorrow!</Text>
           <Text style={[styles.overlayDesc, { color: '#AAAAAA' }]}>
-            You've used your full {controls?.dailyLimitMinutes ?? 0} min today.{'\n'}Great work — rest up and come back tomorrow!
+            You&apos;ve used your full {controls?.dailyLimitMinutes ?? 0} min today.{'\n'}Great work — rest up and come back tomorrow!
           </Text>
           <Text style={{ color: '#666', fontSize: 11, textAlign: 'center', marginTop: 4 }}>Ask a parent to adjust your limit</Text>
         </View>
@@ -243,7 +243,7 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
           </View>
           <Text style={[styles.overlayTitle, { color: '#FFFFFF' }]}>Weekly Limit Reached</Text>
           <Text style={[styles.overlayDesc, { color: '#AAAAAA' }]}>
-            You've reached your weekly screen time limit.{'\n'}Resets next Monday!
+            You&apos;ve reached your weekly screen time limit.{'\n'}Resets next Monday!
           </Text>
         </View>
       ) : (

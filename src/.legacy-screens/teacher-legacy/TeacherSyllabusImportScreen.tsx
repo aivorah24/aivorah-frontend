@@ -11,7 +11,7 @@ import Header from '../../components/common/Header';
 import ScreenLayout from '../../components/common/ScreenLayout';
 import { spacing, radius, fonts } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
-import { getSubjectsForEntry } from '../school-admin/TeachingEntriesEditor';
+import { getSubjectsForEntry } from '@legacy/school-admin/TeachingEntriesEditor';
 
 // ── Canonical extraction types (Stage 1 output — the single source of truth) ──
 // Mirrors server/services/syllabusExtraction.js exactly. The Preview Generator

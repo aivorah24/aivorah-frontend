@@ -27,7 +27,7 @@ export default function TopicsList({ topics, search, colors, isDark, onSelectTop
           <Feather name="chevron-right" size={16} color={colors.textDim} style={{ marginLeft: 'auto' as any }} />
         </TouchableOpacity>
       ))}
-      {topics.length === 0 && <Text style={styles.emptyText}>No topics match "{search}"</Text>}
+      {topics.length === 0 && <Text style={styles.emptyText}>No topics match &quot;{search}&quot;</Text>}
     </View>
   );
 }

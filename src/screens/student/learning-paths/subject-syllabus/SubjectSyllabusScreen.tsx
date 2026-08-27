@@ -63,6 +63,14 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
     const topic = chapter.topics[topicIndex] as any;
+    // Two different kinds of "real" (non-curated) topic share this list:
+    // a teacher-published one with a real syllabus_topics DB id, and a real
+    // NCERT/Qdrant topic with no DB row at all (kind: 'qdrant' — see Bug #8
+    // and its Bug #11 follow-up, BUGS_AND_FIXES.md). Sending a Qdrant topic's
+    // synthetic id ("qdrant:...") as `topicId` made LessonScreen fetch from
+    // the DB-id route instead of the byName route, which found nothing —
+    // "Content coming soon" for a topic that has real content in Qdrant.
+    const isQdrantTopic = isDbBacked && topic?.kind === 'qdrant';
     navigation.navigate('LessonScreen', {
       subject, curriculum, grade,
       chapterTitle: chapter.title,
@@ -70,8 +78,9 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       topicIndex,
       // Real teacher-published topic — LessonScreen fetches its resolved
       // resources from the DB instead of the static curated dataset.
-      topicId: isDbBacked ? topic?.id : undefined,
+      topicId: isDbBacked && !isQdrantTopic ? topic?.id : undefined,
       topicName: isDbBacked ? topic?.name : undefined,
+      byNameTopic: isQdrantTopic ? topic?.name : undefined,
     });
   }
 
@@ -87,12 +96,14 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   // If a chapter or topic matches the search, force it open.
   const effectiveOpen = q ? new Set(filteredChapters.map(x => x.ci)) : openChapters;
 
-  const overallPct = chapters.length
-    ? Math.round((chapters.reduce((s, c) => s + c.topics.filter(t => completedSet.has(t.name)).length, 0) /
-                   chapters.reduce((s, c) => s + c.topics.length, 0)) * 100)
+  const totalTopicsCount = chapters.reduce((s, c) => s + c.topics.length, 0);
+  // Guard the denominator, not just chapters.length — a subject can have real
+  // chapters with zero real topics yet (all pending/"Being prepared"), which
+  // divided out as 0/0 and rendered "NaN%" instead of 0%.
+  const overallPct = totalTopicsCount
+    ? Math.round((chapters.reduce((s, c) => s + c.topics.filter(t => completedSet.has(t.name)).length, 0) / totalTopicsCount) * 100)
     : 0;
   const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
-  const totalTopicsCount = chapters.reduce((s, c) => s + c.topics.length, 0);
 
   if (loadingDb) {
     return (

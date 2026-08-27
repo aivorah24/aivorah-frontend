@@ -1,6 +1,6 @@
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
-
 import { generateQuizHTMLPreview, getAnsweredQuizHtml, stripInternalQuizFields } from '../../utils/quizHtml';
+
+jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
 
 describe('generateQuizHTMLPreview', () => {
   test('renders a question per task and totals them into the score badge', () => {

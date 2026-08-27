@@ -161,7 +161,7 @@ export default function SetPasswordScreen() {
             {/* Temporary password */}
             <View style={styles.fieldWrap}>
               <Text style={styles.label}>Temporary Password</Text>
-              <Text style={styles.hint}>Sent to your parent's email when account was created</Text>
+              <Text style={styles.hint}>Sent to your parent&apos;s email when account was created</Text>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.input}
@@ -294,7 +294,7 @@ export default function SetPasswordScreen() {
               <View style={styles.confirmIcon}><Feather name="log-out" size={22} color={TEAL} /></View>
               <Text style={styles.confirmTitle}>Leave password setup?</Text>
               <Text style={styles.confirmMsg}>
-                You'll be signed out and returned to the home page. You can sign back in anytime to finish setting your password.
+                You&apos;ll be signed out and returned to the home page. You can sign back in anytime to finish setting your password.
               </Text>
               <TouchableOpacity style={styles.confirmPrimary} onPress={() => { setShowLeaveConfirm(false); logout(); }} activeOpacity={0.85}>
                 <Text style={styles.confirmPrimaryText}>Sign out & go to home</Text>

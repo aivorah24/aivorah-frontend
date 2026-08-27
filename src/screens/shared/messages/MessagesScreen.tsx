@@ -63,6 +63,10 @@ export default function MessagesScreen(_props: any) {
 
   // Keep the conversations hook's "active email" ref in sync with the real active convo.
   React.useEffect(() => {
+    // Breaks a circular dependency: useConversations (called above, before `thread`
+    // exists) needs the active convo email, so it's threaded back in via this effect
+    // rather than computed inline. Not simplifiable without reordering the hooks.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveConvoEmailForList(thread.activeConvo?.otherEmail ?? null);
   }, [thread.activeConvo]);
 

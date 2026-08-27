@@ -49,6 +49,8 @@ export function useStudentsList(user: any) {
   // Initial load + auto-refresh every 15s so a student's name/profile edit shows
   // up here on its own (no manual refresh).
   useEffect(() => {
+    // data fetching effect — setState happens inside load, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     const interval = setInterval(load, 15 * 1000);
     return () => clearInterval(interval);

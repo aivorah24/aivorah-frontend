@@ -18,7 +18,8 @@ import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { TEAL, DatePickerInput } from './OnboardingScreen';
 import { computeTeacherCompletion } from './utils/teacherCompletion';
-import TeachingEntriesEditor, { TeachingEntry, emptyEntry } from '../school-admin/TeachingEntriesEditor';
+import { resolveOnboardingSaveResult } from './utils/resolveOnboardingSaveResult';
+import TeachingEntriesEditor, { TeachingEntry, emptyEntry } from '@legacy/school-admin/TeachingEntriesEditor';
 import {
   AutocompleteField, CardHeader, BBox, fetchCitySuggestions, fetchSchoolSuggestions, locateCity, locateFull,
   SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES, PhoneCodeSelect,
@@ -215,6 +216,16 @@ export default function OnboardingTeacherBoxes() {
       }
       const saved = await profileRes.json().catch(() => ({}));
 
+      // Trust the server's own onboardingComplete field rather than assuming
+      // success from a 200 status — see BUGS_AND_FIXES.md Bug #1: this used
+      // to hardcode true locally, so a save that returned 200 without
+      // actually persisting onboarding_complete still let the teacher
+      // through, only to be bounced back to onboarding on the next login.
+      const saveResult = resolveOnboardingSaveResult(saved);
+      if (!saveResult.ok) {
+        throw new Error(saveResult.error);
+      }
+
       await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -239,7 +250,7 @@ export default function OnboardingTeacherBoxes() {
         name: fullName.trim(),
         school,
         location: city,
-        onboardingComplete: true,
+        onboardingComplete: saveResult.onboardingComplete,
         avatarStyle,
         curriculum: saved.curriculum || primaryCurriculum,
         grade: primaryGrade,
@@ -289,7 +300,7 @@ export default function OnboardingTeacherBoxes() {
               <Text style={{ color: TEAL, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>Teacher Onboarding</Text>
             </View>
           </View>
-          <Text style={styles.greetMain}>Welcome — let's set up your teaching profile</Text>
+          <Text style={styles.greetMain}>Welcome — let&apos;s set up your teaching profile</Text>
           <Text style={styles.greetSub}>Fill in each box so we can tailor your class view and content recommendations.</Text>
         </View>
 
@@ -516,8 +527,8 @@ export default function OnboardingTeacherBoxes() {
             </View>
             <Text style={styles.confirmTitle}>Return to the home page?</Text>
             <Text style={styles.confirmBody}>
-              You'll be signed out and taken back to the Aivorah home page. We can save what
-              you've entered so far so it's still here next time you sign in.
+              You&apos;ll be signed out and taken back to the Aivorah home page. We can save what
+              you&apos;ve entered so far so it&apos;s still here next time you sign in.
             </Text>
             <TouchableOpacity
               style={styles.confirmPrimary}

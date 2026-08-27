@@ -6,9 +6,9 @@ import type { AppColors } from '../../../../theme';
 import type { Student } from '../types';
 import { initials, toTitleCase, avatarGradient, lastActiveLabel } from '../utils/studentDisplay';
 
-export const StudentAvatar = memo(({ photoUrl, name, grad, styles }: {
+function StudentAvatarComponent({ photoUrl, name, grad, styles }: {
   photoUrl?: string; name: string; grad: [string, string]; styles: any;
-}) => {
+}) {
   const [imgErr, setImgErr] = useState(false);
   if (photoUrl && !imgErr) {
     return (
@@ -24,7 +24,8 @@ export const StudentAvatar = memo(({ photoUrl, name, grad, styles }: {
       <Text style={styles.avatarText}>{initials(name)}</Text>
     </LinearGradient>
   );
-});
+}
+export const StudentAvatar = memo(StudentAvatarComponent);
 
 interface Props {
   student: Student;

@@ -73,7 +73,7 @@ describe('useTaskSteps', () => {
     let captured: any;
     function Capture() {
       const h = useTaskSteps(ARGS);
-      captured = h;
+      React.useEffect(() => { captured = h; });
       return <TouchableOpacity testID="gen" onPress={() => h.generateSteps()} />;
     }
     await render(<Capture />);

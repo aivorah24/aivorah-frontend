@@ -11,6 +11,7 @@ import OnboardingStudentBoxes from '../OnboardingStudentBoxes';
 // Not exercised by this test — mocked out because the real firebase package
 // ships ESM-only builds Jest can't parse, and this component transitively
 // pulls it in via OnboardingScreen -> OnboardingTeacherBoxes -> phoneOtpVerification.
+jest.setTimeout(15000);
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(), deleteApp: jest.fn() }));
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(),

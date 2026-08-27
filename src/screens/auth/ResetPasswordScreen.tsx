@@ -24,6 +24,7 @@ export default function ResetPasswordScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from URL on mount, external sync
     if (Platform.OS !== 'web' || typeof window === 'undefined') { setStatus('error'); setError('This page must be opened in a browser.'); return; }
     const params = new URLSearchParams(window.location.search);
     const code = params.get('oobCode');

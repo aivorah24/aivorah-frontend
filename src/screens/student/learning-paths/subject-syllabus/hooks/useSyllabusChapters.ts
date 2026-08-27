@@ -9,6 +9,8 @@ export function useSyllabusChapters(curriculum: string, grade: string, subject: 
 
   useEffect(() => {
     let cancelled = false;
+    // data fetching effect — reset loading/error state before the async fetch below
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingDb(true);
     setLoadError(false);
     fetchPublishedSyllabus(curriculum, grade, subject).then((units) => {
