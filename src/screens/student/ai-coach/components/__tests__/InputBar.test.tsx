@@ -1,13 +1,13 @@
+import React from 'react';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import InputBar from '../InputBar';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
   OS: 'web',
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
-
-import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import InputBar from '../InputBar';
 
 const colors = { accentYellow: '#fa0', textDim: '#666', textMuted: '#888' } as any;
 const styles = {

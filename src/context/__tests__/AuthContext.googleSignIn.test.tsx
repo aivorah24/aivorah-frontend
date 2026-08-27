@@ -5,6 +5,11 @@
 // they'd actually saved — because signInWithGoogle built `name` from
 // Firebase alone, before `profile` (the saved DB record) was even fetched.
 
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { AuthProvider, useAuth } from '../AuthContext';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default },
@@ -28,11 +33,6 @@ jest.mock('firebase/auth', () => ({
 jest.mock('../../config/firebase', () => ({ auth: {} }));
 jest.mock('../ThemeContext', () => ({ useTheme: () => ({ setThemeMode: jest.fn() }) }));
 jest.mock('../../utils/curriculumPrefetch', () => ({ prefetchStudentDashboard: jest.fn() }));
-
-import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
-import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
-import { AuthProvider, useAuth } from '../AuthContext';
 
 function TestConsumer({ role }: { role?: 'student' }) {
   const { user, signInWithGoogle } = useAuth();

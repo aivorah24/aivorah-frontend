@@ -25,7 +25,7 @@ export default function ComingSoonPane({
           Content coming soon
         </Text>
         <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', maxWidth: 420 }}>
-          We're preparing the lesson for "{topicName}". This topic is on the syllabus and will unlock here as soon as it's ready.
+          We&apos;re preparing the lesson for &quot;{topicName}&quot;. This topic is on the syllabus and will unlock here as soon as it&apos;s ready.
         </Text>
       </ScrollView>
     </View>

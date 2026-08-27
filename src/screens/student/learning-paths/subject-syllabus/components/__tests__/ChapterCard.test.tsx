@@ -1,0 +1,61 @@
+// Regression for Bug #11 follow-up (BUGS_AND_FIXES.md): `isPending` used to
+// OR the server's own `pending` field with `chapter.topics.length === 0` —
+// since `chapter.topics` (syllabus_topics DB rows) stays empty for virtually
+// all NCERT content regardless of real Qdrant content, that second
+// condition silently discarded the server's correct `pending: false` answer
+// for exactly the case Bug #11's backend fix targeted. A chapter server-
+// confirmed as NOT pending must render as available, not "Coming soon".
+
+import React from 'react';
+import { render, screen } from '@testing-library/react-native';
+import ChapterCard from '../ChapterCard';
+import { makeStyles } from '../../styles';
+
+const colors = {
+  bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888',
+  primary: '#fa0', textDim: '#666',
+} as any;
+const styles = makeStyles(colors);
+
+function renderCard(chapter: any) {
+  return render(
+    <ChapterCard
+      chapter={chapter}
+      ci={0}
+      topics={chapter.topics}
+      isOpen={false}
+      completedSet={new Set()}
+      isUnitShaped={false}
+      colors={colors}
+      styles={styles}
+      onToggle={() => {}}
+      onOpenTopic={() => {}}
+    />
+  );
+}
+
+describe('ChapterCard — pending/"Coming soon" (Bug #11 follow-up)', () => {
+  test('server says pending: false -> renders as available, even with an empty topics array', async () => {
+    await renderCard({
+      unitNo: 1, title: 'Learning Objectives', pending: false, topics: [], subtopics: ['Meaning of Accounting'],
+    });
+    expect(screen.queryByText('Coming soon')).toBeNull();
+  });
+
+  test('server says pending: true -> renders "Coming soon"', async () => {
+    await renderCard({
+      unitNo: 2, title: 'Unwritten Chapter', pending: true, topics: [], subtopics: [],
+    });
+    expect(screen.getByText('Coming soon')).toBeTruthy();
+  });
+
+  test('no server pending field at all (curated syllabus) -> falls back to the topics-empty heuristic', async () => {
+    await renderCard({ title: 'Curated Chapter', topics: [] });
+    expect(screen.getByText('Coming soon')).toBeTruthy();
+  });
+
+  test('no server pending field, but real topics present -> not pending', async () => {
+    await renderCard({ title: 'Curated Chapter', topics: [{ name: 'A Topic' }] });
+    expect(screen.queryByText('Coming soon')).toBeNull();
+  });
+});

@@ -1,14 +1,14 @@
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import { useTextToSpeech } from '../useTextToSpeech';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
   OS: 'web',
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
-
-import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import { useTextToSpeech } from '../useTextToSpeech';
 
 class MockUtterance {
   text: string; lang = ''; rate = 1; pitch = 1; volume = 1; voice: any = null;

@@ -52,6 +52,7 @@ export default function ChannelThreadView({ channel, onBack }: {
     } catch {} finally { setLoading(false); }
   }, [email, channel.id]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/channel change, external sync
   useEffect(() => { load(); }, [load]);
 
   const send = async () => {
@@ -76,6 +77,7 @@ export default function ChannelThreadView({ channel, onBack }: {
   // WhatsApp-style: search students/parents by name and tap to pick, instead
   // of typing raw email addresses.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced-search effect's early-return reset, external sync
     if (!showAdd || !addQuery.trim()) { setAddResults([]); return; }
     const memberEmails = new Set(members.map((m) => m.email));
     const t = setTimeout(() => {
@@ -132,8 +134,8 @@ export default function ChannelThreadView({ channel, onBack }: {
 
       {canPost ? (
         <View style={styles.composer}>
-          <TextInput style={styles.composerInput} value={draft} onChangeText={setDraft} placeholder="Write a message…" placeholderTextColor={colors.textDim} multiline />
-          <TouchableOpacity style={[styles.sendBtn, (!draft.trim() || sending) && { opacity: 0.5 }]} disabled={!draft.trim() || sending} onPress={send}>
+          <TextInput testID="messages-channel-input" style={styles.composerInput} value={draft} onChangeText={setDraft} placeholder="Write a message…" placeholderTextColor={colors.textDim} multiline />
+          <TouchableOpacity testID="messages-channel-send-button" style={[styles.sendBtn, (!draft.trim() || sending) && { opacity: 0.5 }]} disabled={!draft.trim() || sending} onPress={send}>
             {sending ? <ActivityIndicator size="small" color="#fff" /> : <Feather name="send" size={16} color="#fff" />}
           </TouchableOpacity>
         </View>

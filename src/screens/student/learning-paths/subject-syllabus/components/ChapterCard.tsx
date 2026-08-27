@@ -35,8 +35,18 @@ export default function ChapterCard({
   // /teacher/syllabus/current. Fall back to position only for the
   // older curated datasets that carry no number.
   const chapterNo = (chapter as any).unitNo ?? (ci + 1);
-  // A chapter the book has but no lesson has been written for yet.
-  const isPending = !!(chapter as any).pending || chapter.topics.length === 0;
+  // A chapter the book has but no lesson has been written for yet. Trust the
+  // server's own `pending` field when it provided one — it already accounts
+  // for real Qdrant content, not just whether a syllabus_topics DB row
+  // exists (Bug #11, BUGS_AND_FIXES.md). `chapter.topics` stays empty for
+  // virtually all NCERT content regardless of Qdrant (that table is a
+  // separate, teacher-upload-only feature) — ORing it in here as a second,
+  // independent trigger silently discarded the server's correct answer for
+  // exactly that case. Only fall back to the topics-empty heuristic for
+  // sources that never send `pending` at all (the curated syllabusRegistry
+  // datasets, which are always considered complete).
+  const serverPending = (chapter as any).pending;
+  const isPending = serverPending !== undefined ? !!serverPending : chapter.topics.length === 0;
   const subtopicNames: string[] = (chapter as any).subtopics || [];
 
   return (

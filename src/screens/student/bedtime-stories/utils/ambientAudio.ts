@@ -278,14 +278,14 @@ export function createAmbient(storyId: string, page?: { sceneIcon?: string; scen
   const moodProfile = getPageMoodProfile(page, storyId);
   const mood = STORY_MOOD[storyId];
   const path = mood ? MOOD_TRACK[mood] : null;
-  const useSynth = () => { inner = createAmbientMusic(storyId, moodProfile); if (paused) { try { inner?.pause?.(); } catch {} } };
+  const fallBackToSynth = () => { inner = createAmbientMusic(storyId, moodProfile); if (paused) { try { inner?.pause?.(); } catch {} } };
   if (path) {
     const track = createAmbientTrack(`${SERVER_URL}${path}`);
     if (track) {
       inner = track;
-      track._audio?.addEventListener?.('error', () => { try { track.stop(); } catch {} useSynth(); }, { once: true });
-    } else { useSynth(); }
-  } else { useSynth(); }
+      track._audio?.addEventListener?.('error', () => { try { track.stop(); } catch {} fallBackToSynth(); }, { once: true });
+    } else { fallBackToSynth(); }
+  } else { fallBackToSynth(); }
   return {
     pause()  { paused = true;  try { inner?.pause?.(); } catch {} },
     resume() { paused = false; try { inner?.resume?.(); } catch {} },

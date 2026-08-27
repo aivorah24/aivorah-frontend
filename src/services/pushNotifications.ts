@@ -10,9 +10,9 @@ let _registered = false;
 
 // Lazy-require the native modules so the web bundle never imports them.
 function nativeModules() {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const Notifications = require('expo-notifications');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const Device = require('expo-device');
   return { Notifications, Device };
 }

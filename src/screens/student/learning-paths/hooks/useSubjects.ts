@@ -27,6 +27,8 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
 
   useEffect(() => {
     let cancelled = false;
+    // data fetching effect — reset loading/error state before the async fetch below
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError('');
 

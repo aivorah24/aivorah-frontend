@@ -40,7 +40,7 @@ export function AnnouncementProvider({ children }: { children: React.ReactNode }
       // than crashing or clearing on a blip.
       console.warn('[AnnouncementProvider] fetch error:', err);
     }
-  }, [isAuthenticated, user?.email]);
+  }, [isAuthenticated, user]);
 
   const dismiss = useCallback(async (id: string) => {
     // Optimistic: remove immediately, don't wait on the network.
@@ -54,9 +54,10 @@ export function AnnouncementProvider({ children }: { children: React.ReactNode }
       // which is a safe direction to fail in (never stuck permanently dismissed
       // from a local action that didn't actually persist).
     }
-  }, [user?.email]);
+  }, [user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the poll/subscription below; fetchActive's sync early-return branch resets state, external sync
     fetchActive();
 
     pollRef.current = setInterval(fetchActive, POLL_INTERVAL_MS);

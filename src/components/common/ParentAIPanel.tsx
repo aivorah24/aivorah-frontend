@@ -5,7 +5,7 @@
  * decoding reports, drafting teacher messages.
  * Uses selected child's real data as context. Warm, jargon-free tone.
  */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Animated, ActivityIndicator, Platform, Image,
@@ -79,7 +79,7 @@ export default function ParentAIPanel() {
   const [listening, setListening] = useState(false);
   const [children, setChildren] = useState<any[]>([]);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useMemo(() => new Animated.Value(0), []);
   const scrollRef = useRef<ScrollView>(null);
 
   // Load parent's children
@@ -155,7 +155,7 @@ Last lesson: ${selectedChild.lastLesson || 'unknown'}`
     } finally {
       setLoading(false);
     }
-  }, [loading, childSummary, selectedChild, user?.email]);
+  }, [loading, childSummary, selectedChild, user]);
 
   const handleKeyPress = (e: any) => {
     if (e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {

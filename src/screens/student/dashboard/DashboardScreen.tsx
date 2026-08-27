@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -13,8 +13,6 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, radius, fonts } from '../../../theme';
@@ -29,7 +27,7 @@ import { useResponsive } from '../../../hooks/useResponsive';
 import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
 import {
   computeRealTopicPerf, computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic,
-  computeAllBarTopics, computeMasteredTopics,
+  computeAllBarTopics, computeMasteredTopics, computeLessonSubjects,
 } from '../utils/performanceStats';
 import { useDashboardData } from './hooks/useDashboardData';
 import type { CurriculumTopic, CurriculumData } from './types';
@@ -44,6 +42,8 @@ import { QuickActionsGrid } from './components/QuickActionsGrid';
 import { ContinueLearningCard } from './components/ContinueLearningCard';
 import { AICoachBanner } from './components/AICoachBanner';
 import { LearningPathCard } from './components/LearningPathCard';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 // ─────────────────────────────────────────────────────────
 // Main Screen
@@ -93,7 +93,9 @@ export default function DashboardScreen({ navigation, route }: any) {
   const studentGrade = childOverride?.grade ?? user?.grade ?? 'Grade 3';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [barSubjectFilter, setBarSubjectFilter] = useState<string>('All');
+  // '' = not chosen yet — effectiveBarSubjectFilter below picks the first
+  // real subject as the default instead of a generic "All".
+  const [barSubjectFilter, setBarSubjectFilter] = useState<string>('');
   // '' = not chosen yet — effectiveLessonSubjectFilter below picks the most
   // recently studied subject as the real default instead of a generic "All".
   const [lessonSubjectFilter, setLessonSubjectFilter] = useState<string>('');
@@ -117,9 +119,9 @@ export default function DashboardScreen({ navigation, route }: any) {
     navigation,
   });
 
-  const heroAnim  = useRef(new Animated.Value(0)).current;
-  const bodyAnim  = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const heroAnim  = useMemo(() => new Animated.Value(0), []);
+  const bodyAnim  = useMemo(() => new Animated.Value(0), []);
+  const pulseAnim = useMemo(() => new Animated.Value(1), []);
 
   const firstName = (childOverride?.name ?? user?.name)?.split(' ')[0] || 'there';
   const curriculumName = childOverride?.curriculum ?? user?.curriculum ?? 'IB PYP';
@@ -206,10 +208,16 @@ export default function DashboardScreen({ navigation, route }: any) {
 
   // Tapping "Continue Learning" should open the ACTUAL lesson, not just the
   // subject's syllabus screen. Where a curated chapter-accurate syllabus exists
-  // for this subject/grade (see syllabusRegistry.ts), route straight into
-  // LessonScreen at the right chapter+topic; otherwise fall back to the
-  // existing flat VideoLesson route so nothing regresses for subjects/grades
-  // without curated data yet (e.g. Mathematics).
+  // for this subject/grade (see syllabusRegistry.ts — currently only Grade 6),
+  // route straight into LessonScreen at the right chapter+topic. Otherwise,
+  // route into LessonScreen's DB-by-name mode instead (Bug #8,
+  // BUGS_AND_FIXES.md) — resolves real NCERT/Qdrant-only content (e.g.
+  // "Ability Beyond Disability", Grade 9 English) directly by name, so it
+  // reaches the current Learn/AI Tutor/Ask Aivorah/Practice flow instead of
+  // the deprecated VideoLesson screen. If nothing real exists for this topic
+  // either, LessonScreen's own contentReady state shows an honest "Coming
+  // Soon" pane rather than a broken lesson — never worse than the old
+  // fallback, and correct far more often.
   function openFeaturedLesson() {
     if (!featuredLesson) return;
     const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
@@ -224,7 +232,10 @@ export default function DashboardScreen({ navigation, route }: any) {
         return;
       }
     }
-    navigation.navigate('VideoLesson', { topic: featuredLesson.topic, grade: featuredLesson.grade, subject: featuredLesson.subject, curriculum: isIBPYP ? 'IB_PYP' : 'NCERT' });
+    navigation.navigate('LessonScreen', {
+      subject: featuredLesson.subject, curriculum: isIBPYP ? 'IB_PYP' : 'NCERT', grade: studentGrade,
+      byNameTopic: featuredLesson.topic, topicName: featuredLesson.topic,
+    });
   }
 
   const query = normalizeSearchText(searchQuery);
@@ -234,13 +245,21 @@ export default function DashboardScreen({ navigation, route }: any) {
   // just dumps everything together. Instead, the subject the student most
   // recently studied (same signal as "Continue Learning") leads the list, so
   // whatever they were last working on is the default view, not a random pick.
-  const lessonSubjects = useMemo(() => {
-    const subjects = Array.from(new Set(allLessons.map(l => l.subject))).sort();
-    const recent = featuredLesson?.subject;
-    return recent && subjects.includes(recent)
-      ? [recent, ...subjects.filter(s => s !== recent)]
-      : subjects;
-  }, [allLessons, featuredLesson]);
+  //
+  // Source is subjectChapters (the same canonical, book-derived subject list
+  // Performance's barSubjects and the actual chapter rows below use) — NOT
+  // allLessons (raw Qdrant-ingested topics). Those two disagreed: allLessons
+  // carries every raw ingestion subject tag, including near-duplicates from
+  // inconsistent ingestion ("Physical Education" vs "Physical Education and
+  // Well Being" for the same real subject) and subjects with zero real
+  // chapters. That produced Learning Path chips (e.g. "Social Science", the
+  // bare "Physical Education") that filteredChapterRows below — which is
+  // built from subjectChapters — could never actually match, so tapping them
+  // silently showed nothing. See Bug #7/#12, BUGS_AND_FIXES.md.
+  const lessonSubjects = useMemo(
+    () => computeLessonSubjects(subjectChapters, featuredLesson?.subject),
+    [subjectChapters, featuredLesson]
+  );
 
   const effectiveLessonSubjectFilter = lessonSubjects.includes(lessonSubjectFilter)
     ? lessonSubjectFilter
@@ -307,11 +326,15 @@ export default function DashboardScreen({ navigation, route }: any) {
     [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
   );
 
-  const barSubjects = useMemo(() => ['All', ...Array.from(new Set(allBarTopics.map(t => t.subject))).sort()], [allBarTopics]);
+  // No "All" chip — same reasoning as lessonSubjects above: a flat "All" view
+  // across every subject's chapters isn't useful, so only real subjects are listed.
+  const barSubjects = useMemo(() => Array.from(new Set(allBarTopics.map(t => t.subject))).sort(), [allBarTopics]);
+
+  const effectiveBarSubjectFilter = barSubjects.includes(barSubjectFilter) ? barSubjectFilter : (barSubjects[0] ?? '');
 
   const barTopics = useMemo(() =>
-    barSubjectFilter === 'All' ? allBarTopics : allBarTopics.filter(t => t.subject === barSubjectFilter),
-  [allBarTopics, barSubjectFilter]);
+    allBarTopics.filter(t => t.subject === effectiveBarSubjectFilter),
+  [allBarTopics, effectiveBarSubjectFilter]);
 
   // Real per-topic quiz results (independent of chapter grouping) — drives every
   // metric below the bars (average score, consistency, best score, insight text).
@@ -481,7 +504,6 @@ export default function DashboardScreen({ navigation, route }: any) {
   showBack={!!childOverride}
   onBack={childOverride ? () => navigation.navigate('ParentMyKids') : undefined}
   onMenuPress={childOverride ? () => navigation.goBack() : () => navigation.openDrawer()}
-  onProfilePress={childOverride ? undefined : () => navigation.navigate('Profile')}
   notificationCount={childOverride ? 0 : unreadCount}
 />
 
@@ -560,7 +582,7 @@ export default function DashboardScreen({ navigation, route }: any) {
                   bestChapter={bestChapter}
                   weeklyConsistency={weeklyConsistency}
                   barSubjects={barSubjects}
-                  barSubjectFilter={barSubjectFilter}
+                  barSubjectFilter={effectiveBarSubjectFilter}
                   setBarSubjectFilter={setBarSubjectFilter}
                   barTopics={barTopics}
                   perfInsight={perfInsight}

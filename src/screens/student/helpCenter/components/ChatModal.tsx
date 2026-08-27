@@ -16,7 +16,7 @@ interface ChatModalProps {
   chatInput: string;
   setChatInput: (v: string) => void;
   sendSupportMessage: (text?: string) => void;
-  chatScrollRef: React.RefObject<ScrollView>;
+  chatScrollRef: React.RefObject<ScrollView | null>;
 }
 
 export default function ChatModal({
@@ -57,7 +57,7 @@ export default function ChatModal({
                       </View>
                     </View>
                     <View style={[styles.firstMsgBubble, { backgroundColor: isDark ? '#141414' : '#fff', borderColor: colors.borderColor }]}>
-                      <Text style={[styles.firstMsgTitle, { color: colors.textMain }]}>Hi! I'm your Aivorah 24/7{'\n'}Support Assistant.</Text>
+                      <Text style={[styles.firstMsgTitle, { color: colors.textMain }]}>Hi! I&apos;m your Aivorah 24/7{'\n'}Support Assistant.</Text>
                       <Text style={[styles.firstMsgBody, { color: colors.textMuted }]}>{m.text.replace("Hi! I'm your Aivorah 24/7 Support Assistant. ", '')}</Text>
                     </View>
                   </View>

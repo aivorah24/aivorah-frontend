@@ -37,6 +37,7 @@ export default function PostLightbox({ post, onClose, onLikeChanged }: {
     }
   }, [post.id]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/post change, external sync
   useEffect(() => { load(); }, [load]);
 
   async function onLike() {

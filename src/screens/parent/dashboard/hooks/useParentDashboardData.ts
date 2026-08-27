@@ -59,6 +59,7 @@ export function useParentDashboardData({
 
   useEffect(() => {
     if (!selectedChild.id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets + kicks off data fetches below on selected-child change, external sync
     setWeeklyActivity([0, 0, 0, 0, 0, 0, 0]);
     fetchWeeklyActivity(selectedChild.id)
       .then(data => {

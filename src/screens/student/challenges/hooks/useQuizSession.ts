@@ -17,7 +17,7 @@ export function useQuizSession({
   grade: string;
   userEmail: string | undefined;
   addXP: (xp: number) => void;
-  recordStudyTime: (minutes: number, source: string) => void;
+  recordStudyTime: (minutes: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
   onChallengeCompleted: (challengeId: string, score: number, xpAwarded: number) => void;
 }) {
   const [quizVisible, setQuizVisible] = useState(false);
@@ -159,6 +159,8 @@ export function useQuizSession({
   // Auto-submit when timer expires
   useEffect(() => {
     if (timeLeft === 0 && !quizResult && !quizLoading && questions.length > 0) {
+      // external sync (timer-driven auto-submit) — setState happens inside submitQuiz, not synchronously here
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       submitQuiz();
     }
   }, [timeLeft]);

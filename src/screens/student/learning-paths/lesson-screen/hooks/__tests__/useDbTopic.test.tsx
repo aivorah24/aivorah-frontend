@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, waitFor } from '@testing-library/react-native';
-import { useDbTopic } from '../useDbTopic';
+import { useDbTopic, type TopicByName } from '../useDbTopic';
 
 jest.setTimeout(15000);
 
@@ -9,8 +9,8 @@ function jsonRes(data: any, ok = true) {
   return Promise.resolve({ ok, json: async () => data });
 }
 
-function Harness({ topicId, topicName }: { topicId?: string; topicName?: string }) {
-  const h = useDbTopic(topicId, topicName);
+function Harness({ topicId, topicName, byName }: { topicId?: string; topicName?: string; byName?: TopicByName }) {
+  const h = useDbTopic(topicId, topicName, byName);
   return (
     <>
       <Text testID="loading">{String(h.loadingDbTopic)}</Text>
@@ -94,5 +94,43 @@ describe('useDbTopic', () => {
 
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
     expect(screen.getByTestId('name').props.children).toBe('');
+  });
+
+  // Bug #8 (BUGS_AND_FIXES.md): a real NCERT/Qdrant-only topic with no DB id
+  // (e.g. "Ability Beyond Disability") resolves via curriculum+grade+subject
+  // +topic instead of a topicId, hitting the new topic-by-name route.
+  describe('byName (Bug #8)', () => {
+    const BY_NAME: TopicByName = { curriculum: 'NCERT', grade: 'Grade 9', subject: 'English', topic: 'Ability Beyond Disability' };
+
+    test('fetches the topic-by-name route (not the topicId route) and resolves real content', async () => {
+      global.fetch = jest.fn().mockResolvedValue(jsonRes({
+        resources: [{ resourceType: 'AI_EXPLANATION', status: 'READY', payload: { intro: 'Ability Beyond Disability — intro.', body: [] } }],
+      })) as any;
+
+      await render(<Harness topicName="Ability Beyond Disability" byName={BY_NAME} />);
+
+      await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+      expect(screen.getByTestId('intro').props.children).toBe('Ability Beyond Disability — intro.');
+      const calledUrl = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(calledUrl).toContain('/teacher/syllabus/topic-by-name/resources');
+      expect(calledUrl).toContain('topic=Ability');
+      expect(calledUrl).not.toContain('/teacher/syllabus/topic/');
+    });
+
+    test('with neither topicId nor byName, does not fetch and is never in a loading state', async () => {
+      global.fetch = jest.fn() as any;
+      await render(<Harness topicName="Something" />);
+
+      expect(screen.getByTestId('loading').props.children).toBe('false');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('topicId takes priority over byName when both are somehow present', async () => {
+      global.fetch = jest.fn().mockResolvedValue(jsonRes({ resources: [] })) as any;
+      await render(<Harness topicId="t1" topicName="X" byName={BY_NAME} />);
+      await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+      const calledUrl = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(calledUrl).toContain('/teacher/syllabus/topic/t1/resources');
+    });
   });
 });

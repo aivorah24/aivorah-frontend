@@ -5,13 +5,13 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
-import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
-import TeacherScheduleScreen from '../screens/teacher/TeacherScheduleScreen';
-import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
-import TeacherProgressScreen from '../screens/teacher/TeacherProgressScreen';
-import TeacherSettingsScreen from '../screens/teacher/TeacherSettingsScreen';
-import TeacherMessagesScreen from '../screens/teacher/TeacherMessagesScreen';
+import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
+import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
+import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
+import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
+import TeacherProgressScreen from '@legacy/teacher-legacy/TeacherProgressScreen';
+import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
+import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import TimetableScreen from '../features/timetable/components/TimetableScreen';
 import ResourcesScreen from '../features/resources/components/ResourcesScreen';
@@ -27,6 +27,9 @@ export type SuperAdminDrawerParamList = {
   TeacherSettings: undefined;
   TeacherMessages: undefined;
   AnnouncementManager: undefined;
+  Timetable: undefined;
+  Resources: undefined;
+  Channels: undefined;
 };
 
 const Drawer = createDrawerNavigator<SuperAdminDrawerParamList>();

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -38,9 +38,15 @@ export default function DatePicker({ value, onChange, placeholder = 'Select a da
   const selected = parseKey(value);
   // Which month the calendar is currently showing
   const [view, setView] = useState(() => selected || { y: today.getFullYear(), m: today.getMonth(), d: 1 });
-  useEffect(() => { if (selected) setView(v => ({ ...v, y: selected.y, m: selected.m })); }, [value]);
+  // Adjust the displayed month when `value` changes, without clobbering independent
+  // month-navigation state (see React docs: "Adjusting state when a prop changes").
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (selected) setView(v => ({ ...v, y: selected.y, m: selected.m }));
+  }
 
-  const uid = useRef('dp_' + Math.random().toString(36).slice(2)).current;
+  const [uid] = useState(() => 'dp_' + Math.random().toString(36).slice(2));
   useEffect(() => {
     if (!open || Platform.OS !== 'web') return;
     const handler = (e: MouseEvent) => {

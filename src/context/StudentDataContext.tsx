@@ -161,6 +161,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   // ── Load from server — re-run whenever logged-in email changes ──
   useEffect(() => {
     if (!user?.email) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- early-return branch of the data-fetch effect below, external sync
     if (user?.role && user.role !== 'student') { setLoaded(true); return; }
     setLoaded(false);
     setStats(ZERO_STATS);

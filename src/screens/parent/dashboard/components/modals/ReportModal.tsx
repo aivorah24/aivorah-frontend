@@ -31,7 +31,7 @@ export default function ReportModal({
           {loading ? (
             <View style={{ alignItems: 'center', paddingVertical: 40, gap: 12 }}>
               <ActivityIndicator color={colors.accentYellow} size="large" />
-              <Text style={[s.modalDesc, { textAlign: 'center' }]}>Analyzing {childName}'s learning data...</Text>
+              <Text style={[s.modalDesc, { textAlign: 'center' }]}>Analyzing {childName}&apos;s learning data...</Text>
             </View>
           ) : !reportData ? (
             <View style={{ alignItems: 'center', paddingVertical: 32, gap: 8 }}>
@@ -83,7 +83,7 @@ export default function ReportModal({
               {reportData.report.encouragement ? (
                 <View style={[s.reportSection, { backgroundColor: colors.accentYellow + '10', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.accentYellow + '30' }]}>
                   <Text style={[s.reportSectionTitle, { color: colors.accentYellow }]}>Share with {childName}</Text>
-                  <Text style={[s.reportBody, { fontStyle: 'italic' }]}>"{reportData.report.encouragement}"</Text>
+                  <Text style={[s.reportBody, { fontStyle: 'italic' }]}>&quot;{reportData.report.encouragement}&quot;</Text>
                 </View>
               ) : null}
               <View style={{ height: 8 }} />

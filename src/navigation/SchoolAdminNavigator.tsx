@@ -11,27 +11,27 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import SchoolAdminDashboardScreen from '../screens/school-admin/SchoolAdminDashboardScreen';
-import SchoolAdminPeopleScreen from '../screens/school-admin/SchoolAdminPeopleScreen';
-import SchoolAdminStudentsScreen from '../screens/school-admin/SchoolAdminStudentsScreen';
-import SchoolAdminTeachersScreen from '../screens/school-admin/SchoolAdminTeachersScreen';
-import SchoolAdminParentsScreen from '../screens/school-admin/SchoolAdminParentsScreen';
-import SchoolAdminAddParentScreen from '../screens/school-admin/SchoolAdminAddParentScreen';
-import SchoolAdminSettingsScreen from '../screens/school-admin/SchoolAdminSettingsScreen';
-import SchoolAdminComingSoonScreen from '../screens/school-admin/SchoolAdminComingSoonScreen';
-import SchoolAdminImportHistoryScreen from '../screens/school-admin/SchoolAdminImportHistoryScreen';
-import SchoolAdminBulkImportScreen from '../screens/school-admin/SchoolAdminBulkImportScreen';
-import SchoolAdminAddStudentScreen from '../screens/school-admin/SchoolAdminAddStudentScreen';
-import SchoolAdminGradesSectionsScreen from '../screens/school-admin/SchoolAdminGradesSectionsScreen';
-import SchoolAdminClassesScreen from '../screens/school-admin/SchoolAdminClassesScreen';
-import SchoolAdminAddTeacherScreen from '../screens/school-admin/SchoolAdminAddTeacherScreen';
-import SchoolAdminEditTeacherScreen from '../screens/school-admin/SchoolAdminEditTeacherScreen';
-import SchoolAdminTeacherBulkImportScreen from '../screens/school-admin/SchoolAdminTeacherBulkImportScreen';
+import SchoolAdminDashboardScreen from '@legacy/school-admin/SchoolAdminDashboardScreen';
+import SchoolAdminPeopleScreen from '@legacy/school-admin/SchoolAdminPeopleScreen';
+import SchoolAdminStudentsScreen from '@legacy/school-admin/SchoolAdminStudentsScreen';
+import SchoolAdminTeachersScreen from '@legacy/school-admin/SchoolAdminTeachersScreen';
+import SchoolAdminParentsScreen from '@legacy/school-admin/SchoolAdminParentsScreen';
+import SchoolAdminAddParentScreen from '@legacy/school-admin/SchoolAdminAddParentScreen';
+import SchoolAdminSettingsScreen from '@legacy/school-admin/SchoolAdminSettingsScreen';
+import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingSoonScreen';
+import SchoolAdminImportHistoryScreen from '@legacy/school-admin/SchoolAdminImportHistoryScreen';
+import SchoolAdminBulkImportScreen from '@legacy/school-admin/SchoolAdminBulkImportScreen';
+import SchoolAdminAddStudentScreen from '@legacy/school-admin/SchoolAdminAddStudentScreen';
+import SchoolAdminGradesSectionsScreen from '@legacy/school-admin/SchoolAdminGradesSectionsScreen';
+import SchoolAdminClassesScreen from '@legacy/school-admin/SchoolAdminClassesScreen';
+import SchoolAdminAddTeacherScreen from '@legacy/school-admin/SchoolAdminAddTeacherScreen';
+import SchoolAdminEditTeacherScreen from '@legacy/school-admin/SchoolAdminEditTeacherScreen';
+import SchoolAdminTeacherBulkImportScreen from '@legacy/school-admin/SchoolAdminTeacherBulkImportScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
-import TeacherSettingsScreen from '../screens/teacher/TeacherSettingsScreen';
-import SchoolAdminMessagesScreen from '../screens/school-admin/SchoolAdminMessagesScreen';
+import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
+import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
@@ -55,6 +55,7 @@ export type SchoolAdminDrawerParamList = {
   SchoolAdminSettings: undefined;
   TeacherSettings: undefined;
   Messages: undefined;
+  Channels: undefined;
 };
 
 const Drawer = createDrawerNavigator<SchoolAdminDrawerParamList>();

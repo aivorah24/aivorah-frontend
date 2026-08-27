@@ -12,6 +12,14 @@ export function usePracticeRedirect(
   params: {
     grade: string; subject: string; curriculum: string; topicId: string | undefined;
     chapterIndex: number; topicIndex: number;
+    // A Qdrant/byName-resolved topic (Bug #8) has no topicId at all — without
+    // its name and chapter title in returnParams, LessonScreen can't tell
+    // this is a DB/Qdrant-backed topic on the way back from Quiz, falls back
+    // to the curated syllabusRegistry (Grade 6 only), finds nothing for e.g.
+    // Grade 11 Accountancy, and shows "This lesson isn't available yet"
+    // instead of the real lesson. See BUGS_AND_FIXES.md.
+    byNameTopic: string | undefined;
+    chapterTitle: string | undefined;
   },
   contentReady: boolean = true,
 ) {
@@ -29,7 +37,12 @@ export function usePracticeRedirect(
         ? `${(topic as any).readText.intro} ${(topic as any).readText.body?.join(' ') ?? ''}`.trim()
         : undefined,
       returnTo: 'LessonScreen',
-      returnParams: { subject: params.subject, curriculum: params.curriculum, grade: params.grade, chapterIndex: params.chapterIndex, topicIndex: params.topicIndex },
+      returnParams: {
+        subject: params.subject, curriculum: params.curriculum, grade: params.grade,
+        chapterIndex: params.chapterIndex, topicIndex: params.topicIndex,
+        topicId: params.topicId, byNameTopic: params.byNameTopic, chapterTitle: params.chapterTitle,
+        topicName: params.byNameTopic,
+      },
     });
   }, [mode, topic, contentReady]);
 }

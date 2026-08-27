@@ -11,6 +11,11 @@ export function useChapterExpansion(chapters: SyllabusChapter[], wantChapterTitl
   useEffect(() => {
     if (!wantChapterTitle || chapters.length === 0) return;
     const idx = chapters.findIndex(c => c.title === wantChapterTitle);
+    // Deep-link sync from a prop with an unstable array reference
+    // (`chapters` is a new array each render); a render-time-adjustment
+    // pattern here would compare by reference and loop forever, so this
+    // stays an external-sync effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (idx !== -1) setOpenChapters(new Set([idx]));
   }, [wantChapterTitle, chapters]);
 

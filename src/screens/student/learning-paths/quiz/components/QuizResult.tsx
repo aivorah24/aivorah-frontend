@@ -43,7 +43,11 @@ export default function QuizResult({
   const gold = colors.accentYellow;
   const pct = Math.round((score / questions.length) * 100);
   const passed = pct >= 60;
-  const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+  // Freeze the elapsed time at first render of the result screen instead of
+  // recomputing Date.now() on every render (which would make the displayed
+  // time keep ticking upward while the results are just being read).
+  const [resultShownAt] = React.useState(() => Date.now());
+  const totalTime = Math.round((resultShownAt - quizStartTime) / 1000);
   const timeStr = totalTime >= 60 ? `${Math.floor(totalTime / 60)}m ${totalTime % 60}s` : `${totalTime}s`;
   const scoreColor = pct >= 60 ? gold : '#C98A8A';
   const trophyTier: 'gold' | 'silver' | 'bronze' = pct >= 80 ? 'gold' : pct >= 60 ? 'silver' : 'bronze';
@@ -144,7 +148,7 @@ export default function QuizResult({
                 </Text>
               </View>
               {wrongQs.map((r) => {
-                const expl = resultExplanations[r.idx] || explanationsRef.current[r.idx];
+                const expl = resultExplanations[r.idx];
                 return (
                   <View key={r.idx} style={[styles.reviewCard, {
                     backgroundColor: colors.cardDark,

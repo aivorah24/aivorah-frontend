@@ -1,14 +1,14 @@
+import React from 'react';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import MessageList from '../MessageList';
+import type { Message } from '../../types';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
   OS: 'web',
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
-
-import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import MessageList from '../MessageList';
-import type { Message } from '../../types';
 
 const colors = {
   accentRed: '#f00', cardDark: '#111', borderColor: '#333',

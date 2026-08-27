@@ -101,6 +101,20 @@ export function computeAllBarTopics(
   });
 }
 
+// Subject chips for the Learning Path section — from subjectChapters (the
+// same canonical, book-derived list Performance's bar-chart subjects use),
+// NOT from raw ingested topics. Those two used to disagree: raw ingestion
+// carries inconsistent/duplicate subject tags for the same real subject
+// (e.g. "Physical Education" vs "Physical Education and Well Being") and
+// subjects with zero real chapters mapped, producing chips that matched
+// nothing when tapped. See Bug #7/#12, BUGS_AND_FIXES.md.
+export function computeLessonSubjects(subjectChapters: SubjectChapters[], recentSubject: string | undefined): string[] {
+  const subjects = Array.from(new Set(subjectChapters.map(sc => sc.subject))).sort();
+  return recentSubject && subjects.includes(recentSubject)
+    ? [recentSubject, ...subjects.filter(s => s !== recentSubject)]
+    : subjects;
+}
+
 // Mastered chapters — estimated per subject as (completed topics / total topics
 // in that subject) x that subject's real chapter count, since individual
 // topics aren't tagged with which chapter they belong to yet. A genuine

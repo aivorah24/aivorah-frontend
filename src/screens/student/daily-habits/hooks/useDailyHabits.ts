@@ -26,11 +26,13 @@ export function useDailyHabits() {
       setError('Could not load habits. Please try again.');
     }
     finally { setLoading(false); setRefreshing(false); }
-  }, [user?.email]);
+  }, [user]);
 
   // Initial load + auto-refresh every 10s so tasks a parent allocates appear
   // without the student manually refreshing the browser.
   useEffect(() => {
+    // data fetching effect — setState happens inside fetchData, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
     const interval = setInterval(fetchData, 10 * 1000);
     return () => clearInterval(interval);

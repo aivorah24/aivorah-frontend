@@ -214,7 +214,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
       } catch { /* silent — sidebar still renders without the school card */ }
     })();
     return () => { cancelled = true; };
-  }, [isSchoolAdmin, user?.email]));
+  }, [isSchoolAdmin, user]));
 
   const NAV_ITEMS_ROLE = role === 'super_admin' ? SUPER_ADMIN_NAV_ITEMS : role === 'school_admin' ? SCHOOL_ADMIN_NAV_ITEMS : role === 'teacher' ? TEACHER_NAV_ITEMS : role === 'parent' ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
   // B2C vs B2B: independent (no schoolId) student/teacher/parent accounts don't
@@ -505,7 +505,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
               <Text style={styles.confirmBrand}>Aivorah</Text>
             </View>
             <Text style={styles.confirmTitle}>Leave to Home?</Text>
-            <Text style={styles.confirmSub}>You'll be taken back to the Aivorah landing page and signed out.</Text>
+            <Text style={styles.confirmSub}>You&apos;ll be taken back to the Aivorah landing page and signed out.</Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity style={styles.confirmCancel} onPress={() => setShowHomeConfirm(false)} activeOpacity={0.8}>
                 <Text style={styles.confirmCancelText}>Stay</Text>

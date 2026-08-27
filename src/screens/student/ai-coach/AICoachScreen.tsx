@@ -81,7 +81,6 @@ export default function AICoachScreen({ navigation }: any) {
         subtitle={`Powered by Aivorah · ${userCurriculum}`}
         searchPlaceholder="Search conversations..."
         onMenuPress={() => navigation.openDrawer()}
-        onProfilePress={() => navigation.navigate('Profile')}
       />
 
       <KeyboardAvoidingView

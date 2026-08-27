@@ -1,8 +1,8 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import ChallengeTabs from '../ChallengeTabs';
+
+jest.setTimeout(15000);
 
 const styles: any = new Proxy({}, { get: () => ({}) });
 const colors: any = { borderColor: '#333', textDim: '#666' };

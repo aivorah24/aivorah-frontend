@@ -33,7 +33,7 @@ export default function TimetableGrid({
     return (
       <View style={styles.emptyBox}>
         <Text style={styles.emptyTitle}>No bell schedule yet</Text>
-        <Text style={styles.emptySub}>Once the class's periods are set up, the weekly timetable appears here.</Text>
+        <Text style={styles.emptySub}>Once the class&apos;s periods are set up, the weekly timetable appears here.</Text>
       </View>
     );
   }

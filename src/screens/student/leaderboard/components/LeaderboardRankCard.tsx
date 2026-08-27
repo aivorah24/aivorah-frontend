@@ -26,8 +26,8 @@ export default function LeaderboardRankCard({ myEntry, aboveEntry, loading, colo
         <View style={styles.trophyCircle}>
           <Feather name="award" size={44} color={gold} />
         </View>
-        <Text style={styles.rankCardTitle}>You're doing great!</Text>
-        <Text style={styles.rankCardSub}>Keep up the momentum and you'll reach the top soon.</Text>
+        <Text style={styles.rankCardTitle}>You&apos;re doing great!</Text>
+        <Text style={styles.rankCardSub}>Keep up the momentum and you&apos;ll reach the top soon.</Text>
         <View style={styles.rankCardBox}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={styles.rankCardBoxLabel}>Your Rank</Text>

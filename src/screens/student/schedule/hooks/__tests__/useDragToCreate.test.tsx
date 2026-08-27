@@ -1,14 +1,14 @@
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, screen, userEvent, act } from '@testing-library/react-native';
+import { useDragToCreate } from '../useDragToCreate';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
   OS: 'web',
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
-
-import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
-import { render, screen, userEvent, act } from '@testing-library/react-native';
-import { useDragToCreate } from '../useDragToCreate';
 
 const mockOnQuickCreate = jest.fn();
 const mockOnDragCreate = jest.fn();

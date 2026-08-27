@@ -2,6 +2,9 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "paths": {
+      "@legacy/*": ["./src/.legacy-screens/*"]
+    }
   }
 }

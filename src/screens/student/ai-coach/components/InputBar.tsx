@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 
 interface Props {
-  inputRef: React.RefObject<TextInput>;
+  inputRef: React.RefObject<TextInput | null>;
   input: string;
   setInput: (v: string) => void;
   isListening: boolean;

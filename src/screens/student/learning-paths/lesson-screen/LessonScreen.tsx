@@ -39,8 +39,14 @@ export default function LessonScreen({ navigation, route }: any) {
   const topicIndex = Number(route?.params?.topicIndex ?? 0);
   const topicId = route?.params?.topicId as string | undefined;
   const chapterTitleParam = route?.params?.chapterTitle as string | undefined;
+  // A real NCERT/Qdrant-only topic with no DB id (Bug #8, BUGS_AND_FIXES.md) —
+  // resolved by curriculum+grade+subject+topic instead of topicId.
+  const byNameTopic = route?.params?.byNameTopic as string | undefined;
+  const byName = !topicId && byNameTopic
+    ? { curriculum, grade, subject, topic: byNameTopic }
+    : undefined;
 
-  const { dbTopic, rawPayload, loadingDbTopic, contentReady } = useDbTopic(topicId, route?.params?.topicName);
+  const { dbTopic, rawPayload, loadingDbTopic, contentReady } = useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName);
 
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -63,10 +69,11 @@ export default function LessonScreen({ navigation, route }: any) {
   const [exampleOpen, setExampleOpen] = useState(false);
   const isMath = /math/i.test(subject);
 
-  const chapter = topicId
-    ? { title: chapterTitleParam || '', topics: dbTopic ? [dbTopic] : [] }
+  const isDbBacked = !!topicId || !!byName;
+  const chapter = isDbBacked
+    ? { title: chapterTitleParam || byNameTopic || '', topics: dbTopic ? [dbTopic] : [] }
     : getSubjectSyllabus(curriculum, grade, subject)[chapterIndex];
-  const topic = topicId ? dbTopic ?? undefined : chapter?.topics[topicIndex];
+  const topic = isDbBacked ? dbTopic ?? undefined : chapter?.topics[topicIndex];
 
   const listenSteps: ListenStep[] = useMemo(() => {
     if (!topic) return [];
@@ -106,17 +113,29 @@ export default function LessonScreen({ navigation, route }: any) {
 
   usePracticeRedirect(mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
+    byNameTopic, chapterTitle: chapter?.title,
   }, contentReady);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson
   // itself changes, so switching topics never leaves stale playback/answer
   // state from the previous one.
   useEffect(() => {
+    // external sync (narration engine reset) alongside the state reset below —
+    // not purely derivable state, kept as an effect
     narration.resetNarration();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPauseAnswer(null);
     setVocabIndex(0);
   }, [mode, topicIndex, chapterIndex]);
-  useEffect(() => { setPauseAnswer(null); }, [narration.listenStep]);
+
+  // Reset the pause-answer state whenever the narration advances to a new step —
+  // adjusted during render (React's documented "adjusting state when a prop
+  // changes" pattern) instead of an effect.
+  const [prevListenStep, setPrevListenStep] = useState(narration.listenStep);
+  if (prevListenStep !== narration.listenStep) {
+    setPrevListenStep(narration.listenStep);
+    setPauseAnswer(null);
+  }
 
   if (loadingDbTopic) {
     return (
@@ -136,7 +155,7 @@ export default function LessonScreen({ navigation, route }: any) {
           <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />
           <View style={styles.centerWrap}>
             <Feather name="alert-circle" size={32} color={colors.textMuted} />
-            <Text style={{ color: colors.textMuted, marginTop: 10 }}>This lesson isn't available yet.</Text>
+            <Text style={{ color: colors.textMuted, marginTop: 10 }}>This lesson isn&apos;t available yet.</Text>
           </View>
         </View>
       </ScreenLayout>

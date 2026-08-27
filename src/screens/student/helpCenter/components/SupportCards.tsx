@@ -36,7 +36,7 @@ export default function SupportCards({ colors, isDark, onOpenChat, onOpenTicket 
           <Feather name="mail" size={28} color={colors.textMuted} />
         </View>
         <Text style={styles.supportCardTitle}>Submit a Ticket</Text>
-        <Text style={styles.supportCardSub}>We'll reply within 24h</Text>
+        <Text style={styles.supportCardSub}>We&apos;ll reply within 24h</Text>
         <View style={[styles.supportArrowBtn, { backgroundColor: colors.accentYellow + '20', borderWidth: 1, borderColor: colors.accentYellow + '40' }]}>
           <Feather name="arrow-right" size={16} color={colors.accentYellow} />
         </View>

@@ -20,7 +20,7 @@ export default function IndependentAccountEmpty({ feature = 'this' }: { feature?
   return (
     <View style={styles.emptyBox}>
       <View style={styles.iconWrap}><Feather name="layers" size={26} color={colors.textDim} /></View>
-      <Text style={styles.title}>You're on an Independent Account</Text>
+      <Text style={styles.title}>You&apos;re on an Independent Account</Text>
       <Text style={styles.subtitle}>
         You signed up on your own, so school {feature === 'this' ? 'features like classes and attendance are' : feature + ' is'} hidden.
         You can connect to an official school anytime to unlock them.

@@ -46,7 +46,7 @@ export default function TimetableScreen({ navigation, route }: any) {
   // When opened for a specific class (e.g. from ClassDetail), show just that
   // class and hide the selector. Otherwise list the user's own classes.
   const paramClass: MyClass | null = route?.params?.grade
-    ? { grade: route.params.grade, section: route.params.section || '', label: route.params.label || `${route.params.grade}${route.params.section ? ' ' + route.params.section : ''}`, code: `${route.params.grade}${route.params.section || ''}`, classTeacherEmail: null, classTeacherName: null }
+    ? { grade: route.params.grade, section: route.params.section || '', label: route.params.label || `${route.params.grade}${route.params.section ? ' ' + route.params.section : ''}`, code: `${route.params.grade}${route.params.section || ''}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 }
     : null;
 
   const [classes, setClasses] = useState<MyClass[]>(paramClass ? [paramClass] : []);
@@ -80,7 +80,7 @@ export default function TimetableScreen({ navigation, route }: any) {
         for (const g of (data?.grades || [])) {
           const secs = g.sections?.length ? g.sections : [''];
           for (const s of secs) {
-            opts.push({ grade: g.name, section: s, label: `${g.name}${s ? ' ' + s : ''}`, code: `${g.name}${s}`, classTeacherEmail: null, classTeacherName: null });
+            opts.push({ grade: g.name, section: s, label: `${g.name}${s ? ' ' + s : ''}`, code: `${g.name}${s}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 });
           }
         }
         setClasses(opts);
@@ -118,6 +118,7 @@ export default function TimetableScreen({ navigation, route }: any) {
   }, [loadClasses, loadTimetable, selected]));
   // Also re-fetch the timetable whenever the selected class changes (covers
   // the initial load and when the user taps a different class chip).
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on class-selection change, external sync
   useEffect(() => { if (selected) loadTimetable(selected); }, [selected, loadTimetable]);
 
   const classLabel = selected ? selected.label : 'Timetable';
@@ -147,7 +148,7 @@ export default function TimetableScreen({ navigation, route }: any) {
   const pickGrade = (gradeName: string) => {
     const g = structure.find((x) => x.name === gradeName);
     const sec = (g?.sections && g.sections[0]) || '';
-    setSelected({ grade: gradeName, section: sec, label: `${gradeName}${sec ? ' ' + sec : ''}`, code: `${gradeName}${sec}`, classTeacherEmail: null, classTeacherName: null });
+    setSelected({ grade: gradeName, section: sec, label: `${gradeName}${sec ? ' ' + sec : ''}`, code: `${gradeName}${sec}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 });
   };
   const pickSection = (sec: string) => {
     if (!selected) return;

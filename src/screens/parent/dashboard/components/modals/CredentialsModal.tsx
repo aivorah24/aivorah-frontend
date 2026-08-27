@@ -22,7 +22,7 @@ export default function CredentialsModal({
               </View>
               <View>
                 <Text style={s.modalTitle}>Login Info</Text>
-                <Text style={s.modalDesc}>{credsChild?.name}'s credentials</Text>
+                <Text style={s.modalDesc}>{credsChild?.name}&apos;s credentials</Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

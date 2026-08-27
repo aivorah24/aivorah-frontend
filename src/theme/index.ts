@@ -1,5 +1,7 @@
 // ── Exact landing.html palette (the marketing site = the design reference) ──
 // #0B0B0B base, warm off-white text, muted SAGE + GOLD accents, Fraunces serif.
+import { Platform } from 'react-native';
+
 export const darkColors = {
   bgDark: '#0B0B0B',        // landing --bg
   cardDark: '#141414',      // dark card surface
@@ -81,8 +83,6 @@ export const radius = {
   xxl: 36,
   full: 9999,
 };
-
-import { Platform } from 'react-native';
 const INTER = Platform.OS === 'web' ? 'Inter, system-ui, sans-serif' : 'system';
 export const fonts = {
   serif: INTER,

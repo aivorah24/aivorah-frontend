@@ -32,8 +32,10 @@ export function useLeaderboard(
     }
   }, [tab, myGrade, mySchool, myCurriculum]);
 
-  useEffect(() => { 
-    fetchLeaderboard(); 
+  useEffect(() => {
+    // data fetching effect — setState happens inside fetchLeaderboard, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchLeaderboard();
   }, [fetchLeaderboard]);
 
   useFocusEffect(

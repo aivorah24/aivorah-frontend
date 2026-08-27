@@ -5,6 +5,16 @@ module.exports = function (api) {
     presets: [
       ['babel-preset-expo', { reanimated: !isTest }],
     ],
-    plugins: isTest ? [] : [],
+    plugins: [
+      ...isTest ? [] : [],
+      [
+        'module-resolver',
+        {
+          alias: {
+            '@legacy': './src/.legacy-screens',
+          },
+        },
+      ],
+    ],
   };
 };

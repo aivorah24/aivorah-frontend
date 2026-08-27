@@ -155,7 +155,7 @@ export default function DrawerContent(props: any) {
       } catch { /* silent — sidebar still renders without the school card */ }
     })();
     return () => { cancelled = true; };
-  }, [isSchoolAdmin, user?.email]));
+  }, [isSchoolAdmin, user]));
   const isTeacher = user?.role === 'teacher';
   const isParent = user?.role === 'parent';
   const NAV_ITEMS_ROLE = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : isSchoolAdmin ? SCHOOL_ADMIN_NAV_ITEMS : isTeacher ? TEACHER_NAV_ITEMS : isParent ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
@@ -395,7 +395,7 @@ export default function DrawerContent(props: any) {
               <Text style={styles.confirmBrand}>Aivorah</Text>
             </View>
             <Text style={styles.confirmTitle}>Leave to Home?</Text>
-            <Text style={styles.confirmSub}>You'll be taken back to the Aivorah landing page and signed out.</Text>
+            <Text style={styles.confirmSub}>You&apos;ll be taken back to the Aivorah landing page and signed out.</Text>
             <View style={styles.confirmBtns}>
               <TouchableOpacity style={styles.confirmCancel} onPress={() => setShowHomeConfirm(false)} activeOpacity={0.8}>
                 <Text style={styles.confirmCancelText}>Stay</Text>

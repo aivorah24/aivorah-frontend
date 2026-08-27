@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import OnboardingStudentBoxes from './OnboardingStudentBoxes';
 import OnboardingTeacherBoxes from './OnboardingTeacherBoxes';
-import OnboardingParentBoxes from './OnboardingParentBoxes';
+import OnboardingParentBoxes from '@legacy/onboarding/OnboardingParentBoxes';
 
 // ── Custom Date Picker ─────────────────────────────────────
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];

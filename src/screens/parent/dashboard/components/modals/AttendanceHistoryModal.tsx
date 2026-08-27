@@ -52,7 +52,7 @@ export default function AttendanceHistoryModal({
       <View style={s.modalOverlay}>
         <View style={s.calendarModalCard}>
           <View style={s.calendarModalHeader}>
-            <Text style={s.calendarModalTitle}>{childName}'s Attendance</Text>
+            <Text style={s.calendarModalTitle}>{childName}&apos;s Attendance</Text>
             <TouchableOpacity onPress={onClose} accessibilityRole="button">
               <Feather name="x" size={18} color={colors.textHeading} />
             </TouchableOpacity>

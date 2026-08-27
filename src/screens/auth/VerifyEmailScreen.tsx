@@ -156,7 +156,7 @@ export default function VerifyEmailScreen() {
   }, [user?.email]);
 
   // Pulsing animation
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     Animated.loop(
@@ -270,10 +270,10 @@ export default function VerifyEmailScreen() {
         <View style={styles.spamWarning}>
           <Feather name="alert-triangle" size={15} color={GOLD} style={{ marginRight: 8, marginTop: 1 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.spamTitle}>Can't find the email?</Text>
+            <Text style={styles.spamTitle}>Can&apos;t find the email?</Text>
             <Text style={styles.spamText}>
               Check your <Text style={{ fontWeight: '700' }}>Spam</Text> or <Text style={{ fontWeight: '700' }}>Junk</Text> folder.
-              Gmail and Outlook sometimes filter verification emails. If you find it there, mark it as "Not Spam" to receive future emails.
+              Gmail and Outlook sometimes filter verification emails. If you find it there, mark it as &quot;Not Spam&quot; to receive future emails.
             </Text>
           </View>
         </View>

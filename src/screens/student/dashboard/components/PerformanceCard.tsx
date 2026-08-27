@@ -152,7 +152,6 @@ export function PerformanceCard({
                 />
               </View>
               <Text style={[styles.barLabel, { color: colors.textDim }]} numberOfLines={2}>{t.label}</Text>
-              <Text style={[styles.barSubject, { color: colors.textMuted }]} numberOfLines={1}>{t.subject}</Text>
             </View>
           );
         })}

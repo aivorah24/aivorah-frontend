@@ -61,6 +61,7 @@ export default function ParentDashboardScreen({ navigation, route }: any) {
 
   React.useEffect(() => {
     if (route.params?.openAttendance) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to deep-link nav param, external sync
       setShowAttendanceHistoryModal(true);
       setCalendarYear(new Date().getFullYear());
       setCalendarMonth(new Date().getMonth());
@@ -159,7 +160,7 @@ export default function ParentDashboardScreen({ navigation, route }: any) {
           {/* ── Row 1: Child cards + AI Insight ── */}
           <View style={[s.topRow, isWide && { flexDirection: 'row', gap: 16, alignItems: 'stretch' }]}>
             <ChildrenSection
-              children={children}
+              childrenList={children}
               childrenLoading={childrenLoading}
               selectedChild={selectedChild}
               onSelectChild={setSelectedChild}
@@ -183,7 +184,7 @@ export default function ParentDashboardScreen({ navigation, route }: any) {
           {/* ── Row 2: Weekly Snapshot ── */}
           {child.id ? (
             <>
-              <Text style={[s.sectionTitle, { marginTop: 22, marginBottom: 12 }]}>{child.name}'s Weekly Snapshot</Text>
+              <Text style={[s.sectionTitle, { marginTop: 22, marginBottom: 12 }]}>{child.name}&apos;s Weekly Snapshot</Text>
 
               <WeeklySnapshotStats
                 child={child}

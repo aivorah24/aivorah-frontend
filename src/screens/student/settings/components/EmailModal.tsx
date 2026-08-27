@@ -38,8 +38,8 @@ export default function EmailModal({
         <>
           <Text style={styles.modalNote}>
             Your account signs in with Google, so its email is your Google account. To use a different
-            address, switch to another Google account you own — we'll move your account and all its data
-            onto it. You'll pick the account in a Google window.
+            address, switch to another Google account you own — we&apos;ll move your account and all its data
+            onto it. You&apos;ll pick the account in a Google window.
           </Text>
           <View style={[styles.modalInput, { opacity: 0.7 }]}>
             <Feather name="mail" size={15} color={colors.textDim} />

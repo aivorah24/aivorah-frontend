@@ -103,7 +103,7 @@ export default function ListenTab({
           {isMath && (
             <View style={[styles.aiTutorBadge, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '30' }]}>
               <Feather name="cpu" size={12} color={colors.primary} />
-              <Text style={[styles.aiTutorBadgeText, { color: colors.primary }]}>AI Tutor — let's understand this step by step</Text>
+              <Text style={[styles.aiTutorBadgeText, { color: colors.primary }]}>AI Tutor — let&apos;s understand this step by step</Text>
             </View>
           )}
 
@@ -457,7 +457,7 @@ export default function ListenTab({
                 <View style={[styles.card, { borderColor: colors.accentGreen + '40', backgroundColor: colors.accentGreen + '0a' }]}>
                   <View style={styles.newWordHeader}>
                     <Feather name="edit-3" size={13} color={colors.accentGreen} />
-                    <Text style={[styles.newWordLabel, { color: colors.accentGreen }]}>Let's solve it together</Text>
+                    <Text style={[styles.newWordLabel, { color: colors.accentGreen }]}>Let&apos;s solve it together</Text>
                   </View>
                   <Text style={[styles.whyText, { color: colors.textMain, fontWeight: '800', fontSize: 18, marginTop: 8 }]}>
                     {ex.problem}

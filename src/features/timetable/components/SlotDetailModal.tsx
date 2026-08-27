@@ -49,6 +49,7 @@ export default function SlotDetailModal({
   // Reset local edit state whenever the modal (re)opens for a slot.
   useEffect(() => {
     if (!visible) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets edit form on modal open, external sync
     setEditing(false); setError('');
     setSubject(slot?.subject || '');
     setRoom(slot?.room || '');

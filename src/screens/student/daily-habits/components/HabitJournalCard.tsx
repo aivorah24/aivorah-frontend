@@ -26,7 +26,7 @@ export default function HabitJournalCard({ journalText, cardDark, borderColor, t
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.journalTitle, { color: SAGE }]}>My Daily Journal</Text>
-          <Text style={[styles.journalSub, { color: textMuted }]}>Auto-generated from today's habits</Text>
+          <Text style={[styles.journalSub, { color: textMuted }]}>Auto-generated from today&apos;s habits</Text>
         </View>
         <Feather name={showJournal ? 'chevron-up' : 'chevron-down'} size={16} color={textDim} />
       </TouchableOpacity>

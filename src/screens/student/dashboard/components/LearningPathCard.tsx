@@ -62,7 +62,7 @@ export function LearningPathCard({
         </View>
         <Text style={[styles.lessonTopic, { color: colors.textMain, fontSize: 17, textAlign: 'center' }]}>Lessons for {studentGrade} are coming soon</Text>
         <Text style={[styles.lessonMeta, { color: colors.textMuted, textAlign: 'center', lineHeight: 20, maxWidth: 380 }]}>
-          Our team is carefully crafting playful, age-appropriate learning experiences for {studentGrade}. We'll let you know the moment they're ready to explore.
+          Our team is carefully crafting playful, age-appropriate learning experiences for {studentGrade}. We&apos;ll let you know the moment they&apos;re ready to explore.
         </Text>
       </View>
     );
@@ -92,7 +92,7 @@ export function LearningPathCard({
       {filteredChapterRows.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <Feather name="search" size={22} color={colors.textDim} />
-          <Text style={[styles.emptyTxt, { color: colors.textMuted }]}>No chapters match "{searchQuery}"</Text>
+          <Text style={[styles.emptyTxt, { color: colors.textMuted }]}>No chapters match &quot;{searchQuery}&quot;</Text>
         </View>
       ) : (
         <View style={[styles.lessonContainer, { backgroundColor: cardBg, borderColor: cardBorder }]}>

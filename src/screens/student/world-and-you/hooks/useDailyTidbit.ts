@@ -48,6 +48,8 @@ export function useDailyTidbit(grade: string, onReload?: () => void, onTabChange
   }
 
   useEffect(() => {
+    // data fetching effect — setState happens inside loadTidbit, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTidbit();
   }, [grade]);
 

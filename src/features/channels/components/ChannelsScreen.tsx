@@ -264,7 +264,13 @@ function CreateModal({ visible, onClose, email, onCreated, styles, colors }: any
   const [autoGrade, setAutoGrade] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  React.useEffect(() => { if (visible) { setName(''); setStaffOnly(true); setAutoGrade(''); setError(''); } }, [visible]);
+  // Reset the form each time the modal opens (render-time adjustment instead of an
+  // effect — see React docs "Adjusting state when a prop changes").
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) { setName(''); setStaffOnly(true); setAutoGrade(''); setError(''); }
+  }
   const submit = async () => {
     if (!name.trim()) return;
     setBusy(true); setError('');

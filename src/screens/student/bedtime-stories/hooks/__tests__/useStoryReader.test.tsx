@@ -5,6 +5,12 @@
 // ambientAudio is mocked at the module boundary — its own Web Audio API
 // synthesis is out of scope for this hook's tests.
 
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, screen, userEvent, waitFor, act } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useStoryReader } from '../useStoryReader';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
   default: { OS: 'web', select: (obj: any) => obj.web ?? obj.default ?? obj.ios },
@@ -15,18 +21,12 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => ({
 const mockPlayPageFlip = jest.fn();
 const mockSilenceAllAmbient = jest.fn();
 const mockAmbientInstance = { pause: jest.fn(), resume: jest.fn(), stop: jest.fn() };
-const mockCreateAmbient = jest.fn(() => mockAmbientInstance);
+const mockCreateAmbient = jest.fn((..._args: any[]) => mockAmbientInstance);
 jest.mock('../../utils/ambientAudio', () => ({
   playPageFlip: (...args: any[]) => mockPlayPageFlip(...args),
   silenceAllAmbient: (...args: any[]) => mockSilenceAllAmbient(...args),
   createAmbient: (...args: any[]) => mockCreateAmbient(...args),
 }));
-
-import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
-import { render, screen, userEvent, waitFor, act } from '@testing-library/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useStoryReader } from '../useStoryReader';
 
 const STORY = {
   id: 'ambarisha',

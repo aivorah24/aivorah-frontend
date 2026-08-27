@@ -85,7 +85,7 @@ export default function MyClassesScreen({ navigation }: any) {
                   studentId: c.studentId, studentName: c.studentName,
                 })}
               >
-                {c.studentName && <Text style={styles.studentLabel}>{c.studentName}'s classes</Text>}
+                {c.studentName && <Text style={styles.studentLabel}>{c.studentName}&apos;s classes</Text>}
                 <View style={styles.cardRow}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{(c.grade || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 2) || 'CL'}</Text>

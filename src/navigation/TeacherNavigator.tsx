@@ -6,13 +6,14 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
-import TeacherStudentsScreen from '../screens/teacher/TeacherStudentsScreen';
-import TeacherScheduleScreen from '../screens/teacher/TeacherScheduleScreen';
-import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '../screens/teacher/TeacherChallengesScreen';
-import TeacherProgressScreen from '../screens/teacher/TeacherProgressScreen';
-import TeacherSettingsScreen from '../screens/teacher/TeacherSettingsScreen';
-import TeacherMessagesScreen from '../screens/teacher/TeacherMessagesScreen';
+import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
+import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
+import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
+import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
+import TeacherProgressScreen from '@legacy/teacher-legacy/TeacherProgressScreen';
+import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
+import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
+import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
@@ -50,6 +51,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
+      <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />
       <Drawer.Screen name="AnnouncementManager" component={AnnouncementManagerScreen} />

@@ -6,10 +6,10 @@ import type { ChildData } from '../types';
 import ChildCard from './ChildCard';
 
 export default function ChildrenSection({
-  children, childrenLoading, selectedChild, onSelectChild, onViewCreds, onAddChild,
+  childrenList, childrenLoading, selectedChild, onSelectChild, onViewCreds, onAddChild,
   isWide, colors, s,
 }: {
-  children: ChildData[]; childrenLoading: boolean; selectedChild: ChildData;
+  childrenList: ChildData[]; childrenLoading: boolean; selectedChild: ChildData;
   onSelectChild: (c: ChildData) => void; onViewCreds: (c: ChildData) => void;
   onAddChild: () => void; isWide: boolean; colors: AppColors; s: any;
 }) {
@@ -21,14 +21,14 @@ export default function ChildrenSection({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.childScroll}>
         {childrenLoading ? (
           <ActivityIndicator color={colors.accentYellow} style={{ marginTop: 40, marginLeft: 8 }} />
-        ) : children.length === 0 ? (
+        ) : childrenList.length === 0 ? (
           <TouchableOpacity style={s.addChildBtn} onPress={onAddChild} activeOpacity={0.7}>
             <Feather name="plus" size={20} color={colors.textDim} />
             <Text style={s.addChildText}>Add Child</Text>
           </TouchableOpacity>
         ) : (
           <>
-            {children.map(ch => (
+            {childrenList.map(ch => (
               <ChildCard
                 key={ch.id} child={ch}
                 isSelected={selectedChild.id === ch.id}

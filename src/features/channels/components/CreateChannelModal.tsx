@@ -66,6 +66,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
   useEffect(() => {
     if (!visible) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets form + kicks off data fetch below on modal open, external sync
     setMode('class'); setName(''); setScope('class'); setStaffOnly(true); setAutoGrade(''); setAutoSection('');
     setSelectedStudent(null); setError(''); setIcon('users');
     setGroupName(''); setGroupGrade(''); setGroupSection(''); setPeopleQuery(''); setPeopleResults([]); setPickedPeople([]);
@@ -81,6 +82,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
   const groupSectionsForGrade = gradesSections.find((g) => g.name === groupGrade)?.sections || [];
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced-search effect's early-return reset, external sync
     if (mode !== 'group' || !groupGrade) { setPeopleResults([]); return; }
     const t = setTimeout(() => {
       searchPeople(email, { grade: groupGrade, section: groupSection || undefined, q: peopleQuery.trim() || undefined })
@@ -142,18 +144,18 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.head}><Text style={styles.title}>New channel</Text><TouchableOpacity onPress={onClose}><Feather name="x" size={18} color={colors.textMuted} /></TouchableOpacity></View>
+        <View testID="messages-create-channel-modal" style={styles.card}>
+          <View style={styles.head}><Text style={styles.title}>New channel</Text><TouchableOpacity testID="messages-create-channel-close" onPress={onClose}><Feather name="x" size={18} color={colors.textMuted} /></TouchableOpacity></View>
 
           <ScrollView style={styles.cardScroll} contentContainerStyle={styles.cardScrollContent} nestedScrollEnabled showsVerticalScrollIndicator={false}>
           <View style={styles.modeRow}>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'class' && styles.modeBtnActive]} onPress={() => setMode('class')}>
+            <TouchableOpacity testID="messages-channel-mode-class" style={[styles.modeBtn, mode === 'class' && styles.modeBtnActive]} onPress={() => setMode('class')}>
               <Text style={[styles.modeText, mode === 'class' && styles.modeTextActive]}>Class channel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'family' && styles.modeBtnActive]} onPress={() => setMode('family')}>
+            <TouchableOpacity testID="messages-channel-mode-family" style={[styles.modeBtn, mode === 'family' && styles.modeBtnActive]} onPress={() => setMode('family')}>
               <Text style={[styles.modeText, mode === 'family' && styles.modeTextActive]}>Family room</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, mode === 'group' && styles.modeBtnActive]} onPress={() => setMode('group')}>
+            <TouchableOpacity testID="messages-channel-mode-group" style={[styles.modeBtn, mode === 'group' && styles.modeBtnActive]} onPress={() => setMode('group')}>
               <Text style={[styles.modeText, mode === 'group' && styles.modeTextActive]}>Create group</Text>
             </TouchableOpacity>
           </View>
@@ -161,7 +163,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
           {mode === 'class' && (
             <>
               <Text style={styles.label}>Channel name</Text>
-              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. PYP 5 Parents - 2026-27" placeholderTextColor={colors.textDim} autoFocus />
+              <TextInput testID="messages-channel-name-input" style={styles.input} value={name} onChangeText={setName} placeholder="e.g. PYP 5 Parents - 2026-27" placeholderTextColor={colors.textDim} autoFocus />
 
               <Text style={styles.label}>Icon</Text>
               <View style={styles.iconRow}>
@@ -174,10 +176,10 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
               <Text style={styles.label}>Scope</Text>
               <View style={styles.modeRow}>
-                <TouchableOpacity style={[styles.scopeBtn, scope === 'class' && styles.modeBtnActive]} onPress={() => setScope('class')}>
+                <TouchableOpacity testID="messages-channel-scope-class" style={[styles.scopeBtn, scope === 'class' && styles.modeBtnActive]} onPress={() => setScope('class')}>
                   <Text style={[styles.modeText, scope === 'class' && styles.modeTextActive]}>Class</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.scopeBtn, scope === 'staff' && styles.modeBtnActive]} onPress={() => setScope('staff')}>
+                <TouchableOpacity testID="messages-channel-scope-staff" style={[styles.scopeBtn, scope === 'staff' && styles.modeBtnActive]} onPress={() => setScope('staff')}>
                   <Text style={[styles.modeText, scope === 'staff' && styles.modeTextActive]}>Staff Room</Text>
                 </TouchableOpacity>
               </View>
@@ -198,7 +200,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
 
                   <Text style={styles.label}>Auto-add parents of grade &amp; section (optional)</Text>
                   {!!myHomerooms.length && (
-                    <Text style={styles.hint}>Pre-filled from your homeroom{myHomerooms.length > 1 ? 's' : ''} — change if you're creating this for a different class.</Text>
+                    <Text style={styles.hint}>Pre-filled from your homeroom{myHomerooms.length > 1 ? 's' : ''} — change if you&apos;re creating this for a different class.</Text>
                   )}
                   <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
@@ -252,8 +254,8 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
                 </>
               )}
 
-              {!!error && <Text style={styles.error}>{error}</Text>}
-              <TouchableOpacity style={[styles.createBtn, (!name.trim() || busy) && { opacity: 0.6 }]} disabled={!name.trim() || busy} onPress={submitClass}>
+              {!!error && <Text testID="messages-channel-error" style={styles.error}>{error}</Text>}
+              <TouchableOpacity testID="messages-create-channel-submit" style={[styles.createBtn, (!name.trim() || busy) && { opacity: 0.6 }]} disabled={!name.trim() || busy} onPress={submitClass}>
                 {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.createBtnText}>Create channel</Text>}
               </TouchableOpacity>
             </>
@@ -282,7 +284,7 @@ export default function CreateChannelModal({ visible, onClose, onCreated }: { vi
               )}
               {!!selectedStudent && (
                 <Text style={styles.hint}>
-                  Creates "Family of {selectedStudent.name}" with you and all of {selectedStudent.name}'s linked parents — everyone can post.
+                  Creates &quot;Family of {selectedStudent.name}&quot; with you and all of {selectedStudent.name}&apos;s linked parents — everyone can post.
                 </Text>
               )}
 

@@ -21,9 +21,9 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   const playSeqRef = useRef(0); // token invalidates stale onEnd callbacks
   const listenSentencesRef = useRef<ReturnType<typeof sentencesWithOffsets>>([]);
   const playbackRateRef = useRef(playbackRate);
-  playbackRateRef.current = playbackRate;
+  useEffect(() => { playbackRateRef.current = playbackRate; }, [playbackRate]);
   const isPoemRef = useRef(isPoem);
-  isPoemRef.current = isPoem;
+  useEffect(() => { isPoemRef.current = isPoem; }, [isPoem]);
   const sentenceYRef = useRef<Record<number, number>>({});
   const leftScrollRef = useRef<any>(null);
 
@@ -32,7 +32,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
     () => (currentListenStep ? sentencesWithOffsets(currentListenStep.text) : []),
     [currentListenStep],
   );
-  listenSentencesRef.current = listenSentences;
+  useEffect(() => { listenSentencesRef.current = listenSentences; }, [listenSentences]);
 
   // Speak sentence `idx` of the current step, then chain to the next.
   function speakFromSentence(idx: number) {

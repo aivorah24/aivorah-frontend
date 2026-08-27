@@ -149,6 +149,8 @@ export function useAssignments(highlightId: string | undefined, navigation: any)
   // same way the web path's iframe ref callback does on first mount.
   useEffect(() => {
     if (Platform.OS !== 'web' && activeAssignment?.interactiveQuizHtml) {
+      // external sync (WebView progress reset on new assignment id) — not derivable state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuizProgress(null);
       setSubmittingQuiz(false);
     }
@@ -298,6 +300,8 @@ export function useAssignments(highlightId: string | undefined, navigation: any)
       a.id === highlightId || (a as any).scheduleId === highlightId
     );
     if (target) {
+      // external sync (deep-link open + navigation param clear) — not derivable state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       openAssignment(target);
       navigation.setParams?.({ highlightId: undefined });
     }

@@ -39,7 +39,7 @@ export default function ProfileHeroCard({
       </View>
 
       <View style={s.heroQuote}>
-        <Text style={s.quoteGlyph}>"</Text>
+        <Text style={s.quoteGlyph}>&quot;</Text>
         <Text style={s.quoteText}>
           Every step today,{'\n'}a <Text style={s.quoteHighlight}>brighter</Text> tomorrow.
         </Text>

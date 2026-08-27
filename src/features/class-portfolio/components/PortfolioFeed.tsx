@@ -46,11 +46,13 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
   const [openPostId, setOpenPostId] = useState<string | null>(initialOpenPostId || null);
   const [showComposer, setShowComposer] = useState(false);
 
-  useEffect(() => {
-    if (initialOpenPostId) {
-      setOpenPostId(initialOpenPostId);
-    }
-  }, [initialOpenPostId]);
+  // Sync openPostId when the deep-link prop changes (render-time adjustment
+  // instead of an effect — see React docs "Adjusting state when a prop changes").
+  const [prevInitialOpenPostId, setPrevInitialOpenPostId] = useState(initialOpenPostId);
+  if (initialOpenPostId !== prevInitialOpenPostId) {
+    setPrevInitialOpenPostId(initialOpenPostId);
+    if (initialOpenPostId) setOpenPostId(initialOpenPostId);
+  }
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('all');
@@ -396,7 +398,7 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
           </View>
         ) : (
           filteredPosts.map((post) => (
-            <View key={post.id} style={styles.card} className="portfolio-card">
+            <View key={post.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.avatarContainer}>
                   <View style={styles.avatar}>
@@ -431,15 +433,15 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
                     <Text style={styles.postDate}>{formatToddleDate(post.createdAt)}</Text>
                     {post.folderName && (
-                      <View style={[styles.folderBadge, { backgroundColor: `${post.folderColor || '#0d9488'}15`, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }]}>
+                      <View style={{ backgroundColor: `${post.folderColor || '#0d9488'}15`, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                         <Feather name="folder" size={10} color={post.folderColor || '#0d9488'} style={{ marginRight: 3 }} />
-                        <Text style={[styles.folderBadgeText, { color: post.folderColor || '#0d9488', fontSize: 10, fontWeight: '700', fontFamily: fonts.serif }]}>{post.folderName}</Text>
+                        <Text style={{ color: post.folderColor || '#0d9488', fontSize: 10, fontWeight: '700', fontFamily: fonts.serif }}>{post.folderName}</Text>
                       </View>
                     )}
                   </View>
                 </View>
                 {isHomeroomTeacher && (
-                  <TouchableOpacity onPress={() => onDelete(post.id)} accessibilityRole="button" accessibilityLabel="Delete post" style={{ padding: 6 }} className="portfolio-trash-btn">
+                  <TouchableOpacity onPress={() => onDelete(post.id)} accessibilityRole="button" accessibilityLabel="Delete post" style={{ padding: 6 }}>
                     <Feather name="trash-2" size={15} color={colors.textDim} />
                   </TouchableOpacity>
                 )}
@@ -455,14 +457,14 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
               )}
 
               {post.attachments.length > 0 && (
-                <TouchableOpacity activeOpacity={0.85} onPress={() => setOpenPostId(post.id)} className="portfolio-media-wrap">
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setOpenPostId(post.id)}>
                   <MediaPreview attachment={post.attachments[0]} moreCount={post.attachments.length - 1} colors={colors} />
                 </TouchableOpacity>
               )}
 
               <View style={styles.actionsRow}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(post)} accessibilityRole="button" className="portfolio-action-btn">
-                  <View className={post.isLiked ? "heart-liked" : ""} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(post)} accessibilityRole="button">
+                  <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {post.isLiked ? (
                       <AntDesign name="heart" size={16} color="#ef4444" />
                     ) : (
@@ -471,7 +473,7 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
                   </View>
                   <Text style={styles.actionText}>Like</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => setOpenPostId(post.id)} accessibilityRole="button" className="portfolio-action-btn">
+                <TouchableOpacity style={styles.actionBtn} onPress={() => setOpenPostId(post.id)} accessibilityRole="button">
                   <Feather name="message-circle" size={16} color={colors.textMuted} />
                   <Text style={styles.actionText}>Comment</Text>
                 </TouchableOpacity>
@@ -746,7 +748,7 @@ function makeStyles(colors: AppColors) {
     searchInput: { flex: 1, fontFamily: fonts.serif, fontSize: 13, color: colors.textMain, paddingVertical: 6, paddingRight: 10 },
     filterBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, width: 38, height: 38 },
     folderDropdown: { position: 'absolute', top: 44, right: 0, width: 180, backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, padding: 4, zIndex: 99 },
-    folderOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderRadius: radius.xs },
+    folderOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderRadius: radius.sm },
     folderLabel: { flex: 1, fontFamily: fonts.serif, fontSize: 13, color: colors.textHeading },
     radioCircle: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: colors.textDim, alignItems: 'center', justifyContent: 'center' },
     radioActive: { borderColor: '#0d9488' },

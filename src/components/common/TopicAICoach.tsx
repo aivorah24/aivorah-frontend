@@ -8,6 +8,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, Animated, ActivityIndicator, Keyboard,
   Platform, KeyboardAvoidingView, Image,
+  type StyleProp, type TextStyle,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -214,6 +215,9 @@ export default function TopicAICoach({
   // Greeting message when panel opens for the first time
   useEffect(() => {
     if (open && messages.length === 0) {
+      // one-time initialization when the panel first opens — not derivable from
+      // props alone (must not re-fire once the user has sent messages)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([{
         role: 'ai',
         text: `Hi! I'm your Aivorah AI Coach for "${topic}". Ask me anything about this topic and I'll help you understand it!`,
@@ -446,12 +450,12 @@ export default function TopicAICoach({
                         const isStep     = /^step\s*\d+[:.→]/i.test(line.trim());
                         const isAnswer   = /^answer[:.]/i.test(line.trim());
                         const isPractice = /^(try this|practice|question)[:.]/i.test(line.trim());
-                        const lineStyle = [
+                        const lineStyle: StyleProp<TextStyle> = [
                           styles.bubbleText,
                           { color: colors.textMain },
-                          isStep     && { fontWeight: '700', color: colors.accentYellow, marginTop: li > 0 ? 3 : 0 },
-                          isAnswer   && { fontWeight: '700', color: '#4A9E70', marginTop: 3 },
-                          isPractice && { fontWeight: '600', color: colors.textMuted, fontStyle: 'italic', marginTop: 3 },
+                          isStep     && { fontWeight: '700' as const, color: colors.accentYellow, marginTop: li > 0 ? 3 : 0 },
+                          isAnswer   && { fontWeight: '700' as const, color: '#4A9E70', marginTop: 3 },
+                          isPractice && { fontWeight: '600' as const, color: colors.textMuted, fontStyle: 'italic' as const, marginTop: 3 },
                         ];
                         // While this message is being read aloud, highlight the
                         // word currently spoken — same karaoke-style highlight
@@ -598,7 +602,7 @@ export default function TopicAICoach({
               placeholderTextColor={colors.textDim}
               value={input}
               onChangeText={setInput}
-              onSubmitEditing={send}
+              onSubmitEditing={() => send()}
               onKeyPress={(e: any) => {
                 if (
                   Platform.OS === 'web' &&
@@ -615,7 +619,7 @@ export default function TopicAICoach({
             />
             <TouchableOpacity
               style={[styles.sendBtn, { backgroundColor: loading ? colors.cardHover : colors.accentYellow }]}
-              onPress={send}
+              onPress={() => send()}
               disabled={loading}
             >
               <Feather name="send" size={16} color="#fff" />

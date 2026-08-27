@@ -23,7 +23,7 @@ export function renderChallengeModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>{withCh.length} Students</Text>
               <Text style={styles.modalHeading}>Students with Challenges Assigned</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -80,7 +80,7 @@ export function renderChallengeModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>{done.length} Students</Text>
               <Text style={styles.modalHeading}>Challenges Completed</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>
@@ -136,7 +136,7 @@ export function renderChallengeModal(tileIndex: number, ctx: ModalRenderCtx) {
               <Text style={[styles.modalStat, { color: tile.color }]}>Challenge Leaderboard</Text>
               <Text style={styles.modalHeading}>Students Ranked by Challenge Score</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose} testID="modal-close-button">
               <Feather name="x" size={20} color={colors.textDim} />
             </TouchableOpacity>
           </View>

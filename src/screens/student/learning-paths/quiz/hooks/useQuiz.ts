@@ -14,7 +14,7 @@ export function useQuiz(params: {
   navigation: any;
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
-  recordStudyTime: (mins: number, source: string, subject: string) => void;
+  recordStudyTime: (mins: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
 }) {
   const { topic, grade, subject, curriculum, passageText, topicId, userEmail, userRole, userId, navigation, completeLesson, addXP, recordStudyTime } = params;
 
@@ -43,14 +43,15 @@ export function useQuiz(params: {
   const [attemptNumber, setAttemptNumber] = useState(1);
   const perQuestionResultsRef = useRef<any[]>([]);
   const explanationsRef = useRef<Record<number, string>>({});
-  const quizStartTimeRef = useRef(Date.now());
-  const questionStartTimeRef = useRef(Date.now());
+  const [initialStartTime] = useState(() => Date.now());
+  const quizStartTimeRef = useRef(initialStartTime);
+  const questionStartTimeRef = useRef(initialStartTime);
 
   // Issue #106 — auto-loaded explanations in result screen
   const [resultExplanations, setResultExplanations] = useState<Record<number, string>>({});
 
   const scoreRef = useRef(score);
-  scoreRef.current = score;
+  useEffect(() => { scoreRef.current = score; }, [score]);
 
   // Auto-fetch explanations for all wrong answers when results load
   useEffect(() => {
@@ -116,7 +117,11 @@ export function useQuiz(params: {
     }
   }, [topic, grade, subject, curriculum, passageText, userEmail]);
 
-  useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
+  useEffect(() => {
+    // data fetching effect — setState happens inside fetchQuiz, not synchronously here
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchQuiz();
+  }, [fetchQuiz]);
 
   function finishQuiz(finalScore: number) {
     const pct = Math.round((finalScore / questions.length) * 100);
@@ -223,6 +228,7 @@ export function useQuiz(params: {
       const text = q.explanation || 'Great job! That\'s correct!';
       setExplanation(text);
       explanationsRef.current[currentQ] = text;
+      setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
       return;
     }
     setLoadingExplain(true);
@@ -235,10 +241,12 @@ export function useQuiz(params: {
       const text = data.explanation || q.explanation || 'The correct answer is highlighted above.';
       setExplanation(text);
       explanationsRef.current[currentQ] = text;
+      setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
     } catch {
       const text = q.explanation || 'The correct answer is highlighted above. Keep going!';
       setExplanation(text);
       explanationsRef.current[currentQ] = text;
+      setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
     } finally {
       setLoadingExplain(false);
     }
@@ -285,6 +293,7 @@ export function useQuiz(params: {
         setFillFeedback('correct');
         setExplanation(text);
         explanationsRef.current[currentQ] = text;
+        setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
       } else {
         const attempts = fillAttempts + 1;
         setFillAttempts(attempts);
@@ -295,6 +304,7 @@ export function useQuiz(params: {
           const text = questions[currentQ].explanation || '';
           setExplanation(text);
           explanationsRef.current[currentQ] = text;
+          setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
         }
       }
     } catch {
@@ -302,6 +312,7 @@ export function useQuiz(params: {
       const text = questions[currentQ].explanation || '';
       setExplanation(text);
       explanationsRef.current[currentQ] = text;
+      setResultExplanations(prev => ({ ...prev, [currentQ]: text }));
     } finally {
       setFillValidating(false);
     }

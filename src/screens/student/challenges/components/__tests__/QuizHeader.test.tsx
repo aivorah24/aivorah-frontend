@@ -1,9 +1,9 @@
-jest.setTimeout(15000);
-
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import QuizHeader from '../QuizHeader';
 import type { Challenge } from '../../types';
+
+jest.setTimeout(15000);
 
 const colors: any = { borderColor: '#333', textMain: '#fff', textDim: '#666', textMuted: '#888', accentRed: '#f00', cardDark: '#111' };
 

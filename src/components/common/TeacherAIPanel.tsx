@@ -4,7 +4,7 @@
  * Features: text chat, image/PDF upload, mic voice input, Enter to send.
  * No student guardrails — professional educator context.
  */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Animated, ActivityIndicator, Platform, Image,
@@ -124,7 +124,7 @@ export default function TeacherAIPanel() {
   const [listening, setListening] = useState(false);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useMemo(() => new Animated.Value(0), []);
   const scrollRef = useRef<ScrollView>(null);
   const fileInputRef = useRef<any>(null);
 
@@ -262,7 +262,7 @@ export default function TeacherAIPanel() {
     } finally {
       setLoading(false);
     }
-  }, [loading, classSummary, user?.email]);
+  }, [loading, classSummary, user]);
 
   const handleKeyPress = (e: any) => {
     if (e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {

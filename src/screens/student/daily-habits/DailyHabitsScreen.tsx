@@ -81,7 +81,7 @@ export default function DailyHabitsScreen({ navigation }: any) {
                 styles={styles}
               />
 
-              <Text style={[styles.sectionTitle, { color: '#BAA467' }]}>TODAY'S HABITS</Text>
+              <Text style={[styles.sectionTitle, { color: '#BAA467' }]}>TODAY&apos;S HABITS</Text>
 
               <HabitGrid
                 tasks={parentTasks}

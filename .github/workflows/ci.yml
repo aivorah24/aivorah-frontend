@@ -18,11 +18,11 @@ jobs:
       - run: npm ci
       - name: TypeScript check
         run: npx tsc --noEmit
-      - name: Jest tests
-        run: npx jest --ci --coverage=false
-      # No lint step: no ESLint config exists in this repo yet. Adding one
-      # and getting the codebase clean is a separate, larger task — tracked
-      # as a known gap rather than faked here.
-      # No build step: `expo export --platform web` needs build-time env
-      # vars (API keys) this workflow doesn't have access to yet. Add once
-      # Staging env vars are wired into GitHub Actions secrets.
+      - name: Lint check
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:unit -- --ci
+      - name: Integration tests
+        run: npm run test:integration -- --ci
+      - name: Build verification
+        run: npm run vercel-build
