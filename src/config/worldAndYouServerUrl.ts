@@ -9,6 +9,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-world-and-you-service.onrender.com';
 
 const WORLD_AND_YOU_SERVER_URL =
-   LIVE_SERVICE;
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3010' : LIVE_SERVICE;
 
 export default WORLD_AND_YOU_SERVER_URL;

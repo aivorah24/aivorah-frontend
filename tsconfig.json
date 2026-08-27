@@ -3,9 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "types": ["jest", "node"],
-    "baseUrl": ".",
     "paths": {
-      "@legacy/*": ["src/.legacy-screens/*"]
+      "@legacy/*": ["./src/.legacy-screens/*"]
     }
   }
 }

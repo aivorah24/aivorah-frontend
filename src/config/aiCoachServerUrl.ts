@@ -7,6 +7,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-ai-coach-service.onrender.com';
 
 const AI_COACH_SERVER_URL =
-   LIVE_SERVICE;
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3007' : LIVE_SERVICE;
 
 export default AI_COACH_SERVER_URL;

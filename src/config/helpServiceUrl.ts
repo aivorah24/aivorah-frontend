@@ -9,6 +9,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-help-center-service.onrender.com';
 
 const HELP_SERVICE_URL =
-   LIVE_SERVICE;
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3013' : LIVE_SERVICE;
 
 export default HELP_SERVICE_URL;

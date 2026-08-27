@@ -7,6 +7,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-profile-service.onrender.com';
 
 const PROFILE_SERVER_URL =
-   LIVE_SERVICE;
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:4002' : LIVE_SERVICE;
 
 export default PROFILE_SERVER_URL;
