@@ -9,7 +9,7 @@ import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsSc
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
-// import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
+import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
@@ -61,7 +61,7 @@ export default function SuperAdminNavigator() {
       <Drawer.Screen name="TeacherAssignments" component={TeacherAssignmentsScreen} />
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
-      {/* <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} /> */}
+      <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />
       <Drawer.Screen name="AnnouncementManager" component={AnnouncementManagerScreen} />

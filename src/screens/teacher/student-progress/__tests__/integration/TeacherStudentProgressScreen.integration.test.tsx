@@ -48,6 +48,11 @@ jest.mock('jspdf', () => ({
 
 const navigation = { openDrawer: jest.fn(), navigate: jest.fn() };
 
+// Two students in two DIFFERENT real classes (curriculum/grade/class/section
+// all differ) — this is exactly the shape that exercises the cascading
+// filter defaults: on load, only the FIRST real combo (Aarav's) is
+// auto-selected, and Bela only appears once the teacher explicitly picks
+// her class via a dropdown.
 const HEATMAP_RESPONSE = {
   students: [
     { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
@@ -71,16 +76,19 @@ const ATTEMPTS_RESPONSE = {
   ],
 };
 
-const PREFERENCES_RESPONSE = {
-  teaches: [{ grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Mathematics'] }],
-};
-
 function jsonRes(url: string) {
   if (url.includes('/heatmap')) return Promise.resolve({ ok: true, json: async () => HEATMAP_RESPONSE });
   if (url.includes('/topic/') && url.includes('/attempts')) return Promise.resolve({ ok: true, json: async () => ATTEMPTS_RESPONSE });
-  if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
   if (url.match(/\/by-teacher\/[^/]+$/)) return Promise.resolve({ ok: true, json: async () => ROSTER_RESPONSE });
   return Promise.resolve({ ok: true, json: async () => ({}) });
+}
+
+// Opens a filter dropdown and picks the given option — mirrors how a real
+// teacher would use the new dropdown UI (tap to open, tap an option to
+// select and close).
+async function selectFilter(user: ReturnType<typeof userEvent.setup>, key: string, option: string) {
+  await user.press(screen.getByTestId(`filter-dropdown-${key}`));
+  await user.press(screen.getByTestId(`filter-dropdown-${key}-option-${option}`));
 }
 
 beforeEach(() => {
@@ -89,11 +97,11 @@ beforeEach(() => {
 });
 
 describe('TeacherStudentProgressScreen', () => {
-  test('loads and renders the real heatmap: both real students, no generic "All" default hiding anyone', async () => {
+  test('defaults to the teacher\'s first real class (Curriculum/Grade/Section/Subject), showing only that class\'s students — never a generic "All"', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
-    expect(screen.getAllByText('Bela Rao').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Bela Rao').length).toBe(0);
     expect(screen.getByTestId('legend-mastered')).toBeTruthy();
     expect(screen.getByTestId('legend-stuck')).toBeTruthy();
   });
@@ -103,47 +111,101 @@ describe('TeacherStudentProgressScreen', () => {
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
 
     expect(screen.getByTestId('heatmap-cell-s1-Fractions')).toBeTruthy();
-    expect(screen.getByTestId('heatmap-cell-s2-Fractions')).toBeTruthy();
   });
 
   // Regression test for the reported bug: filtering the heatmap to one
   // grade left the Activity & Performance table below still showing every
   // grade — the two sections shared no filter state.
-  test('the Grade filter narrows BOTH the heatmap and the Activity & Performance table (Section D), never one alone', async () => {
+  test('switching the Grade dropdown narrows BOTH the heatmap and the Activity & Performance table (Section D), never one alone', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, default class
+    expect(screen.queryByTestId('activity-row-s2')).toBeNull();
+
+    await selectFilter(user, 'grade', 'Grade 6');
+
+    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy()); // Bela, Grade 6
+    expect(screen.queryByTestId('activity-row-s1')).toBeNull(); // Aarav, Grade 4 — filtered out
+    // Topic exploration narrows too — same shared filter state.
+    expect(screen.getByTestId('heatmap-cell-s2-Fractions')).toBeTruthy();
+    expect(screen.queryByTestId('heatmap-cell-s1-Fractions')).toBeNull();
+  });
+
+  // Sections cascade on the selected Grade — "if I handle Grade 3 sections
+  // A and B, selecting Grade 3 shows both".
+  test('the Section dropdown offers only the sections that really exist in the selected grade', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.getByTestId('activity-row-s2')).toBeTruthy(); // Bela Rao, Grade 6
 
-    await user.press(screen.getByTestId('filter-dropdown-grade'));
-    await user.press(screen.getByTestId('filter-dropdown-grade-option-Grade 4'));
+    // Default grade is Aarav's Grade 4 -> only section A exists there.
+    await user.press(screen.getByTestId('filter-dropdown-section'));
+    expect(screen.getByTestId('filter-dropdown-section-option-A')).toBeTruthy();
+    expect(screen.queryByTestId('filter-dropdown-section-option-B')).toBeNull();
+    await user.press(screen.getByTestId('filter-dropdown-section-backdrop'));
 
-    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — stays
-    expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — filtered out
-    // Topic exploration narrows too — same shared filter state.
-    expect(screen.queryByTestId('heatmap-cell-s2-Fractions')).toBeNull();
+    // Switching to Grade 6 swaps the real section list to B.
+    await selectFilter(user, 'grade', 'Grade 6');
+    await user.press(screen.getByTestId('filter-dropdown-section'));
+    expect(screen.getByTestId('filter-dropdown-section-option-B')).toBeTruthy();
+    expect(screen.queryByTestId('filter-dropdown-section-option-A')).toBeNull();
   });
 
-  // Class = the real `users.class` column (e.g. "4A"), a distinct dropdown
-  // from Grade/Section per the teacher's explicit instruction.
-  test('the Class filter (real users.class column) narrows to the exact class selected', async () => {
+  // Student search — a second, independent narrowing shared by Topic
+  // Exploration and Activity & Performance, useful once a class runs ~30
+  // students. Uses its own fixture: two students in the SAME real class
+  // (so both are visible by default, unlike the Aarav/Bela cross-class fixture).
+  test('the student search box narrows BOTH Topic Exploration and Activity & Performance by real name, together', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/heatmap')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            students: [
+              { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+                Fractions: { status: 'mastered', attempts: 1, latestScore: 90, bestScore: 90, struggled: false, lastAttemptDate: '2026-08-20', subject: 'Mathematics' },
+              } },
+              { id: 's2', name: 'Bela Rao', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+                Fractions: { status: 'stuck', attempts: 2, latestScore: 30, bestScore: 40, struggled: false, lastAttemptDate: '2026-08-01', subject: 'Mathematics' },
+              } },
+            ],
+            topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
+          }),
+        });
+      }
+      if (url.match(/\/by-teacher\/[^/]+$/)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, learningPathTimeToday: 12, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
+            { id: 's2', name: 'Bela Rao', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, learningPathTimeToday: 0, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: [], quizAttempts: 0, quizBestScore: null, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
+          ],
+        });
+      }
+      return jsonRes(url);
+    }) as any;
     const user = userEvent.setup();
+
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
     expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
+    expect(screen.getByTestId('heatmap-row-s1')).toBeTruthy();
+    expect(screen.getByTestId('heatmap-row-s2')).toBeTruthy();
 
-    await user.press(screen.getByTestId('filter-dropdown-class'));
-    await user.press(screen.getByTestId('filter-dropdown-class-option-4A'));
+    await user.type(screen.getByTestId('student-progress-search'), 'Bela');
 
-    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.queryByTestId('activity-row-s2')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('activity-row-s1')).toBeNull());
+    expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
+    expect(screen.queryByTestId('heatmap-row-s1')).toBeNull();
+    expect(screen.getByTestId('heatmap-row-s2')).toBeTruthy();
   });
 
   test('the Curriculum dropdown is a real, independently selectable filter', async () => {
+    const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
 
-    await userEvent.setup().press(screen.getByTestId('filter-dropdown-curriculum'));
+    await user.press(screen.getByTestId('filter-dropdown-curriculum'));
     expect(screen.getByTestId('filter-dropdown-curriculum-option-IB PYP')).toBeTruthy();
   });
 
@@ -184,33 +246,57 @@ describe('TeacherStudentProgressScreen', () => {
   // filtered heatmap data (see utils/subjectSummary.ts), not a separate
   // unfiltered backend call — so it can never disagree with Topic
   // Exploration below it.
-  test('renders the real Subject Progress cards (Section 4), consistent with the heatmap data', async () => {
+  test('renders the real Subject Progress card (Section 4), consistent with the default-filtered heatmap data', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByTestId('subject-card-Mathematics')).toBeTruthy());
-    // 1 mastered cell (Aarav) out of 2 total real cells (Aarav mastered, Bela stuck) = 50%.
-    expect(screen.getAllByText('50%').length).toBeGreaterThan(0);
-    expect(screen.getByText('Class average mastery · 2 students')).toBeTruthy();
+    // Default class = Aarav only, whose one real cell is mastered = 100%.
+    expect(screen.getAllByText('100%').length).toBeGreaterThan(0);
+    expect(screen.getByText('of syllabus mastered · 1 student')).toBeTruthy();
+  });
+
+  test('switching class updates the Subject Progress card to the newly selected population', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('subject-card-Mathematics')).toBeTruthy());
+
+    await selectFilter(user, 'grade', 'Grade 6');
+
+    // Bela's one real cell is stuck (not mastered) = 0%.
+    await waitFor(() => expect(screen.getByText('of syllabus mastered · 1 student')).toBeTruthy());
+    expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
   });
 
   // Section D — Activity & Performance table
   test('renders the real Activity & Performance table (Section D), including the real quiz stats', async () => {
+    const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
-    expect(screen.getByTestId('needs-attention-s2')).toBeTruthy(); // real needsAttention flag
     expect(screen.queryByTestId('needs-attention-s1')).toBeNull();
+
+    await selectFilter(user, 'grade', 'Grade 6');
+
+    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy());
+    expect(screen.getByTestId('needs-attention-s2')).toBeTruthy(); // real needsAttention flag
   });
 
   // Section 9 — Best Quiz Score must say "No quiz attempts" (Bela has 0),
   // never a fake 0%.
   test('a student with zero quiz attempts shows "No quiz attempts", not a fake 0%', async () => {
+    const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+
+    await selectFilter(user, 'grade', 'Grade 6');
     await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy());
 
+    // "No quiz attempts" is the honest empty state for Bela's Best Quiz
+    // Score column — asserted here at the integration level (unit coverage
+    // for the exact "not a fake 0%" behavior lives in ActivityTable.test.tsx;
+    // a bare page-wide "0%" check would also match her real 0% Subject
+    // Progress mastery card, which is unrelated).
     expect(screen.getByText('No quiz attempts')).toBeTruthy();
-    expect(screen.queryByText('0%')).toBeNull();
   });
 
   // Section 7/10 — Today/Overall toggle lives inside Activity & Performance
@@ -240,12 +326,30 @@ describe('TeacherStudentProgressScreen', () => {
     expect(screen.queryByText('Time Period')).toBeNull();
     expect(screen.getByTestId('filter-dropdown-curriculum')).toBeTruthy();
     expect(screen.getByTestId('filter-dropdown-grade')).toBeTruthy();
-    expect(screen.getByTestId('filter-dropdown-subject')).toBeTruthy();
-    expect(screen.getByTestId('filter-dropdown-class')).toBeTruthy();
     expect(screen.getByTestId('filter-dropdown-section')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-subject')).toBeTruthy();
+    // No redundant "Class" pill — grade + section IS the class.
+    expect(screen.queryByTestId('filter-dropdown-class')).toBeNull();
   });
 
-  test('Export PDF is present and clicking it does not crash', async () => {
+  // Dropdown UX: opens inline (no gray/dark Modal overlay), and tapping
+  // outside (the transparent backdrop) closes it without changing selection.
+  test('the dropdown opens inline with no page overlay, and tapping outside closes it without changing the selection', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+
+    await user.press(screen.getByTestId('filter-dropdown-grade'));
+    expect(screen.getByTestId('filter-dropdown-grade-option-Grade 6')).toBeTruthy();
+
+    await user.press(screen.getByTestId('filter-dropdown-grade-backdrop'));
+
+    expect(screen.queryByTestId('filter-dropdown-grade-option-Grade 6')).toBeNull();
+    // Selection unchanged — still Aarav's Grade 4 class.
+    expect(screen.getByTestId('activity-row-s1')).toBeTruthy();
+  });
+
+  test('Export report is present and clicking it does not crash', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());

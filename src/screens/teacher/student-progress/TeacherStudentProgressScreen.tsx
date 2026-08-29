@@ -11,10 +11,13 @@ import { useStudentRoster } from './hooks/useStudentRoster';
 import HeatmapGrid from './components/HeatmapGrid';
 import HeatmapLegend from './components/HeatmapLegend';
 import TopFilters from './components/TopFilters';
+import StudentSearchBar from './components/StudentSearchBar';
 import SummaryCards from './components/SummaryCards';
 import ActivityTable from './components/ActivityTable';
 import AttemptDrawer from './components/AttemptDrawer';
 import { filterByClass } from './utils/rosterFilters';
+import { searchByName } from './utils/searchStudents';
+import { profileSubjectsFor } from './utils/profileSubjects';
 import { computeSubjectSummary } from './utils/subjectSummary';
 import { exportStudentProgressPdf } from './utils/exportPdf';
 import { updatedAgoLabel } from './utils/formatters';
@@ -28,10 +31,21 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
     students, topics, summaryStudents, summaryTopics,
     loading, refreshing, error, lastRefreshedAt,
     filters, setFilters,
-    availableSubjects, availableGrades, availableCurricula, availableClasses, availableSections,
+    availableSubjects, availableGrades, availableCurricula, availableSections,
     refresh,
   } = useStudentProgress(user?.email);
   const { students: roster, loading: rosterLoading } = useStudentRoster(user?.email);
+
+  // "If I'm a teacher who handles Mathematics and English, the dropdown
+  // should show both" — union the teacher's own configured Staff Subject
+  // Mapping (their profile, same source the "My Profile" drawer's Teaching
+  // section reads) with the real per-student data, so a configured subject
+  // is always selectable even before any student is linked under it.
+  // `user.teaches[].subjects` isn't in the AuthContext type (only
+  // grade/curriculum are declared there) but is present at runtime — same
+  // loose-typed access Header.tsx's own profile drawer already uses.
+  const profileSubjects = profileSubjectsFor((user as any)?.teaches, filters.curriculum, filters.grade);
+  const subjectOptions = Array.from(new Set([...profileSubjects, ...availableSubjects])).sort();
 
   // Section 7/8/10 — Activity & Performance's own Today/Overall toggle,
   // deliberately scoped to that section only (NOT a top-level page filter).
@@ -41,7 +55,14 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   // Progress, Topic Exploration, AND the Activity table below — never
   // independent per-section state, so the three sections can't disagree.
   const filteredRoster = filterByClass(roster, filters);
-  const subjectCards = computeSubjectSummary(summaryStudents, summaryTopics);
+  const subjectCards = computeSubjectSummary(summaryStudents, summaryTopics, profileSubjects);
+
+  // Student name search — a second, independent narrowing on top of the
+  // class filters above, shared by Topic Exploration and Activity &
+  // Performance (never Subject Progress, which stays a class-wide summary).
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchedHeatmapStudents = searchByName(students, searchQuery);
+  const searchedRoster = searchByName(filteredRoster, searchQuery);
 
   const [selectedCell, setSelectedCell] = useState<{ student: HeatmapStudent; topic: string } | null>(null);
 
@@ -83,29 +104,29 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={gold} />}
         >
-          {/* Section 3 — top filters, modern dropdown style. Order:
-              Curriculum, Grade, Subject, Class, Section, then Export report
-              — per the teacher's explicit instruction. No top-level Time
-              Period filter — that lives inside Activity & Performance as
-              its own Today/Overall toggle (Section 7). */}
+          {/* Section 3 — top filters. Teacher-facing flow: Curriculum ->
+              Grade -> Section -> Subject, then Export report. No top-level
+              Time Period filter — that lives inside Activity & Performance
+              as its own Today/Overall toggle (Section 7). */}
           <TopFilters
             colors={colors}
             gold={gold}
             curriculumOptions={availableCurricula}
             selectedCurriculum={filters.curriculum}
-            onSelectCurriculum={(curriculum) => setFilters((f) => ({ ...f, curriculum }))}
+            // Cascading: picking a broader filter clears every narrower one
+            // beneath it, since a previously-picked Section/Subject may not
+            // exist under the new Curriculum/Grade at all — leaving it in
+            // place would silently filter out every real student.
+            onSelectCurriculum={(curriculum) => setFilters({ curriculum })}
             gradeOptions={availableGrades}
             selectedGrade={filters.grade}
-            onSelectGrade={(grade) => setFilters((f) => ({ ...f, grade }))}
-            subjectOptions={availableSubjects}
-            selectedSubject={filters.subject}
-            onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
-            classOptions={availableClasses}
-            selectedClass={filters.class}
-            onSelectClass={(cls) => setFilters((f) => ({ ...f, class: cls }))}
+            onSelectGrade={(grade) => setFilters((f) => ({ curriculum: f.curriculum, grade }))}
             sectionOptions={availableSections}
             selectedSection={filters.section}
-            onSelectSection={(section) => setFilters((f) => ({ ...f, section }))}
+            onSelectSection={(section) => setFilters((f) => ({ curriculum: f.curriculum, grade: f.grade, section }))}
+            subjectOptions={subjectOptions}
+            selectedSubject={filters.subject}
+            onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
             onExportPdf={handleExportPdf}
           />
 
@@ -113,6 +134,11 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
               data as Topic Exploration below (see utils/subjectSummary.ts),
               so it can never disagree with what the teacher filtered to. */}
           <SummaryCards colors={colors} gold={gold} subjects={subjectCards} loading={loading} />
+
+          {/* Student search — narrows Topic Exploration + Activity &
+              Performance together, on top of the class filters above.
+              Useful once a class runs ~30 students. */}
+          <StudentSearchBar colors={colors} value={searchQuery} onChangeText={setSearchQuery} />
 
           {/* Section 5 — Topic Exploration */}
           <View style={{ backgroundColor: colors.cardDark, borderRadius: 12, borderWidth: 1, borderColor: colors.borderColor, padding: 12 }}>
@@ -137,7 +163,7 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
             ) : (
               <HeatmapGrid
                 colors={colors}
-                students={students}
+                students={searchedHeatmapStudents}
                 topics={topics}
                 onCellPress={(student, topic) => setSelectedCell({ student, topic })}
               />
@@ -146,7 +172,7 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
 
           {/* Section 7/8/9 — Activity & Performance, with its own
               Today/Overall toggle. */}
-          <ActivityTable colors={colors} gold={gold} students={filteredRoster} loading={rosterLoading} mode={activityMode} onModeChange={setActivityMode} />
+          <ActivityTable colors={colors} gold={gold} students={searchedRoster} loading={rosterLoading} mode={activityMode} onModeChange={setActivityMode} />
         </ScrollView>
 
         {/* Section 6 — lightweight drill-down drawer */}

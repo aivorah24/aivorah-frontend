@@ -54,15 +54,14 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     if (hasDefaultedRef.current || data.students.length === 0) return;
     hasDefaultedRef.current = true;
     const curriculum = data.students.map((s) => s.curriculum).find((c): c is string => !!c);
-    const gradeCandidates = data.students.filter((s) => !curriculum || s.curriculum === curriculum);
-    const grade = gradeCandidates.map((s) => s.grade).find((g): g is string => !!g);
-    const subjectCandidates = gradeCandidates.filter((s) => !grade || normalizeGrade(s.grade) === normalizeGrade(grade));
-    const subject = subjectCandidates.flatMap((s) => s.scopedSubjects).find(Boolean);
-    const cls = subjectCandidates.map((s) => s.class).find((c): c is string => !!c);
-    const sectionCandidates = subjectCandidates.filter((s) => !cls || s.class === cls);
-    const section = sectionCandidates.map((s) => s.section).find((sec): sec is string => !!sec);
+    const inCurriculum = data.students.filter((s) => !curriculum || s.curriculum === curriculum);
+    const grade = inCurriculum.map((s) => s.grade).find((g): g is string => !!g);
+    const inGrade = inCurriculum.filter((s) => !grade || normalizeGrade(s.grade) === normalizeGrade(grade));
+    const section = inGrade.map((s) => s.section).find((sec): sec is string => !!sec);
+    const inSection = inGrade.filter((s) => !section || s.section === section);
+    const subject = inSection.flatMap((s) => s.scopedSubjects).find(Boolean);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFilters({ curriculum, grade, subject, class: cls, section });
+    setFilters({ curriculum, grade, section, subject });
   }, [data]);
 
   // Full filters (incl. subject) — drives Topic Exploration.
@@ -85,36 +84,37 @@ export function useStudentProgress(teacherEmail: string | undefined) {
   const availableCurricula = Array.from(
     new Set(data.students.map((s) => s.curriculum).filter((c): c is string => !!c))
   ).sort();
+  const matchesCurriculum = (s: HeatmapData['students'][number]) =>
+    !filters.curriculum || s.curriculum === filters.curriculum;
+  const matchesGrade = (s: HeatmapData['students'][number]) =>
+    !filters.grade || normalizeGrade(s.grade) === normalizeGrade(filters.grade);
+  const matchesSection = (s: HeatmapData['students'][number]) =>
+    !filters.section || s.section === filters.section;
+
   const availableGrades = Array.from(
     new Set(
       data.students
-        .filter((s) => !filters.curriculum || s.curriculum === filters.curriculum)
+        .filter(matchesCurriculum)
         .map((s) => s.grade)
         .filter((g): g is string => !!g)
+    )
+  ).sort();
+  // Sections a teacher handles for the selected grade — "if I handle Grade 3
+  // sections A and B, selecting Grade 3 shows both".
+  const availableSections = Array.from(
+    new Set(
+      data.students
+        .filter((s) => matchesCurriculum(s) && matchesGrade(s))
+        .map((s) => s.section)
+        .filter((sec): sec is string => !!sec)
     )
   ).sort();
   const availableSubjects = Array.from(
     new Set(
       data.students
-        .filter((s) => (!filters.curriculum || s.curriculum === filters.curriculum) && (!filters.grade || normalizeGrade(s.grade) === normalizeGrade(filters.grade)))
+        .filter((s) => matchesCurriculum(s) && matchesGrade(s) && matchesSection(s))
         .flatMap((s) => s.scopedSubjects)
         .filter(Boolean)
-    )
-  ).sort();
-  const availableClasses = Array.from(
-    new Set(
-      data.students
-        .filter((s) => (!filters.grade || normalizeGrade(s.grade) === normalizeGrade(filters.grade)) && (!filters.curriculum || s.curriculum === filters.curriculum))
-        .map((s) => s.class)
-        .filter((c): c is string => !!c)
-    )
-  ).sort();
-  const availableSections = Array.from(
-    new Set(
-      data.students
-        .filter((s) => (!filters.grade || normalizeGrade(s.grade) === normalizeGrade(filters.grade)) && (!filters.curriculum || s.curriculum === filters.curriculum) && (!filters.class || s.class === filters.class))
-        .map((s) => s.section)
-        .filter((sec): sec is string => !!sec)
     )
   ).sort();
 
@@ -123,7 +123,7 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     summaryStudents, summaryTopics,
     loading, refreshing, error, lastRefreshedAt,
     filters, setFilters,
-    availableSubjects, availableGrades, availableCurricula, availableClasses, availableSections,
+    availableSubjects, availableGrades, availableCurricula, availableSections,
     refresh: () => load(true),
   };
 }

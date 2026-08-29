@@ -18,6 +18,7 @@ function Harness({ teacherEmail }: { teacherEmail: string | undefined }) {
       <Text testID="availableSubjects">{JSON.stringify(h.availableSubjects)}</Text>
       <Text testID="availableGrades">{JSON.stringify(h.availableGrades)}</Text>
       <Text testID="availableSections">{JSON.stringify(h.availableSections)}</Text>
+      <Text testID="filters">{JSON.stringify(h.filters)}</Text>
       <TouchableOpacity testID="setSubjectMath" onPress={() => h.setFilters((f) => ({ ...f, subject: 'Mathematics' }))}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setGrade3" onPress={() => h.setFilters((f) => ({ ...f, grade: 'Grade 3' }))}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="refresh" onPress={() => h.refresh()}><Text>x</Text></TouchableOpacity>
@@ -32,7 +33,7 @@ beforeEach(() => {
 describe('useStudentProgress', () => {
   test('loads real heatmap data on mount', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonRes({
-      students: [{ id: 's1', name: 'Aarav', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: [], topicStatus: {} }],
+      students: [{ id: 's1', name: 'Aarav', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} }],
       topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
     })) as any;
 
@@ -43,11 +44,31 @@ describe('useStudentProgress', () => {
     expect(screen.getByTestId('topicCount').props.children).toBe(1);
   });
 
-  test('derives available subjects/grades from the real fetched data, not a hardcoded list', async () => {
+  test('availableGrades reflects the real fetched data, not a hardcoded list (unaffected by the grade auto-default)', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonRes({
       students: [
-        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: [], topicStatus: {} },
-        { id: 's2', name: 'B', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: [], topicStatus: {} },
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', class: null, photoUrl: null, scopedSubjects: ['English'], topicStatus: {} },
+      ],
+      topics: [{ topic: 'Fractions', subject: 'Mathematics' }, { topic: 'Grammar', subject: 'English' }],
+    })) as any;
+
+    await render(<Harness teacherEmail="teacher@test.com" />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    // Both students share curriculum IB PYP, so availableGrades (scoped only
+    // by curriculum, not by the auto-defaulted grade itself) still shows both.
+    expect(JSON.parse(screen.getByTestId('availableGrades').props.children)).toEqual(['Grade 4', 'Grade 6']);
+  });
+
+  // availableSubjects cascades on curriculum+grade+section (real
+  // scopedSubjects data, not the topics list) — two students sharing the
+  // whole selected class surface both of their real subjects.
+  test('availableSubjects reflects the real scopedSubjects data for the auto-defaulted curriculum+grade+section', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      students: [
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['English'], topicStatus: {} },
       ],
       topics: [{ topic: 'Fractions', subject: 'Mathematics' }, { topic: 'Grammar', subject: 'English' }],
     })) as any;
@@ -56,7 +77,24 @@ describe('useStudentProgress', () => {
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
 
     expect(JSON.parse(screen.getByTestId('availableSubjects').props.children)).toEqual(['English', 'Mathematics']);
-    expect(JSON.parse(screen.getByTestId('availableGrades').props.children)).toEqual(['Grade 4', 'Grade 6']);
+  });
+
+  // A student in a DIFFERENT section of the same grade must not leak their
+  // subject into the selected section's Subject dropdown.
+  test('availableSubjects excludes subjects that only exist in a different section', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      students: [
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'IB PYP', section: 'B', class: null, photoUrl: null, scopedSubjects: ['English'], topicStatus: {} },
+      ],
+      topics: [{ topic: 'Fractions', subject: 'Mathematics' }, { topic: 'Grammar', subject: 'English' }],
+    })) as any;
+
+    await render(<Harness teacherEmail="teacher@test.com" />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    // Auto-defaults to section A, whose only real subject is Mathematics.
+    expect(JSON.parse(screen.getByTestId('availableSubjects').props.children)).toEqual(['Mathematics']);
   });
 
   test('a network failure sets error=true and an empty (not stale/undefined) dataset', async () => {
@@ -69,6 +107,24 @@ describe('useStudentProgress', () => {
     expect(screen.getByTestId('studentCount').props.children).toBe(0);
   });
 
+  // Real, cascading defaults (Curriculum -> Grade -> Subject -> Class ->
+  // Section) as soon as data first loads — never a generic "All" default.
+  test('defaults every filter to the first real cascading value on load, never "All"', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      students: [
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+      ],
+      topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
+    })) as any;
+
+    await render(<Harness teacherEmail="teacher@test.com" />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    expect(JSON.parse(screen.getByTestId('filters').props.children)).toEqual({
+      curriculum: 'IB PYP', grade: 'Grade 4', section: 'A', subject: 'Mathematics',
+    });
+  });
+
   // The heatmap route has no curriculum query param, so it can't disambiguate
   // the "Grade 3 IB + Grade 4 CBSE" edge case server-side — the hook now does
   // exactly one unfiltered fetch, and every filter change is applied
@@ -76,8 +132,8 @@ describe('useStudentProgress', () => {
   test('changing filters does NOT re-fetch — filtering is applied client-side to the one loaded dataset', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonRes({
       students: [
-        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
-        { id: 's2', name: 'B', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['English'], topicStatus: {} },
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
       ],
       topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
     }));
@@ -86,12 +142,13 @@ describe('useStudentProgress', () => {
 
     await render(<Harness teacherEmail="teacher@test.com" />);
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
-    expect(screen.getByTestId('studentCount').props.children).toBe(2);
+    // Both students share the same auto-defaulted curriculum/grade/subject/section, so both remain visible after defaulting.
+    await waitFor(() => expect(screen.getByTestId('studentCount').props.children).toBe(2));
     fetchMock.mockClear();
 
-    await user.press(screen.getByTestId('setSubjectMath'));
+    await user.press(screen.getByTestId('setGrade3'));
 
-    await waitFor(() => expect(screen.getByTestId('studentCount').props.children).toBe(1));
+    await waitFor(() => expect(screen.getByTestId('studentCount').props.children).toBe(0));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -99,13 +156,13 @@ describe('useStudentProgress', () => {
   // is missing — I need to go back to All then tap grade 4." RCA (now moot
   // for network calls since there's only one unfiltered fetch, but the
   // option-list-derived-from-filtered-data class of bug is worth guarding):
-  // availableGrades must stay derived from the full unfiltered dataset even
-  // while a grade filter narrows `students`.
+  // availableGrades must stay derived from the curriculum-scoped dataset
+  // even while a grade filter narrows `students`.
   test('selecting a grade filter does NOT remove the other grades from availableGrades (the reported bug)', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonRes({
       students: [
-        { id: 's1', name: 'A', grade: 'Grade 3', curriculum: 'CBSE', section: 'A', photoUrl: null, scopedSubjects: [], topicStatus: {} },
-        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'CBSE', section: 'A', photoUrl: null, scopedSubjects: [], topicStatus: {} },
+        { id: 's1', name: 'A', grade: 'Grade 3', curriculum: 'CBSE', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'CBSE', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
       ],
       topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
     }));
@@ -131,9 +188,9 @@ describe('useStudentProgress', () => {
   test('availableSections is real, derived from the current grade+curriculum\'s students only', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonRes({
       students: [
-        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: [], topicStatus: {} },
-        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: [], topicStatus: {} },
-        { id: 's3', name: 'C', grade: 'Grade 6', curriculum: 'IB PYP', section: 'Z', photoUrl: null, scopedSubjects: [], topicStatus: {} },
+        { id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 4', curriculum: 'IB PYP', section: 'B', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
+        { id: 's3', name: 'C', grade: 'Grade 4', curriculum: 'IB PYP', section: 'Z', class: null, photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {} },
       ],
       topics: [],
     })) as any;
@@ -141,7 +198,7 @@ describe('useStudentProgress', () => {
     await render(<Harness teacherEmail="teacher@test.com" />);
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
 
-    // No grade filter yet -> every real section across all students.
+    // All three students share the same auto-defaulted curriculum+grade, so every real section shows.
     expect(JSON.parse(screen.getByTestId('availableSections').props.children)).toEqual(['A', 'B', 'Z']);
 
     await userEvent.setup().press(screen.getByTestId('setGrade3')); // narrows to grade='Grade 3', which has no students

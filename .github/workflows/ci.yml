@@ -10,121 +10,6 @@ on:
 env:
   # The frontend will be built and served locally on 3006
   BASE_URL: http://localhost:3006
-  # Inject required secrets
-  B2B_ADMIN_EMAIL: ${{ secrets.B2B_ADMIN_EMAIL }}
-  B2B_ADMIN_PASSWORD: ${{ secrets.B2B_ADMIN_PASSWORD }}
-  B2B_PARENT_EMAIL: ${{ secrets.B2B_PARENT_EMAIL }}
-  B2B_PARENT_PASSWORD: ${{ secrets.B2B_PARENT_PASSWORD }}
-  B2B_STUDENT_EMAIL: ${{ secrets.B2B_STUDENT_EMAIL }}
-  B2B_STUDENT_PASSWORD: ${{ secrets.B2B_STUDENT_PASSWORD }}
-  B2B_TEACHER_EMAIL: ${{ secrets.B2B_TEACHER_EMAIL }}
-  B2B_TEACHER_PASSWORD: ${{ secrets.B2B_TEACHER_PASSWORD }}
-  E2E_ADMIN_A: ${{ secrets.E2E_ADMIN_A }}
-  E2E_ADMIN_B: ${{ secrets.E2E_ADMIN_B }}
-  E2E_ADMIN_C: ${{ secrets.E2E_ADMIN_C }}
-  E2E_PARENT_A: ${{ secrets.E2E_PARENT_A }}
-  E2E_PARENT_B: ${{ secrets.E2E_PARENT_B }}
-  E2E_PARENT_C: ${{ secrets.E2E_PARENT_C }}
-  E2E_PARENT_D: ${{ secrets.E2E_PARENT_D }}
-  E2E_PARENT_E: ${{ secrets.E2E_PARENT_E }}
-  E2E_PARENT_F: ${{ secrets.E2E_PARENT_F }}
-  E2E_PARENT_F2: ${{ secrets.E2E_PARENT_F2 }}
-  E2E_PARENT_F3: ${{ secrets.E2E_PARENT_F3 }}
-  E2E_PARENT_F4: ${{ secrets.E2E_PARENT_F4 }}
-  E2E_PARENT_F5: ${{ secrets.E2E_PARENT_F5 }}
-  E2E_PARENT_F6: ${{ secrets.E2E_PARENT_F6 }}
-  E2E_PARENT_F7: ${{ secrets.E2E_PARENT_F7 }}
-  E2E_PARENT_G: ${{ secrets.E2E_PARENT_G }}
-  E2E_PARENT_H: ${{ secrets.E2E_PARENT_H }}
-  E2E_PARENT_I: ${{ secrets.E2E_PARENT_I }}
-  E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-  E2E_STUDENT_A: ${{ secrets.E2E_STUDENT_A }}
-  E2E_STUDENT_B: ${{ secrets.E2E_STUDENT_B }}
-  E2E_STUDENT_C: ${{ secrets.E2E_STUDENT_C }}
-  E2E_STUDENT_D: ${{ secrets.E2E_STUDENT_D }}
-  E2E_STUDENT_D1: ${{ secrets.E2E_STUDENT_D1 }}
-  E2E_STUDENT_D10: ${{ secrets.E2E_STUDENT_D10 }}
-  E2E_STUDENT_D2: ${{ secrets.E2E_STUDENT_D2 }}
-  E2E_STUDENT_D3: ${{ secrets.E2E_STUDENT_D3 }}
-  E2E_STUDENT_D4: ${{ secrets.E2E_STUDENT_D4 }}
-  E2E_STUDENT_D5: ${{ secrets.E2E_STUDENT_D5 }}
-  E2E_STUDENT_D6: ${{ secrets.E2E_STUDENT_D6 }}
-  E2E_STUDENT_D7: ${{ secrets.E2E_STUDENT_D7 }}
-  E2E_STUDENT_D8: ${{ secrets.E2E_STUDENT_D8 }}
-  E2E_STUDENT_D9: ${{ secrets.E2E_STUDENT_D9 }}
-  E2E_STUDENT_E: ${{ secrets.E2E_STUDENT_E }}
-  E2E_STUDENT_F: ${{ secrets.E2E_STUDENT_F }}
-  E2E_STUDENT_G: ${{ secrets.E2E_STUDENT_G }}
-  E2E_STUDENT_H: ${{ secrets.E2E_STUDENT_H }}
-  E2E_STUDENT_I: ${{ secrets.E2E_STUDENT_I }}
-  E2E_STUDENT_I1: ${{ secrets.E2E_STUDENT_I1 }}
-  E2E_STUDENT_I2: ${{ secrets.E2E_STUDENT_I2 }}
-  E2E_STUDENT_J: ${{ secrets.E2E_STUDENT_J }}
-  E2E_STUDENT_K: ${{ secrets.E2E_STUDENT_K }}
-  E2E_STUDENT_L: ${{ secrets.E2E_STUDENT_L }}
-  E2E_STUDENT_L2: ${{ secrets.E2E_STUDENT_L2 }}
-  E2E_STUDENT_L3: ${{ secrets.E2E_STUDENT_L3 }}
-  E2E_STUDENT_M: ${{ secrets.E2E_STUDENT_M }}
-  E2E_STUDENT_N: ${{ secrets.E2E_STUDENT_N }}
-  E2E_STUDENT_O: ${{ secrets.E2E_STUDENT_O }}
-  E2E_STUDENT_P: ${{ secrets.E2E_STUDENT_P }}
-  E2E_STUDENT_PARENT_D: ${{ secrets.E2E_STUDENT_PARENT_D }}
-  E2E_STUDENT_PARENT_F: ${{ secrets.E2E_STUDENT_PARENT_F }}
-  E2E_STUDENT_PARENT_F2: ${{ secrets.E2E_STUDENT_PARENT_F2 }}
-  E2E_STUDENT_PARENT_F3: ${{ secrets.E2E_STUDENT_PARENT_F3 }}
-  E2E_STUDENT_PARENT_F4: ${{ secrets.E2E_STUDENT_PARENT_F4 }}
-  E2E_STUDENT_PARENT_F5: ${{ secrets.E2E_STUDENT_PARENT_F5 }}
-  E2E_STUDENT_PARENT_F6: ${{ secrets.E2E_STUDENT_PARENT_F6 }}
-  E2E_STUDENT_PARENT_F7: ${{ secrets.E2E_STUDENT_PARENT_F7 }}
-  E2E_STUDENT_PARENT_G: ${{ secrets.E2E_STUDENT_PARENT_G }}
-  E2E_STUDENT_Q: ${{ secrets.E2E_STUDENT_Q }}
-  E2E_STUDENT_R: ${{ secrets.E2E_STUDENT_R }}
-  E2E_STUDENT_TEACHER_A: ${{ secrets.E2E_STUDENT_TEACHER_A }}
-  E2E_TEACHER_A: ${{ secrets.E2E_TEACHER_A }}
-  E2E_TEACHER_AA: ${{ secrets.E2E_TEACHER_AA }}
-  E2E_TEACHER_B: ${{ secrets.E2E_TEACHER_B }}
-  E2E_TEACHER_C: ${{ secrets.E2E_TEACHER_C }}
-  E2E_TEACHER_D: ${{ secrets.E2E_TEACHER_D }}
-  E2E_TEACHER_E: ${{ secrets.E2E_TEACHER_E }}
-  E2E_TEACHER_F: ${{ secrets.E2E_TEACHER_F }}
-  E2E_TEACHER_G: ${{ secrets.E2E_TEACHER_G }}
-  E2E_TEACHER_H: ${{ secrets.E2E_TEACHER_H }}
-  E2E_TEACHER_I: ${{ secrets.E2E_TEACHER_I }}
-  E2E_TEACHER_J: ${{ secrets.E2E_TEACHER_J }}
-  E2E_TEACHER_K: ${{ secrets.E2E_TEACHER_K }}
-  E2E_TEACHER_L: ${{ secrets.E2E_TEACHER_L }}
-  E2E_TEACHER_M: ${{ secrets.E2E_TEACHER_M }}
-  E2E_TEACHER_N: ${{ secrets.E2E_TEACHER_N }}
-  E2E_TEACHER_O: ${{ secrets.E2E_TEACHER_O }}
-  E2E_TEACHER_P: ${{ secrets.E2E_TEACHER_P }}
-  E2E_TEACHER_Q: ${{ secrets.E2E_TEACHER_Q }}
-  E2E_TEACHER_R: ${{ secrets.E2E_TEACHER_R }}
-  E2E_TEACHER_S: ${{ secrets.E2E_TEACHER_S }}
-  E2E_TEACHER_T: ${{ secrets.E2E_TEACHER_T }}
-  E2E_TEACHER_U: ${{ secrets.E2E_TEACHER_U }}
-  E2E_TEACHER_V: ${{ secrets.E2E_TEACHER_V }}
-  E2E_TEACHER_W: ${{ secrets.E2E_TEACHER_W }}
-  E2E_TEACHER_X: ${{ secrets.E2E_TEACHER_X }}
-  E2E_TEACHER_Y: ${{ secrets.E2E_TEACHER_Y }}
-  E2E_TEACHER_Z: ${{ secrets.E2E_TEACHER_Z }}
-  NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  BACKEND_URL: ${{ secrets.BACKEND_URL }}
-  SCHEDULE_SERVICE_URL: ${{ secrets.SCHEDULE_SERVICE_URL }}
-  CHALLENGES_SERVICE_URL: ${{ secrets.CHALLENGES_SERVICE_URL }}
-  LEADERBOARD_SERVICE_URL: ${{ secrets.LEADERBOARD_SERVICE_URL }}
-  ASSIGNMENTS_SERVICE_URL: ${{ secrets.ASSIGNMENTS_SERVICE_URL }}
-  PROFILE_SERVICE_URL: ${{ secrets.PROFILE_SERVICE_URL }}
-  TEACHER_DASHBOARD_SERVICE_URL: ${{ secrets.TEACHER_DASHBOARD_SERVICE_URL }}
-  LEARNING_PATHS_SERVICE_URL: ${{ secrets.LEARNING_PATHS_SERVICE_URL }}
-  STUDENTS_SERVICE_URL: ${{ secrets.STUDENTS_SERVICE_URL }}
-  DAILY_HABITS_SERVICE_URL: ${{ secrets.DAILY_HABITS_SERVICE_URL }}
-  WORLD_AND_YOU_SERVICE_URL: ${{ secrets.WORLD_AND_YOU_SERVICE_URL }}
-  AI_COACH_SERVICE_URL: ${{ secrets.AI_COACH_SERVICE_URL }}
-  BEDTIME_STORIES_SERVICE_URL: ${{ secrets.BEDTIME_STORIES_SERVICE_URL }}
-  HELP_SERVICE_URL: ${{ secrets.HELP_SERVICE_URL }}
-  AUTH_SERVICE_URL: ${{ secrets.AUTH_SERVICE_URL }}
 
 jobs:
   build_and_setup:
@@ -163,6 +48,7 @@ jobs:
       - name: Run E2E Setup (Warmup + Login + Snapshot)
         run: |
           cd e2e
+          echo "${{ secrets.E2E_ENV_FILE }}" > .env
           # Temporarily serve the app so setup can hit it locally
           npx serve -s ../dist -l 3006 &
           SERVER_PID=$!
