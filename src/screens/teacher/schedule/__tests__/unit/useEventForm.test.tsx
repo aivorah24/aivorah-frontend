@@ -223,7 +223,7 @@ describe('confirmDeleteEvent — Bug #15 (native platforms must actually confirm
 
   test('on native, pressing "Delete" in the real confirmation prompt actually deletes', async () => {
     RN.Platform.OS = 'android';
-    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg?: string, buttons?: any[]) => {
       buttons.find((b) => b.text === 'Delete')?.onPress?.();
     });
     const removeEvent = jest.fn().mockResolvedValue(undefined);
@@ -237,7 +237,7 @@ describe('confirmDeleteEvent — Bug #15 (native platforms must actually confirm
 
   test('on native, pressing "Cancel" in the confirmation prompt does NOT delete', async () => {
     RN.Platform.OS = 'ios';
-    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg?: string, buttons?: any[]) => {
       buttons.find((b) => b.text === 'Cancel')?.onPress?.();
     });
     const removeEvent = jest.fn().mockResolvedValue(undefined);
