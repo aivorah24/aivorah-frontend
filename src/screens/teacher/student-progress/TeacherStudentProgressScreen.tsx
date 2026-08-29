@@ -28,7 +28,7 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
     students, topics, summaryStudents, summaryTopics,
     loading, refreshing, error, lastRefreshedAt,
     filters, setFilters,
-    availableSubjects, availableGrades, availableCurricula, availableSections,
+    availableSubjects, availableGrades, availableCurricula, availableClasses, availableSections,
     refresh,
   } = useStudentProgress(user?.email);
   const { students: roster, loading: rosterLoading } = useStudentRoster(user?.email);
@@ -66,19 +66,16 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
 
-        {/* Section 2 — header action row: refresh timestamp, Refresh, Export
-            PDF. Kept as its own bar below the shared Header component
-            (rather than modifying Header.tsx, which is used across every
-            screen) to avoid unrelated risk to other pages. */}
+        {/* Section 2 — header action row: refresh timestamp + Refresh.
+            Export report now lives at the end of the filter row (matches
+            reference design). Kept as its own bar below the shared Header
+            component (rather than modifying Header.tsx, which is used
+            across every screen) to avoid unrelated risk to other pages. */}
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 12, paddingHorizontal: spacing.lg, paddingTop: 10 }}>
           <Text style={{ fontSize: 11, color: colors.textDim }}>{updatedAgoLabel(lastRefreshedAt)}</Text>
           <TouchableOpacity testID="student-progress-refresh" onPress={refresh} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 7, borderWidth: 1, borderColor: colors.borderColor }}>
             <Feather name="refresh-cw" size={12} color={colors.textMuted} />
             <Text style={{ fontSize: 11.5, fontWeight: '600', color: colors.textMuted }}>Refresh</Text>
-          </TouchableOpacity>
-          <TouchableOpacity testID="student-progress-export-pdf" onPress={handleExportPdf} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 7, borderWidth: 1, borderColor: gold }}>
-            <Feather name="download" size={12} color={gold} />
-            <Text style={{ fontSize: 11.5, fontWeight: '700', color: gold }}>Export PDF</Text>
           </TouchableOpacity>
         </View>
 
@@ -86,24 +83,30 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={gold} />}
         >
-          {/* Section 3 — top filters: Subject / Grade / Class / Section only.
-              No Time Period filter here — that lives inside Activity &
-              Performance as its own Today/Overall toggle (Section 7). */}
+          {/* Section 3 — top filters, modern dropdown style. Order:
+              Curriculum, Grade, Subject, Class, Section, then Export report
+              — per the teacher's explicit instruction. No top-level Time
+              Period filter — that lives inside Activity & Performance as
+              its own Today/Overall toggle (Section 7). */}
           <TopFilters
             colors={colors}
             gold={gold}
-            subjectOptions={availableSubjects}
-            selectedSubject={filters.subject}
-            onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
+            curriculumOptions={availableCurricula}
+            selectedCurriculum={filters.curriculum}
+            onSelectCurriculum={(curriculum) => setFilters((f) => ({ ...f, curriculum }))}
             gradeOptions={availableGrades}
             selectedGrade={filters.grade}
             onSelectGrade={(grade) => setFilters((f) => ({ ...f, grade }))}
-            classOptions={availableCurricula}
-            selectedClass={filters.curriculum}
-            onSelectClass={(curriculum) => setFilters((f) => ({ ...f, curriculum }))}
+            subjectOptions={availableSubjects}
+            selectedSubject={filters.subject}
+            onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
+            classOptions={availableClasses}
+            selectedClass={filters.class}
+            onSelectClass={(cls) => setFilters((f) => ({ ...f, class: cls }))}
             sectionOptions={availableSections}
             selectedSection={filters.section}
             onSelectSection={(section) => setFilters((f) => ({ ...f, section }))}
+            onExportPdf={handleExportPdf}
           />
 
           {/* Section 4 — Subject Progress, derived from the SAME filtered

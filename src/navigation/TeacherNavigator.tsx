@@ -14,7 +14,7 @@ import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScr
 // was a dummy — hardcoded "Alice Smith"/"Bob Jones", zero real backend call.
 // Replaced with the real screen, backed by the extracted heatmap route in
 // aivorah-teacher-dashboard-service.
-import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
+// import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
 import TeacherSyllabusImportScreen from '@legacy/teacher-legacy/TeacherSyllabusImportScreen';
 import TeacherAnnouncementsScreen from '@legacy/teacher-legacy/TeacherAnnouncementsScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';

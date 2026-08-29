@@ -16,6 +16,7 @@ export interface HeatmapStudent {
   grade: string | null;
   curriculum: string | null;
   section: string | null;
+  class: string | null;
   photoUrl: string | null;
   scopedSubjects: string[];
   topicStatus: Record<string, TopicStatus>;
@@ -52,6 +53,7 @@ export interface RosterStudent {
   grade: string;
   curriculum: string | null;
   section: string | null;
+  class: string | null;
   photoUrl: string | null;
   scopedSubjects: string[];
   studyTime: number;

@@ -50,10 +50,10 @@ const navigation = { openDrawer: jest.fn(), navigate: jest.fn() };
 
 const HEATMAP_RESPONSE = {
   students: [
-    { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+    { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
       Fractions: { status: 'mastered', attempts: 1, latestScore: 90, bestScore: 90, struggled: false, lastAttemptDate: '2026-08-20', subject: 'Mathematics' },
     } },
-    { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+    { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', class: '6B', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
       Fractions: { status: 'stuck', attempts: 2, latestScore: 30, bestScore: 40, struggled: false, lastAttemptDate: '2026-08-01', subject: 'Mathematics' },
     } },
   ],
@@ -61,8 +61,8 @@ const HEATMAP_RESPONSE = {
 };
 
 const ROSTER_RESPONSE = [
-  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, learningPathTimeToday: 12, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
-  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, learningPathTimeToday: 0, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 0, quizBestScore: null, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
+  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, learningPathTimeToday: 12, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
+  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', class: '6B', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, learningPathTimeToday: 0, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 0, quizBestScore: null, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
 ];
 
 const ATTEMPTS_RESPONSE = {
@@ -71,9 +71,14 @@ const ATTEMPTS_RESPONSE = {
   ],
 };
 
+const PREFERENCES_RESPONSE = {
+  teaches: [{ grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Mathematics'] }],
+};
+
 function jsonRes(url: string) {
   if (url.includes('/heatmap')) return Promise.resolve({ ok: true, json: async () => HEATMAP_RESPONSE });
   if (url.includes('/topic/') && url.includes('/attempts')) return Promise.resolve({ ok: true, json: async () => ATTEMPTS_RESPONSE });
+  if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
   if (url.match(/\/by-teacher\/[^/]+$/)) return Promise.resolve({ ok: true, json: async () => ROSTER_RESPONSE });
   return Promise.resolve({ ok: true, json: async () => ({}) });
 }
@@ -110,7 +115,8 @@ describe('TeacherStudentProgressScreen', () => {
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
     expect(screen.getByTestId('activity-row-s2')).toBeTruthy(); // Bela Rao, Grade 6
 
-    await user.press(screen.getByTestId('top-filter-Grade-Grade 4'));
+    await user.press(screen.getByTestId('filter-dropdown-grade'));
+    await user.press(screen.getByTestId('filter-dropdown-grade-option-Grade 4'));
 
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — stays
     expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — filtered out
@@ -118,13 +124,27 @@ describe('TeacherStudentProgressScreen', () => {
     expect(screen.queryByTestId('heatmap-cell-s2-Fractions')).toBeNull();
   });
 
-  // "Class" filter maps to curriculum — the edge case a teacher can handle
-  // the same grade under two different curricula.
-  test('the Class (curriculum) filter is a real, independent filter option', async () => {
+  // Class = the real `users.class` column (e.g. "4A"), a distinct dropdown
+  // from Grade/Section per the teacher's explicit instruction.
+  test('the Class filter (real users.class column) narrows to the exact class selected', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+    expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
+
+    await user.press(screen.getByTestId('filter-dropdown-class'));
+    await user.press(screen.getByTestId('filter-dropdown-class-option-4A'));
+
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+    expect(screen.queryByTestId('activity-row-s2')).toBeNull();
+  });
+
+  test('the Curriculum dropdown is a real, independently selectable filter', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
 
-    expect(screen.getByTestId('top-filter-Class-IB PYP')).toBeTruthy();
+    await userEvent.setup().press(screen.getByTestId('filter-dropdown-curriculum'));
+    expect(screen.getByTestId('filter-dropdown-curriculum-option-IB PYP')).toBeTruthy();
   });
 
   test('a backend failure shows a real retry affordance, not a silent blank screen', async () => {
@@ -213,15 +233,16 @@ describe('TeacherStudentProgressScreen', () => {
     expect(screen.queryByText('20m')).toBeNull();
   });
 
-  test('there is no top-level Time Period filter — only Subject/Grade/Class/Section', async () => {
+  test('there is no top-level Time Period filter — only Curriculum/Grade/Subject/Class/Section dropdowns', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
 
     expect(screen.queryByText('Time Period')).toBeNull();
-    expect(screen.getByTestId('top-filter-Subject-all')).toBeTruthy();
-    expect(screen.getByTestId('top-filter-Grade-all')).toBeTruthy();
-    expect(screen.getByTestId('top-filter-Class-all')).toBeTruthy();
-    expect(screen.getByTestId('top-filter-Section-all')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-curriculum')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-grade')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-subject')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-class')).toBeTruthy();
+    expect(screen.getByTestId('filter-dropdown-section')).toBeTruthy();
   });
 
   test('Export PDF is present and clicking it does not crash', async () => {
@@ -271,7 +292,7 @@ describe('TeacherStudentProgressScreen', () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            students: [{ id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+            students: [{ id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
               Fractions: { status: 'mastered', attempts: 0, latestScore: null, bestScore: null, struggled: false, lastAttemptDate: null, subject: 'Mathematics' },
             } }],
             topics: [{ topic: 'Fractions', subject: 'Mathematics' }],

@@ -2,13 +2,15 @@ interface ClassFilterable {
   grade: string | null;
   curriculum: string | null;
   section: string | null;
+  class: string | null;
   scopedSubjects: string[];
 }
 
 export interface ClassFilters {
-  grade?: string;
   curriculum?: string;
+  grade?: string;
   subject?: string;
+  class?: string; // real users.class column (e.g. "4A") — undefined = "All classes"
   section?: string; // undefined/omitted = "All sections"
 }
 
@@ -34,6 +36,7 @@ export function filterByClass<T extends ClassFilterable>(items: T[], filters: Cl
     if (filters.grade && normalizeGrade(s.grade) !== normalizeGrade(filters.grade)) return false;
     if (filters.curriculum && s.curriculum !== filters.curriculum) return false;
     if (filters.subject && !s.scopedSubjects.includes(filters.subject)) return false;
+    if (filters.class && s.class !== filters.class) return false;
     if (filters.section && s.section !== filters.section) return false;
     return true;
   });
