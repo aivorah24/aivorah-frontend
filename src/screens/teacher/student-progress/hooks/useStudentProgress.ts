@@ -60,11 +60,27 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     )
   ).sort();
 
+  // Real subjects with actual linked students for a given grade+curriculum —
+  // NOT the teacher's configured Staff Subject Mapping. A teacher can be
+  // configured to teach a subject (e.g. "Social Studies") with zero real
+  // students actually linked under it yet, which must never be the default
+  // filter (it silently produces "No students to show for this filter.").
+  const subjectsForGradeCurriculum = (grade: string, curriculum: string): string[] =>
+    Array.from(
+      new Set(
+        data.students
+          .filter((s) => s.grade === grade && s.curriculum === curriculum)
+          .flatMap((s) => s.scopedSubjects)
+          .filter(Boolean)
+      )
+    ).sort();
+
   return {
     students: filteredStudents, topics,
     loading, refreshing, error,
     filters, setFilters,
     availableSubjects, availableGrades, availableSections,
+    subjectsForGradeCurriculum,
     refresh: () => load(true),
   };
 }

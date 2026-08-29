@@ -187,12 +187,16 @@ describe('TeacherStudentProgressScreen', () => {
 
   // Section D — Activity & Performance table
   test('renders the real Activity & Performance table (Section D), including the real quiz stats', async () => {
+    const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
-    expect(screen.getByTestId('needs-attention-s2')).toBeTruthy(); // real needsAttention flag
     expect(screen.queryByTestId('needs-attention-s1')).toBeNull();
+
+    await user.press(screen.getByTestId('class-selector-class-1'));
+
+    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy());
+    expect(screen.getByTestId('needs-attention-s2')).toBeTruthy(); // real needsAttention flag
   });
 
   // Section E — drill-down drawer
@@ -228,7 +232,7 @@ describe('TeacherStudentProgressScreen', () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            students: [{ id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', photoUrl: null, scopedSubjects: [], topicStatus: {
+            students: [{ id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
               Fractions: { status: 'mastered', attempts: 0, latestScore: null, bestScore: null, struggled: false, lastAttemptDate: null, subject: 'Mathematics' },
             } }],
             topics: [{ topic: 'Fractions', subject: 'Mathematics' }],

@@ -26,7 +26,7 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   const { classes, loading: classesLoading } = useTeacherClasses(user?.email);
   const {
     students, topics, loading, refreshing, error,
-    filters, setFilters, availableSections, refresh,
+    filters, setFilters, availableSections, subjectsForGradeCurriculum, refresh,
   } = useStudentProgress(user?.email);
   const { subjects: subjectSummaries, combined, loading: summaryLoading } = useSubjectSummary(user?.email);
   const { students: roster, loading: rosterLoading } = useStudentRoster(user?.email);
