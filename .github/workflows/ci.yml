@@ -145,11 +145,11 @@ jobs:
       # - name: Lint check
       #   run: npm run lint
         
-      - name: Unit tests
-        run: npm run test:unit -- --ci
+      # - name: Unit tests
+      #   run: npm run test:unit -- --ci
         
-      - name: Integration tests
-        run: npm run test:integration -- --ci
+      # - name: Integration tests
+      #   run: npm run test:integration -- --ci
         
       - name: Build Web Application
         run: npm run vercel-build

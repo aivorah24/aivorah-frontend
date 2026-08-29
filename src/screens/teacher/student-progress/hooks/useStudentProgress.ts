@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchStudentProgressHeatmap } from '../services/studentProgressService';
-import { filterByClass, type ClassFilters } from '../utils/rosterFilters';
+import { filterByClass, normalizeGrade, type ClassFilters } from '../utils/rosterFilters';
 import type { HeatmapData } from '../types';
 
 const EMPTY: HeatmapData = { students: [], topics: [] };
@@ -54,7 +54,7 @@ export function useStudentProgress(teacherEmail: string | undefined) {
   const availableSections = Array.from(
     new Set(
       data.students
-        .filter((s) => (!filters.grade || s.grade === filters.grade) && (!filters.curriculum || s.curriculum === filters.curriculum))
+        .filter((s) => (!filters.grade || normalizeGrade(s.grade) === normalizeGrade(filters.grade)) && (!filters.curriculum || s.curriculum === filters.curriculum))
         .map((s) => s.section)
         .filter((sec): sec is string => !!sec)
     )
@@ -65,22 +65,38 @@ export function useStudentProgress(teacherEmail: string | undefined) {
   // configured to teach a subject (e.g. "Social Studies") with zero real
   // students actually linked under it yet, which must never be the default
   // filter (it silently produces "No students to show for this filter.").
+  // Grade comparison is normalized — the teacher's own "teaches" grade
+  // ("Grade 7") and a real student's `users.grade` column ("7") are
+  // different formats for the same grade.
   const subjectsForGradeCurriculum = (grade: string, curriculum: string): string[] =>
     Array.from(
       new Set(
         data.students
-          .filter((s) => s.grade === grade && s.curriculum === curriculum)
+          .filter((s) => normalizeGrade(s.grade) === normalizeGrade(grade) && s.curriculum === curriculum)
           .flatMap((s) => s.scopedSubjects)
           .filter(Boolean)
       )
     ).sort();
+
+  // Every real (grade, curriculum) combo that actually has linked students,
+  // in the students' own raw grade format (e.g. "7", not "Grade 7") — used
+  // as a fallback when none of the teacher's configured "teaches" combos
+  // have any real data at all (a Settings/roster mismatch), so the screen
+  // can still default to something real instead of a permanent empty state.
+  const realGradeCurriculumCombos = Array.from(
+    new Map(
+      data.students
+        .filter((s): s is typeof s & { grade: string; curriculum: string } => !!s.grade && !!s.curriculum)
+        .map((s) => [`${s.grade}|${s.curriculum}`, { grade: s.grade, curriculum: s.curriculum }])
+    ).values()
+  );
 
   return {
     students: filteredStudents, topics,
     loading, refreshing, error,
     filters, setFilters,
     availableSubjects, availableGrades, availableSections,
-    subjectsForGradeCurriculum,
+    subjectsForGradeCurriculum, realGradeCurriculumCombos,
     refresh: () => load(true),
   };
 }

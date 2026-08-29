@@ -39,11 +39,31 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   // Keep filters.grade/curriculum/subject in sync with the selected class —
   // adjusted during render (React's "adjusting state when a prop changes"
   // pattern) rather than an effect, matching useTeacherCurriculumGrade.ts.
+  // Waits for the real heatmap data to finish loading before syncing: the
+  // default subject must be one with actual linked students, not just the
+  // first subject in the teacher's configured Staff Subject Mapping — a
+  // teacher can be configured for a subject (e.g. "Social Studies") with
+  // zero real students linked under it yet, which silently produced "No
+  // students to show for this filter." when picked blindly.
   const [syncedClassIndex, setSyncedClassIndex] = useState(-1);
-  if (selectedClass && syncedClassIndex !== selectedClassIndex) {
+  if (selectedClass && !loading && syncedClassIndex !== selectedClassIndex) {
     setSyncedClassIndex(selectedClassIndex);
-    setFilters({ grade: selectedClass.grade, curriculum: selectedClass.curriculum, subject: selectedClass.subjects[0] });
+    const realSubjects = subjectsForGradeCurriculum(selectedClass.grade, selectedClass.curriculum);
+    const preferredSubject = selectedClass.subjects.find((s) => realSubjects.includes(s));
+    const subject = preferredSubject ?? realSubjects[0] ?? selectedClass.subjects[0];
+    setFilters({ grade: selectedClass.grade, curriculum: selectedClass.curriculum, subject });
   }
+
+  // Subject chips shown to the teacher: their own configured subjects for
+  // this class, narrowed to the ones with real linked students — a
+  // configured-but-dataless subject (e.g. "Social Studies" with 0 students)
+  // would just be a dead end to tap.
+  const realSubjectsForClass = selectedClass
+    ? subjectsForGradeCurriculum(selectedClass.grade, selectedClass.curriculum)
+    : [];
+  const subjectOptions = selectedClass
+    ? selectedClass.subjects.filter((s) => realSubjectsForClass.includes(s))
+    : [];
 
   // Reported feedback: the Activity table ignored the filters entirely —
   // one shared set of controls (grade+curriculum+subject+section) now scopes
@@ -79,7 +99,7 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
                 classes={classes}
                 selectedClassIndex={selectedClassIndex}
                 onSelectClass={setSelectedClassIndex}
-                subjectOptions={selectedClass?.subjects ?? []}
+                subjectOptions={subjectOptions}
                 selectedSubject={filters.subject}
                 onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
                 sectionOptions={availableSections}

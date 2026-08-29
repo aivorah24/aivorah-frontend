@@ -140,6 +140,33 @@ describe('TeacherStudentProgressScreen', () => {
     expect(screen.queryByTestId('activity-row-s1')).toBeNull(); // Aarav, Grade 4 — filtered out
   });
 
+  // Regression test for the exact bug just reported: the teacher is
+  // configured (Staff Subject Mapping) to teach "Social Studies" for
+  // Grade 3 IB PYP, but the real linked students only have "Mathematics"
+  // data. Defaulting blindly to teaches[0].subjects[0] picked "Social
+  // Studies" and showed "No students to show for this filter." even though
+  // real Mathematics data existed for that same class.
+  test('defaults to a subject with real linked students, not just the first configured-but-dataless subject', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/user/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            teaches: [{ grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Social Studies', 'Mathematics'] }],
+          }),
+        });
+      }
+      return jsonRes(url);
+    }) as any;
+
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
+    expect(screen.queryByText('No students to show for this filter.')).toBeNull();
+    expect(screen.getByTestId('class-selector-subject-Mathematics')).toBeTruthy();
+    expect(screen.queryByTestId('class-selector-subject-Social Studies')).toBeNull();
+  });
+
   test('a backend failure shows a real retry affordance, not a silent blank screen', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
 
