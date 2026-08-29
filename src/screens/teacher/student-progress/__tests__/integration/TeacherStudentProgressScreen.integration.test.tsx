@@ -40,10 +40,10 @@ const navigation = { openDrawer: jest.fn(), navigate: jest.fn() };
 
 const HEATMAP_RESPONSE = {
   students: [
-    { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+    { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
       Fractions: { status: 'mastered', attempts: 1, latestScore: 90, bestScore: 90, struggled: false, lastAttemptDate: '2026-08-20', subject: 'Mathematics' },
     } },
-    { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
+    { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], topicStatus: {
       Fractions: { status: 'stuck', attempts: 2, latestScore: 30, bestScore: 40, struggled: false, lastAttemptDate: '2026-08-01', subject: 'Mathematics' },
     } },
   ],
@@ -56,8 +56,8 @@ const SUBJECT_SUMMARY_RESPONSE = {
 };
 
 const ROSTER_RESPONSE = [
-  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
-  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 2, quizBestScore: 40, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
+  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
+  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 2, quizBestScore: 40, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
 ];
 
 const ATTEMPTS_RESPONSE = {
@@ -66,10 +66,21 @@ const ATTEMPTS_RESPONSE = {
   ],
 };
 
+// This teacher's real Staff Subject Mapping — the edge case from the
+// reported feedback: two different (grade, curriculum) combos, each with
+// its own real scoped subject.
+const PREFERENCES_RESPONSE = {
+  teaches: [
+    { grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Mathematics'] },
+    { grade: 'Grade 6', curriculum: 'IB PYP', subjects: ['Mathematics'] },
+  ],
+};
+
 function jsonRes(url: string) {
   if (url.includes('/heatmap')) return Promise.resolve({ ok: true, json: async () => HEATMAP_RESPONSE });
   if (url.includes('/subject-summary')) return Promise.resolve({ ok: true, json: async () => SUBJECT_SUMMARY_RESPONSE });
   if (url.includes('/topic/') && url.includes('/attempts')) return Promise.resolve({ ok: true, json: async () => ATTEMPTS_RESPONSE });
+  if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
   if (url.match(/\/by-teacher\/[^/]+$/)) return Promise.resolve({ ok: true, json: async () => ROSTER_RESPONSE });
   return Promise.resolve({ ok: true, json: async () => ({}) });
 }
@@ -80,11 +91,14 @@ beforeEach(() => {
 });
 
 describe('TeacherStudentProgressScreen', () => {
-  test('loads and renders the real heatmap: students, their names, and the legend', async () => {
+  test('loads and renders the real heatmap, defaulted to the teacher\'s first real taught class', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
+    // Defaults to the teacher's first real (grade, curriculum) combo —
+    // Grade 4 IB PYP — so only Aarav (Grade 4) shows until the class is
+    // switched, never a generic "All" mixing both classes together.
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
-    expect(screen.getAllByText('Bela Rao').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Bela Rao').length).toBe(0);
     expect(screen.getByTestId('legend-mastered')).toBeTruthy();
     expect(screen.getByTestId('legend-stuck')).toBeTruthy();
   });
@@ -94,33 +108,36 @@ describe('TeacherStudentProgressScreen', () => {
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
 
     expect(screen.getByTestId('heatmap-cell-s1-Fractions')).toBeTruthy();
-    expect(screen.getByTestId('heatmap-cell-s2-Fractions')).toBeTruthy();
   });
 
-  test('filtering by subject re-fetches and the request includes the real filter', async () => {
+  // Edge case from the reported feedback: a teacher can handle Grade 4
+  // under IB and Grade 6 under IB (or different curricula) as two separate
+  // real classes — switching the class selector must swap rosters, not mix them.
+  test('switching the class selector to the teacher\'s other real class swaps the roster, not a generic "All"', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
+    expect(screen.queryAllByText('Bela Rao').length).toBe(0);
 
-    (global.fetch as jest.Mock).mockClear();
-    await user.press(screen.getByTestId('filter-Subject-Mathematics'));
+    await user.press(screen.getByTestId('class-selector-class-1'));
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('subject=Mathematics')));
+    await waitFor(() => expect(screen.getAllByText('Bela Rao').length).toBeGreaterThan(0));
+    expect(screen.queryAllByText('Aarav Kapoor').length).toBe(0);
   });
 
   // Regression test for the reported bug: filtering the heatmap to one
-  // grade left the Activity & Performance table below still showing every
-  // grade — the two sections shared no filter state.
-  test('the Grade filter also narrows the Activity & Performance table (Section D), not just the heatmap', async () => {
+  // class left the Activity & Performance table below still showing every
+  // student — the two sections shared no filter state.
+  test('the class selector also narrows the Activity & Performance table (Section D), not just the heatmap', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
-    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.getByTestId('activity-row-s2')).toBeTruthy(); // Bela Rao, Grade 6
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — default class
+    expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — not this class
 
-    await user.press(screen.getByTestId('filter-Grade-Grade 4'));
+    await user.press(screen.getByTestId('class-selector-class-1'));
 
-    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — stays
-    expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — filtered out
+    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy()); // Bela, Grade 6 — now shown
+    expect(screen.queryByTestId('activity-row-s1')).toBeNull(); // Aarav, Grade 4 — filtered out
   });
 
   test('a backend failure shows a real retry affordance, not a silent blank screen', async () => {
@@ -149,7 +166,10 @@ describe('TeacherStudentProgressScreen', () => {
   });
 
   test('no linked students -> a real "no students" message, not an empty crash', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ students: [], topics: [] }) }) as any;
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
+      return Promise.resolve({ ok: true, json: async () => ({ students: [], topics: [] }) });
+    }) as any;
 
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 

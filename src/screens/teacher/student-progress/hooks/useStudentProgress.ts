@@ -1,30 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchStudentProgressHeatmap } from '../services/studentProgressService';
+import { filterByClass, type ClassFilters } from '../utils/rosterFilters';
 import type { HeatmapData } from '../types';
 
 const EMPTY: HeatmapData = { students: [], topics: [] };
 
+// A single unfiltered fetch, all filtering done client-side below. This
+// replaced a server-refetch-per-filter-change design because the heatmap
+// route only accepts ?subject=/?grade= (no curriculum) — insufficient for
+// the reported edge case of a teacher handling the same grade under two
+// curricula (e.g. Grade 3 IB + Grade 4 CBSE), which needs grade+curriculum
+// applied together to disambiguate the right roster.
 export function useStudentProgress(teacherEmail: string | undefined) {
   const [data, setData] = useState<HeatmapData>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
-  const [subjectFilter, setSubjectFilter] = useState<string | undefined>(undefined);
-  const [gradeFilter, setGradeFilter] = useState<string | undefined>(undefined);
-  // Reported bug: tapping "Grade 3" made "Grade 4" vanish from the filter
-  // pills entirely, forcing a trip back through "All" to reach it. RCA: the
-  // available options were derived from `data`, which IS the filtered
-  // response — so filtering to Grade 3 collapsed the option list to just
-  // Grade 3. `baseline` is fetched once, unfiltered, purely to populate the
-  // filter pills — it never changes when subjectFilter/gradeFilter change.
-  const [baseline, setBaseline] = useState<HeatmapData>(EMPTY);
+  const [filters, setFilters] = useState<ClassFilters>({});
 
   const load = useCallback(async (isRefresh = false) => {
     if (!teacherEmail) { setLoading(false); return; }
     if (isRefresh) setRefreshing(true); else setLoading(true);
     setError(false);
     try {
-      const result = await fetchStudentProgressHeatmap(teacherEmail, { subject: subjectFilter, grade: gradeFilter });
+      const result = await fetchStudentProgressHeatmap(teacherEmail, {});
       setData(result && Array.isArray(result.students) ? result : EMPTY);
     } catch {
       setError(true);
@@ -32,17 +31,6 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  }, [teacherEmail, subjectFilter, gradeFilter]);
-
-  const loadBaseline = useCallback(async () => {
-    if (!teacherEmail) return;
-    try {
-      const result = await fetchStudentProgressHeatmap(teacherEmail, {});
-      setBaseline(result && Array.isArray(result.students) ? result : EMPTY);
-    } catch {
-      // Filter pills just stay empty on a baseline-fetch failure — the main
-      // `load()` above is what surfaces the real error state to the user.
     }
   }, [teacherEmail]);
 
@@ -52,25 +40,31 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     load();
   }, [load]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadBaseline();
-  }, [loadBaseline]);
+  const filteredStudents = filterByClass(data.students, filters);
+  // Topics list is scoped to the same subject filter, so the heatmap's
+  // column headers match the students actually shown in its rows.
+  const topics = filters.subject ? data.topics.filter((t) => t.subject === filters.subject) : data.topics;
 
-  // Real subject/grade options derived from the UNFILTERED baseline, so
-  // selecting one filter never removes the others from the option list.
   const availableSubjects = Array.from(
-    new Set(baseline.topics.map((t) => t.subject).filter((s): s is string => !!s))
+    new Set(data.topics.map((t) => t.subject).filter((s): s is string => !!s))
   ).sort();
   const availableGrades = Array.from(
-    new Set(baseline.students.map((s) => s.grade).filter((g): g is string => !!g))
+    new Set(data.students.map((s) => s.grade).filter((g): g is string => !!g))
+  ).sort();
+  const availableSections = Array.from(
+    new Set(
+      data.students
+        .filter((s) => (!filters.grade || s.grade === filters.grade) && (!filters.curriculum || s.curriculum === filters.curriculum))
+        .map((s) => s.section)
+        .filter((sec): sec is string => !!sec)
+    )
   ).sort();
 
   return {
-    students: data.students, topics: data.topics,
+    students: filteredStudents, topics,
     loading, refreshing, error,
-    subjectFilter, setSubjectFilter, gradeFilter, setGradeFilter,
-    availableSubjects, availableGrades,
-    refresh: () => { load(true); loadBaseline(); },
+    filters, setFilters,
+    availableSubjects, availableGrades, availableSections,
+    refresh: () => load(true),
   };
 }
