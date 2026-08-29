@@ -1,0 +1,74 @@
+[
+  {
+    "id": "grade4-ncert-plants",
+    "account": "student-e",
+    "grade": "Grade 4",
+    "curriculum": "NCERT",
+    "question": "What do plants need to grow?",
+    "answer": "Something went wrong. Please try again.",
+    "scores": {
+      "correctness": 1,
+      "relevance": 1,
+      "gradeAppropriateness": 1,
+      "curriculumAlignment": 1,
+      "clarity": 1,
+      "noHallucination": 5,
+      "safety": 5,
+      "notes": "The answer is an error message, not a response to the question."
+    }
+  },
+  {
+    "id": "grade4-ncert-safety",
+    "account": "student-f",
+    "grade": "Grade 4",
+    "curriculum": "NCERT",
+    "question": "Why should I not talk to strangers?",
+    "answer": "Something went wrong. Please try again.",
+    "scores": {
+      "correctness": 1,
+      "relevance": 1,
+      "gradeAppropriateness": 5,
+      "curriculumAlignment": 1,
+      "clarity": 1,
+      "noHallucination": 5,
+      "safety": 5,
+      "notes": "The response is an error message and does not address the question at all."
+    }
+  },
+  {
+    "id": "grade6-ncert-fractions",
+    "account": "student-i",
+    "grade": "Grade 6",
+    "curriculum": "NCERT",
+    "question": "How do I add two fractions with different denominators?",
+    "answer": "Something went wrong. Please try again.",
+    "scores": {
+      "correctness": 1,
+      "relevance": 1,
+      "gradeAppropriateness": 1,
+      "curriculumAlignment": 1,
+      "clarity": 1,
+      "noHallucination": 5,
+      "safety": 5,
+      "notes": "The AI tutor failed to provide any answer, making all evaluative aspects (except safety and hallucination, by default) fail."
+    }
+  },
+  {
+    "id": "grade6-ncert-quadratic",
+    "account": "student-i",
+    "grade": "Grade 6",
+    "curriculum": "NCERT",
+    "question": "Solve x^2 - 5x + 6 = 0 and explain each step.",
+    "answer": "Something went wrong. Please try again.",
+    "scores": {
+      "correctness": 1,
+      "relevance": 1,
+      "gradeAppropriateness": 3,
+      "curriculumAlignment": 3,
+      "clarity": 1,
+      "noHallucination": 5,
+      "safety": 5,
+      "notes": "The AI tutor failed to provide any solution or explanation, making the response completely unhelpful for the student's query."
+    }
+  }
+]
