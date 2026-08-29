@@ -7,71 +7,55 @@ import { useAuth } from '../../../context/AuthContext';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import Header from '../../../components/common/Header';
 import { useStudentProgress } from './hooks/useStudentProgress';
-import { useSubjectSummary } from './hooks/useSubjectSummary';
 import { useStudentRoster } from './hooks/useStudentRoster';
-import { useTeacherClasses } from './hooks/useTeacherClasses';
 import HeatmapGrid from './components/HeatmapGrid';
 import HeatmapLegend from './components/HeatmapLegend';
-import ClassSelector from './components/ClassSelector';
+import TopFilters from './components/TopFilters';
 import SummaryCards from './components/SummaryCards';
 import ActivityTable from './components/ActivityTable';
 import AttemptDrawer from './components/AttemptDrawer';
 import { filterByClass } from './utils/rosterFilters';
+import { computeSubjectSummary } from './utils/subjectSummary';
+import { exportStudentProgressPdf } from './utils/exportPdf';
+import { updatedAgoLabel } from './utils/formatters';
 import type { HeatmapStudent } from './types';
 
 export default function TeacherStudentProgressScreen({ navigation }: any) {
   const { colors } = useTheme();
   const gold = colors.accentYellow;
   const { user } = useAuth();
-  const { classes, loading: classesLoading } = useTeacherClasses(user?.email);
   const {
-    students, topics, loading, refreshing, error,
-    filters, setFilters, availableSections, subjectsForGradeCurriculum, refresh,
+    students, topics, summaryStudents, summaryTopics,
+    loading, refreshing, error, lastRefreshedAt,
+    filters, setFilters,
+    availableSubjects, availableGrades, availableCurricula, availableSections,
+    refresh,
   } = useStudentProgress(user?.email);
-  const { subjects: subjectSummaries, combined, loading: summaryLoading } = useSubjectSummary(user?.email);
   const { students: roster, loading: rosterLoading } = useStudentRoster(user?.email);
 
-  // No generic class combo exists until the teacher's real teaches[] loads —
-  // default to their first real (grade, curriculum) combo, never "All".
-  const [selectedClassIndex, setSelectedClassIndex] = useState(0);
-  const selectedClass = classes[selectedClassIndex];
+  // Section 7/8/10 — Activity & Performance's own Today/Overall toggle,
+  // deliberately scoped to that section only (NOT a top-level page filter).
+  const [activityMode, setActivityMode] = useState<'today' | 'overall'>('overall');
 
-  // Keep filters.grade/curriculum/subject in sync with the selected class —
-  // adjusted during render (React's "adjusting state when a prop changes"
-  // pattern) rather than an effect, matching useTeacherCurriculumGrade.ts.
-  // Waits for the real heatmap data to finish loading before syncing: the
-  // default subject must be one with actual linked students, not just the
-  // first subject in the teacher's configured Staff Subject Mapping — a
-  // teacher can be configured for a subject (e.g. "Social Studies") with
-  // zero real students linked under it yet, which silently produced "No
-  // students to show for this filter." when picked blindly.
-  const [syncedClassIndex, setSyncedClassIndex] = useState(-1);
-  if (selectedClass && !loading && syncedClassIndex !== selectedClassIndex) {
-    setSyncedClassIndex(selectedClassIndex);
-    const realSubjects = subjectsForGradeCurriculum(selectedClass.grade, selectedClass.curriculum);
-    const preferredSubject = selectedClass.subjects.find((s) => realSubjects.includes(s));
-    const subject = preferredSubject ?? realSubjects[0] ?? selectedClass.subjects[0];
-    setFilters({ grade: selectedClass.grade, curriculum: selectedClass.curriculum, subject });
-  }
-
-  // Subject chips shown to the teacher: their own configured subjects for
-  // this class, narrowed to the ones with real linked students — a
-  // configured-but-dataless subject (e.g. "Social Studies" with 0 students)
-  // would just be a dead end to tap.
-  const realSubjectsForClass = selectedClass
-    ? subjectsForGradeCurriculum(selectedClass.grade, selectedClass.curriculum)
-    : [];
-  const subjectOptions = selectedClass
-    ? selectedClass.subjects.filter((s) => realSubjectsForClass.includes(s))
-    : [];
-
-  // Reported feedback: the Activity table ignored the filters entirely —
-  // one shared set of controls (grade+curriculum+subject+section) now scopes
-  // both the heatmap and this table, applied client-side since the roster
-  // endpoint has no filter query params at all.
+  // One shared filter state (Subject/Grade/Class/Section) drives Subject
+  // Progress, Topic Exploration, AND the Activity table below — never
+  // independent per-section state, so the three sections can't disagree.
   const filteredRoster = filterByClass(roster, filters);
+  const subjectCards = computeSubjectSummary(summaryStudents, summaryTopics);
 
   const [selectedCell, setSelectedCell] = useState<{ student: HeatmapStudent; topic: string } | null>(null);
+
+  function handleExportPdf() {
+    exportStudentProgressPdf({
+      teacherName: user?.name || user?.email || 'Teacher',
+      filters,
+      subjectCards,
+      heatmapStudents: students,
+      heatmapTopics: topics,
+      activityStudents: filteredRoster,
+      activityMode,
+    });
+  }
 
   return (
     <ScreenLayout>
@@ -81,38 +65,53 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
           subtitle="Real mastery data per student, per topic"
           onMenuPress={() => navigation.openDrawer()}
         />
+
+        {/* Section 2 — header action row: refresh timestamp, Refresh, Export
+            PDF. Kept as its own bar below the shared Header component
+            (rather than modifying Header.tsx, which is used across every
+            screen) to avoid unrelated risk to other pages. */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 12, paddingHorizontal: spacing.lg, paddingTop: 10 }}>
+          <Text style={{ fontSize: 11, color: colors.textDim }}>{updatedAgoLabel(lastRefreshedAt)}</Text>
+          <TouchableOpacity testID="student-progress-refresh" onPress={refresh} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 7, borderWidth: 1, borderColor: colors.borderColor }}>
+            <Feather name="refresh-cw" size={12} color={colors.textMuted} />
+            <Text style={{ fontSize: 11.5, fontWeight: '600', color: colors.textMuted }}>Refresh</Text>
+          </TouchableOpacity>
+          <TouchableOpacity testID="student-progress-export-pdf" onPress={handleExportPdf} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 7, borderWidth: 1, borderColor: gold }}>
+            <Feather name="download" size={12} color={gold} />
+            <Text style={{ fontSize: 11.5, fontWeight: '700', color: gold }}>Export PDF</Text>
+          </TouchableOpacity>
+        </View>
+
         <ScrollView
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={gold} />}
         >
-          {/* Page-level class selector — top-right, per the reported
-              feedback ("keep the filter on top right side"). Defaults to
-              the teacher's real taught grade+curriculum+subject (no generic
-              "All"); section stays a separate "All sections" default since
-              it isn't part of the teacher's own class assignment. Scopes
-              BOTH the heatmap and the Activity table below it. */}
-          {!classesLoading && classes.length === 0 ? null : (
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <ClassSelector
-                colors={colors}
-                gold={gold}
-                classes={classes}
-                selectedClassIndex={selectedClassIndex}
-                onSelectClass={setSelectedClassIndex}
-                subjectOptions={subjectOptions}
-                selectedSubject={filters.subject}
-                onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
-                sectionOptions={availableSections}
-                selectedSection={filters.section}
-                onSelectSection={(section) => setFilters((f) => ({ ...f, section }))}
-              />
-            </View>
-          )}
+          {/* Section 3 — top filters: Subject / Grade / Class / Section only.
+              No Time Period filter here — that lives inside Activity &
+              Performance as its own Today/Overall toggle (Section 7). */}
+          <TopFilters
+            colors={colors}
+            gold={gold}
+            subjectOptions={availableSubjects}
+            selectedSubject={filters.subject}
+            onSelectSubject={(subject) => setFilters((f) => ({ ...f, subject }))}
+            gradeOptions={availableGrades}
+            selectedGrade={filters.grade}
+            onSelectGrade={(grade) => setFilters((f) => ({ ...f, grade }))}
+            classOptions={availableCurricula}
+            selectedClass={filters.curriculum}
+            onSelectClass={(curriculum) => setFilters((f) => ({ ...f, curriculum }))}
+            sectionOptions={availableSections}
+            selectedSection={filters.section}
+            onSelectSection={(section) => setFilters((f) => ({ ...f, section }))}
+          />
 
-          {/* Section B — Where the class stands, by subject */}
-          <SummaryCards colors={colors} gold={gold} subjects={subjectSummaries} combined={combined} loading={summaryLoading} />
+          {/* Section 4 — Subject Progress, derived from the SAME filtered
+              data as Topic Exploration below (see utils/subjectSummary.ts),
+              so it can never disagree with what the teacher filtered to. */}
+          <SummaryCards colors={colors} gold={gold} subjects={subjectCards} loading={loading} />
 
-          {/* Section C — Topic exploration heatmap */}
+          {/* Section 5 — Topic Exploration */}
           <View style={{ backgroundColor: colors.cardDark, borderRadius: 12, borderWidth: 1, borderColor: colors.borderColor, padding: 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
               <View>
@@ -142,11 +141,12 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
             )}
           </View>
 
-          {/* Section D — Activity & Performance table */}
-          <ActivityTable colors={colors} gold={gold} students={filteredRoster} loading={rosterLoading} />
+          {/* Section 7/8/9 — Activity & Performance, with its own
+              Today/Overall toggle. */}
+          <ActivityTable colors={colors} gold={gold} students={filteredRoster} loading={rosterLoading} mode={activityMode} onModeChange={setActivityMode} />
         </ScrollView>
 
-        {/* Section E — drill-down drawer */}
+        {/* Section 6 — lightweight drill-down drawer */}
         {selectedCell && (
           <AttemptDrawer
             colors={colors}

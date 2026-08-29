@@ -58,12 +58,12 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
       {/* Not yet refactored — served from src/.legacy-screens/teacher-legacy/
-          until their own dedicated refactor pass, same as TeacherProgress/
-          TeacherChallenges/TeacherMessages above. Were declared in
-          TeacherDrawerParamList (navigation/types.ts) and had sidebar menu
-          items (DrawerContent.tsx/Sidebar.tsx) pointing at them, but were
-          never actually registered as a Drawer.Screen — both "Manage
-          Syllabus" and "Announcements" were dead sidebar links until this. */}
+          until their own dedicated refactor pass, same as TeacherChallenges/
+          TeacherMessages above. Were declared in TeacherDrawerParamList
+          (navigation/types.ts) and had sidebar menu items
+          (DrawerContent.tsx/Sidebar.tsx) pointing at them, but were never
+          actually registered as a Drawer.Screen — both "Manage Syllabus"
+          and "Announcements" were dead sidebar links until this. */}
       <Drawer.Screen name="TeacherSyllabusImport" component={TeacherSyllabusImportScreen} />
       <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />

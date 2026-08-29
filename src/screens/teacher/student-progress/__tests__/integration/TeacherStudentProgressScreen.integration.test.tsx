@@ -36,6 +36,16 @@ jest.mock('../../../../../context/ThemeContext', () => ({
   }),
 }));
 
+// jsPDF isn't relevant to component behavior here and pulls in canvas/DOM
+// machinery jsdom doesn't have — stub the one method exportPdf.ts calls.
+jest.mock('jspdf', () => ({
+  jsPDF: jest.fn().mockImplementation(() => ({
+    internal: { pageSize: { getHeight: () => 800, getWidth: () => 600 } },
+    setFont: jest.fn(), setFontSize: jest.fn(), setTextColor: jest.fn(),
+    text: jest.fn(), addPage: jest.fn(), save: jest.fn(),
+  })),
+}));
+
 const navigation = { openDrawer: jest.fn(), navigate: jest.fn() };
 
 const HEATMAP_RESPONSE = {
@@ -50,14 +60,9 @@ const HEATMAP_RESPONSE = {
   topics: [{ topic: 'Fractions', subject: 'Mathematics' }],
 };
 
-const SUBJECT_SUMMARY_RESPONSE = {
-  subjects: [{ subject: 'Mathematics', avgScorePct: 62, avgAttemptSeconds: 480, attemptCount: 5 }],
-  combined: { avgScorePct: 62, avgAttemptSeconds: 480, attemptCount: 5 },
-};
-
 const ROSTER_RESPONSE = [
-  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
-  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 2, quizBestScore: 40, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
+  { id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 90, learningPathTime: 40, learningPathTimeToday: 12, assignmentTime: 30, challengeTime: 20, progressPct: 60, totalTopics: 20, completedTopics: ['Fractions', 'Decimals'], quizAttempts: 1, quizBestScore: 90, lastActive: new Date().toISOString(), needsAttention: false },
+  { id: 's2', name: 'Bela Rao', grade: 'Grade 6', curriculum: 'IB PYP', section: 'B', photoUrl: null, scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, learningPathTimeToday: 0, assignmentTime: 5, challengeTime: 0, progressPct: 5, totalTopics: 20, completedTopics: ['Fractions'], quizAttempts: 0, quizBestScore: null, lastActive: '2020-01-01T00:00:00.000Z', needsAttention: true },
 ];
 
 const ATTEMPTS_RESPONSE = {
@@ -66,21 +71,9 @@ const ATTEMPTS_RESPONSE = {
   ],
 };
 
-// This teacher's real Staff Subject Mapping — the edge case from the
-// reported feedback: two different (grade, curriculum) combos, each with
-// its own real scoped subject.
-const PREFERENCES_RESPONSE = {
-  teaches: [
-    { grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Mathematics'] },
-    { grade: 'Grade 6', curriculum: 'IB PYP', subjects: ['Mathematics'] },
-  ],
-};
-
 function jsonRes(url: string) {
   if (url.includes('/heatmap')) return Promise.resolve({ ok: true, json: async () => HEATMAP_RESPONSE });
-  if (url.includes('/subject-summary')) return Promise.resolve({ ok: true, json: async () => SUBJECT_SUMMARY_RESPONSE });
   if (url.includes('/topic/') && url.includes('/attempts')) return Promise.resolve({ ok: true, json: async () => ATTEMPTS_RESPONSE });
-  if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
   if (url.match(/\/by-teacher\/[^/]+$/)) return Promise.resolve({ ok: true, json: async () => ROSTER_RESPONSE });
   return Promise.resolve({ ok: true, json: async () => ({}) });
 }
@@ -91,14 +84,11 @@ beforeEach(() => {
 });
 
 describe('TeacherStudentProgressScreen', () => {
-  test('loads and renders the real heatmap, defaulted to the teacher\'s first real taught class', async () => {
+  test('loads and renders the real heatmap: both real students, no generic "All" default hiding anyone', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
-    // Defaults to the teacher's first real (grade, curriculum) combo —
-    // Grade 4 IB PYP — so only Aarav (Grade 4) shows until the class is
-    // switched, never a generic "All" mixing both classes together.
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
-    expect(screen.queryAllByText('Bela Rao').length).toBe(0);
+    expect(screen.getAllByText('Bela Rao').length).toBeGreaterThan(0);
     expect(screen.getByTestId('legend-mastered')).toBeTruthy();
     expect(screen.getByTestId('legend-stuck')).toBeTruthy();
   });
@@ -108,63 +98,33 @@ describe('TeacherStudentProgressScreen', () => {
     await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
 
     expect(screen.getByTestId('heatmap-cell-s1-Fractions')).toBeTruthy();
-  });
-
-  // Edge case from the reported feedback: a teacher can handle Grade 4
-  // under IB and Grade 6 under IB (or different curricula) as two separate
-  // real classes — switching the class selector must swap rosters, not mix them.
-  test('switching the class selector to the teacher\'s other real class swaps the roster, not a generic "All"', async () => {
-    const user = userEvent.setup();
-    await render(<TeacherStudentProgressScreen navigation={navigation} />);
-    await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
-    expect(screen.queryAllByText('Bela Rao').length).toBe(0);
-
-    await user.press(screen.getByTestId('class-selector-class-1'));
-
-    await waitFor(() => expect(screen.getAllByText('Bela Rao').length).toBeGreaterThan(0));
-    expect(screen.queryAllByText('Aarav Kapoor').length).toBe(0);
+    expect(screen.getByTestId('heatmap-cell-s2-Fractions')).toBeTruthy();
   });
 
   // Regression test for the reported bug: filtering the heatmap to one
-  // class left the Activity & Performance table below still showing every
-  // student — the two sections shared no filter state.
-  test('the class selector also narrows the Activity & Performance table (Section D), not just the heatmap', async () => {
+  // grade left the Activity & Performance table below still showing every
+  // grade — the two sections shared no filter state.
+  test('the Grade filter narrows BOTH the heatmap and the Activity & Performance table (Section D), never one alone', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
-    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — default class
-    expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — not this class
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+    expect(screen.getByTestId('activity-row-s2')).toBeTruthy(); // Bela Rao, Grade 6
 
-    await user.press(screen.getByTestId('class-selector-class-1'));
+    await user.press(screen.getByTestId('top-filter-Grade-Grade 4'));
 
-    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy()); // Bela, Grade 6 — now shown
-    expect(screen.queryByTestId('activity-row-s1')).toBeNull(); // Aarav, Grade 4 — filtered out
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy()); // Aarav, Grade 4 — stays
+    expect(screen.queryByTestId('activity-row-s2')).toBeNull(); // Bela, Grade 6 — filtered out
+    // Topic exploration narrows too — same shared filter state.
+    expect(screen.queryByTestId('heatmap-cell-s2-Fractions')).toBeNull();
   });
 
-  // Regression test for the exact bug just reported: the teacher is
-  // configured (Staff Subject Mapping) to teach "Social Studies" for
-  // Grade 3 IB PYP, but the real linked students only have "Mathematics"
-  // data. Defaulting blindly to teaches[0].subjects[0] picked "Social
-  // Studies" and showed "No students to show for this filter." even though
-  // real Mathematics data existed for that same class.
-  test('defaults to a subject with real linked students, not just the first configured-but-dataless subject', async () => {
-    global.fetch = jest.fn((url: string) => {
-      if (url.includes('/user/preferences')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            teaches: [{ grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Social Studies', 'Mathematics'] }],
-          }),
-        });
-      }
-      return jsonRes(url);
-    }) as any;
-
+  // "Class" filter maps to curriculum — the edge case a teacher can handle
+  // the same grade under two different curricula.
+  test('the Class (curriculum) filter is a real, independent filter option', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
 
-    await waitFor(() => expect(screen.getAllByText('Aarav Kapoor').length).toBeGreaterThan(0));
-    expect(screen.queryByText('No students to show for this filter.')).toBeNull();
-    expect(screen.getByTestId('class-selector-subject-Mathematics')).toBeTruthy();
-    expect(screen.queryByTestId('class-selector-subject-Social Studies')).toBeNull();
+    expect(screen.getByTestId('top-filter-Class-IB PYP')).toBeTruthy();
   });
 
   test('a backend failure shows a real retry affordance, not a silent blank screen', async () => {
@@ -193,37 +153,89 @@ describe('TeacherStudentProgressScreen', () => {
   });
 
   test('no linked students -> a real "no students" message, not an empty crash', async () => {
-    global.fetch = jest.fn((url: string) => {
-      if (url.includes('/user/preferences')) return Promise.resolve({ ok: true, json: async () => PREFERENCES_RESPONSE });
-      return Promise.resolve({ ok: true, json: async () => ({ students: [], topics: [] }) });
-    }) as any;
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ students: [], topics: [] }) }) as any;
 
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByText('No students to show for this filter.')).toBeTruthy());
   });
 
-  // Section B — Where the class stands, by subject
-  test('renders the real subject summary cards (Section B)', async () => {
+  // Section 4 — Subject Progress, now derived client-side from the SAME
+  // filtered heatmap data (see utils/subjectSummary.ts), not a separate
+  // unfiltered backend call — so it can never disagree with Topic
+  // Exploration below it.
+  test('renders the real Subject Progress cards (Section 4), consistent with the heatmap data', async () => {
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByTestId('subject-card-Mathematics')).toBeTruthy());
-    expect(screen.getByTestId('subject-card-combined')).toBeTruthy();
-    expect(screen.getAllByText('62%').length).toBeGreaterThan(0);
+    // 1 mastered cell (Aarav) out of 2 total real cells (Aarav mastered, Bela stuck) = 50%.
+    expect(screen.getAllByText('50%').length).toBeGreaterThan(0);
+    expect(screen.getByText('Class average mastery · 2 students')).toBeTruthy();
   });
 
   // Section D — Activity & Performance table
   test('renders the real Activity & Performance table (Section D), including the real quiz stats', async () => {
-    const user = userEvent.setup();
     await render(<TeacherStudentProgressScreen navigation={navigation} />);
 
     await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
-    expect(screen.queryByTestId('needs-attention-s1')).toBeNull();
-
-    await user.press(screen.getByTestId('class-selector-class-1'));
-
-    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy());
+    expect(screen.getByTestId('activity-row-s2')).toBeTruthy();
     expect(screen.getByTestId('needs-attention-s2')).toBeTruthy(); // real needsAttention flag
+    expect(screen.queryByTestId('needs-attention-s1')).toBeNull();
+  });
+
+  // Section 9 — Best Quiz Score must say "No quiz attempts" (Bela has 0),
+  // never a fake 0%.
+  test('a student with zero quiz attempts shows "No quiz attempts", not a fake 0%', async () => {
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s2')).toBeTruthy());
+
+    expect(screen.getByText('No quiz attempts')).toBeTruthy();
+    expect(screen.queryByText('0%')).toBeNull();
+  });
+
+  // Section 7/10 — Today/Overall toggle lives inside Activity & Performance
+  // only, and switches real per-day data (learningPathTimeToday) vs
+  // cumulative — never a fabricated per-day value for fields with no real
+  // "today" column (Assignments/Challenges).
+  test('the Today/Overall toggle switches real Learning Path time and shows "not tracked" for fields with no real per-day data', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+    expect(screen.getByText('40m')).toBeTruthy(); // Aarav's overall learningPathTime
+
+    await user.press(screen.getByTestId('activity-mode-today'));
+
+    expect(screen.getByText('12m')).toBeTruthy(); // Aarav's real learningPathTimeToday
+    // Aarav's real assignmentTime (30m) and challengeTime (20m) must NOT
+    // appear in Today mode — that would silently pass off overall totals as
+    // "today" values.
+    expect(screen.queryByText('30m')).toBeNull();
+    expect(screen.queryByText('20m')).toBeNull();
+  });
+
+  test('there is no top-level Time Period filter — only Subject/Grade/Class/Section', async () => {
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+
+    expect(screen.queryByText('Time Period')).toBeNull();
+    expect(screen.getByTestId('top-filter-Subject-all')).toBeTruthy();
+    expect(screen.getByTestId('top-filter-Grade-all')).toBeTruthy();
+    expect(screen.getByTestId('top-filter-Class-all')).toBeTruthy();
+    expect(screen.getByTestId('top-filter-Section-all')).toBeTruthy();
+  });
+
+  test('Export PDF is present and clicking it does not crash', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+
+    await user.press(screen.getByTestId('student-progress-export-pdf'));
+    // jsPDF is mocked — reaching here without throwing is the assertion.
+  });
+
+  test('shows a real "Updated ... ago" timestamp after a successful load, not a fake "live" indicator', async () => {
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByText(/Updated/)).toBeTruthy());
   });
 
   // Section E — drill-down drawer

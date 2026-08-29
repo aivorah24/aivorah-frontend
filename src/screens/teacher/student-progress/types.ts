@@ -58,6 +58,12 @@ export interface RosterStudent {
   learningPathTime: number;
   assignmentTime: number;
   challengeTime: number;
+  // "Today" scope for the Activity & Performance Today/Overall toggle. Only
+  // the Learning Path has a real per-day column (`learning_path_minutes`
+  // reset daily) — Assignments/Challenges have no equivalent per-day
+  // tracking anywhere in the schema, so there is no honest "today" value
+  // for them (the UI must show an explicit "not tracked" state, never 0m).
+  learningPathTimeToday: number | null;
   progressPct: number;
   // Real denominator behind progressPct (total topics for this student's
   // grade/curriculum/subject, from Qdrant). When 0, progressPct isn't a

@@ -6,16 +6,18 @@ import type { HeatmapData } from '../types';
 const EMPTY: HeatmapData = { students: [], topics: [] };
 
 // A single unfiltered fetch, all filtering done client-side below. This
-// replaced a server-refetch-per-filter-change design because the heatmap
-// route only accepts ?subject=/?grade= (no curriculum) — insufficient for
-// the reported edge case of a teacher handling the same grade under two
-// curricula (e.g. Grade 3 IB + Grade 4 CBSE), which needs grade+curriculum
-// applied together to disambiguate the right roster.
+// keeps Subject/Grade/Class(curriculum)/Section as one shared filter state
+// (Section 11's "single source of truth") so Topic Exploration, the
+// Subject Progress summary, and Activity & Performance can never show
+// mutually inconsistent populations — and it sidesteps the heatmap route's
+// missing curriculum query param, which alone can't disambiguate a teacher
+// handling the same grade under two curricula.
 export function useStudentProgress(teacherEmail: string | undefined) {
   const [data, setData] = useState<HeatmapData>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [filters, setFilters] = useState<ClassFilters>({});
 
   const load = useCallback(async (isRefresh = false) => {
@@ -25,6 +27,7 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     try {
       const result = await fetchStudentProgressHeatmap(teacherEmail, {});
       setData(result && Array.isArray(result.students) ? result : EMPTY);
+      setLastRefreshedAt(Date.now());
     } catch {
       setError(true);
       setData(EMPTY);
@@ -40,16 +43,27 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     load();
   }, [load]);
 
+  // Full filters (incl. subject) — drives Topic Exploration.
   const filteredStudents = filterByClass(data.students, filters);
-  // Topics list is scoped to the same subject filter, so the heatmap's
-  // column headers match the students actually shown in its rows.
   const topics = filters.subject ? data.topics.filter((t) => t.subject === filters.subject) : data.topics;
+
+  // Grade+Class+Section only (NOT subject) — drives the Subject Progress
+  // summary, so every subject the teacher teaches for this class still gets
+  // its own card even while one subject is selected up top (spec: "If only
+  // one subject is selected, show that subject's progress clearly; if All
+  // subjects, show the relevant subject-wise summaries").
+  const { subject: _subjectFilter, ...classOnlyFilters } = filters;
+  const summaryStudents = filterByClass(data.students, classOnlyFilters);
+  const summaryTopics = data.topics;
 
   const availableSubjects = Array.from(
     new Set(data.topics.map((t) => t.subject).filter((s): s is string => !!s))
   ).sort();
   const availableGrades = Array.from(
     new Set(data.students.map((s) => s.grade).filter((g): g is string => !!g))
+  ).sort();
+  const availableCurricula = Array.from(
+    new Set(data.students.map((s) => s.curriculum).filter((c): c is string => !!c))
   ).sort();
   const availableSections = Array.from(
     new Set(
@@ -60,43 +74,12 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     )
   ).sort();
 
-  // Real subjects with actual linked students for a given grade+curriculum —
-  // NOT the teacher's configured Staff Subject Mapping. A teacher can be
-  // configured to teach a subject (e.g. "Social Studies") with zero real
-  // students actually linked under it yet, which must never be the default
-  // filter (it silently produces "No students to show for this filter.").
-  // Grade comparison is normalized — the teacher's own "teaches" grade
-  // ("Grade 7") and a real student's `users.grade` column ("7") are
-  // different formats for the same grade.
-  const subjectsForGradeCurriculum = (grade: string, curriculum: string): string[] =>
-    Array.from(
-      new Set(
-        data.students
-          .filter((s) => normalizeGrade(s.grade) === normalizeGrade(grade) && s.curriculum === curriculum)
-          .flatMap((s) => s.scopedSubjects)
-          .filter(Boolean)
-      )
-    ).sort();
-
-  // Every real (grade, curriculum) combo that actually has linked students,
-  // in the students' own raw grade format (e.g. "7", not "Grade 7") — used
-  // as a fallback when none of the teacher's configured "teaches" combos
-  // have any real data at all (a Settings/roster mismatch), so the screen
-  // can still default to something real instead of a permanent empty state.
-  const realGradeCurriculumCombos = Array.from(
-    new Map(
-      data.students
-        .filter((s): s is typeof s & { grade: string; curriculum: string } => !!s.grade && !!s.curriculum)
-        .map((s) => [`${s.grade}|${s.curriculum}`, { grade: s.grade, curriculum: s.curriculum }])
-    ).values()
-  );
-
   return {
     students: filteredStudents, topics,
-    loading, refreshing, error,
+    summaryStudents, summaryTopics,
+    loading, refreshing, error, lastRefreshedAt,
     filters, setFilters,
-    availableSubjects, availableGrades, availableSections,
-    subjectsForGradeCurriculum, realGradeCurriculumCombos,
+    availableSubjects, availableGrades, availableCurricula, availableSections,
     refresh: () => load(true),
   };
 }
