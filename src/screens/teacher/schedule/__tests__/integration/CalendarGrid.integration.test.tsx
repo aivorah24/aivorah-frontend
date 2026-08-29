@@ -22,7 +22,7 @@ import { TIMES, HOUR_HEIGHT } from '../../constants';
 import { dateISO } from '../../utils/scheduleUtils';
 import type { ScheduleEvent } from '../../types';
 
-function Harness({ openModal = jest.fn(), setSelectedEvent = jest.fn(), removeEvent = jest.fn(), eventsMap = {} }: any) {
+function Harness({ openModal = jest.fn(), setSelectedEvent = jest.fn(), removeEvent = jest.fn(), eventsMap = {}, onDayHeaderPress }: any) {
   const firstLoadDoneRef = React.useRef(false);
   const week = useWeekNav(firstLoadDoneRef);
   const tagFilters = useTagFilters(eventsMap, week.week);
@@ -55,6 +55,7 @@ function Harness({ openModal = jest.fn(), setSelectedEvent = jest.fn(), removeEv
       removeEvent={removeEvent}
       openModal={openModal}
       setSelectedEvent={setSelectedEvent}
+      onDayHeaderPress={onDayHeaderPress}
     />
   );
 }
@@ -95,6 +96,30 @@ describe('CalendarGrid + useWeekNav/useTagFilters integration', () => {
     // GMT label is always shown once as the fixed time-column header.
     expect(screen.getByText('GMT+05:30')).toBeTruthy();
     expect(screen.getByText('All day')).toBeTruthy();
+  });
+
+  // Regression test for Bug #19's "tap-date doesn't scroll" — the day
+  // header used to be a plain View (not tappable at all). Now a
+  // TouchableOpacity that calls onDayHeaderPress(iso).
+  test('tapping a day header calls onDayHeaderPress with that day\'s iso date (Bug #19)', async () => {
+    const onDayHeaderPress = jest.fn();
+    const user = userEvent.setup();
+    await render(<Harness onDayHeaderPress={onDayHeaderPress} />);
+    const headers = screen.root!.queryAll((node: any) => typeof node.props?.testID === 'string' && node.props.testID.startsWith('teacher-schedule-day-header-'));
+    expect(headers.length).toBe(7);
+    const firstIso = headers[0].props.testID.replace('teacher-schedule-day-header-', '');
+    await user.press(screen.getByTestId(`teacher-schedule-day-header-${firstIso}`));
+    expect(onDayHeaderPress).toHaveBeenCalledWith(firstIso);
+  });
+
+  // Bug #19: the week grid changed from Monday-first to Sunday-first.
+  test('the week grid starts on Sunday, not Monday (Bug #19)', async () => {
+    await render(<Harness />);
+    const headers = screen.root!.queryAll((node: any) => typeof node.props?.testID === 'string' && node.props.testID.startsWith('teacher-schedule-day-header-'));
+    const firstIso = headers[0].props.testID.replace('teacher-schedule-day-header-', '');
+    const lastIso = headers[6].props.testID.replace('teacher-schedule-day-header-', '');
+    expect(new Date(firstIso + 'T00:00:00').getDay()).toBe(0); // Sunday
+    expect(new Date(lastIso + 'T00:00:00').getDay()).toBe(6);  // Saturday
   });
 
   test('an all-day event renders as a chip in its day\'s all-day lane and is tappable', async () => {

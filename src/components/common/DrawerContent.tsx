@@ -75,11 +75,15 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MENU' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
-  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MENU' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MENU' },
-  { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MENU' },
+  // Student Progress restored 2026-08-29 — real screen now, backed by a
+  // real extracted endpoint (see aivorah-teacher-dashboard-service's
+  // /heatmap route), not the dummy mock it was on 2026-08-28 when this
+  // whole group was removed. Manage Syllabus / Announcements remain
+  // removed — still not refactored, still served from
+  // src/.legacy-screens/teacher-legacy/.
+  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MENU' },
   { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'TEACHING DEVELOPMENT' },
-  { label: 'Manage Syllabus', icon: 'upload', screen: 'TeacherSyllabusImport', group: 'TEACHING DEVELOPMENT' },
   { label: 'Achievements', icon: 'award', screen: 'TeacherAchievements', group: 'TEACHING DEVELOPMENT' },
   { label: 'Project Details', icon: 'activity', screen: 'ProjectDetails', group: 'SYSTEM' },
   { label: 'Help Center', icon: 'help-circle', screen: 'TeacherHelp', group: 'SYSTEM' },

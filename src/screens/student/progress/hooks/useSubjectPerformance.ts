@@ -12,7 +12,16 @@ export function useSubjectPerformance(userGrade: string | undefined, userCurricu
 
   useEffect(() => {
     const studentGrade = userGrade ?? 'Grade 3';
-    const isIBPYP = !userCurriculum || userCurriculum.toLowerCase().includes('ib');
+    // Bug: an unset curriculum used to unconditionally fall back to IB PYP,
+    // which only has content for Grade 1-5 — any Grade 6-12 student without
+    // curriculum explicitly set on their profile got a real, non-empty
+    // subject request that always came back empty. Only truly IB PYP-range
+    // grades should default to IB PYP when curriculum is missing; everyone
+    // else falls through to CBSE/NCERT.
+    const IB_PYP_GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'];
+    const isIBPYP = userCurriculum
+      ? /^ib.?pyp$/i.test(userCurriculum.trim())
+      : IB_PYP_GRADES.includes(studentGrade);
     const cacheKey = curriculumCacheKey(isIBPYP, studentGrade);
 
     const cached = getMemoryCurriculum(cacheKey);

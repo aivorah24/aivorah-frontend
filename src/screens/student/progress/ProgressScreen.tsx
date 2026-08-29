@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import Header from '../../../components/common/Header';
@@ -21,7 +22,7 @@ import { AchievementsGrid } from './components/AchievementsGrid';
 
 export default function ProgressScreen({ navigation }: any) {
   const { user } = useAuth();
-  const { stats, studentId } = useStudentData();
+  const { stats, studentId, statsLoadError, refreshStats } = useStudentData();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -70,6 +71,21 @@ export default function ProgressScreen({ navigation }: any) {
         />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
+          {statsLoadError && (
+            <TouchableOpacity
+              style={styles.loadErrorBanner}
+              onPress={refreshStats}
+              activeOpacity={0.8}
+              testID="stats-load-error-banner"
+            >
+              <Feather name="wifi-off" size={16} color="#C9A24E" />
+              <Text style={styles.loadErrorText}>
+                Couldn't load your latest progress. Tap to retry.
+              </Text>
+              <Feather name="refresh-cw" size={14} color="#C9A24E" />
+            </TouchableOpacity>
+          )}
+
           <ProgressHero
             styles={styles}
             overallPct={overallPct}
@@ -110,6 +126,20 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.bgDark },
   scroll: { flex: 1 },
   content: { padding: spacing.xl, paddingBottom: 40 },
+
+  loadErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(201,162,78,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,162,78,0.35)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  loadErrorText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#C9A24E' },
 
   heroBanner: {
     backgroundColor: c.cardDark,

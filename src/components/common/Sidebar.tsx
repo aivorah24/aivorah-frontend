@@ -64,11 +64,17 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MANAGE' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MANAGE' },
-  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MANAGE' },
   { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'MANAGE' },
-  { label: 'Manage Syllabus', icon: 'upload', screen: 'TeacherSyllabusImport', group: 'MANAGE' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MANAGE' },
-  { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MANAGE' },
+  // Student Progress restored 2026-08-29 — it's now a real, refactored
+  // screen backed by a real extracted endpoint (see
+  // aivorah-teacher-dashboard-service's /heatmap route), not the dummy
+  // mock it was on 2026-08-28 when this whole group was removed.
+  // Manage Syllabus / Announcements remain removed — still not refactored,
+  // still served from src/.legacy-screens/teacher-legacy/. "Send
+  // Announcement" (AnnouncementManager) is a separate, already-refactored
+  // feature — kept.
+  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MANAGE' },
   { label: 'Send Announcement', icon: 'edit-3', screen: 'AnnouncementManager', group: 'MANAGE' },
   { label: 'Settings', icon: 'settings', screen: 'TeacherSettings', group: 'SYSTEM' },
 ];

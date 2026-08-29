@@ -16,9 +16,11 @@ export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>) {
   const hScrollRef = useRef<ScrollView>(null);
   const vScrollRef = useRef<ScrollView>(null);
 
+  // Bug #19: was Monday-first (`(dow + 6) % 7`) — the grid is now
+  // Sunday-first (see buildWeek()), so today's column is just `getDay()`
+  // itself, no wraparound needed.
   function scrollToTodayCol(base: Date, cw: number) {
-    const dow = base.getDay();          // 0=Sun
-    const todayCol = (dow + 6) % 7;    // Mon=0 … Sun=6
+    const todayCol = base.getDay();     // 0=Sun … 6=Sat, matches buildWeek()
     hScrollRef.current?.scrollTo({ x: todayCol * cw, animated: true });
   }
 
@@ -62,6 +64,6 @@ export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>) {
   return {
     today, todayISO, weekBase, setWeekBase, week,
     colWidth, hScrollRef, vScrollRef,
-    goToday, onGridContentSizeChange,
+    goToday, onGridContentSizeChange, scrollToCurrentTime,
   };
 }

@@ -4,17 +4,16 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 
 interface Props {
-  stats: { xpPoints: number; challengesCompleted: number; completedTopics?: any[]; currentStreak: number };
+  stats: { xpPoints: number; challengesCompleted: number; currentStreak: number };
   styles: any;
   colors: AppColors;
 }
 
 export default function StatsRow({ stats, styles, colors }: Props) {
   const items = [
-    { label: 'Total XP',    value: stats.xpPoints.toLocaleString(),            icon: 'star' as const,      color: colors.accentYellow },
-    { label: 'Challenges',  value: String(stats.challengesCompleted),           icon: 'award' as const,     color: colors.accentGreen },
-    { label: 'Topics Done', value: String(stats.completedTopics?.length ?? 0), icon: 'book-open' as const, color: colors.accentYellow },
-    { label: 'Streak',      value: `${stats.currentStreak}d`,                  icon: 'zap' as const,       color: colors.accentRed },
+    { label: 'Total XP',    value: stats.xpPoints.toLocaleString(),  icon: 'star' as const,  color: colors.accentYellow },
+    { label: 'Challenges',  value: String(stats.challengesCompleted), icon: 'award' as const, color: colors.accentGreen },
+    { label: 'Streak',      value: `${stats.currentStreak}d`,        icon: 'zap' as const,   color: colors.accentRed },
   ];
   return (
     <View style={styles.statsRow}>

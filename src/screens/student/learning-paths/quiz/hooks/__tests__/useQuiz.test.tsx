@@ -193,7 +193,23 @@ describe('useQuiz — navigation between questions', () => {
     expect(screen.getByTestId('phase').props.children).toBe('quiz');
   });
 
-  test('goNext on the real final question finishes the quiz: records XP/study time and moves to result', async () => {
+  // Regression test for Bug #22's "XP inconsistent between pages" report.
+  // RCA: finishQuiz() called BOTH completeLesson() (real, server-persisted,
+  // flat 150 XP, only once per topic — see aivorah-leaderboard-service's
+  // completeLesson()) AND addXP() (a SEPARATE, purely local-only bump —
+  // never sent to any server) for the exact same quiz-completion event.
+  // Effects: (1) a first-time pass showed 150+60/100 XP locally but only
+  // 150 was ever persisted — the extra addXP() amount vanished the moment
+  // any other screen refetched real stats; (2) a REPEAT pass of an
+  // already-completed topic still called addXP() every single time (no
+  // idempotency, unlike completeLesson()'s server-side check), so local XP
+  // kept climbing on every retry while the server total never moved; (3) a
+  // failing attempt (pct<60) showed +30 XP that was 100% fake — completeLesson
+  // isn't even called below 60%, so nothing was ever persisted for it.
+  // Fix: addXP() is no longer called here at all — completeLesson()'s real,
+  // idempotent, server-persisted XP is now the ONLY source for this event,
+  // so what's shown always matches what a fresh page load will show too.
+  test('goNext on the real final question finishes the quiz: records real XP via completeLesson only, NOT a separate local-only addXP bump', async () => {
     const user = userEvent.setup();
     await render(<Harness />);
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
@@ -202,8 +218,8 @@ describe('useQuiz — navigation between questions', () => {
     await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> finish
 
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
-    expect((globalThis as any).__lastMocks.addXP).toHaveBeenCalledWith(100); // 2/2 = 100%
     expect((globalThis as any).__lastMocks.completeLesson).toHaveBeenCalled();
+    expect((globalThis as any).__lastMocks.addXP).not.toHaveBeenCalled();
   });
 
   test('goPrev on the real first question is a real no-op', async () => {

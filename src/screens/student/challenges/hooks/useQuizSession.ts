@@ -9,14 +9,14 @@ export function useQuizSession({
   studentId,
   grade,
   userEmail,
-  addXP,
+  completeChallenge,
   recordStudyTime,
   onChallengeCompleted,
 }: {
   studentId: string | undefined;
   grade: string;
   userEmail: string | undefined;
-  addXP: (xp: number) => void;
+  completeChallenge: (xpAwarded?: number) => void;
   recordStudyTime: (minutes: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
   onChallengeCompleted: (challengeId: string, score: number, xpAwarded: number) => void;
 }) {
@@ -81,30 +81,58 @@ export function useQuizSession({
         }
       }
 
-      // Fetch quiz questions
-      const qRes = await fetch(`${SERVER_URL}/ncert/quiz`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: ch.topic,
-          count: ch.questionCount,
-          grade: ch.grade || grade,
-          subject: ch.subject || 'Mathematics',
-          difficulty: ch.difficulty || 'Easy',
-          challengeType: ch.type || '',
-          challengeId: ch.id || '',
-        }),
-      });
-      if (qRes.ok) {
-        const data = await qRes.json();
-        const qs: Question[] = (Array.isArray(data.questions) ? data.questions : []).map((q: any) => ({
-          ...q,
-          options: q.options ?? [],
-          // server returns `correct` as index (0-3); map to the option string for comparison
-          answer: q.options?.[q.correct] ?? q.answer ?? '',
-          type: q.type || 'mcq',
-          acceptAnswers: q.acceptAnswers ?? null,
-        }));
+      // Curated challenges (e.g. the predefined NCERT Grade 1-12 set) have
+      // their MCQs pre-authored and stored in aivorah-challenges-service —
+      // check there first so these serve instantly with zero AI-generation
+      // latency. Only challenges without predefined questions (legacy /
+      // AI-generated ones) fall through to the monolith's live-generation
+      // endpoint below.
+      let qs: Question[] = [];
+      try {
+        const predefRes = await fetch(`${CHALLENGES_SERVER_URL}/challenges/${ch.id}/questions`);
+        if (predefRes.ok) {
+          const predefQuestions = await predefRes.json();
+          if (Array.isArray(predefQuestions) && predefQuestions.length > 0) {
+            qs = predefQuestions.map((q: any) => ({
+              ...q,
+              options: q.options ?? [],
+              answer: q.options?.[q.correct] ?? '',
+              type: q.questionType || 'mcq',
+              acceptAnswers: q.acceptAnswers ?? null,
+            }));
+          }
+        }
+      } catch { /* fall through to live generation below */ }
+
+      if (qs.length === 0) {
+        // Fetch quiz questions
+        const qRes = await fetch(`${SERVER_URL}/ncert/quiz`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: ch.topic,
+            count: ch.questionCount,
+            grade: ch.grade || grade,
+            subject: ch.subject || 'Mathematics',
+            difficulty: ch.difficulty || 'Easy',
+            challengeType: ch.type || '',
+            challengeId: ch.id || '',
+          }),
+        });
+        if (qRes.ok) {
+          const data = await qRes.json();
+          qs = (Array.isArray(data.questions) ? data.questions : []).map((q: any) => ({
+            ...q,
+            options: q.options ?? [],
+            // server returns `correct` as index (0-3); map to the option string for comparison
+            answer: q.options?.[q.correct] ?? q.answer ?? '',
+            type: q.type || 'mcq',
+            acceptAnswers: q.acceptAnswers ?? null,
+          }));
+        }
+      }
+
+      if (qs.length > 0) {
         setQuestions(qs);
         setAnswers(new Array(qs.length).fill(null));
         // Start countdown timer
@@ -142,7 +170,10 @@ export function useQuizSession({
       if (res.ok) {
         const data = await res.json();
         setQuizResult({ score: data.score, xpAwarded: data.xpAwarded });
-        if (data.xpAwarded) addXP(data.xpAwarded);
+        // The challenge is complete regardless of whether any XP was
+        // awarded — the "Challenges" counter must always go up here, not
+        // only when xpAwarded is truthy.
+        completeChallenge(data.xpAwarded || 0);
         onChallengeCompleted(activeChallenge.id, data.score, data.xpAwarded);
         // Fetch challenge leaderboard
         setLeaderLoading(true);
@@ -154,7 +185,7 @@ export function useQuizSession({
       }
     } catch {}
     setQuizSubmitting(false);
-  }, [activeChallenge, questions, answers, studentId, grade, addXP, onChallengeCompleted]);
+  }, [activeChallenge, questions, answers, studentId, grade, completeChallenge, onChallengeCompleted]);
 
   // Auto-submit when timer expires
   useEffect(() => {

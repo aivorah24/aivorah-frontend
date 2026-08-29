@@ -29,13 +29,17 @@ interface Props {
   removeEvent: (id: string, dateStr: string) => void;
   openModal: (presetDate?: string, presetTime?: string, presetAllDay?: boolean, presetTag?: string) => void;
   setSelectedEvent: (e: any) => void;
+  // Bug #19 ("tap-date doesn't scroll"): the day header used to be a plain
+  // View — tapping a date did nothing at all. Optional so existing callers
+  // that don't care about this still work.
+  onDayHeaderPress?: (iso: string) => void;
 }
 
 export default function CalendarGrid({
   colors, gold, styles, week, todayISO, eventsMap, passesTagFilter,
   allDayHeight, colWidth, gridHeight, hScrollRef, onGridContentSizeChange, nowTime,
   students, dragPreviewTeacher, makeOnMouseDown, startDrag, wasDragRef,
-  removeEvent, openModal, setSelectedEvent,
+  removeEvent, openModal, setSelectedEvent, onDayHeaderPress,
 }: Props) {
   return (
     <>
@@ -73,9 +77,15 @@ export default function CalendarGrid({
                 {week.map((d) => {
                   const isToday = d.iso === todayISO;
                   return (
-                    <View key={d.iso} style={[styles.dayHeader, { width: colWidth }, isToday && styles.dayHeaderToday]}>
+                    <TouchableOpacity
+                      key={d.iso}
+                      testID={`teacher-schedule-day-header-${d.iso}`}
+                      style={[styles.dayHeader, { width: colWidth }, isToday && styles.dayHeaderToday]}
+                      onPress={() => onDayHeaderPress?.(d.iso)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={[styles.dayHeaderLabel, isToday && styles.dayHeaderLabelToday]}>{String(d.date).padStart(2, '0')} {d.day.charAt(0) + d.day.slice(1).toLowerCase()}</Text>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>

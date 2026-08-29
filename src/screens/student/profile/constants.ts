@@ -5,10 +5,13 @@ import { INDIA_CITIES } from '../../onboarding/OnboardingSharedFields';
 export const ALL_CITIES = Array.from(new Set(Object.values(INDIA_CITIES).flat())).sort();
 
 // ── Learning styles — palette colors ─────────────────────────────────────────
+// All four cards share one gold accent (#C9A24E) — same "one consistent
+// color, not per-item colors" treatment already applied to Progress's
+// Subject Performance cards and Learning Paths' subject cards.
 export const LEARNING_STYLES = [
-  { id: 'visual',    label: 'Visual',    desc: 'I learn best through diagrams & images',  icon: 'eye'      as const, color: '#9FB2A4' },
-  { id: 'auditory',  label: 'Auditory',  desc: 'I learn best by listening & discussing',  icon: 'volume-2' as const, color: '#B2C2B7' },
-  { id: 'reading',   label: 'Reading',   desc: 'I learn best through reading & writing',  icon: 'book'     as const, color: '#BAA467' },
+  { id: 'visual',    label: 'Visual',    desc: 'I learn best through diagrams & images',  icon: 'eye'      as const, color: '#C9A24E' },
+  { id: 'auditory',  label: 'Auditory',  desc: 'I learn best by listening & discussing',  icon: 'volume-2' as const, color: '#C9A24E' },
+  { id: 'reading',   label: 'Reading',   desc: 'I learn best through reading & writing',  icon: 'book'     as const, color: '#C9A24E' },
   { id: 'hands-on',  label: 'Hands-On', desc: 'I learn best by doing & experimenting',   icon: 'tool'     as const, color: '#C9A24E' },
 ];
 

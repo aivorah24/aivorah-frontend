@@ -44,15 +44,28 @@ beforeEach(() => {
   global.fetch = jest.fn().mockResolvedValue(jsonRes({})) as any;
 });
 
-describe('useProfileFields — GRADES restriction', () => {
-  test('only offers the real current grade and higher — never lower grades', async () => {
+// Regression tests for Bug #27 (reported 2026-08-28): "If user entered the
+// grade 9 instead of 10 - the grade section is not showing up grade... so
+// please make sure user will get full grade control edit here." Previously
+// GRADES was sliced to "current grade and higher only" — a Grade 10 account
+// (even a mistaken one) could never be corrected back down to Grade 9,
+// because Grade 9 was never offered as an option. Full edit control means
+// every real grade must always be selectable, regardless of the account's
+// current value.
+describe('useProfileFields — GRADES always offers the full real grade list', () => {
+  test('a Grade 10 account can still select a LOWER grade (e.g. Grade 9) — the actual reported bug', async () => {
     await render(<Harness user={{ name: 'A', grade: 'Grade 10', curriculum: 'NCERT', email: 'a@a.com' }} />);
     const grades = JSON.parse(screen.getByTestId('grades').props.children);
-    expect(grades[0]).toBe('Grade 10');
-    expect(grades).not.toContain('Grade 9');
+    expect(grades).toContain('Grade 9');
   });
 
-  test('an unrecognized current grade falls back to the real full grade list', async () => {
+  test('the full 15-grade list (Nursery through Grade 12) is always offered, not just current-and-above', async () => {
+    await render(<Harness user={{ name: 'A', grade: 'Grade 10', curriculum: 'NCERT', email: 'a@a.com' }} />);
+    const grades = JSON.parse(screen.getByTestId('grades').props.children);
+    expect(grades).toEqual(['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+  });
+
+  test('an unrecognized current grade also falls back to the real full grade list', async () => {
     await render(<Harness user={{ name: 'A', grade: 'Not A Real Grade', email: 'a@a.com' }} />);
     const grades = JSON.parse(screen.getByTestId('grades').props.children);
     expect(grades.length).toBeGreaterThan(1);

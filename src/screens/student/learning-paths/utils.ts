@@ -2,12 +2,13 @@ import { SUBJECT_META, IB_PYP_TOPIC_BANK, IB_PYP_SUBJECTS_BY_GRADE } from './con
 import type { CurriculumTopic, SubjectData, SubjectMeta, TopicItem } from './types';
 
 export function subjectMeta(subject: string): SubjectMeta {
-  // Same soft pastel treatment as every mapped subject — an unmapped name
-  // (e.g. a new CBSE subject) should never fall back to a jarring dark card.
+  // Same gold treatment as every mapped subject (see SUBJECT_META) — an
+  // unmapped name (e.g. a new CBSE subject) should never fall back to a
+  // different color than the rest of the grid.
   return SUBJECT_META[subject] ?? {
     icon: 'book',
-    accentDark: '#BAA467', bgFromDark: '#D8CFA8', bgToDark: '#E6DEBC',
-    accentLight: '#BAA467', bgFromLight: '#D8CFA8', bgToLight: '#E6DEBC',
+    accentDark: '#C9A24E', bgFromDark: '#E4D4A8', bgToDark: '#F0E2BC',
+    accentLight: '#C9A24E', bgFromLight: '#E4D4A8', bgToLight: '#F0E2BC',
   };
 }
 

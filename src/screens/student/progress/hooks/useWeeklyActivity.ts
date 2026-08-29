@@ -9,11 +9,16 @@ export function useWeeklyActivity(studentId: string | undefined) {
 
   useEffect(() => {
     if (!studentId) return;
-    fetchWeeklyActivity(studentId).then((weekly) => {
+    // Bug: the Month tab used to update this state but nothing re-fetched
+    // when it changed — `periodTab` must be in the dependency array, and
+    // passed through to the API, for the toggle to actually do anything.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data-fetching effect, external sync
+    setLoading(true);
+    fetchWeeklyActivity(studentId, periodTab).then((weekly) => {
       setWeeklyDays(weekly.days ?? []);
       setLoading(false);
     });
-  }, [studentId]);
+  }, [studentId, periodTab]);
 
   return { periodTab, setPeriodTab, weeklyDays, loading };
 }

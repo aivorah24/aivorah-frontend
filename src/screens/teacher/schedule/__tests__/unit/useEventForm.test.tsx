@@ -175,11 +175,91 @@ describe('useEventForm', () => {
     expect(screen.getByTestId('modalVisible').props.children).toBe('true');
   });
 
-  test('confirmDeleteEvent calls removeEvent with the event id and date', async () => {
+  test('confirmDeleteEvent calls removeEvent with the event id and date (web, confirmed)', async () => {
+    const RN = require('react-native');
+    const prevPlatform = RN.Platform.OS;
+    RN.Platform.OS = 'web';
+    (global as any).window.confirm = jest.fn().mockReturnValue(true);
     const removeEvent = jest.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     await render(<Harness removeEvent={removeEvent} />);
     await user.press(screen.getByTestId('confirm-delete'));
     await waitFor(() => expect(removeEvent).toHaveBeenCalledWith('ev1', '2026-08-25'));
+    RN.Platform.OS = prevPlatform;
+  });
+});
+
+// Regression tests for Bug #15 (reported 2026-08-27/28): "event cancel with
+// no confirmation." RCA: `confirmDeleteEvent` was
+// `Platform.OS === 'web' ? window.confirm(...) : true` — on any NATIVE
+// platform (the `: true` branch), the event was deleted immediately with NO
+// confirmation dialog at all, regardless of what the user tapped. Only web
+// ever showed a real confirm. Fixed to use RN's `Alert.alert` on native
+// (matching the convention already documented elsewhere in this codebase —
+// see ParentSettingsScreen.tsx's "Alert.alert is a no-op on React Native
+// Web" comment) and keep `window.confirm` on web.
+describe('confirmDeleteEvent — Bug #15 (native platforms must actually confirm before deleting)', () => {
+  const RN = require('react-native');
+
+  afterEach(() => {
+    RN.Platform.OS = 'ios';
+    jest.restoreAllMocks();
+  });
+
+  test('on a native platform, deleting is NOT immediate — it waits for a real confirmation prompt', async () => {
+    RN.Platform.OS = 'ios';
+    const alertSpy = jest.spyOn(RN.Alert, 'alert').mockImplementation(() => {}); // never presses a button
+    const removeEvent = jest.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await render(<Harness removeEvent={removeEvent} />);
+
+    await user.press(screen.getByTestId('confirm-delete'));
+
+    expect(alertSpy).toHaveBeenCalled();
+    // The bug: removeEvent used to fire immediately regardless of any prompt.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(removeEvent).not.toHaveBeenCalled();
+  });
+
+  test('on native, pressing "Delete" in the real confirmation prompt actually deletes', async () => {
+    RN.Platform.OS = 'android';
+    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+      buttons.find((b) => b.text === 'Delete')?.onPress?.();
+    });
+    const removeEvent = jest.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await render(<Harness removeEvent={removeEvent} />);
+
+    await user.press(screen.getByTestId('confirm-delete'));
+
+    await waitFor(() => expect(removeEvent).toHaveBeenCalledWith('ev1', '2026-08-25'));
+  });
+
+  test('on native, pressing "Cancel" in the confirmation prompt does NOT delete', async () => {
+    RN.Platform.OS = 'ios';
+    jest.spyOn(RN.Alert, 'alert').mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+      buttons.find((b) => b.text === 'Cancel')?.onPress?.();
+    });
+    const removeEvent = jest.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await render(<Harness removeEvent={removeEvent} />);
+
+    await user.press(screen.getByTestId('confirm-delete'));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(removeEvent).not.toHaveBeenCalled();
+  });
+
+  test('on web, declining window.confirm still does NOT delete (existing behavior, unchanged)', async () => {
+    RN.Platform.OS = 'web';
+    (global as any).window.confirm = jest.fn().mockReturnValue(false);
+    const removeEvent = jest.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await render(<Harness removeEvent={removeEvent} />);
+
+    await user.press(screen.getByTestId('confirm-delete'));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(removeEvent).not.toHaveBeenCalled();
   });
 });

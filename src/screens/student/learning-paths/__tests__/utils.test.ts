@@ -8,13 +8,24 @@ describe('subjectMeta', () => {
     expect(subjectMeta(knownSubject)).toEqual(SUBJECT_META[knownSubject]);
   });
 
-  test('an unmapped subject falls back to the neutral gold palette, not a crash', () => {
+  test('an unmapped subject falls back to the same gold palette every mapped subject uses, not a crash', () => {
     const result = subjectMeta('Some Brand New Subject');
     expect(result).toEqual({
       icon: 'book',
-      accentDark: '#BAA467', bgFromDark: '#D8CFA8', bgToDark: '#E6DEBC',
-      accentLight: '#BAA467', bgFromLight: '#D8CFA8', bgToLight: '#E6DEBC',
+      accentDark: '#C9A24E', bgFromDark: '#E4D4A8', bgToDark: '#F0E2BC',
+      accentLight: '#C9A24E', bgFromLight: '#E4D4A8', bgToLight: '#F0E2BC',
     });
+  });
+
+  test('every mapped subject uses the exact same accent/gradient colors as the unmapped fallback — a uniform gold grid, not per-subject colors', () => {
+    for (const meta of Object.values(SUBJECT_META)) {
+      expect(meta.accentDark).toBe('#C9A24E');
+      expect(meta.bgFromDark).toBe('#E4D4A8');
+      expect(meta.bgToDark).toBe('#F0E2BC');
+      expect(meta.accentLight).toBe('#C9A24E');
+      expect(meta.bgFromLight).toBe('#E4D4A8');
+      expect(meta.bgToLight).toBe('#F0E2BC');
+    }
   });
 });
 

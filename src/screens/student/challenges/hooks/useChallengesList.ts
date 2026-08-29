@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import SERVER_URL from '../../../../config/challengesServerUrl';
+import { fetchWithRetry } from '../../../../utils/fetchWithRetry';
 import type { Challenge } from '../types';
 
 export function useChallengesList({
@@ -32,10 +33,16 @@ export function useChallengesList({
   const fetchChallenges = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
+      // Bug #22 ("no challenges available"): this used to be a bare
+      // single-attempt fetch() — the same intermittent network flakiness
+      // already proven and fixed this session for the Progress page and AI
+      // Coach suggestions (both now on fetchWithRetry) meant any one
+      // transient blip permanently showed an empty state, even though real
+      // challenges existed.
       const url = `${SERVER_URL}/challenges?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}${studentId ? `&studentId=${studentId}` : ''}`;
       const [res, assignedRes] = await Promise.all([
-        fetch(url),
-        studentId ? fetch(`${SERVER_URL}/challenges/assigned?studentId=${studentId}`) : Promise.resolve(null),
+        fetchWithRetry(url),
+        studentId ? fetchWithRetry(`${SERVER_URL}/challenges/assigned?studentId=${studentId}`) : Promise.resolve(null),
       ]);
       if (res.ok) {
         const data: Challenge[] = await res.json();

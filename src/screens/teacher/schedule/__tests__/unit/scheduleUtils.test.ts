@@ -118,28 +118,30 @@ describe('dateISO', () => {
   });
 });
 
+// Bug #19: week grid changed from Monday-first to Sunday-first per explicit
+// user request.
 describe('buildWeek', () => {
-  test('always builds Monday through Sunday, 7 days', () => {
+  test('always builds Sunday through Saturday, 7 days', () => {
     // Wednesday, Jan 7 2026
     const week = buildWeek(new Date(2026, 0, 7));
     expect(week).toHaveLength(7);
-    expect(week[0].day).toBe('MON');
-    expect(week[6].day).toBe('SUN');
-    expect(week[0].date).toBe(5);
-    expect(week[6].date).toBe(11);
+    expect(week[0].day).toBe('SUN');
+    expect(week[6].day).toBe('SAT');
+    expect(week[0].date).toBe(4);
+    expect(week[6].date).toBe(10);
   });
-  test('a Sunday base date rolls back to the Monday that starts that week', () => {
-    // Sunday, Jan 11 2026 belongs to the week of Mon Jan 5.
-    const monday = new Date(2026, 0, 5);
-    const sunday = new Date(2026, 0, 11);
+  test('a Saturday base date rolls back to the Sunday that starts that week', () => {
+    // Saturday, Jan 10 2026 belongs to the week of Sun Jan 4.
+    const sunday = new Date(2026, 0, 4);
+    const saturday = new Date(2026, 0, 10);
+    const week = buildWeek(saturday);
+    expect(week[0].iso).toBe(dateISO(sunday));
+    expect(week[6].iso).toBe(dateISO(saturday));
+  });
+  test('a Sunday base date is itself day 0', () => {
+    const sunday = new Date(2026, 0, 4);
     const week = buildWeek(sunday);
-    expect(week[0].iso).toBe(dateISO(monday));
-    expect(week[6].iso).toBe(dateISO(sunday));
-  });
-  test('a Monday base date is itself day 0', () => {
-    const monday = new Date(2026, 0, 5);
-    const week = buildWeek(monday);
-    expect(week[0].iso).toBe(dateISO(monday));
+    expect(week[0].iso).toBe(dateISO(sunday));
   });
 });
 

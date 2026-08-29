@@ -22,14 +22,14 @@ function makeChallenge(overrides: Partial<Challenge> = {}): Challenge {
   } as Challenge;
 }
 
-const mockAddXP = jest.fn();
+const mockCompleteChallenge = jest.fn();
 const mockRecordStudyTime = jest.fn();
 const mockOnChallengeCompleted = jest.fn();
 
 function Harness({ studentId = 's1', grade = 'Grade 4', userEmail = 'a@a.com' }: any) {
   const hook = useQuizSession({
     studentId, grade, userEmail,
-    addXP: mockAddXP, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted,
+    completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted,
   });
   return (
     <>
@@ -89,6 +89,42 @@ describe('useQuizSession — starting a challenge', () => {
     expect(screen.getByTestId('visible').props.children).toBe('true');
   });
 
+  test('a curated challenge with predefined questions serves them directly, never calling the monolith live-generation endpoint', async () => {
+    const ncertQuizMock = jest.fn();
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/challenges/c1/questions')) {
+        return jsonRes([
+          { question: 'Predefined Q1', options: ['A', 'B', 'C', 'D'], correct: 2, explanation: 'Because.', questionType: 'mcq' },
+        ]);
+      }
+      if (url.includes('/ncert/quiz')) { ncertQuizMock(); return jsonRes({ questions: [] }); }
+      return jsonRes({});
+    }) as any;
+    const user = userEvent.setup();
+    await render(<Harness />);
+
+    await user.press(screen.getByTestId('start'));
+
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(screen.getByTestId('questionsCount').props.children).toBe(1);
+    expect(ncertQuizMock).not.toHaveBeenCalled();
+  });
+
+  test('a challenge with no predefined questions falls back to the live-generation endpoint', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/challenges/c1/questions')) return jsonRes([]);
+      if (url.includes('/ncert/quiz')) return jsonRes({ questions: [{ question: 'Generated Q1', options: ['A', 'B'], correct: 0 }] });
+      return jsonRes({});
+    }) as any;
+    const user = userEvent.setup();
+    await render(<Harness />);
+
+    await user.press(screen.getByTestId('start'));
+
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(screen.getByTestId('questionsCount').props.children).toBe(1);
+  });
+
   test('auto-assigns an unassigned challenge before fetching questions, capturing the real new assignmentId', async () => {
     global.fetch = jest.fn((url: string, opts: any) => {
       if (url.includes('/challenges/assign')) return jsonRes({ id: 'new-asg-99' });
@@ -138,7 +174,7 @@ describe('useQuizSession — timer', () => {
     }) as any;
 
     function StartHarness() {
-      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', addXP: mockAddXP, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
+      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
       React.useEffect(() => { hook.startChallenge(makeChallenge({ timeLimitMinutes: 1 })); }, []);
       return <Text testID="timeLeft">{String(hook.timeLeft)}</Text>;
     }
@@ -177,7 +213,7 @@ describe('useQuizSession — timer', () => {
     }) as any;
 
     function TimeoutHarness() {
-      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', addXP: mockAddXP, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
+      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
       React.useEffect(() => { hook.startChallenge(makeChallenge({ timeLimitMinutes: 1 })); }, []);
       return (
         <>
@@ -229,11 +265,11 @@ describe('useQuizSession — submitting', () => {
     await user.press(screen.getByTestId('submit'));
 
     await waitFor(() => expect(screen.getByTestId('resultScore').props.children).toBe('50'));
-    expect(mockAddXP).toHaveBeenCalledWith(50);
+    expect(mockCompleteChallenge).toHaveBeenCalledWith(50);
     expect(mockOnChallengeCompleted).toHaveBeenCalledWith('c1', 50, 50);
   });
 
-  test('a zero xpAwarded does not call addXP (falsy guard)', async () => {
+  test('a zero xpAwarded still completes the challenge (counter must go up even with no XP)', async () => {
     global.fetch = jest.fn((url: string) => {
       if (url.includes('/ncert/quiz')) return jsonRes({ questions: [{ question: 'Q1', options: ['A', 'B'], correct: 1 }] });
       if (url.includes('/complete')) return jsonRes({ score: 0, xpAwarded: 0 });
@@ -248,7 +284,7 @@ describe('useQuizSession — submitting', () => {
     await user.press(screen.getByTestId('submit'));
 
     await waitFor(() => expect(screen.getByTestId('resultScore').props.children).toBe('0'));
-    expect(mockAddXP).not.toHaveBeenCalled();
+    expect(mockCompleteChallenge).toHaveBeenCalledWith(0);
   });
 
   test('a leaderboard fetch failure after submit is swallowed, result still shows', async () => {

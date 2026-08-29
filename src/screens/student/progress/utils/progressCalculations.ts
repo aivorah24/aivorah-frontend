@@ -1,8 +1,8 @@
-import { SUBJECT_CONFIG, ACHIEVEMENT_DEFS } from '../constants';
+import { SUBJECT_CONFIG, SUBJECT_ACCENT_COLOR, ACHIEVEMENT_DEFS } from '../constants';
 import type { CurriculumData, CurriculumTopic, SubjectStat, Achievement } from '../types';
 
 export function subjectColor(s: string): string {
-  return SUBJECT_CONFIG[s]?.color ?? '#9FB2A4';
+  return SUBJECT_CONFIG[s]?.color ?? SUBJECT_ACCENT_COLOR;
 }
 
 export function subjectIcon(s: string) {

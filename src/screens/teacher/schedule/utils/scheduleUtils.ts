@@ -63,13 +63,16 @@ export function dateISO(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
+// Bug #19: was Monday-first (`monday.setDate(base.getDate() - ((dow + 6) % 7))`)
+// — changed to Sunday-first per explicit user request. `getDay()` already
+// returns 0 for Sunday, so no wraparound math is needed here at all.
 export function buildWeek(base: Date): WeekDay[] {
   const dow = base.getDay();
-  const monday = new Date(base);
-  monday.setDate(base.getDate() - ((dow + 6) % 7));
+  const sunday = new Date(base);
+  sunday.setDate(base.getDate() - dow);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
     return { iso: dateISO(d), day: DAYS_SHORT[i], date: d.getDate() };
   });
 }

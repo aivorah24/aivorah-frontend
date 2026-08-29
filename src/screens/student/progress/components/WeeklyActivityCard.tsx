@@ -18,7 +18,7 @@ export function WeeklyActivityCard({
   return (
     <View style={[styles.glassCard, { marginBottom: spacing.xxl }]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>Weekly Activity</Text>
+        <Text style={styles.cardTitle}>{periodTab === 'Month' ? 'Monthly Activity' : 'Weekly Activity'}</Text>
         <View style={styles.periodTabs}>
           {(['Week', 'Month'] as const).map((p) => (
             <TouchableOpacity key={p} style={[styles.periodTab, periodTab === p && styles.periodTabActive]} onPress={() => setPeriodTab(p)} activeOpacity={0.7}>
@@ -30,7 +30,7 @@ export function WeeklyActivityCard({
       {weeklyDays.every(d => d.studyMinutes === 0 && d.xp === 0) ? (
         <View style={styles.emptyBar}>
           <Feather name="bar-chart-2" size={28} color={colors.textDim} />
-          <Text style={styles.emptyText}>No activity yet this week.{'\n'}Complete lessons to see your chart!</Text>
+          <Text style={styles.emptyText}>No activity yet this {periodTab === 'Month' ? 'month' : 'week'}.{'\n'}Complete lessons to see your chart!</Text>
         </View>
       ) : (
         <View style={styles.barChart}>

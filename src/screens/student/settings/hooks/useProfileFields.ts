@@ -8,10 +8,12 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
   const [newName, setNewName] = useState(user?.name || '');
   const [nameError, setNameError] = useState('');
 
-  const currentGradeIdx = ALL_GRADES.indexOf(user?.grade || '');
-  // A student can only move UP a grade - show their current grade and
-  // higher (through Grade 12), never lower grades.
-  const GRADES = currentGradeIdx >= 0 ? ALL_GRADES.slice(currentGradeIdx) : ALL_GRADES;
+  // Bug #27: this used to slice to "current grade and higher only", so a
+  // mistakenly-entered grade (e.g. Grade 10 when the student is really in
+  // Grade 9) could never be corrected back down — Grade 9 was never even
+  // offered as an option. Full edit control means every real grade is
+  // always selectable, regardless of the account's current value.
+  const GRADES = ALL_GRADES;
   const [selectedGrade, setSelectedGrade] = useState(user?.grade || '');
   const [gradeLoading, setGradeLoading] = useState(false);
 
