@@ -1,48 +1,17 @@
-﻿import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, TextInput, RefreshControl,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import SERVER_URL from '../../config/serverUrl';
-
-const GOLD = '#BAA467';
-const GOLD_BG = '#BAA46718';
-const GOLD_BORDER = '#BAA46740';
-
-const ICONS = [
-  'check-circle','book-open','sun','moon','droplet',
-  'activity','shield','smile','star','coffee',
-  'edit-3','music','heart','zap','wind',
-] as const;
-
-const COIN_OPTIONS = ['5', '10', '15', '20'];
-
-// Prepopulated task suggestions per icon
-const TASK_SUGGESTIONS: Record<string, string[]> = {
-  'check-circle': ['Complete homework', 'Tidy up your room', 'Pack school bag'],
-  'book-open':    ['Read for 20 minutes', 'Read a storybook', 'Practice spellings'],
-  'sun':          ['Morning exercise', 'Wake up on time', 'Drink water in the morning'],
-  'moon':         ['Sleep by 9 PM', 'No screen time after 8 PM', 'Brush teeth before bed'],
-  'droplet':      ['Drink 6 glasses of water', 'Water the plants', 'Wash hands before meals'],
-  'activity':     ['30 min outdoor play', 'Skipping for 10 minutes', 'Yoga or stretching'],
-  'shield':       ['No junk food today', 'Eat fruits and vegetables', 'Take vitamins'],
-  'smile':        ['Help a family member', 'Say something kind to someone', 'Practice gratitude'],
-  'star':         ['Complete Aivorah lesson', 'Practise maths for 15 mins', 'Revise today\'s chapters'],
-  'coffee':       ['Eat breakfast on time', 'Finish lunch without distraction', 'No sugar today'],
-  'edit-3':       ['Write in your journal', 'Practice handwriting', 'Draw or sketch for 10 mins'],
-  'music':        ['Practice instrument for 15 mins', 'Listen to calm music', 'Sing along to a song'],
-  'heart':        ['Call grandparents', 'Do something kind', 'Help with household chores'],
-  'zap':          ['Study for 1 hour', 'Complete all assignments', 'Review notes from school'],
-  'wind':         ['10 min meditation', 'Deep breathing exercise', 'Spend time outdoors'],
-};
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useDailyTasks } from './hooks/useDailyTasks';
+import { GOLD, GOLD_BG, GOLD_BORDER, ICONS, COIN_OPTIONS, TASK_SUGGESTIONS } from './constants';
 
 export default function ParentDailyTasksScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -50,101 +19,26 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
   const { user } = useAuth();
   const parentEmail = user?.email || '';
 
-  // Children
-  const [children, setChildren] = useState<any[]>([]);
-  const [loadingChildren, setLoadingChildren] = useState(true);
-  const [selectedChild, setSelectedChild] = useState<any>(null);
+  const {
+    children, loadingChildren, selectedChild, setSelectedChild,
+    tasks, loadingTasks,
+    saving, error, setError,
+    refreshing, onRefresh,
+    addTask, removeTask,
+  } = useDailyTasks(parentEmail);
 
-  // Tasks
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loadingTasks, setLoadingTasks] = useState(false);
-
-  // New task form
+  // New task form (form-local UI state stays in the screen)
   const [label, setLabel] = useState('');
   const [icon, setIcon] = useState<string>('check-circle');
   const [coins, setCoins] = useState('5');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchChildren = useCallback(async () => {
-    try {
-      const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : [];
-        setChildren(list);
-        if (list.length > 0 && !selectedChild) setSelectedChild(list[0]);
-      }
-    } catch {}
-    finally { setLoadingChildren(false); setRefreshing(false); }
-  }, [parentEmail]);
-
-  const fetchTasks = useCallback(async (child: any, silent = false) => {
-    if (!child?.id) return;
-    if (!silent) setLoadingTasks(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/habits/parent-tasks?childId=${child.id}`);
-      if (res.ok) setTasks(await res.json());
-    } catch {}
-    finally { if (!silent) setLoadingTasks(false); }
-  }, []);
-
-  useEffect(() => { fetchChildren(); }, [fetchChildren]);
-
-  // Load the selected child's tasks + auto-refresh every 10s (silent, no spinner)
-  // so the student's completions show up here without a manual refresh.
-  useEffect(() => {
-    if (!selectedChild) return;
-    fetchTasks(selectedChild);
-    const interval = setInterval(() => fetchTasks(selectedChild, true), 10 * 1000);
-    return () => clearInterval(interval);
-  }, [selectedChild, fetchTasks]);
-
-  // Refresh immediately when the screen regains focus.
-  useFocusEffect(useCallback(() => {
-    if (selectedChild) fetchTasks(selectedChild, true);
-  }, [selectedChild, fetchTasks]));
-
-  async function addTask() {
-    if (!label.trim()) { setError('Please enter a task description.'); return; }
-    if (!selectedChild?.id) { setError('Select a child first.'); return; }
-    setSaving(true); setError('');
-    try {
-      const res = await fetch(`${SERVER_URL}/habits/parent-tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parentEmail,
-          childId: selectedChild.id,
-          label: label.trim(),
-          icon,
-          coins: parseInt(coins) || 5,
-        }),
-      });
-      if (!res.ok) { const d = await res.json(); setError(d.error || 'Could not save task.'); return; }
-      const newTask = await res.json();
-      setTasks(prev => [newTask, ...prev]);
+  async function handleAddTask() {
+    const ok = await addTask(label, icon, coins);
+    if (ok) {
       setLabel('');
       setIcon('check-circle');
       setCoins('5');
-    } catch { setError('Network error. Check server is running.'); }
-    finally { setSaving(false); }
-  }
-
-  async function deleteTask(taskId: string) {
-    setTasks(prev => prev.filter(t => t.id !== taskId)); // optimistic
-    try {
-      await fetch(`${SERVER_URL}/habits/parent-tasks/${taskId}`, { method: 'DELETE' });
-    } catch {
-      fetchTasks(selectedChild); // revert on error
     }
-  }
-
-  function onRefresh() {
-    setRefreshing(true);
-    fetchChildren();
-    if (selectedChild) fetchTasks(selectedChild);
   }
 
   return (
@@ -244,7 +138,7 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
                           </View>
                         )}
                         <TouchableOpacity
-                          onPress={() => deleteTask(task.id)}
+                          onPress={() => removeTask(task.id)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           activeOpacity={0.7}
                         >
@@ -328,7 +222,7 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
 
                 <TouchableOpacity
                   style={[styles.addBtn, (!label.trim() || saving) && { opacity: 0.5 }]}
-                  onPress={addTask}
+                  onPress={handleAddTask}
                   disabled={!label.trim() || saving}
                   activeOpacity={0.8}
                 >
@@ -459,6 +353,3 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   },
   addBtnText: { fontFamily: fonts.serif, fontSize: 14, fontWeight: '700', color: '#0B0B0B' },
 });
-
-
-
