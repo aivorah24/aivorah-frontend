@@ -138,6 +138,8 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
                           </View>
                         )}
                         <TouchableOpacity
+                          testID={`delete-task-${task.id}`}
+                          accessibilityLabel={`Delete task ${task.label}`}
                           onPress={() => removeTask(task.id)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           activeOpacity={0.7}
@@ -221,9 +223,10 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
                 ) : null}
 
                 <TouchableOpacity
+                  testID="add-task-btn"
                   style={[styles.addBtn, (!label.trim() || saving) && { opacity: 0.5 }]}
                   onPress={handleAddTask}
-                  disabled={!label.trim() || saving}
+                  disabled={saving}
                   activeOpacity={0.8}
                 >
                   {saving
