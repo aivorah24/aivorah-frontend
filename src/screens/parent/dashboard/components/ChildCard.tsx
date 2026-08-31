@@ -21,6 +21,8 @@ export default function ChildCard({
       onPress={onPress} activeOpacity={0.85}
     >
       <TouchableOpacity
+        testID={`child-card-creds-${child.id}`}
+        accessibilityLabel={`View ${child.name}'s login credentials`}
         style={s.childKeyBtn}
         onPress={() => onViewCreds(child)}
         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}

@@ -13,13 +13,14 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, radius, typography } from '../../theme';
 import type { AppColors } from '../../theme';
-import { useAuth, setPendingReturnRole, getPendingReturnRole } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeMode } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
 import { useAnnouncements } from '../../features/announcements/context/AnnouncementProvider';
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
+import { SwitchProfile } from './SwitchProfile';
 import { useFocusEffect } from '@react-navigation/native';
 import SERVER_URL from '../../config/serverUrl';
 
@@ -127,17 +128,11 @@ const SCHOOL_ADMIN_NAV_ITEMS: { label: string; icon: string; screen: string; gro
   { label: 'Help & Support',     icon: 'help-circle',   screen: 'TeacherHelp',              group: 'SUPPORT' },
 ];
 
-const ROLE_DASH: Record<string, string> = { super_admin: 'TeacherDashboard', school_admin: 'SchoolAdminDashboard', teacher: 'TeacherDashboard', parent: 'ParentDashboard', student: 'Dashboard' };
 export default function DrawerContent(props: any) {
   const { state, navigation } = props;
   const currentRoute = state.routes[state.index]?.name;
-  const { logout, user, switchRole, updateUser, beginAddParentProfile } = useAuth();
+  const { logout, user, updateUser } = useAuth();
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
-  const pendingReturn = getPendingReturnRole();
-  const isDualRole = (user?.roles?.length ?? 0) > 1 || Boolean(pendingReturn);
-  const effectiveRoles: string[] = (user?.roles?.length ?? 0) > 1
-    ? user!.roles!
-    : pendingReturn === 'teacher' ? ['teacher', 'parent'] : [];
   const { colors, themeMode, setThemeMode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -311,54 +306,7 @@ export default function DrawerContent(props: any) {
           </View>
         </View>
 
-        {/* Role switcher — only for dual-role users (teacher+parent) */}
-        {isDualRole && effectiveRoles.length > 0 && (
-          <View style={styles.roleSwitcher}>
-            <Text style={styles.roleSwitcherLabel}>Switch Profile</Text>
-            <View style={styles.roleSwitcherRow}>
-              {effectiveRoles.map((r) => {
-                const isActive = user?.role === r;
-                return (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.rolePill, isActive && styles.rolePillActive]}
-                    onPress={() => { switchRole(r as any); setTimeout(() => { try { navigation.navigate(ROLE_DASH[r] ?? 'Dashboard'); } catch (_) {} }, 50); }}
-                    activeOpacity={0.75}
-                  >
-                    <Feather name={r === 'teacher' ? 'briefcase' : 'home'} size={12} color={isActive ? colors.accentYellow : colors.textMuted} />
-                    <Text style={[styles.rolePillText, isActive && styles.rolePillTextActive]}>
-                      {r.charAt(0).toUpperCase() + r.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Add Parent Profile hint — shown to teachers without parent profile */}
-        {user?.role === 'teacher' && !isDualRole && (
-          <TouchableOpacity
-            style={styles.addParentHint}
-            onPress={() => {
-              // Start the add-parent flow IN MEMORY only — nothing is persisted
-              // until parent onboarding completes, so backing out leaves no
-              // half-created parent profile. The top-level onboarding gate renders
-              // the parent steps once onboardingComplete flips false in memory.
-              beginAddParentProfile();
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.addParentHintIcon}>
-              <Feather name="home" size={11} color={colors.accentYellow} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.addParentHintTitle}>Also a parent?</Text>
-              <Text style={styles.addParentHintSub}>Add your parent profile</Text>
-            </View>
-            <Feather name="chevron-right" size={12} color={colors.textDim} />
-          </TouchableOpacity>
-        )}
+        <SwitchProfile testIDPrefix="drawer" onNavigate={(screen) => { try { navigation.navigate(screen); } catch (_) {} }} />
 
         {user && (
           <View style={styles.userRow}>
@@ -555,77 +503,6 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   premiumIndicatorText: {
     fontSize: 8, fontWeight: '800', color: '#C5A56A',
     letterSpacing: 0.6,
-  },
-  addParentHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    padding: 10,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: c.accentYellow + '50',
-    backgroundColor: c.accentYellow + "22",
-  },
-  addParentHintIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: c.accentYellow + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addParentHintTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: c.accentYellow,
-  },
-  addParentHintSub: {
-    fontSize: 10,
-    color: c.textDim,
-    marginTop: 1,
-  },
-  roleSwitcher: {
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  roleSwitcherLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: c.textDim,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
-  roleSwitcherRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  rolePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: c.borderColor,
-    backgroundColor: c.cardDark,
-  },
-  rolePillActive: {
-    borderColor: c.accentYellow,
-    backgroundColor: c.accentYellow + '12',
-  },
-  rolePillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: c.textMuted,
-  },
-  rolePillTextActive: {
-    color: c.accentYellow,
-    fontWeight: '700',
   },
   userRow: {
     flexDirection: 'row',

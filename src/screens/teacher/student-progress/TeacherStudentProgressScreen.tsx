@@ -17,7 +17,7 @@ import ActivityTable from './components/ActivityTable';
 import AttemptDrawer from './components/AttemptDrawer';
 import { filterByClass } from './utils/rosterFilters';
 import { searchByName } from './utils/searchStudents';
-import { profileSubjectsFor } from './utils/profileSubjects';
+import { profileSubjectsFor, profileCurricula, profileGradesFor, mergeGrades } from './utils/profileSubjects';
 import { computeSubjectSummary } from './utils/subjectSummary';
 import { exportStudentProgressPdf } from './utils/exportPdf';
 import { updatedAgoLabel } from './utils/formatters';
@@ -40,12 +40,18 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   // should show both" — union the teacher's own configured Staff Subject
   // Mapping (their profile, same source the "My Profile" drawer's Teaching
   // section reads) with the real per-student data, so a configured subject
-  // is always selectable even before any student is linked under it.
-  // `user.teaches[].subjects` isn't in the AuthContext type (only
-  // grade/curriculum are declared there) but is present at runtime — same
-  // loose-typed access Header.tsx's own profile drawer already uses.
-  const profileSubjects = profileSubjectsFor((user as any)?.teaches, filters.curriculum, filters.grade);
+  // is always selectable even before any student is linked under it. Same
+  // treatment for Curriculum and Grade: without this, changing your
+  // teaching assignment in Settings had nowhere to go on this filter — the
+  // dropdowns only ever showed curricula/grades that already had a real
+  // linked student, so the screen looked "stuck" on the old subjects.
+  // `user.teaches` isn't fully typed in AuthContext but is present at
+  // runtime — same loose-typed access Header.tsx's profile drawer uses.
+  const teaches = (user as any)?.teaches;
+  const profileSubjects = profileSubjectsFor(teaches, filters.curriculum, filters.grade);
   const subjectOptions = Array.from(new Set([...profileSubjects, ...availableSubjects])).sort();
+  const curriculumOptions = Array.from(new Set([...profileCurricula(teaches), ...availableCurricula])).sort();
+  const gradeOptions = mergeGrades(availableGrades, profileGradesFor(teaches, filters.curriculum));
 
   // Section 7/8/10 — Activity & Performance's own Today/Overall toggle,
   // deliberately scoped to that section only (NOT a top-level page filter).
@@ -55,7 +61,15 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   // Progress, Topic Exploration, AND the Activity table below — never
   // independent per-section state, so the three sections can't disagree.
   const filteredRoster = filterByClass(roster, filters);
-  const subjectCards = computeSubjectSummary(summaryStudents, summaryTopics, profileSubjects);
+  // When a specific Subject is selected, Subject Progress shows ONLY that
+  // subject's card ("tap English, see English alone") — `students`/`topics`
+  // are already subject-filtered, so this naturally yields one card. With
+  // no Subject selected ("All subjects"), fall back to the class-wide
+  // (subject-unfiltered) population so every subject the teacher teaches
+  // still gets its own card.
+  const subjectCards = filters.subject
+    ? computeSubjectSummary(students, topics)
+    : computeSubjectSummary(summaryStudents, summaryTopics, profileSubjects);
 
   // Student name search — a second, independent narrowing on top of the
   // class filters above, shared by Topic Exploration and Activity &
@@ -67,13 +81,13 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
   const [selectedCell, setSelectedCell] = useState<{ student: HeatmapStudent; topic: string } | null>(null);
 
   function handleExportPdf() {
+    // Exports exactly the Activity & Performance table currently on screen
+    // (class filters AND the name search both applied) — "what you see is
+    // what you get" for a single-section report.
     exportStudentProgressPdf({
       teacherName: user?.name || user?.email || 'Teacher',
       filters,
-      subjectCards,
-      heatmapStudents: students,
-      heatmapTopics: topics,
-      activityStudents: filteredRoster,
+      activityStudents: searchedRoster,
       activityMode,
     });
   }
@@ -111,14 +125,14 @@ export default function TeacherStudentProgressScreen({ navigation }: any) {
           <TopFilters
             colors={colors}
             gold={gold}
-            curriculumOptions={availableCurricula}
+            curriculumOptions={curriculumOptions}
             selectedCurriculum={filters.curriculum}
             // Cascading: picking a broader filter clears every narrower one
             // beneath it, since a previously-picked Section/Subject may not
             // exist under the new Curriculum/Grade at all — leaving it in
             // place would silently filter out every real student.
             onSelectCurriculum={(curriculum) => setFilters({ curriculum })}
-            gradeOptions={availableGrades}
+            gradeOptions={gradeOptions}
             selectedGrade={filters.grade}
             onSelectGrade={(grade) => setFilters((f) => ({ curriculum: f.curriculum, grade }))}
             sectionOptions={availableSections}

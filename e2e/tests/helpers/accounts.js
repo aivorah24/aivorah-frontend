@@ -61,6 +61,30 @@ export const ACCOUNTS = {
   // never collide with teacher-dashboard analytics or Assignments specs
   // reading a shared account's student list.
   'teacher-e': { email: process.env.E2E_TEACHER_E, role: 'teacher', school: 'E2E School Content', mutable: true },
+  // Dedicated to tests/teacher/switch-profile/switch-profile.spec.js. This
+  // spec's core action PERMANENTLY mutates the account from single-role
+  // ('teacher') to dual-role ('teacher'+'parent') via the real "Also a
+  // parent?" onboarding flow — that mutation can never be shared with any
+  // other spec (a second spec running concurrently would find the "Also a
+  // parent?" hint already gone). The account-level snapshot/restore in
+  // runSetup.js/resetProfile.js covers `role`/`user_preferences` automatically
+  // since this is `mutable: true`; the spec's own afterAll cleans up the
+  // child account it creates (not covered by that generic snapshot).
+  // BLOCKED for switch-profile.spec.js (2026-08-29): a stale/orphaned Firebase
+  // Auth user at teacherf_ch1@aivorah.student (pre-dates this account's use in
+  // this suite) permanently collides with the deterministic auto-generated
+  // child-login address the "Also a parent?" flow derives from this account's
+  // own email (see ai-mentor/server/routes/parent.js's generateChildLoginId) -
+  // no Firebase Admin credentials exist in this environment to delete it.
+  // switch-profile.spec.js uses 'teacher-g' instead until that orphan is
+  // cleaned up in the Firebase console. Left registered here in case another
+  // spec wants a plain single-role mutable teacher account.
+  'teacher-f': { email: process.env.E2E_TEACHER_F, role: 'teacher', school: 'E2E School Content', mutable: true },
+  // Hardcoded (not env-var-backed like the rest of this file) - created ad hoc
+  // via the real signup UI as a same-session replacement for 'teacher-f'
+  // above. Same ownership rules apply: dedicated to switch-profile.spec.js,
+  // permanently mutated single-role -> dual-role by that spec's core action.
+  'teacher-g': { email: 'e2e.teacher.g@aivorah.test', role: 'teacher', school: 'E2E School Content', mutable: true },
 
   // ── parent ──
   'parent-a': { email: process.env.E2E_PARENT_A, role: 'parent', school: 'TSRA', mutable: false },
@@ -357,6 +381,8 @@ export const OWNERSHIP = {
   'teacher-d':
     'tests/student/assignments/assignments.spec.js (cross-persona test - assigns a real quiz to student-r via the real Teacher Assignments UI)',
   'teacher-e': 'tests/teacher/students/*.spec.js (create/link/bulk-import/remove/promote real students on its own roster)',
+  'teacher-f': 'BLOCKED for switch-profile.spec.js (stale Firebase orphan collision, see accounts.js) - currently unused, available for another spec needing a plain single-role mutable teacher',
+  'teacher-g': 'tests/teacher/switch-profile/switch-profile.spec.js (permanently adds a real parent profile via onboarding, becoming dual-role — cannot be undone by a simple field restore, so this account must never be reused)',
   'parent-b': 'parent controls tests            (writes to student-e)',
   'parent-c': 'parent controls tests            (writes to student-f)',
   'admin-b': 'school-admin mutation tests       (create/delete student)',

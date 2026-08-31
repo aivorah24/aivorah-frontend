@@ -64,7 +64,7 @@ export default function AIWeeklyInsightCard({
         <CircleProgress pct={weeklyProgressPct} colors={colors} />
       </View>
 
-      <TouchableOpacity style={s.insightCta} onPress={onViewReport} activeOpacity={0.85}>
+      <TouchableOpacity testID="ai-insight-view-report" style={s.insightCta} onPress={onViewReport} activeOpacity={0.85}>
         <Text style={s.insightCtaText}>View Detailed Report</Text>
         <Feather name="arrow-right" size={13} color={colors.accentYellow} />
       </TouchableOpacity>

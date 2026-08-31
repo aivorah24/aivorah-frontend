@@ -21,7 +21,16 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ key: 'TeacherProgress', name: 'TeacherProgress' }),
 }));
 
-const MOCK_TEACHER_USER = { email: 'teacher@aivorah.test', name: 'Priya Menon' };
+const MOCK_TEACHER_USER = {
+  email: 'teacher@aivorah.test', name: 'Priya Menon',
+  // A profile-configured class (CBSE Grade 6) with ZERO real linked
+  // students yet — regression fixture for the reported bug: changing
+  // Curriculum/Grade in Settings had nowhere to appear on this filter.
+  teaches: [
+    { grade: 'Grade 4', curriculum: 'IB PYP', subjects: ['Mathematics'] },
+    { grade: 'Grade 6', curriculum: 'CBSE', subjects: ['Science'] },
+  ],
+};
 jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: MOCK_TEACHER_USER }),
 }));
@@ -38,11 +47,17 @@ jest.mock('../../../../../context/ThemeContext', () => ({
 
 // jsPDF isn't relevant to component behavior here and pulls in canvas/DOM
 // machinery jsdom doesn't have — stub the one method exportPdf.ts calls.
+// This env's Platform.OS isn't 'web', so exportStudentProgressPdf's real
+// body never runs here (see the dedicated unit/exportPdf.test.ts for real
+// jsPDF-call coverage) — this mock only needs to exist so the `require`
+// doesn't fail if that ever changes.
 jest.mock('jspdf', () => ({
   jsPDF: jest.fn().mockImplementation(() => ({
     internal: { pageSize: { getHeight: () => 800, getWidth: () => 600 } },
-    setFont: jest.fn(), setFontSize: jest.fn(), setTextColor: jest.fn(),
-    text: jest.fn(), addPage: jest.fn(), save: jest.fn(),
+    setFont: jest.fn(), setFontSize: jest.fn(), setTextColor: jest.fn(), setFillColor: jest.fn(),
+    setDrawColor: jest.fn(), setLineWidth: jest.fn(), getTextWidth: jest.fn().mockReturnValue(10),
+    text: jest.fn(), rect: jest.fn(), roundedRect: jest.fn(), circle: jest.fn(), line: jest.fn(),
+    addPage: jest.fn(), save: jest.fn(),
   })),
 }));
 
@@ -209,6 +224,31 @@ describe('TeacherStudentProgressScreen', () => {
     expect(screen.getByTestId('filter-dropdown-curriculum-option-IB PYP')).toBeTruthy();
   });
 
+  // Regression test for the reported bug: "I changed the grade and subjects
+  // in Settings but Student Progress still shows the same Mathematics and
+  // English" — root cause was Curriculum/Grade dropdowns being built only
+  // from real linked-student data, so a newly-configured class (with no
+  // students linked yet) had nowhere to appear at all.
+  test('Curriculum and Grade dropdowns include a profile-configured class even with zero real linked students', async () => {
+    const user = userEvent.setup();
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('activity-row-s1')).toBeTruthy());
+
+    // CBSE / Grade 6 comes from MOCK_TEACHER_USER.teaches only — no real
+    // heatmap/roster student is in that class in this fixture.
+    await user.press(screen.getByTestId('filter-dropdown-curriculum'));
+    expect(screen.getByTestId('filter-dropdown-curriculum-option-CBSE')).toBeTruthy();
+    await user.press(screen.getByTestId('filter-dropdown-curriculum-option-CBSE'));
+
+    await user.press(screen.getByTestId('filter-dropdown-grade'));
+    expect(screen.getByTestId('filter-dropdown-grade-option-Grade 6')).toBeTruthy();
+    await user.press(screen.getByTestId('filter-dropdown-grade-option-Grade 6'));
+
+    // Selecting it shows the honest empty state — no students, not a crash,
+    // and NOT stuck showing the previous class's Mathematics/English.
+    await waitFor(() => expect(screen.getByText('No students to show for this filter.')).toBeTruthy());
+  });
+
   test('a backend failure shows a real retry affordance, not a silent blank screen', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
 
@@ -253,6 +293,38 @@ describe('TeacherStudentProgressScreen', () => {
     // Default class = Aarav only, whose one real cell is mastered = 100%.
     expect(screen.getAllByText('100%').length).toBeGreaterThan(0);
     expect(screen.getByText('of syllabus mastered · 1 student')).toBeTruthy();
+  });
+
+  // "Tap English, see English alone" — selecting a specific Subject must
+  // narrow Subject Progress down to just that one card, not show every
+  // subject's card regardless of the filter.
+  test('selecting a specific Subject shows ONLY that subject\'s Subject Progress card', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/heatmap')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            students: [{ id: 's1', name: 'Aarav Kapoor', grade: 'Grade 4', curriculum: 'IB PYP', section: 'A', class: '4A', photoUrl: null, scopedSubjects: ['Mathematics', 'English'], topicStatus: {
+              Fractions: { status: 'mastered', attempts: 1, latestScore: 90, bestScore: 90, struggled: false, lastAttemptDate: '2026-08-20', subject: 'Mathematics' },
+              Grammar: { status: 'stuck', attempts: 2, latestScore: 30, bestScore: 40, struggled: false, lastAttemptDate: '2026-08-01', subject: 'English' },
+            } }],
+            topics: [{ topic: 'Fractions', subject: 'Mathematics' }, { topic: 'Grammar', subject: 'English' }],
+          }),
+        });
+      }
+      return jsonRes(url);
+    }) as any;
+    const user = userEvent.setup();
+
+    await render(<TeacherStudentProgressScreen navigation={navigation} />);
+    // Default subject auto-selects Mathematics (first real one) -> only that card.
+    await waitFor(() => expect(screen.getByTestId('subject-card-Mathematics')).toBeTruthy());
+    expect(screen.queryByTestId('subject-card-English')).toBeNull();
+
+    await selectFilter(user, 'subject', 'English');
+
+    await waitFor(() => expect(screen.getByTestId('subject-card-English')).toBeTruthy());
+    expect(screen.queryByTestId('subject-card-Mathematics')).toBeNull();
   });
 
   test('switching class updates the Subject Progress card to the newly selected population', async () => {

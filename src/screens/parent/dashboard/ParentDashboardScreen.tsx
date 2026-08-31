@@ -175,7 +175,14 @@ export default function ParentDashboardScreen({ navigation, route }: any) {
               weeklyProgressPct={weeklyProgressPct}
               insightTopic={insightTopic}
               isWide={isWide}
-              onViewReport={() => navigation.navigate('ParentAIReports', { childId: selectedChild.id })}
+              // Quick in-place peek (ReportModal) rather than navigating
+              // away — BottomGrid's "Subject Performance" card below still
+              // links to the full ParentAIReportsScreen for the complete
+              // experience. Was previously dead code: this screen fully
+              // built generateReport()/reportModalVisible/ReportModal but
+              // never wired any button to them (both "View Report" buttons
+              // navigated away instead) — real finding, not fabricated.
+              onViewReport={generateReport}
               colors={colors}
               s={s}
             />

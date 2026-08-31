@@ -482,6 +482,7 @@ export default function OnboardingParentBoxes() {
           firebaseUid = childCred.user.uid;
           await updateProfile(childCred.user, { displayName: `${cleanName}|student` }).catch(() => {});
         } catch (fbErr: any) {
+          console.log('[DEBUG child-create error]', JSON.stringify({ code: fbErr?.code, message: fbErr?.message, email: finalEmail }, null, 2));
           if (fbErr?.code === 'auth/email-already-in-use') {
             throw new Error(`${cleanName}'s email already exists. Use another email or leave it blank for auto-generated login.`);
           }
