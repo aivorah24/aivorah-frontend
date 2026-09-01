@@ -1,6 +1,7 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 // Fallback only - used before the child's curriculum/grade is known, or if
 // the /curriculum/subjects lookup below fails. The real subject list is
@@ -69,7 +70,7 @@ export interface GenerateAIPayload {
 }
 
 export async function generateWithAI(payload: GenerateAIPayload): Promise<any> {
-  const res = await fetch(`${SERVER_URL}/assignments/ai-generate`, {
+  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/ai-generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
