@@ -24,8 +24,8 @@ export async function fetchChildren(parentEmail: string): Promise<any[]> {
 
 export async function fetchAssignmentsAndStats(childId: string): Promise<{ assignments: any[]; stats: any }> {
   const [assignData, statsData] = await Promise.all([
-    fetch(`${SERVER_URL}/assignments?studentId=${childId}&viewerRole=parent`).then(r => r.json()).catch(() => []),
-    fetch(`${SERVER_URL}/student/${childId}`).then(r => r.json()).catch(() => null),
+    fetch(`${ASSIGNMENTS_SERVER_URL}/assignments?studentId=${childId}&viewerRole=parent`).then(r => r.json()).catch(() => []),
+    fetch(`${STUDENTS_SERVER_URL}/student/${childId}`).then(r => r.json()).catch(() => null),
   ]);
   return {
     assignments: Array.isArray(assignData) ? assignData : [],
@@ -104,7 +104,7 @@ export interface CreateAssignmentPayload {
 }
 
 export async function createAssignment(payload: CreateAssignmentPayload): Promise<any> {
-  const res = await fetch(`${SERVER_URL}/assignments`, {
+  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

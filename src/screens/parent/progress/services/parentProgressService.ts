@@ -19,9 +19,9 @@ export async function fetchProgressData(child: any): Promise<ProgressData> {
   const gradeParam = encodeURIComponent(child.grade || 'Grade 3');
   
   const [statsRes, weeklyRes, trendsRes, topicCountRes] = await Promise.all([
-    fetch(`${SERVER_URL}/student/${child.id}`).then(r => r.json()).catch(() => ({ error: true })),
-    fetch(`${SERVER_URL}/student/${child.id}/weekly`).then(r => r.json()).catch(() => null),
-    fetch(`${SERVER_URL}/student/${child.id}/mistake-trends`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${STUDENTS_SERVER_URL}/student/${child.id}`).then(r => r.json()).catch(() => ({ error: true })),
+    fetch(`${STUDENTS_SERVER_URL}/student/${child.id}/weekly`).then(r => r.json()).catch(() => null),
+    fetch(`${STUDENTS_SERVER_URL}/student/${child.id}/mistake-trends`).then(r => r.ok ? r.json() : null).catch(() => null),
     fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/topic-count?curriculum=${curriculumParam}&grade=${gradeParam}`)
       .then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
