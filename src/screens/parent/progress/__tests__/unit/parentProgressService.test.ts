@@ -17,7 +17,7 @@ describe('parentProgressService', () => {
         json: jest.fn().mockResolvedValueOnce([{ id: 'c1', name: 'Kid' }]),
       });
       const res = await parentProgressService.fetchChildren('parent@test.com');
-      expect(fetch).toHaveBeenCalledWith(`${STUDENTS_SERVER_URL}/parent/parent%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/parent/parent%40test.com/children`);
       expect(res).toEqual([{ id: 'c1', name: 'Kid' }]);
     });
 
@@ -44,9 +44,9 @@ describe('parentProgressService', () => {
       const res = await parentProgressService.fetchProgressData(mockChild);
       
       expect(fetch).toHaveBeenCalledTimes(4);
-      expect(fetch).toHaveBeenNthCalledWith(1, `${SERVER_URL}/student/c1`);
-      expect(fetch).toHaveBeenNthCalledWith(2, `${SERVER_URL}/student/c1/weekly`);
-      expect(fetch).toHaveBeenNthCalledWith(3, `${SERVER_URL}/student/c1/mistake-trends`);
+      expect(fetch).toHaveBeenNthCalledWith(1, `${STUDENTS_SERVER_URL}/student/c1`);
+      expect(fetch).toHaveBeenNthCalledWith(2, `${STUDENTS_SERVER_URL}/student/c1/weekly`);
+      expect(fetch).toHaveBeenNthCalledWith(3, `${STUDENTS_SERVER_URL}/student/c1/mistake-trends`);
       expect(fetch).toHaveBeenNthCalledWith(4, `${LEARNING_PATHS_SERVER_URL}/curriculum/topic-count?curriculum=CBSE&grade=Grade%205`);
 
       expect(res.stats).toEqual({ xpPoints: 100, totalTopics: 42 });
