@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, master, staging]
   workflow_dispatch:
+    inputs:
+      accountFilter:
+        description: 'Optional comma-separated account keys to log in (e.g. "parent-e,parent-f7") - scopes E2E setup to only the accounts a targeted run needs instead of logging in all ~64. Leave blank for a full run.'
+        required: false
+        default: ''
 
 env:
   # The frontend will be built and served locally on 3006
@@ -55,6 +60,8 @@ jobs:
           sleep 3 # Wait for server
           node tests/ci/setup.mjs
           kill $SERVER_PID
+        env:
+          ACCOUNT_FILTER: ${{ github.event.inputs.accountFilter }}
           
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

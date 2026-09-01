@@ -34,7 +34,10 @@ const { loginFailures } = await runSetup({ baseURL });
 // fail individually in whichever shard picks them up, exactly like the
 // local dev path.
 const { ACCOUNTS } = await import('../helpers/accounts.js');
-const totalAccounts = Object.keys(ACCOUNTS).length;
+const accountFilter = (process.env.ACCOUNT_FILTER || '').split(',').map((k) => k.trim()).filter(Boolean);
+const totalAccounts = accountFilter.length
+  ? accountFilter.filter((k) => ACCOUNTS[k]).length
+  : Object.keys(ACCOUNTS).length;
 if (loginFailures.length === totalAccounts) {
   console.error('[ci/setup] Every single account failed to log in - treating this as a hard environment failure.');
   process.exit(1);

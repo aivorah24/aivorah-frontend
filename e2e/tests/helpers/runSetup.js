@@ -71,7 +71,24 @@ export async function runSetup({ baseURL }) {
   }
 
   // ── 1. Log in every account, bounded-concurrency + retry/backoff ──────
-  const keys = Object.keys(ACCOUNTS);
+  // ACCOUNT_FILTER (comma-separated account keys, e.g. "parent-e,parent-f7")
+  // narrows this to only the accounts a scoped run actually needs - set it
+  // alongside a Playwright --grep filter so setup doesn't log in to all ~64
+  // accounts for a scoped run. Unset = full suite, same as before this
+  // existed.
+  const accountFilter = (process.env.ACCOUNT_FILTER || '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const keys = accountFilter.length
+    ? accountFilter.filter((k) => {
+        if (!ACCOUNTS[k]) {
+          console.warn(`[setup] ACCOUNT_FILTER named unknown account "${k}" - skipping.`);
+          return false;
+        }
+        return true;
+      })
+    : Object.keys(ACCOUNTS);
   const browser = await chromium.launch();
   const loginStart = Date.now();
 
@@ -124,7 +141,7 @@ export async function runSetup({ baseURL }) {
   }
 
   // ── 2. Snapshot mutable accounts, bounded-concurrency ──────────────────
-  const mutable = Object.entries(ACCOUNTS).filter(([, a]) => a.mutable);
+  const mutable = Object.entries(ACCOUNTS).filter(([key, a]) => a.mutable && keys.includes(key));
   const snapshotStart = Date.now();
 
   const snapshotResults = await runWithConcurrency(
