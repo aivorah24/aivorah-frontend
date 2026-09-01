@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import ScreenLayout from '../../components/common/ScreenLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../config/learningPathsServerUrl';
 
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -134,12 +135,21 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     // refresh should update silently, not blank the dashboard each time.
     if (!firstLoadDoneRef.current) setLoading(true);
     try {
-      const [statsRes, weeklyRes, trendsRes] = await Promise.all([
+      const curriculumParam = encodeURIComponent(child.curriculum || 'IB PYP');
+      const gradeParam = encodeURIComponent(child.grade || 'Grade 3');
+      const [statsRes, weeklyRes, trendsRes, topicCountRes] = await Promise.all([
         fetch(`${SERVER_URL}/student/${child.id}`).then(r => r.json()),
         fetch(`${SERVER_URL}/student/${child.id}/weekly`).then(r => r.json()),
         fetch(`${SERVER_URL}/student/${child.id}/mistake-trends`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/topic-count?curriculum=${curriculumParam}&grade=${gradeParam}`)
+          .then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
-      if (statsRes && !statsRes.error) setStats(statsRes);
+      if (statsRes && !statsRes.error) {
+        if (topicCountRes && typeof topicCountRes.totalTopics === 'number') {
+          statsRes.totalTopics = topicCountRes.totalTopics;
+        }
+        setStats(statsRes);
+      }
       if (weeklyRes?.days) {
         const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const actMap: Record<string, number> = {};
