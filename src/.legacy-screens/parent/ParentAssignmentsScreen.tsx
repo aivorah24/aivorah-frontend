@@ -25,9 +25,15 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import SERVER_URL from '../../config/serverUrl';
+import LEARNING_PATHS_SERVER_URL from '../../config/learningPathsServerUrl';
 
 const FILTERS = ['All', 'School', 'Parent', 'Done'];
-// IB PYP official subject groups
+// Fallback only - used before the child's curriculum/grade is known, or if
+// the /curriculum/subjects lookup below fails. The real subject list is
+// fetched per-child (curriculum + grade), same source as the student
+// learning-paths screen (see useSubjects.ts) - a curriculum can't be assumed
+// to be IB PYP, e.g. an NCERT/CBSE Grade 11 child has Accountancy, Business
+// Studies, etc. instead.
 const IB_PYP_SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Studies', 'Arts', 'Physical Education', 'ICT'];
 const TYPES = ['assignment', 'quiz'] as const;
 
@@ -176,6 +182,48 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
       })
       .catch(() => {});
   }, [child?.grade]);
+
+  // Subject options for the modal must match the selected child's actual
+  // curriculum (IB PYP/MYP/DP, CBSE, IGCSE, ...) - not be hardcoded to IB
+  // PYP, or e.g. a CBSE Grade 11 child would only see IB subjects and never
+  // Accountancy/Business Studies/etc. Same /curriculum/subjects source the
+  // student learning-paths screen uses (see useSubjects.ts for why IB DP/MYP
+  // and CBSE route to the learning-paths service instead of the monolith).
+  const [subjectOptions, setSubjectOptions] = useState<string[]>(IB_PYP_SUBJECTS);
+  useEffect(() => {
+    if (!child?.curriculum || !child?.grade) { setSubjectOptions(IB_PYP_SUBJECTS); return; }
+    let cancelled = false;
+    const curriculum = child.curriculum;
+    const isCBSE = /^cbse$/i.test(curriculum.trim());
+    const isIBDPorMYP = /^ib.?(dp|myp)$/i.test(curriculum.trim());
+    const gradeNum = parseInt(String(child.grade).replace(/\D/g, ''), 10);
+    const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && gradeNum >= 6;
+    const base = (isIBDPorMYP || isCambridgeQdrant || isCBSE) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+    const queryCurriculum = isCBSE ? 'CBSE' : curriculum;
+    fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(child.grade)}&curriculum=${encodeURIComponent(queryCurriculum)}`)
+      .then(r => r.json())
+      .then((data: { subjects?: { name?: string }[] | string[] }) => {
+        if (cancelled) return;
+        const names = (data.subjects || [])
+          .map((s: any) => (typeof s === 'string' ? s : s?.name))
+          .filter(Boolean);
+        if (names.length > 0) setSubjectOptions(names);
+        else setSubjectOptions(IB_PYP_SUBJECTS);
+      })
+      .catch(() => { if (!cancelled) setSubjectOptions(IB_PYP_SUBJECTS); });
+    return () => { cancelled = true; };
+  }, [child?.curriculum, child?.grade]);
+
+  // If the previously-selected subject isn't valid for the newly-loaded
+  // curriculum's subject list, fall back to the first available option
+  // instead of silently submitting a subject the child's curriculum doesn't
+  // have (e.g. "Mathematics" carried over is fine, but "Arts" isn't valid
+  // for a CBSE Grade 11 subject list).
+  useEffect(() => {
+    if (subjectOptions.length > 0 && !subjectOptions.includes(subject)) {
+      setSubject(subjectOptions[0]);
+    }
+  }, [subjectOptions]);
 
   const filtered = useMemo(() => {
     if (activeFilter === 'All') return assignments;
@@ -468,7 +516,7 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
                   {/* Subject */}
                   <Text style={styles.fieldLabel}>Subject</Text>
                   <View style={styles.chipRow}>
-                    {IB_PYP_SUBJECTS.map(s => (
+                    {subjectOptions.map(s => (
                       <TouchableOpacity
                         key={s}
                         style={[styles.chip, subject === s && { backgroundColor: colors.accentYellow + '18', borderColor: colors.accentYellow }]}
