@@ -14,7 +14,7 @@ import ParentScheduleScreen from '@legacy/parent/ParentScheduleScreen';
 import ParentAssignmentsScreen from '../screens/parent/assignments/ParentAssignmentsScreen';
 import ParentChallengesScreen from '@legacy/parent/ParentChallengesScreen';
 import ParentLeaderboardScreen from '@legacy/parent/ParentLeaderboardScreen';
-import ParentProgressScreen from '@legacy/parent/ParentProgressScreen';
+import ParentProgressScreen from '../screens/parent/progress/ParentProgressScreen';
 import ParentAIReportsScreen from '@legacy/parent/ParentAIReportsScreen';
 import ParentSettingsScreen from '@legacy/parent/ParentSettingsScreen';
 import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';

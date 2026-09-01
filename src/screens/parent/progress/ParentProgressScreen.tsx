@@ -1,9 +1,8 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -12,24 +11,12 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import SERVER_URL from '../../config/serverUrl';
-import LEARNING_PATHS_SERVER_URL from '../../config/learningPathsServerUrl';
-
-const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const AV = {
-  coral:  '#C4836A',
-  rose:   '#C85870',
-  purple: '#9B7EC8',
-  cream:  '#F7F3EF',
-  sand:   '#EDE8E2',
-};
+import { spacing, radius, fonts } from '../../../theme';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useParentProgress } from './hooks/useParentProgress';
+import { makeStyles, AV } from './styles';
 
 function formatStudyTime(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -70,117 +57,25 @@ function CircularProgress({ pct, size = 110, strokeWidth = 10, color = '#BAA467'
 
 export default function ParentProgressScreen({ navigation, route }: any) {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
   const gold = colors.accentYellow;          // Aivorah brand gold — #BAA467
   const goldLight = colors.accentYellow + 'BB';
   const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
-  const parentEmail = user?.email || 'parent@demo.com';
 
-  const [children, setChildren] = useState<any[]>([]);
-  const [childrenLoaded, setChildrenLoaded] = useState(false);
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const [stats, setStats] = useState<any>(null);
-  const [weekly, setWeekly] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [loading, setLoading] = useState(true);
-  const firstLoadDoneRef = useRef(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [practiceInsights, setPracticeInsights] = useState<any>(null);
-  const [insightsGenerating, setInsightsGenerating] = useState(false);
-  const insightAnims = useRef([0,1,2,3].map(() => new Animated.Value(0))).current;
-  const child = children[selectedIdx];
-
-  useEffect(() => {
-    fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setChildren(data);
-          const targetChildId = route?.params?.childId;
-          if (targetChildId) {
-            const idx = data.findIndex((c: any) => c.id === targetChildId);
-            if (idx >= 0) setSelectedIdx(idx);
-          }
-        }
-      }).catch(() => {})
-      .finally(() => setChildrenLoaded(true));
-  }, [parentEmail, route?.params?.childId]);
-
-  // Without a linked child, fetchData below never runs (refresh() bails out
-  // early when `child` is undefined) — so loading must be resolved here
-  // instead, or a parent with zero linked children spins on "Loading..."
-  // forever instead of showing an empty/no-child state.
-  useEffect(() => {
-    if (childrenLoaded && children.length === 0) setLoading(false);
-  }, [childrenLoaded, children.length]);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    const stopPolling = () => { if (interval) { clearInterval(interval); interval = null; } };
-    const refresh = () => {
-      if (!child) return;
-      fetchData();
-      fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
-        .then(r => r.json()).then(data => { if (Array.isArray(data) && data.length > 0) setChildren(data); }).catch(() => {});
-    };
-    const startPolling = () => { if (interval) return; interval = setInterval(refresh, 30000); };
-    const unsubFocus = navigation.addListener('focus', () => { refresh(); startPolling(); });
-    const unsubBlur = navigation.addListener('blur', stopPolling);
-    startPolling();
-    return () => { stopPolling(); unsubFocus(); unsubBlur(); };
-  }, [child, navigation, parentEmail]);
-
-  const fetchData = async () => {
-    if (!child) return;
-    // Only spinner-block on the very first load — the 30s poll and focus
-    // refresh should update silently, not blank the dashboard each time.
-    if (!firstLoadDoneRef.current) setLoading(true);
-    try {
-      const curriculumParam = encodeURIComponent(child.curriculum || 'IB PYP');
-      const gradeParam = encodeURIComponent(child.grade || 'Grade 3');
-      const [statsRes, weeklyRes, trendsRes, topicCountRes] = await Promise.all([
-        fetch(`${SERVER_URL}/student/${child.id}`).then(r => r.json()),
-        fetch(`${SERVER_URL}/student/${child.id}/weekly`).then(r => r.json()),
-        fetch(`${SERVER_URL}/student/${child.id}/mistake-trends`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/topic-count?curriculum=${curriculumParam}&grade=${gradeParam}`)
-          .then(r => r.ok ? r.json() : null).catch(() => null),
-      ]);
-      if (statsRes && !statsRes.error) {
-        if (topicCountRes && typeof topicCountRes.totalTopics === 'number') {
-          statsRes.totalTopics = topicCountRes.totalTopics;
-        }
-        setStats(statsRes);
-      }
-      if (weeklyRes?.days) {
-        const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const actMap: Record<string, number> = {};
-        weeklyRes.days.forEach((d: any) => { actMap[d.day] = d.studyMinutes; });
-        setWeekly(dayOrder.map(d => actMap[d] ?? 0));
-      }
-      setPracticeInsights(trendsRes ?? null);
-    } catch { /* ignore */ } finally {
-      if (!firstLoadDoneRef.current) {
-        firstLoadDoneRef.current = true;
-        setLoading(false);
-      }
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => { fetchData(); }, [selectedIdx, children]);
-
-  // Trigger stagger animation when insights are ready
-  useEffect(() => {
-    if (!practiceInsights) return;
-    insightAnims.forEach(a => a.setValue(0));
-    setInsightsGenerating(true);
-    const timer = setTimeout(() => {
-      setInsightsGenerating(false);
-      Animated.stagger(150, insightAnims.map(a =>
-        Animated.timing(a, { toValue: 1, duration: 400, useNativeDriver: true })
-      )).start();
-    }, 900);
-    return () => clearTimeout(timer);
-  }, [practiceInsights]);
+  const {
+    children,
+    selectedIdx,
+    setSelectedIdx,
+    stats,
+    weekly,
+    loading,
+    refreshing,
+    setRefreshing,
+    practiceInsights,
+    insightsGenerating,
+    insightAnims,
+    child,
+    fetchData,
+  } = useParentProgress(route);
 
   // Derived data
   const completedTopics: string[] = stats?.completedTopics ?? [];
@@ -189,6 +84,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
   const actMax = 240; // full bar = 4 hours (240 min); goal line (2h) sits at the halfway mark
   const totalWeekMins = weekly.reduce((a, b) => a + b, 0);
   const topics: any[] = practiceInsights?.topics ?? [];
+  const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // AI Insights derived from practice data
   const aiInsights: any[] = useMemo(() => {
@@ -206,7 +102,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
       list.push({ icon: 'activity', color: gold, text: 'Study consistency improving', sub: 'Great job maintaining your streak!' });
     }
     return list.slice(0, 4);
-  }, [topics, stats]);
+  }, [topics, stats, gold, goldLight]);
 
   // Subject progress — derived from completedTopics + practice insights
   const subjectProgress: any[] = useMemo(() => {
@@ -259,7 +155,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     const perfect = topics.find(t => t.latestScore === 100);
     if (perfect) list.push({ icon: 'award', color: gold,  label: 'Perfect Score',  sub: `100% in ${perfect.topic}` });
     return list;
-  }, [completedTopics, stats, topics]);
+  }, [completedTopics, stats, topics, gold, goldLight]);
 
   // Recommended next steps
   const nextSteps: any[] = useMemo(() => {
@@ -270,7 +166,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     if (weakTopic) steps.push({ icon: 'target', color: gold, label: 'Practice Weak Areas', sub: weakTopic.topic });
     steps.push({ icon: 'clipboard', color: gold, label: 'Take Weekly Quiz', sub: 'Test your understanding' });
     return steps.slice(0, 3);
-  }, [completedTopics, topics]);
+  }, [completedTopics, topics, gold]);
 
   const bgCard = isDark ? colors.cardDark : '#fff';
   const borderCol = isDark ? colors.borderColor : AV.sand;
@@ -490,7 +386,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
                     {topics.length > 0 && (
                       <View style={[styles.pill, { backgroundColor: gold + '15', borderColor: gold + '30' }]}>
                         <Text style={{ fontFamily: fonts.serif, fontSize: 9, fontWeight: '700', color: gold }}>
-                          {topics.filter(t => t.passed).length} passed
+                          {topics.filter((t: any) => t.passed).length} passed
                         </Text>
                       </View>
                     )}
@@ -684,62 +580,3 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     </ScreenLayout>
   );
 }
-
-const makeStyles = (c: AppColors, isDark: boolean) => StyleSheet.create({
-  screen:  { flex: 1 },
-  scroll:  { flex: 1 },
-  content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
-
-  // Child tabs
-  tab:         { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1 },
-  tabActive:   { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14 },
-  tabText:     { fontFamily: fonts.serif, fontSize: 12, fontWeight: '600' },
-  tabTextActive: { fontFamily: fonts.serif, fontSize: 12, fontWeight: '700', color: '#0B0B0B' },
-
-  // Cards
-  card: { borderRadius: radius.xl, padding: spacing.md, borderWidth: 1 },
-
-  // Hero
-  avatarCircle: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontFamily: fonts.serif, fontSize: 24, fontWeight: '900', color: '#fff' },
-  heroChip:     { alignItems: 'center', gap: 2, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
-
-  // Section icon
-  secIcon:   { width: 26, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '800' },
-
-  // Curriculum progress
-  mileDot:      { width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  progressFill:  { height: '100%', borderRadius: 3 },
-  viewBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, alignSelf: 'flex-start' },
-
-  // Weekly chart
-  goalBadge:    { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  barsRow:      { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 110, paddingTop: 10 },
-  barWrapper:   { flex: 1, alignItems: 'center', gap: 4 },
-  barTimeLabel: { fontFamily: fonts.serif, fontSize: 8, fontWeight: '700', height: 11, textAlign: 'center' },
-  barTrack:     { width: 20, height: 72, borderRadius: 10, justifyContent: 'flex-end', overflow: 'hidden' },
-  barFill:      { width: '100%', borderRadius: 10 },
-  barDayLabel:  { fontFamily: fonts.serif, fontSize: 9 },
-
-  // Subject progress
-  subjectIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  subjTrack:   { height: 6, borderRadius: 3, overflow: 'hidden' },
-  subjFill:    { height: '100%', borderRadius: 3 },
-
-  // Practice rows
-  pill:        { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1 },
-  practiceRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingLeft: 8, borderLeftWidth: 2 },
-
-  // AI Insights
-  insightRow:  { flexDirection: 'row', alignItems: 'center', paddingVertical: 7 },
-  insightIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-
-  // Achievements — badge style
-  achieveBadge:     { flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1 },
-  achieveBadgeIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-});
-
-
-
