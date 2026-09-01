@@ -1,5 +1,7 @@
 export const TIMES = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`);
-export const DAYS_SHORT = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+// Bug #19: the week grid used to start on Monday — changed to Sunday-first
+// per explicit user request.
+export const DAYS_SHORT = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 export const DURATIONS = ['30 min', '45 min', '1 hr', '1.5 hrs', '2 hrs', '2.5 hrs', '3 hrs'];
 export const HOUR_HEIGHT = 56;
 export const DAY_COL_WIDTH = 140;

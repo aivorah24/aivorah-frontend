@@ -86,9 +86,50 @@ describe('useChallengesList — initial fetch', () => {
   test('a network error is swallowed, loading still resolves to false', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
     await render(<Harness />);
-    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    // fetchWithRetry (3 attempts, backoff up to 400ms+800ms) needs more than
+    // waitFor's default 1000ms budget when every single attempt fails.
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'), { timeout: 10000 });
     expect(screen.getByTestId('challengesCount').props.children).toBe(0);
-  });
+  }, 15000);
+
+  // Regression test for Bug #22's "no challenges available" report. RCA: a
+  // bare single-attempt `fetch()` meant any ONE transient network blip (the
+  // same class of intermittent flakiness already proven and fixed this
+  // session for the Progress page and AI Coach suggestions, both now on
+  // fetchWithRetry) permanently showed an empty "No challenges available"
+  // state, even though the challenges genuinely existed.
+  //
+  // This hook also independently calls fetchChallenges() twice on mount
+  // (once from its own effect, once from useFocusEffect) — a naive "one
+  // rejection, does the count end up right?" test would pass by accident
+  // via that redundant second call, without the fix actually being present.
+  // So this asserts the real distinguishing signal instead: with a retry
+  // helper in place, ONE failed attempt causes MORE than one fetch call to
+  // the main challenges endpoint (its own internal retries), not just the
+  // two calls the pre-existing double-invocation already produces.
+  test('a single transient network failure triggers a real retry, not just relying on the double-fetch-on-mount to paper over it', async () => {
+    let mainCalls = 0;
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/challenges/assigned')) return jsonRes([]);
+      if (url.includes('/challenges?')) {
+        mainCalls++;
+        if (mainCalls === 1) return Promise.reject(new Error('transient blip'));
+        return jsonRes([{ id: 'c1', status: 'available' }]);
+      }
+      return jsonRes([]);
+    }) as any;
+
+    await render(<Harness />);
+
+    // Wait on the retry count directly, not on `loading` — the OTHER
+    // concurrent invocation (useEffect vs. useFocusEffect both fire on
+    // mount) succeeds immediately and flips `loading` false well before the
+    // failed invocation's own backoff-and-retry finishes in the background,
+    // so gating on `loading` would let this assertion run too early to ever
+    // observe the retry.
+    await waitFor(() => expect(mainCalls).toBeGreaterThan(2), { timeout: 10000 });
+    await waitFor(() => expect(screen.getByTestId('challengesCount').props.children).toBe(1), { timeout: 10000 });
+  }, 15000);
 });
 
 describe('useChallengesList — tabs and counts', () => {

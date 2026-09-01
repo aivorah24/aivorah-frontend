@@ -274,6 +274,31 @@ describe('ProgressScreen — Subject Performance (previously broken, now fixed)'
 
     await waitFor(() => expect(screen.getByText('Complete lessons to see subject scores.')).toBeTruthy());
   });
+
+  test('a real Grade 11 student with no curriculum set on their profile queries NCERT/CBSE, not IB PYP (which only covers Grade 1-5)', async () => {
+    mockUser = { name: 'A Student', email: 'a@a.com', grade: 'Grade 11', curriculum: undefined };
+    mockStats = baseStats({ completedTopics: [], totalTopics: 0 });
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/weekly')) return jsonRes({ days: [] });
+      if (url.includes('/curriculum')) {
+        // The real bug: an unset curriculum used to unconditionally fall
+        // back to IB_PYP, which has no Grade 11 content and always returns
+        // empty — even for CBSE/NCERT students whose profile just never
+        // had curriculum explicitly set. Assert the request itself is
+        // correct, not just the rendered result.
+        expect(url).not.toContain('curriculum=IB_PYP');
+        return jsonRes({
+          topics: [{ grade: 'Grade 11', subject: 'Physics', unit: 'Mechanics', topic: 'Laws of Motion' }],
+          totalTopics: 1,
+        });
+      }
+      return jsonRes({});
+    }) as any;
+
+    await render(<ProgressScreen navigation={navProp()} />);
+
+    await waitFor(() => expect(screen.getByText('Physics')).toBeTruthy());
+  });
 });
 
 describe('ProgressScreen — Completed Topics list', () => {

@@ -631,4 +631,271 @@ Extracted `useParentProfile.ts` (`createChild`, `linkChild`, both add-the-`paren
 
 ---
 
-*(Bug #14 — AI Coach suggestion pollution — still open, previously flagged as needing a scoping decision before building new API surface.)*
+---
+
+## Bug #14 — AI Coach suggestion pollution (raw PDF codes as suggestion chips)
+
+**Status:** ✅ CLOSED
+
+**Observed:** AI Coach's suggestion chips ("What is X?") sometimes show a raw, meaningless string instead of a real topic.
+
+**RCA:** `useSuggestions.ts` calls the monolith's `/curriculum?curriculum=NCERT&grade=...` directly (per the earlier scoping note below, left as-is — no monolith edit, no new API surface) and picks the **first** topic per subject with no validity check. Live-verified across every grade (1, 2, 6, 9, 11) that this returns raw, unfiltered Qdrant data — for many subjects the first ingested "topic" is literally a bare PDF filename code (`aemr101`, `bhsr101`, `fekb101`, `ihsc101`, `iehp101`, `kebt101`), not a real chapter title, which then became suggestion chips like "What is aemr101?".
+
+**Scope decision (resolved):** The tracker previously flagged this as needing new backend API surface. On closer look, the exact same garbage-topic class was already solved once, on the backend, for Bug #11 (`looksLikeRealTopicName()` in `aivorah-learning-paths-service/services/qdrant.js`) — filters raw PDF-code topics and image-caption placeholders. Reused that exact, already-tested regex/logic here instead of building anything new: no new endpoint, no monolith touch, just a client-side filter matching an established pattern.
+
+**Fix:** Ported `looksLikeRealTopicName()` into `useSuggestions.ts` (frontend can't import the backend service's module directly). When building `bySubject`, now skips any topic that fails the check and keeps looking for the next real one in that subject's topic list, instead of blindly taking index 0.
+
+**Regression tests:** 2 new tests in `useSuggestions.test.tsx` — exact live-reproduced codes (`aemr101`, `bhsr101`) and an `[IMAGE]` placeholder are never surfaced as a suggestion; the real topic that follows in the same subject is picked instead; a subject whose *only* ingested topic is a raw code contributes no suggestion at all (not a garbled one).
+
+**Before fix:** FAIL ❌ — 2/2 new tests (confirmed via `git stash push -- .../useSuggestions.ts`).
+
+**After fix:** PASS ✅ — 10/10 in the file, 91/91 across the full `ai-coach` suite. `tsc` clean.
+
+**Files changed:** `src/screens/student/ai-coach/hooks/useSuggestions.ts` · `.../hooks/__tests__/useSuggestions.test.tsx`
+
+**Manual verification:** Live-reproduced the exact bug via direct `curl` against the real `/curriculum` endpoint before fixing (confirmed raw codes present for Grades 1, 2, 6, 9, 11) — pending your in-app confirmation that AI Coach's suggestion chips no longer show raw codes.
+
+**Risk/Impact:** Low — purely additive filtering on data already being fetched; no change to the endpoint called, no monolith touch, no new API surface.
+
+---
+
+## Bug #14 — second finding: Grade 9 (and any non-3/4/5 grade) student stuck on generic Grade 3 suggestions
+
+**Status:** ✅ CLOSED
+
+**Observed (user screenshot, 2026-08-28):** A real Grade 9 CBSE student's AI Coach screen correctly showed "Ask me anything about your Grade 9 curriculum" in the header, but every suggestion chip was the generic, wrong-grade fallback set: "What is colour theory?", "How do we add numbers?", "What is internet safety?", "What is rhythm and beat?", "How do plants grow?" — verbatim `FALLBACK_SUGGESTIONS['Grade 3']`.
+
+**RCA:**
+- `FALLBACK_SUGGESTIONS` (`constants.ts`) only defines entries for Grade 3/4/5 — any other grade (including Grade 9) has no dedicated fallback and silently starts on the Grade 3 set as its *initial* state, before the real fetch resolves. Expected/acceptable on its own — the real fetch is supposed to immediately replace it with real, grade-scoped suggestions.
+- The real fetch never replaced it: `useSuggestions.ts` called `fetch(endpoint)` **once**, with a silent `.catch(() => {})` and no timeout — the exact same resilience gap already found and fixed this session in `StudentDataContext` (Progress page showing all-zero despite real DB data). Confirmed the underlying cause is real and not code-specific: a plain `curl` straight at the backing service (outside any app code) showed ~1-in-6 requests stall/fail transiently on this dev machine's network path. One bad attempt here means the student is stuck on 3rd-grade content for the rest of the session, silently, with no error or retry — worse than the first Bug #14 finding because it can affect *every* grade, not just ones with garbage-topic data.
+
+**Fix:**
+1. Extracted the retry helper (previously local to `StudentDataContext.tsx`) into a shared `src/utils/fetchWithRetry.ts` — bounds each attempt to a timeout via `AbortController` and retries with backoff. Both `StudentDataContext` and `useSuggestions.ts` now import the same tested implementation instead of duplicating it.
+2. `useSuggestions.ts`'s fetch now goes through `fetchWithRetry(endpoint)` instead of a bare single-attempt `fetch(endpoint)`.
+
+**Regression test:** New test in `useSuggestions.test.tsx` — first fetch attempt rejects (transient blip), second attempt resolves with real Grade 9 topics; asserts the fallback ("colour theory") is never what's shown and the real topic ("Algebraic Identities") is. Also updated 3 pre-existing tests (`toHaveBeenCalledWith`) that asserted the exact `fetch(url)` call shape — now correctly expect the second `options`/`signal` argument `fetchWithRetry` always passes.
+
+**Before fix:** FAIL ❌ — confirmed by temporarily reverting just the `fetchWithRetry(endpoint)` call back to `fetch(endpoint)` and re-running: test fails with real suggestions never appearing (stuck on fallback, `waitFor` times out).
+
+**After fix:** PASS ✅ — 123/123 across the combined `ai-coach` + `StudentDataContext` + `progress` suites (11/11 in `useSuggestions.test.tsx` alone, including this new test).
+
+**Files changed:** `src/utils/fetchWithRetry.ts` (new, extracted) · `src/context/StudentDataContext.tsx` (now imports the shared helper instead of a local copy) · `src/screens/student/ai-coach/hooks/useSuggestions.ts` · `.../hooks/__tests__/useSuggestions.test.tsx`
+
+**Manual verification:** Pending your in-app refresh — a Grade 9 (or any grade outside 3/4/5) student's AI Coach suggestions should now reliably show real, curriculum-scoped topics instead of ever getting stuck on the generic fallback set.
+
+**Risk/Impact:** Low — purely additive resilience (retry+timeout) around an existing call; response handling and endpoint unchanged. Consolidating the retry helper also means any future fix to it benefits both call sites at once instead of drifting apart.
+
+---
+
+## Bug #9 — Avatar (and learning style/bio/interests) picked on Profile screen reverts after a refresh
+
+**Status:** ✅ CLOSED
+
+**Observed (user report, 2026-08-28):** "when I update a profile picture nd chnage avatar - intially it was working but when I refresh it was failing up."
+
+**RCA:**
+- `useProfile.ts`'s `handleSelectAvatar()` calls `updateUser({ avatarStyle: id, ... })`, which itself fires an un-awaited `PATCH /user/preferences` (fire-and-forget, silent `.catch`) and writes the new value to the local AsyncStorage cache immediately — so the very next render correctly shows the new avatar.
+- On a page refresh, `AuthContext`'s session-restore path (`onAuthStateChanged` handler) rebuilds the user object as `{ ...baseUser, ...savedLocal, ...supaProfile, ... }` — a **blind spread** where `supaProfile` (fetched last) always wins, for every key it carries, even when that key's value is `undefined`.
+- `avatarStyle`/`learningStyle`/`interests`/`bio` only ever come from a **second, separate, best-effort** `GET /user/preferences` call inside `fetchSupabaseProfile()` — never from the reliable `/user/sync` call (unlike `dob`/`gender`/`state`/`country`, which were moved onto `/user/sync` specifically to fix this exact class of bug on 2026-08-26 — see that fix's own comment in the same function). That GET call always explicitly assigns `avatarStyle: pref.avatarStyle || undefined` — so the key exists on the returned object regardless of outcome.
+- Net effect: if the refresh's preferences GET runs before the earlier, un-awaited avatar-selection PATCH has actually landed server-side (a very easy race — a user picking an avatar and immediately refreshing to check it "stuck" is completely natural), or if that GET hits the network flakiness already proven elsewhere this session, the locally-cached, correct avatar choice gets silently overwritten back to blank. Confirmed via a debug trace of a real session-restore: an earlier, separate "optimistic restore from cache" effect briefly renders the correct cached avatar first (explaining why it "looks fine" for an instant), then the real resolution overwrites it to `undefined` moments later — exactly matching "initially it was working but when I refresh it was failing."
+
+**Regression test (written first, confirmed failing, per your instruction):** New `AuthContext.avatarPersistence.test.tsx` — seeds a locally-cached profile with `avatarStyle: 'gamer'`, mocks `/user/preferences` to return a real response that simply omits `avatarStyle` (the actual failure mode), fires a real session-restore via the captured `onAuthStateChanged` callback, and asserts the avatar survives. A second test confirms the server IS still trusted when it genuinely returns a different value (a real change made elsewhere must still win — this isn't "always prefer local").
+- First test-writing attempt asserted too early and passed even against the buggy code, because it caught the transient *optimistic-cache* render instead of the real settled state — traced with an explicit debug log, then fixed the test itself to wait for a marker (`isPro`, only ever populated by the real resolution, never by the cached-profile fast-path) before asserting on `avatarStyle`.
+- Re-ran against the actual buggy code after that test fix: FAIL ❌ (`Expected: "gamer"`, `Received: "(none)"`) — genuinely reproduces the bug this time.
+
+**Fix:** `resolvedUser`'s construction in `AuthContext.tsx` now explicitly falls back to `savedLocal` for these 4 fields — `avatarStyle: supaProfile.avatarStyle ?? savedLocal.avatarStyle` (and the same for `learningStyle`/`interests`/`bio`) — mirroring the exact pattern already used for `dob`/`gender`/`state`/`country` inside `fetchSupabaseProfile()`.
+
+**After fix:** PASS ✅ — 2/2 new tests. Full `src/context/__tests__` suite: 12/12 (5/5 suites), no regressions. `src/screens/student/profile` + `src/screens/student/settings` (the actual consumers of `avatarStyle`): 91/91, no regressions. `tsc` clean on the touched file.
+
+**Files changed:** `src/context/AuthContext.tsx` · `src/context/__tests__/AuthContext.avatarPersistence.test.tsx` (new)
+
+**Manual verification:** Pending your local check, per your instruction — pick a new avatar on the Profile screen, refresh, confirm it's still selected.
+
+**Risk/Impact:** Low — purely additive fallback on 4 specific fields at one merge site; doesn't change what the server is trusted for when it actually has real data (proven by the second test). Same precedented pattern already shipped once for a sibling set of fields.
+
+---
+
+### Bug #9 — second finding: header top-right avatar and sidebar bottom-left avatar keep showing the OLD uploaded photo after switching to a built-in avatar, even on refresh
+
+**Status:** ✅ CLOSED
+
+**Observed (user report, 2026-08-28):** after the fix above, the main Profile screen correctly shows the newly-picked "Champion" avatar and survives a refresh — but the header's top-right avatar icon and the sidebar's bottom-left avatar (next to the user's name) still show the old uploaded photo, and refreshing doesn't fix it. User: "in the profile picture I changed the profile picture from the boy image to avatar But still on the top right and in the bottom left right it is not when I give refresh it is not properly changing up."
+
+**RCA:**
+- `Header.tsx` (line ~206) and `Sidebar.tsx` (line ~442) both render `photoUrl` **ahead of** `avatarStyle` — `photoUrl ? <Image .../> : avatarStyle ? <Gradient icon/> : ...`. This is correct in principle (a real uploaded photo should beat a generic built-in icon) but only if `photoUrl` can actually ever become empty again once it's been set.
+- `useProfile.ts`'s `handleSelectAvatar(id)` calls `updateUser({ avatarStyle: id, photoUrl: undefined })` intending to clear the photo. `AuthContext.tsx`'s `updateUser()` merges this into local React state fine (`{...prev, ...fields}` copies the `undefined` value, so local `photoUrl` briefly does go blank — which is why the Profile screen's own local state looked correct). But the PATCH body sent to `/user/preferences` is built with `JSON.stringify(...)`, which **silently drops any key whose value is `undefined`** — so the request the server actually received never mentioned `photoUrl` at all.
+- Even if it had, `aivorah-profile-service/services/profile-service.js`'s `updatePreferences()` had `if (photoUrl != null) patch.photoUrl = String(photoUrl);` — this can only ever *set* photoUrl, never clear it, because a `null`/absent value is treated identically to "field not provided."
+- Net effect: `users.photo_url` (the DB column) — the single authoritative source read back by every future `/user/sync`, which is what `Header.tsx`/`Sidebar.tsx` actually render — was **permanently stuck** at whatever was last uploaded. There was no code path anywhere that could ever clear it. So the very next refresh (or the next time `AuthContext` rebuilds `resolvedUser` from a fresh `/user/sync`) re-populated `photoUrl` with the stale value, and the header/sidebar's `photoUrl`-first rendering kept showing the old photo forever.
+
+**Regression tests (written first, confirmed failing, per your instruction):**
+- Backend: `aivorah-profile-service/tests/unit/preferencesEndpoint.test.js` — new test asserts that `updatePreferences({ email, avatarStyle: 'champion', photoUrl: null })` write-throughs `photo_url: null` to the `users` table update call. Ran against the unfixed code first: FAIL ❌ (`Received: {"avatarStyle": "champion", "updatedAt": ...}` — no `photoUrl` key at all, confirming the described bug). A second new test confirms omitting `photoUrl` entirely (e.g. saving bio) still leaves `users.photo_url` untouched, so nothing else regresses.
+- Frontend: new `src/screens/student/profile/hooks/__tests__/useProfile.avatarClear.test.tsx` — calls `handleSelectAvatar('champion')` and asserts `updateUser` is called with an explicit `photoUrl: null`, plus a direct `JSON.stringify` round-trip proving the key survives (vs. `undefined`, which doesn't). Ran against the unfixed code first: FAIL ❌ (`Received: {"avatarStyle": "champion", "photoUrl": undefined}`).
+
+**Fix (two repos, both deliberate/in-scope — `aivorah-profile-service` is an already-migrated microservice, not the monolith):**
+- `useProfile.ts`'s `handleSelectAvatar()`: sends `photoUrl: null` instead of `photoUrl: undefined`, so the "clear it" intent actually survives `JSON.stringify` into the PATCH body.
+- `aivorah-profile-service/services/profile-service.js`'s `updatePreferences()`: now distinguishes "key not provided" from "explicitly null" via `Object.prototype.hasOwnProperty.call(body, 'photoUrl')`. When explicitly cleared, writes `photoUrl: null` to `user_preferences` AND write-throughs `photo_url: null` to the authoritative `users` table row (same write-through pattern already used for grade/curriculum/location/phone/gender/dob/state/country).
+
+**After fix:** PASS ✅ — both new tests. Backend: full `aivorah-profile-service` suite 91/91 (9/9 suites), no regressions. Frontend: `src/screens/student/profile` + `src/context/__tests__` 21/21 (7/7 suites), no regressions.
+
+**Files changed:** `src/screens/student/profile/hooks/useProfile.ts` · `src/screens/student/profile/hooks/__tests__/useProfile.avatarClear.test.tsx` (new) · `aivorah-profile-service/services/profile-service.js` · `aivorah-profile-service/tests/unit/preferencesEndpoint.test.js`
+
+**Manual verification:** Pending your local check, per your instruction — upload a real photo, then switch to a built-in avatar, refresh, and confirm the header (top-right) and sidebar (bottom-left) both now show the built-in avatar instead of the old photo. Note: this fix only prevents the photo from getting *permanently* stuck going forward — an account whose `users.photo_url` is already stuck from before this fix will need one more avatar-pick to actually clear it (the clear-signal now works, but it still only fires when `handleSelectAvatar` is called).
+
+**Risk/Impact:** Low-medium — touches a shared write-through helper in an already-migrated microservice, but the change is additive (only activates on the new explicit-null path) and every other `updatePreferences` field/behavior is unchanged, confirmed by the full existing suite staying green.
+
+---
+
+## Bug #27 — Settings "Update Grade / Year" dialog won't let a user correct a wrong grade downward
+
+**Status:** ✅ CLOSED
+
+**Observed (user report, 2026-08-28):** "If user entered the grade 9 instead of 10 - the grade section is not showing up grade - so user won't rise ticket and we no need to update that - so please make sure user will get full grade control edit here." Screenshot shows the "Update Grade / Year" modal offering only Grade 10/11/12.
+
+**RCA:** `useProfileFields.ts` deliberately sliced the grade options to "current grade and higher only" — `ALL_GRADES.slice(currentGradeIdx)` — on the assumption a student can only move up a grade. A Grade 10 account (even one that's simply wrong, e.g. should be Grade 9) could therefore never be corrected back down — the lower grade was never offered as a selectable option at all.
+
+**Regression test (written first, confirmed failing):** Updated `useProfileFields.test.tsx` — asserts a Grade 10 account's `GRADES` list still contains Grade 9, and that the full 15-entry list (Nursery → Grade 12) is always offered regardless of the account's current grade. Ran against the unfixed code first: FAIL ❌ (`Grade 9` and everything below `Grade 10` missing from the list).
+
+**Fix:** `GRADES` is now simply `ALL_GRADES` — full, unrestricted grade control, matching the user's explicit instruction.
+
+**After fix:** PASS ✅ — 3/3 new/updated tests. Full `src/screens/student/settings` suite: 84/84, no regressions.
+
+**Files changed:** `src/screens/student/settings/hooks/useProfileFields.ts` · `src/screens/student/settings/hooks/__tests__/useProfileFields.test.tsx`
+
+**Manual verification:** Pending your local check — open Settings → Update Grade / Year, confirm all 15 grades (Nursery through Grade 12) are selectable regardless of the account's current grade.
+
+**Risk/Impact:** Low — removes a restriction, doesn't add new logic; the save path itself (`handleSaveGrade`) is unchanged.
+
+---
+
+## Bug #15 — Teacher Schedule: deleting an event has no confirmation
+
+**Status:** ✅ CLOSED
+
+**Observed (user report, 2026-08-27/28):** event cancel/delete goes through with no confirmation dialog.
+
+**RCA:** `useEventForm.ts`'s `confirmDeleteEvent()` was `const ok = Platform.OS === 'web' ? window.confirm(...) : true;` — on any native platform, `ok` was hard-coded `true`, so the event was deleted immediately with **no prompt shown at all**, regardless of what (if anything) the user tapped. Only the web build ever showed a real confirmation.
+
+**Regression tests (written first, confirmed failing):** 4 new tests in `useEventForm.test.tsx` — native platform never deletes immediately without a real Alert.alert prompt; pressing "Delete" in that prompt does delete; pressing "Cancel" does not; web's `window.confirm` decline still doesn't delete. Ran against the unfixed code first: 2/4 FAILED ❌ (native path deleted with zero prompt, and "Cancel" still deleted) — the other 2 happened to already pass by coincidence of the `: true` fallback. Also found and fixed a **pre-existing false-positive** in the original "web, confirmed" test: it never actually set `Platform.OS` or mocked `window.confirm`, so it was silently passing via the native `: true` branch the whole time, not real web confirmation — corrected to explicitly test the web path.
+
+**Fix:** `confirmDeleteEvent()` now uses RN's `Alert.alert` (Cancel/Delete buttons, destructive style) on native, keeping `window.confirm` on web — the same "Alert.alert is a no-op on React Native Web" convention already documented elsewhere in this codebase (`ParentSettingsScreen.tsx`).
+
+**After fix:** PASS ✅ — all 4 new tests + the corrected pre-existing test. Full `src/screens/teacher/schedule` suite: 104/104. `TeacherScheduleScreen.e2e.test.tsx`: 10/10 (3 pre-existing skips), no regressions.
+
+**Files changed:** `src/screens/teacher/schedule/hooks/useEventForm.ts` · `src/screens/teacher/schedule/__tests__/unit/useEventForm.test.tsx`
+
+**Manual verification:** Pending your local check — delete an event on both web and (if testable) a native build, confirm a real prompt appears and Cancel genuinely aborts the delete.
+
+**Risk/Impact:** Low — isolated to one function; behavior only gets stricter (adds a missing confirmation), doesn't change what happens once confirmed.
+
+---
+
+## Bug #20 — Brain Teaser wrong format; "Test Your Knowledge" quiz-load error
+
+**Status:** ✅ CLOSED (both findings)
+
+**Observed (user report, 2026-08-28):** Brain Teaser text looks wrong/garbled; "Test Your Knowledge" sometimes fails to load a quiz.
+
+**Finding 1 — mojibake in Brain Teaser / On This Day / GK Fact text.** Live-reproduced directly against `aivorah-world-and-you-service`'s real `GET /world/daily` endpoint (started it locally, hit it with a real grade) before assuming anything — found real Groq output like `"NASAâ€™s Mars Rover Spirit landed"` and `"the worldâ€™s largest reef system"`. RCA: classic mojibake — a UTF-8-encoded curly apostrophe (U+2019) getting re-interpreted as Windows-1252 and re-encoded, 3 codepoints (U+00E2 U+20AC U+2122) where one real character belongs. `onThisDay`, `gkFact`, `funChallenge` (Brain Teaser), and `currentAffairs` all come from the same Groq JSON response, so Brain Teaser is equally exposed even in test runs where the specific article happened not to trigger it.
+- **Regression tests (written first, confirmed failing):** 2 new tests in `world.unit.test.js`, using explicit `\u` escapes (not pasted literal characters, to avoid any file/terminal-encoding ambiguity) — a mojibake apostrophe is corrected in every text field including `funChallenge`; clean text is left untouched. Ran against the unfixed code first: FAIL ❌ (`Expected: "NASA's..."`, `Received: "NASAâ€™s..."`).
+- **Fix:** `services/world.js` — new `fixMojibake()`/`sanitizeDeep()` applied to the whole response before caching/returning. Scoped deliberately to the mojibake patterns actually confirmed live (apostrophe, opening single/double quote, ellipsis, nbsp) — closing-double-quote and en/em-dash mojibake were **not** independently verified against real output and are left unhandled rather than guessed, since a wrong mapping would be worse than an unhandled one.
+- **After fix:** PASS ✅ — verified twice live: restarted the local service, hit the real endpoint, confirmed the exact previously-corrupted `onThisDay` entry now reads `"the world's first commercial 3D cinema"` correctly (U+2019 apostrophe, not mojibake).
+
+**Finding 2 — "Test Your Knowledge" quiz-load error.** RCA: `generateComprehensionQuiz()` (`services/dailyTidbit.js`) did a bare `JSON.parse(clean)` with no extraction and no retry — unlike `getWorldDaily()` in the same repo, which defends against the model wrapping JSON in prose via a regex-extracted `{...}`/`[...]` match (see Finding 1's fix and that function's own comment). Any real response with lead-in prose ("Here are the questions: [...]", observed behavior of this exact model) or a truncation (`max_tokens: 400` is tight for 2 MCQs × 4 options) threw immediately, which `routes/daily-tidbit.js` turns into a 500 — the frontend shows "Could not load quiz. Please try again."
+- **Regression tests (written first, confirmed failing):** 3 new tests in `dailyTidbit.unit.test.js` — prose-wrapped JSON is still parsed; a truncated first response retries once and recovers; two consecutive malformed responses still surface a real error (not a silently empty quiz). Ran against the unfixed code first: 2/3 FAILED ❌ (`SyntaxError: Unexpected token 'H'...` / truncation error) confirming the bug.
+- **Fix:** extracted the Groq call into `requestQuizJson()`, which now regex-extracts the `[...]` array before parsing (same pattern as `world.js`) and retries once — re-prompted to respond with ONLY the JSON array — before giving up. `max_tokens` also raised 400→500 to reduce truncation likelihood in the first place.
+- **After fix:** PASS ✅ — 5/5 (2 pre-existing + 3 new).
+
+**Files changed:** `aivorah-world-and-you-service/services/world.js` · `aivorah-world-and-you-service/services/dailyTidbit.js` · `aivorah-world-and-you-service/tests/unit/world.unit.test.js` · `aivorah-world-and-you-service/tests/unit/dailyTidbit.unit.test.js`
+
+**Full suite:** 49/49, no regressions.
+
+**Manual verification:** Pending your local check — open World & You a few times across different days/grades (Brain Teaser/On This Day text should never show "â€"-style garbage) and try "Test Your Knowledge" a few times to confirm it no longer intermittently fails to load.
+
+**Risk/Impact:** Low — both fixes are additive (extra sanitization pass, extra retry-on-failure); neither changes behavior for already-correct responses, confirmed by the "clean text untouched" test.
+
+---
+
+## Bug #22 — remaining findings: "no challenges available" and XP inconsistent between pages
+
+**Status:** ✅ CLOSED (both remaining findings — the false "1 day streak" part of #22 was already fixed under Bug #3.1)
+
+**Finding 1 — "no challenges available."** RCA: `useChallengesList.ts`'s `fetchChallenges()` used a bare single-attempt `fetch()` (same intermittent-network-flakiness class already proven and fixed this session for the Progress page and AI Coach suggestions). One transient blip permanently showed the empty "No challenges available" state even though real challenges existed.
+- **Regression test (written first, confirmed failing):** a real per-request retry test — discovered mid-writing that a naive "one rejection, does the final count come out right?" test would pass by accident, because this hook already independently calls `fetchChallenges()` twice on mount (its own effect + `useFocusEffect`), and the second call papers over a missing retry. Rewrote to assert the real distinguishing signal — more than 2 total fetch calls to the challenges endpoint when one fails. Ran against the unfixed code: FAIL ❌ (exactly 2 calls, no retry).
+- **Fix:** swapped `fetch()` → the existing `fetchWithRetry()` utility (3 attempts, backoff), same as the Progress/AI Coach fixes.
+- **After fix:** PASS ✅ — 14/14 in `useChallengesList.test.tsx` (2 tests also needed their `waitFor` timeout raised — real retries with backoff legitimately take longer than the default 1000ms budget). Full `src/screens/student/challenges` suite: 115/115.
+
+**Finding 2 — XP inconsistent between pages.** RCA, traced through `StudentDataContext.tsx` in full (not assumed): there's a generic "sync to server whenever stats change" effect that PUTs the ENTIRE local `stats` object to `aivorah-leaderboard-service`'s `PUT /student/:id` on every change — confirmed server-side that this endpoint treats `xpPoints` as **authoritative and overwrites** it (`services/student-stats.js`'s `updateStudentStats()`). Separately, `completeLesson()` has its own **atomic, idempotent, server-side** XP award (`POST /:id/complete-lesson`, flat +150, guarded by `completed_topics`).
+- For a Learning Path quiz finish, `useQuiz.ts`'s `finishQuiz()` called **both**: `completeLesson()` (atomic, correct) **and** a separate local-only `addXP(pct>=80?100:pct>=60?60:30)`, for the exact same event. `addXP()`'s `setStats` fires *synchronously*, immediately PUTing the client's locally-guessed total (which doesn't yet include `completeLesson()`'s still-in-flight +150) — a genuine **lost-update race** between an atomic server-side increment and a stale client-side overwrite. Depending on which write landed last, a student could see XP that didn't match what a fresh page load (which always re-fetches the server's real total) would show. It also had no idempotency guard, unlike `completeLesson()` — a **repeat** attempt of an already-completed topic still added local XP every time, while the server-side total correctly stayed flat.
+- **Regression test (written first, confirmed failing):** updated the existing `useQuiz.test.tsx` quiz-finish test to assert `completeLesson` is called but `addXP` is **not**. Ran against the unfixed code: FAIL ❌ (`addXP` was called with `100`).
+- **Fix:** removed the `addXP(...)` call from `finishQuiz()` entirely — `completeLesson()`'s atomic, idempotent, server-persisted award is now the sole XP source for this event, eliminating the race outright rather than trying to win it.
+- **Also checked, found NOT buggy:** `completeChallenge()` (Challenges) and `exploreTopic()` (AI Coach) each have exactly one XP-crediting path apiece — no duplicate/competing writes for the same event — so left unchanged.
+- **After fix:** PASS ✅ — 26/26 in `src/screens/student/learning-paths/quiz`.
+
+**Files changed:** `src/screens/student/challenges/hooks/useChallengesList.ts` · `src/screens/student/challenges/hooks/__tests__/useChallengesList.test.tsx` · `src/screens/student/learning-paths/quiz/hooks/useQuiz.ts` · `src/screens/student/learning-paths/quiz/hooks/__tests__/useQuiz.test.tsx`
+
+**Full regression:** `src/context` + `src/screens/student/learning-paths/quiz` + `src/screens/student/challenges`: 153/153, no regressions.
+
+**Manual verification:** Pending your local check — (1) open Challenges a few times, confirm it never shows empty when challenges genuinely exist; (2) finish a Learning Path quiz, then check Dashboard/Progress/Challenges immediately after — the XP total should already match everywhere, including after a full refresh.
+
+**Risk/Impact:** Low-medium — Finding 1 is purely additive resilience. Finding 2 removes a source of double-counted/racy XP; a student's total may appear slightly lower after this fix than the old (partially fake) inflated number, which is the correct, honest behavior — the removed XP was never reliably persisted anyway.
+
+---
+
+## Bug #23 — leaderboard column misalignment / symbol error
+
+**Status:** ✅ CLOSED (symbol error) — misalignment investigated, not reproduced in code
+
+**Observed:** reported column misalignment and a symbol error on the Leaderboard.
+
+**Investigated column alignment:** `LeaderboardTable.tsx`'s header (`thRank`/`thStudent`/`thGrade`/`thXp`/`thStreak`) and every data row reuse the exact same width-carrying style objects — same `width`/`flex`/`textAlign` for both header and cells. No layout defect found in code; not fixed since there's nothing here to fix without a live repro showing an actual misaligned screenshot.
+
+**Confirmed symbol error:** the streak indicator used Feather's `"wind"` icon — unrelated to a streak. Every other streak display in the app (e.g. Dashboard's `HeroCard`) uses a dedicated flame icon (`FlameIcon`, a custom SVG — Feather has no flame glyph, which is presumably why "wind" ended up here as a stand-in).
+
+**Fix:** swapped the Feather `"wind"` icon for the existing `FlameIcon` component, reused from `dashboard/components/common/icons.tsx` for visual consistency with the rest of the app.
+
+**Regression test:** new `LeaderboardTable.test.tsx` (component previously had no test coverage at all) — renders the table with a real entry and confirms it mounts cleanly with the new icon import.
+
+**After fix:** PASS ✅ — 10/10 in `src/screens/student/leaderboard`.
+
+**Files changed:** `src/screens/student/leaderboard/components/LeaderboardTable.tsx` · `src/screens/student/leaderboard/components/__tests__/LeaderboardTable.test.tsx` (new)
+
+**Manual verification:** Pending your local check — confirm the streak column now shows a flame icon, and if column misalignment is still visible, send a screenshot so it can be traced against the real rendered layout rather than the source alone.
+
+**Risk/Impact:** Very low — icon swap only, no layout/logic change.
+
+---
+
+## Bug #24 — Progress screen's "Month" toggle non-functional
+
+**Status:** ✅ CLOSED — was already fixed earlier this session (before the pivot to working the bug tracker sequentially), confirmed here rather than left ambiguous in the tracker.
+
+**RCA (as documented directly in the code, `useWeeklyActivity.ts`):** the Month tab updated `periodTab` state, but the data-fetching `useEffect` didn't have `periodTab` in its dependency array, so toggling Week→Month never re-fetched — the chart just kept showing the Week data.
+
+**Fix (already in place):** `periodTab` added to the effect's dependency array; `fetchWeeklyActivity(studentId, periodTab)` passes it through to `GET /student/:id/weekly?period=week|month` on `aivorah-leaderboard-service`.
+
+**Verified now:** `src/screens/student/progress` suite — 28/28 passing, including `useWeeklyActivity.test.tsx`'s toggle-re-fetch coverage.
+
+**Manual verification:** Pending your local check — toggle Week/Month on the Progress screen, confirm the chart and totals actually change.
+
+**Risk/Impact:** None — no code changed in this pass, just confirmed and logged.
+
+---
+
+## Bug #19 — Teacher Schedule: week starts on Monday, not Sunday; tapping a date doesn't scroll
+
+**Status:** ✅ CLOSED (both findings)
+
+**Finding 1 — week starts Monday, not Sunday.** Confirmed deliberate (not accidental) — `scheduleUtils.ts`'s `buildWeek()` explicitly rolled back to the preceding Monday (`monday.setDate(base.getDate() - ((dow + 6) % 7))`), `constants.ts`'s `DAYS_SHORT` was `['MON', ..., 'SUN']`, and `useWeekNav.ts`'s `scrollToTodayCol()` mapped `Mon=0…Sun=6`. Per explicit user request, changed to Sunday-first throughout: `buildWeek()` now rolls back to Sunday (`getDay()` is already 0-indexed from Sunday, so the wraparound math was removed entirely, not just re-mapped), `DAYS_SHORT` reordered, `scrollToTodayCol()` simplified to `base.getDay()` directly.
+- **Regression tests (updated, confirmed against the new behavior):** `scheduleUtils.test.ts`'s `buildWeek` suite rewritten for Sunday-first — asserts a Wednesday base still returns all 7 days with `week[0].day === 'SUN'`, and a Saturday base rolls back to that week's real Sunday.
+
+**Finding 2 — tapping a date doesn't scroll.** RCA: `CalendarGrid.tsx`'s day-header cells were a plain `View` — not tappable at all, so there was genuinely nothing to scroll no matter what a user tapped.
+- **Fix:** day headers are now a `TouchableOpacity` calling a new `onDayHeaderPress(iso)` prop, wired in `TeacherScheduleScreen.tsx` to the existing (previously not-exported) `scrollToCurrentTime()` from `useWeekNav.ts` — tapping any day now scrolls the vertical timeline into view, giving real, visible feedback instead of doing nothing.
+- **Regression tests (written first, confirmed failing):** new tests in `CalendarGrid.integration.test.tsx` — tapping a day header calls `onDayHeaderPress` with that day's iso date; the week grid genuinely starts on Sunday (`getDay() === 0`) and ends on Saturday. Ran against the unfixed code first: FAIL ❌ (no `teacher-schedule-day-header-*` testIDs existed — the header wasn't a pressable element at all).
+
+**After fix:** PASS ✅ — full `src/screens/teacher/schedule` + `src/navigation` suite: 108/108. `TeacherScheduleScreen.e2e.test.tsx`: 10/10 (3 pre-existing skips), no regressions.
+
+**Files changed:** `src/screens/teacher/schedule/constants.ts` · `src/screens/teacher/schedule/utils/scheduleUtils.ts` · `src/screens/teacher/schedule/hooks/useWeekNav.ts` · `src/screens/teacher/schedule/components/CalendarGrid.tsx` · `src/screens/teacher/schedule/TeacherScheduleScreen.tsx` · `src/screens/teacher/schedule/__tests__/unit/scheduleUtils.test.ts` · `src/screens/teacher/schedule/__tests__/integration/CalendarGrid.integration.test.tsx`
+
+**Manual verification:** Pending your local check — confirm the week grid now shows Sunday first, and tapping any date header visibly scrolls the timeline.
+
+**Risk/Impact:** Low-medium — the Monday→Sunday change affects every date computation in this screen (week boundaries, "today" column index); mitigated by rewriting the `buildWeek` unit tests against real calendar dates and confirming the full existing suite (108 tests, including drag-to-create, event CRUD, tag filters) still passes unchanged.

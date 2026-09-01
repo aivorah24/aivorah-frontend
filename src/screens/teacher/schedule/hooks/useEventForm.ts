@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import type { ScheduleEvent, StudentItem, TargetStudents } from '../types';
 import { createEvent, updateEvent } from '../services/scheduleService';
 import { deriveTypeFromTag } from '../utils/scheduleUtils';
@@ -147,8 +147,28 @@ export function useEventForm({ todayISO, userEmail, students, setEventsMap, remo
     }
   }
 
+  // Bug #15: this used to be `Platform.OS === 'web' ? window.confirm(...) :
+  // true` — on any native platform the `true` branch deleted immediately,
+  // with NO confirmation shown at all. Alert.alert is a no-op on React
+  // Native Web (same convention already used elsewhere in this codebase,
+  // e.g. ParentSettingsScreen.tsx), so web keeps window.confirm and native
+  // gets a real Alert.alert prompt.
   async function confirmDeleteEvent(ev: any) {
-    const ok = Platform.OS === 'web' ? window.confirm(`Delete "${ev.title}"? This can't be undone.`) : true;
+    const ok = await new Promise<boolean>((resolve) => {
+      if (Platform.OS === 'web') {
+        resolve(window.confirm(`Delete "${ev.title}"? This can't be undone.`));
+        return;
+      }
+      Alert.alert(
+        'Delete event?',
+        `Delete "${ev.title}"? This can't be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
     if (!ok) return;
     await removeEvent(ev.id, ev.date);
     setSelectedEvent(null);

@@ -5,6 +5,7 @@ import { LeaderboardEntry } from '../types';
 import { MEDAL_COLORS } from '../constants';
 import { spacing, radius, fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
+import { FlameIcon } from '../../dashboard/components/common/icons';
 
 function initials(name: string) {
   return name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase();
@@ -61,7 +62,12 @@ export default function LeaderboardTable({ leaderboard, loading, studentId, wide
             {wide && <Text style={styles.thGrade}><Text style={styles.gradeCell}>{s.grade}</Text></Text>}
             <View style={styles.thXp}><Text style={[styles.xpCell, { color: gold }]}>{s.score.toLocaleString()} <Text style={{ fontSize: 11, fontWeight: '600' }}>XP</Text></Text></View>
             <View style={[styles.thStreak, { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }]}>
-              <Feather name="wind" size={12} color={colors.accentYellow} />
+              {/* Bug #23 ("symbol error"): this was Feather's "wind" icon —
+                  wrong symbol for a streak. Every other streak display in
+                  the app (e.g. Dashboard's HeroCard) uses this same flame
+                  icon; Feather has no flame glyph, which is presumably how
+                  "wind" ended up here in the first place. */}
+              <FlameIcon size={12} />
               <Text style={styles.streakCell}>{s.streak}d</Text>
             </View>
           </View>

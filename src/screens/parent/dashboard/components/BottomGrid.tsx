@@ -82,7 +82,7 @@ export default function BottomGrid({
             </View>
           ))}
         </View>
-        <TouchableOpacity style={s.cardFooterBtn} onPress={onViewReport} activeOpacity={0.8}>
+        <TouchableOpacity testID="subject-performance-view-report" style={s.cardFooterBtn} onPress={onViewReport} activeOpacity={0.8}>
           <Text style={s.cardFooterText}>View Detailed Report</Text>
           <Feather name="arrow-right" size={13} color={colors.accentYellow} />
         </TouchableOpacity>

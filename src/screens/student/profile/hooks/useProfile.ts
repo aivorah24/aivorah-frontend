@@ -39,7 +39,12 @@ export function useProfile() {
   function handleSelectAvatar(id: string) {
     setSelAvatar(id);
     setPhotoUrl(null);
-    updateUser({ avatarStyle: id, photoUrl: undefined } as any);
+    // Bug #9 (second finding): must send an EXPLICIT null, not undefined —
+    // JSON.stringify drops undefined keys entirely, so the PATCH never told
+    // the backend to clear the previously-uploaded photo. The header/sidebar
+    // avatar prioritize photoUrl over avatarStyle, so a real (never cleared)
+    // users.photo_url kept winning over the newly-picked avatar on refresh.
+    updateUser({ avatarStyle: id, photoUrl: null } as any);
   }
 
   function handleSelectLearningStyle(id: string) {

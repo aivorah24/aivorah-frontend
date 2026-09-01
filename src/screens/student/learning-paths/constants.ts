@@ -1,45 +1,31 @@
 import type { CurriculumTopic, SubjectData, SubjectMeta } from './types';
 
+// All subject cards share one gold accent/gradient so the grid reads as a
+// uniform set (2026-08-28: previously each subject had its own color —
+// Computer Science green, Hindi pink, etc. — which read as randomly
+// highlighted next to the rest, same issue already fixed this way on the
+// Progress screen's Subject Performance grid). Only the icon still varies
+// per subject.
+const GOLD_META = {
+  accentDark: '#C9A24E', bgFromDark: '#E4D4A8', bgToDark: '#F0E2BC',
+  accentLight: '#C9A24E', bgFromLight: '#E4D4A8', bgToLight: '#F0E2BC',
+};
+
 export const SUBJECT_META: Record<string, SubjectMeta> = {
-  // Light pastels — same soft palette for both dark & light modes
-  Mathematics: { icon: 'trending-up',
-    accentDark: '#BAA467', bgFromDark: '#D8CFA8', bgToDark: '#E6DEBC',
-    accentLight: '#BAA467', bgFromLight: '#D8CFA8', bgToLight: '#E6DEBC' },
-  Science: { icon: 'zap',
-    accentDark: '#9FB2A4', bgFromDark: '#C8DCCC', bgToDark: '#D8E8DC',
-    accentLight: '#9FB2A4', bgFromLight: '#C8DCCC', bgToLight: '#D8E8DC' },
-  EVS: { icon: 'sun',
-    accentDark: '#9FB2A4', bgFromDark: '#C8DCCC', bgToDark: '#D8E8DC',
-    accentLight: '#9FB2A4', bgFromLight: '#C8DCCC', bgToLight: '#D8E8DC' },
-  'Social Studies': { icon: 'globe',
-    accentDark: '#BAA467', bgFromDark: '#E0D898', bgToDark: '#EEE8B4',
-    accentLight: '#BAA467', bgFromLight: '#E0D898', bgToLight: '#EEE8B4' },
+  Mathematics: { icon: 'trending-up', ...GOLD_META },
+  Science: { icon: 'zap', ...GOLD_META },
+  EVS: { icon: 'sun', ...GOLD_META },
+  'Social Studies': { icon: 'globe', ...GOLD_META },
   // CBSE/NCERT names this subject "Social Science" (IB PYP calls it "Social
-  // Studies") — same pastel treatment, just under the name CBSE actually sends.
-  'Social Science': { icon: 'globe',
-    accentDark: '#BAA467', bgFromDark: '#E0D898', bgToDark: '#EEE8B4',
-    accentLight: '#BAA467', bgFromLight: '#E0D898', bgToLight: '#EEE8B4' },
-  Hindi: { icon: 'book-open',
-    accentDark: '#C98A8A', bgFromDark: '#EAD0D0', bgToDark: '#F2DEDE',
-    accentLight: '#C98A8A', bgFromLight: '#EAD0D0', bgToLight: '#F2DEDE' },
-  'Computer Science': { icon: 'monitor',
-    accentDark: '#7E9A86', bgFromDark: '#CFE0D3', bgToDark: '#DEEBE1',
-    accentLight: '#7E9A86', bgFromLight: '#CFE0D3', bgToLight: '#DEEBE1' },
-  English: { icon: 'book-open',
-    accentDark: '#C9A24E', bgFromDark: '#E4D4A8', bgToDark: '#F0E2BC',
-    accentLight: '#C9A24E', bgFromLight: '#E4D4A8', bgToLight: '#F0E2BC' },
-  Arts: { icon: 'feather',
-    accentDark: '#C9A24E', bgFromDark: '#E4D4A8', bgToDark: '#F0E2BC',
-    accentLight: '#C9A24E', bgFromLight: '#E4D4A8', bgToLight: '#F0E2BC' },
-  'Physical Education': { icon: 'activity',
-    accentDark: '#9FB2A4', bgFromDark: '#C8DCCC', bgToDark: '#D8E8DC',
-    accentLight: '#9FB2A4', bgFromLight: '#C8DCCC', bgToLight: '#D8E8DC' },
-  ICT: { icon: 'monitor',
-    accentDark: '#BAA467', bgFromDark: '#D8CFA8', bgToDark: '#E6DEBC',
-    accentLight: '#BAA467', bgFromLight: '#D8CFA8', bgToLight: '#E6DEBC' },
-  'Economics & Trade': { icon: 'dollar-sign',
-    accentDark: '#C9A24E', bgFromDark: '#D8CC88', bgToDark: '#E8DCA0',
-    accentLight: '#C9A24E', bgFromLight: '#D8CC88', bgToLight: '#E8DCA0' },
+  // Studies") — same treatment, just under the name CBSE actually sends.
+  'Social Science': { icon: 'globe', ...GOLD_META },
+  Hindi: { icon: 'book-open', ...GOLD_META },
+  'Computer Science': { icon: 'monitor', ...GOLD_META },
+  English: { icon: 'book-open', ...GOLD_META },
+  Arts: { icon: 'feather', ...GOLD_META },
+  'Physical Education': { icon: 'activity', ...GOLD_META },
+  ICT: { icon: 'monitor', ...GOLD_META },
+  'Economics & Trade': { icon: 'dollar-sign', ...GOLD_META },
 };
 
 export const IB_PYP_TOPIC_BANK: CurriculumTopic[] = [

@@ -10,7 +10,13 @@ import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsSc
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
-import TeacherProgressScreen from '@legacy/teacher-legacy/TeacherProgressScreen';
+// Bug tracker / Student Progress work-order (2026-08-29): the legacy screen
+// was a dummy — hardcoded "Alice Smith"/"Bob Jones", zero real backend call.
+// Replaced with the real screen, backed by the extracted heatmap route in
+// aivorah-teacher-dashboard-service.
+import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
+import TeacherSyllabusImportScreen from '@legacy/teacher-legacy/TeacherSyllabusImportScreen';
+import TeacherAnnouncementsScreen from '@legacy/teacher-legacy/TeacherAnnouncementsScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
@@ -51,6 +57,15 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
+      {/* Not yet refactored — served from src/.legacy-screens/teacher-legacy/
+          until their own dedicated refactor pass, same as TeacherChallenges/
+          TeacherMessages above. Were declared in TeacherDrawerParamList
+          (navigation/types.ts) and had sidebar menu items
+          (DrawerContent.tsx/Sidebar.tsx) pointing at them, but were never
+          actually registered as a Drawer.Screen — both "Manage Syllabus"
+          and "Announcements" were dead sidebar links until this. */}
+      <Drawer.Screen name="TeacherSyllabusImport" component={TeacherSyllabusImportScreen} />
+      <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />

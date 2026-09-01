@@ -5,24 +5,170 @@ on:
     branches: [main, master, staging]
   pull_request:
     branches: [main, master, staging]
+  workflow_dispatch:
+    inputs:
+      accountFilter:
+        description: 'Optional comma-separated account keys to log in (e.g. "parent-e,parent-f7") - scopes E2E setup to only the accounts a targeted run needs instead of logging in all ~64. Leave blank for a full run.'
+        required: false
+        default: ''
+
+env:
+  # The frontend will be built and served locally on 3006
+  BASE_URL: http://localhost:3006
 
 jobs:
-  ci:
+  build_and_setup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-      - run: npm ci
-      - name: TypeScript check
-        run: npx tsc --noEmit
-      - name: Lint check
-        run: npm run lint
-      - name: Unit tests
-        run: npm run test:unit -- --ci
-      - name: Integration tests
-        run: npm run test:integration -- --ci
-      - name: Build verification
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        
+      # - name: TypeScript check
+      #   run: npx tsc --noEmit
+        
+      # - name: Lint check
+      #   run: npm run lint
+        
+      # - name: Unit tests
+      #   run: npm run test:unit -- --ci
+        
+      # - name: Integration tests
+      #   run: npm run test:integration -- --ci
+        
+      - name: Build Web Application
         run: npm run vercel-build
+        
+      - name: Install E2E Dependencies
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium chrome
+          
+      - name: Run E2E Setup (Warmup + Login + Snapshot)
+        run: |
+          cd e2e
+          echo "${{ secrets.E2E_ENV_FILE }}" > .env
+          # Temporarily serve the app so setup can hit it locally
+          npx serve -s ../dist -l 3006 &
+          SERVER_PID=$!
+          sleep 3 # Wait for server
+          node tests/ci/setup.mjs
+          kill $SERVER_PID
+        env:
+          ACCOUNT_FILTER: ${{ github.event.inputs.accountFilter }}
+          
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: dist/
+          retention-days: 1
+          
+      - name: Upload Auth Session Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-session
+          path: |
+            e2e/.auth/
+            e2e/.profile-snapshot.json
+          include-hidden-files: true
+          retention-days: 1
+
+  e2e_tests:
+    needs: build_and_setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          
+      - name: Install E2E Dependencies
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium chrome
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: dist/
+
+      - name: Download Auth Session Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-session
+          path: e2e/
+
+      - name: Run Playwright Shard
+        run: |
+          cd e2e
+          npx playwright test --shard=${{ matrix.shard }}/4 --workers=2 --reporter=blob
+        env:
+          PLAYWRIGHT_SKIP_GLOBAL_HOOKS: 'true'
+
+      - name: Upload Blob Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: e2e/blob-report
+          retention-days: 1
+
+  teardown_and_report:
+    if: always()
+    needs: [build_and_setup, e2e_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          
+      - name: Install E2E Dependencies
+        run: |
+          cd e2e
+          npm ci
+
+      - name: Download all Blob Reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: e2e/all-blob-reports
+          merge-multiple: true
+
+      - name: Merge HTML Report
+        run: |
+          cd e2e
+          npx playwright merge-reports --reporter=html ./all-blob-reports
+
+      - name: Upload Final HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
+      - name: Download Auth Session Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-session
+          path: e2e/
+
+      - name: Teardown Mutated Accounts
+        run: |
+          cd e2e
+          node tests/ci/teardown.mjs

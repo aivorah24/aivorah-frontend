@@ -3,14 +3,20 @@ import { Feather } from '@expo/vector-icons';
 
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
+// All subjects share one accent color so the grid reads as a uniform set —
+// only the icon varies per subject. Previously each subject had its own
+// color and subjects outside this map fell back to a different default,
+// making English (and Arts) look randomly highlighted next to the rest.
+export const SUBJECT_ACCENT_COLOR = '#C9A24E';
+
 export const SUBJECT_CONFIG: Record<string, { color: string; icon: FeatherName }> = {
-  Mathematics:          { color: '#9FB2A4', icon: 'trending-up'  },
-  Science:              { color: '#7E9A86', icon: 'zap'          },
-  English:              { color: '#C9A24E', icon: 'book-open'    },
-  'Social Studies':     { color: '#8A8358', icon: 'globe'        },
-  Arts:                 { color: '#C9A24E', icon: 'feather'      },
-  'Physical Education': { color: '#9FB2A4', icon: 'activity'     },
-  ICT:                  { color: '#BAA467', icon: 'monitor'      },
+  Mathematics:          { color: SUBJECT_ACCENT_COLOR, icon: 'trending-up'  },
+  Science:              { color: SUBJECT_ACCENT_COLOR, icon: 'zap'          },
+  English:              { color: SUBJECT_ACCENT_COLOR, icon: 'book-open'    },
+  'Social Studies':     { color: SUBJECT_ACCENT_COLOR, icon: 'globe'        },
+  Arts:                 { color: SUBJECT_ACCENT_COLOR, icon: 'feather'      },
+  'Physical Education': { color: SUBJECT_ACCENT_COLOR, icon: 'activity'     },
+  ICT:                  { color: SUBJECT_ACCENT_COLOR, icon: 'monitor'      },
 };
 
 // Achievement rule definitions — thresholds evaluated live against real stats

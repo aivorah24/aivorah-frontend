@@ -125,6 +125,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Select a da
                   style={s.cell}
                   disabled={disabled}
                   activeOpacity={0.7}
+                  accessibilityLabel={key}
                   onPress={() => { onChange(key); setOpen(false); }}
                 >
                   <View style={[

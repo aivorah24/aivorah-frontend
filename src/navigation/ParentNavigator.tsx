@@ -8,12 +8,13 @@ import DrawerContent from '../components/common/DrawerContent';
 import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ParentDashboardScreen from '../screens/parent/dashboard/ParentDashboardScreen';
 import ParentProfileScreen from '../screens/parent/profile/ParentProfileScreen';
-import ParentMyKidsScreen from '@legacy/parent/ParentMyKidsScreen';
+import ParentMyKidsScreen from '../screens/parent/my-kids/ParentMyKidsScreen';
+import ParentDailyTasksScreen from '../screens/parent/daily-tasks/ParentDailyTasksScreen';
 import ParentScheduleScreen from '@legacy/parent/ParentScheduleScreen';
-import ParentAssignmentsScreen from '@legacy/parent/ParentAssignmentsScreen';
+import ParentAssignmentsScreen from '../screens/parent/assignments/ParentAssignmentsScreen';
 import ParentChallengesScreen from '@legacy/parent/ParentChallengesScreen';
 import ParentLeaderboardScreen from '@legacy/parent/ParentLeaderboardScreen';
-import ParentProgressScreen from '@legacy/parent/ParentProgressScreen';
+import ParentProgressScreen from '../screens/parent/progress/ParentProgressScreen';
 import ParentAIReportsScreen from '@legacy/parent/ParentAIReportsScreen';
 import ParentSettingsScreen from '@legacy/parent/ParentSettingsScreen';
 import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';
@@ -54,6 +55,7 @@ export default function ParentNavigator() {
       <Drawer.Screen name="ParentStudentView" component={DashboardScreen} />
       <Drawer.Screen name="ParentProfile" component={ParentProfileScreen} />
       <Drawer.Screen name="ParentMyKids" component={ParentMyKidsScreen} />
+      <Drawer.Screen name="ParentDailyTasks" component={ParentDailyTasksScreen} />
       <Drawer.Screen name="ParentSchedule" component={ParentScheduleScreen} />
       <Drawer.Screen name="ParentAssignments" component={ParentAssignmentsScreen} />
       <Drawer.Screen name="ParentChallenges" component={ParentChallengesScreen} />

@@ -1,6 +1,7 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import AUTH_SERVER_URL from '../../../../config/authServerUrl';
+import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import { WEEK_DAYS } from '../constants';
 
 export async function syncUser(email: string): Promise<{ phone?: string; location?: string } | null> {
@@ -23,8 +24,10 @@ export async function saveProfile(payload: { email: string; name: string; locati
 // Aggregates this parent's children + sums their weekly study minutes.
 // This is an aggregation across the Children and Student domains, not
 // profile-owned data, so it stays here rather than in the profile service.
+// aivorah-students-service now owns GET /parent/:email/children (ported off
+// the monolith) - /student/:id/weekly below is unrelated and stays on SERVER_URL.
 export async function fetchChildrenActivity(parentEmail: string): Promise<{ children: any[]; weeklyActivity: number[] }> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   if (!Array.isArray(data)) return { children: [], weeklyActivity: [0, 0, 0, 0, 0, 0, 0] };
 

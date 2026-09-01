@@ -7,6 +7,7 @@ import LessonRenderer from '../../../lesson/LessonRenderer';
 import { buildLessonComponents } from '../../../lesson/lessonComponents';
 import { makeStyles } from '../styles';
 import BookPane from './BookPane';
+import LearningBlocks from './LearningBlocks';
 
 export default function ReadTab({
   topic,
@@ -53,16 +54,26 @@ export default function ReadTab({
               </Text>
             </View>
           )}
-          {/* Type-driven lesson body: the LessonRenderer composes canonical
-              components (poem / story / math / science layouts) from the
-              lesson's instructional type — the frontend half of the
-              Curriculum Intelligence pipeline contract. */}
-          {rawPayload && (
-            <LessonRenderer
-              components={buildLessonComponents(rawPayload).components}
-              grade={rawPayload?.grade ?? (parseInt((grade || '').replace(/[^0-9]/g, ''), 10) || undefined)}
-              colors={colors}
-            />
+          {/* AI enrichment pilot (Qdrant-only topics — see
+              aivorah-learning-paths-service's services/curriculum/
+              enrichment.js): when the backend has real structured blocks,
+              render those instead of the plain raw-textbook-paragraph
+              fallback. Mutually exclusive with LessonRenderer below — a
+              topic has one or the other, never both. */}
+          {!!rawPayload?.blocks?.length ? (
+            <LearningBlocks whatYoullLearn={rawPayload.whatYoullLearn} blocks={rawPayload.blocks} colors={colors} />
+          ) : (
+            /* Type-driven lesson body: the LessonRenderer composes canonical
+               components (poem / story / math / science layouts) from the
+               lesson's instructional type — the frontend half of the
+               Curriculum Intelligence pipeline contract. */
+            rawPayload && (
+              <LessonRenderer
+                components={buildLessonComponents(rawPayload).components}
+                grade={rawPayload?.grade ?? (parseInt((grade || '').replace(/[^0-9]/g, ''), 10) || undefined)}
+                colors={colors}
+              />
+            )
           )}
           {!!(topic.readText as any).mathHelper && (() => {
             const mh = (topic.readText as any).mathHelper;
@@ -111,10 +122,17 @@ export default function ReadTab({
               </View>
             ));
           })()}
-          <View style={[styles.activityBox, { borderColor: colors.primary + '55', backgroundColor: colors.primary + '14' }]}>
-            <Text style={[styles.activityLabel, { color: colors.primary }]}>Try this yourself</Text>
-            <Text style={[styles.activityText, { color: colors.textMain }]}>{topic.readText.activity}</Text>
-          </View>
+          {/* Bug: this used to render unconditionally, showing an empty box
+              whenever there was no real activity text (see BUGS_AND_FIXES.md
+              — reported directly from a screenshot of this exact state).
+              Also skipped when the AI-enrichment blocks above already
+              rendered their own "activity" block, so it's never duplicated. */}
+          {!!topic.readText.activity && !rawPayload?.blocks?.some((b: any) => b.type === 'activity') && (
+            <View style={[styles.activityBox, { borderColor: colors.primary + '55', backgroundColor: colors.primary + '14' }]}>
+              <Text style={[styles.activityLabel, { color: colors.primary }]}>Try this yourself</Text>
+              <Text style={[styles.activityText, { color: colors.textMain }]}>{topic.readText.activity}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

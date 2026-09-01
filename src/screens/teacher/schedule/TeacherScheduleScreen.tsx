@@ -32,7 +32,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   // same dual-purpose ref the monolithic screen used.
   const firstLoadDoneRef = useRef(false);
 
-  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, vScrollRef, goToday, onGridContentSizeChange } =
+  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, vScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
     useWeekNav(firstLoadDoneRef);
 
   const { eventsMap, setEventsMap, loading, nowTime, removeEvent } =
@@ -123,6 +123,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                 removeEvent={removeEvent}
                 openModal={form.openModal}
                 setSelectedEvent={form.setSelectedEvent}
+                onDayHeaderPress={() => scrollToCurrentTime()}
               />
 
               {/* ── Right Sidebar: Tag Filters ── */}

@@ -1,8 +1,9 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 
-export async function fetchWeeklyActivity(studentId: string) {
-  return fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/weekly`)
+export async function fetchWeeklyActivity(studentId: string, period: 'Week' | 'Month' = 'Week') {
+  const periodParam = period === 'Month' ? 'month' : 'week';
+  return fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/weekly?period=${periodParam}`)
     .then(r => r.json())
     .catch(() => ({ days: [] }));
 }

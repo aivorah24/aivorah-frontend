@@ -580,7 +580,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? _pendingRole
           : (savedActiveRole && validRoles.includes(savedActiveRole) ? savedActiveRole : resolvedRole);
         const finalAuthProvider = isGoogleProvider || savedLocal.authProvider === 'google' || supaProfile.authProvider === 'google' ? 'google' : (baseUser.authProvider || 'password');
-        let resolvedUser = { ...baseUser, ...savedLocal, ...supaProfile, email, onboardingComplete, emailVerified, role: activeRole, roles: bestRoles, authProvider: finalAuthProvider };
+        let resolvedUser = {
+          ...baseUser, ...savedLocal, ...supaProfile,
+          email, onboardingComplete, emailVerified, role: activeRole, roles: bestRoles, authProvider: finalAuthProvider,
+          // Bug #9: avatarStyle/learningStyle/interests/bio ONLY ever come
+          // from the second, best-effort GET /user/preferences call inside
+          // fetchSupabaseProfile() — never from the reliable /user/sync call
+          // (unlike dob/gender/state/country, which were moved onto
+          // /user/sync for exactly this reason — see that fix's comment
+          // above in fetchSupabaseProfile). The blind spread above means
+          // `supaProfile`'s key always wins even when its value is
+          // `undefined`, so any refresh racing ahead of the just-fired,
+          // un-awaited updateUser() PATCH (or hitting the network flakiness
+          // already proven elsewhere this session) silently wiped a
+          // student's just-picked avatar back to blank. Same
+          // "fall back to what's already known, don't blank it out on a
+          // second best-effort call" fix already applied to dob/etc.
+          avatarStyle:   supaProfile.avatarStyle   ?? savedLocal.avatarStyle,
+          learningStyle: supaProfile.learningStyle ?? savedLocal.learningStyle,
+          interests:     supaProfile.interests     ?? savedLocal.interests,
+          bio:           supaProfile.bio           ?? savedLocal.bio,
+        };
         
         // This used to force EVERY account on localhost to `teacher`, discarding
         // the role the server had just returned. A genuine student (role
@@ -1121,7 +1141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           school:             profile.school     || undefined,
           schoolId:           profile.schoolId   ?? null,
           location:           profile.location   || 'Hyderabad, India',
-          onboardingComplete: isLocalDev ? true : onboardingComplete,
+          // Always trust the real DB value, on localhost too — a silent
+          // force-true here (removed 2026-08-28) meant local Google-SSO
+          // logins never reflected an account's actual onboarding state,
+          // diverging from every other login path (email/password,
+          // refreshProfile) which always honoured onboardingComplete for
+          // real. That's not needed for local testing and only hid genuine
+          // "onboarding not actually complete" states during dev.
+          onboardingComplete,
           // First-time Google SSO users must verify via Aivorah email before entering.
           // REGRESSION GUARD (2026-07-20, broke in e2a7f90 on top of the Jul-9
           // "sticky emailVerified" cache): this must be Aivorah's own

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import AUTH_SERVER_URL from '../config/authServerUrl';
 import LEADERBOARD_SERVICE_URL from '../config/leaderboardServiceUrl';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { useAuth } from './AuthContext';
 
 // Known email → fixed UUID map (bypasses /user/sync for seeded accounts)
@@ -51,10 +52,16 @@ export interface StudentStats {
 interface StudentDataContextType {
   stats:             StudentStats;
   studentId:         string;
+  // True only when the initial load genuinely failed after retries AND no
+  // cached fallback was found either — i.e. what's showing may not be real
+  // zero progress, it's "we don't know yet". Distinct from a real student
+  // whose stats are actually all zero (statsLoadError stays false for them).
+  statsLoadError:    boolean;
+  refreshStats:      () => void;
   addXP:             (xp: number) => void;
   exploreTopic:      () => void;
   completeLesson:    (topic: string, subject?: string, grade?: string, curriculum?: string) => void;
-  completeChallenge: () => void;
+  completeChallenge: (xpAwarded?: number) => void;
   completeAssignment:() => void;
   recordStudyTime:   (minutes: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
 }
@@ -111,7 +118,7 @@ async function resolveStudentId(email: string): Promise<string> {
 
   // 3. Sync with server → get real UUID
   try {
-    const res = await fetch(`${AUTH_SERVER_URL}/user/sync`, {
+    const res = await fetchWithRetry(`${AUTH_SERVER_URL}/user/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, role: 'student' }),
@@ -140,6 +147,8 @@ async function resolveStudentId(email: string): Promise<string> {
 const StudentDataContext = createContext<StudentDataContextType>({
   stats:             ZERO_STATS,
   studentId:         '',
+  statsLoadError:    false,
+  refreshStats:      () => {},
   addXP:             () => {},
   exploreTopic:      () => {},
   completeLesson:    () => {},
@@ -154,50 +163,96 @@ const StudentDataContext = createContext<StudentDataContextType>({
 
 export function StudentDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [stats,     setStats]     = useState<StudentStats>(ZERO_STATS);
-  const [studentId, setStudentId] = useState('');
-  const [loaded,    setLoaded]    = useState(false);
+  const [stats,          setStats]          = useState<StudentStats>(ZERO_STATS);
+  const [studentId,      setStudentId]      = useState('');
+  const [loaded,         setLoaded]         = useState(false);
+  const [statsLoadError, setStatsLoadError] = useState(false);
+  const [retryTick,      setRetryTick]      = useState(0);
+  const reconcilingRef = useRef(false);
+  // Tracks which email the zero-reset below has already run for, so a
+  // manual refreshStats() retry (same email, retryTick bumped) doesn't wipe
+  // out real/cached stats back to zero while it re-fetches — only an actual
+  // account switch should ever do that.
+  const lastResetEmailRef = useRef<string | null>(null);
 
-  // ── Load from server — re-run whenever logged-in email changes ──
+  // ── Load from server — re-run whenever logged-in email changes, or when
+  // refreshStats() is called after a failed load ──
   useEffect(() => {
     if (!user?.email) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- early-return branch of the data-fetch effect below, external sync
     if (user?.role && user.role !== 'student') { setLoaded(true); return; }
     setLoaded(false);
-    setStats(ZERO_STATS);
+    setStatsLoadError(false);
+    if (lastResetEmailRef.current !== user.email) {
+      lastResetEmailRef.current = user.email;
+      setStats(ZERO_STATS);
+    }
 
     async function init() {
       const id = await resolveStudentId(user!.email);
       setStudentId(id);
       try {
-        const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${id}`);
+        const res = await fetchWithRetry(`${LEADERBOARD_SERVICE_URL}/student/${id}`);
         if (res.ok) {
           const data = await res.json();
           setStats({ ...ZERO_STATS, ...data });
+          setStatsLoadError(false);
+        } else {
+          throw new Error(`GET /student/${id} → ${res.status}`);
         }
       } catch {
+        // Retries exhausted — fall back to the last locally-cached snapshot
+        // (real progress, just possibly a bit stale) rather than blanking
+        // the screen. Only when there's no cache either do we flag this as
+        // a genuine load failure, so the UI can say "couldn't load" instead
+        // of silently rendering a real student's progress as all zeros.
+        let recoveredFromCache = false;
         try {
           const raw = await AsyncStorage.getItem(`@stats_${id}`);
-          if (raw) setStats({ ...ZERO_STATS, ...JSON.parse(raw) });
+          if (raw) { setStats({ ...ZERO_STATS, ...JSON.parse(raw) }); recoveredFromCache = true; }
         } catch {}
+        setStatsLoadError(!recoveredFromCache);
       } finally {
         setLoaded(true);
       }
     }
     init();
-  }, [user?.email]);
+  }, [user?.email, retryTick]);
+
+  function refreshStats() {
+    setRetryTick(t => t + 1);
+  }
 
   // ── Sync to server whenever stats change ──────────────
   useEffect(() => {
     if (!loaded || !studentId) return;
     // Local backup
     AsyncStorage.setItem(`@stats_${studentId}`, JSON.stringify(stats)).catch(() => {});
-    // Server sync (fire-and-forget)
+    // A reconciliation write (below) shouldn't immediately re-trigger
+    // another PUT of the value we just pulled from the server — that would
+    // loop forever on a persistently-down network.
+    if (reconcilingRef.current) { reconcilingRef.current = false; return; }
+    // Server sync (fire-and-forget). If this fails, the local optimistic
+    // state (e.g. from addXP) would otherwise stay permanently ahead of the
+    // server while every other screen that re-fetches fresh (Leaderboard on
+    // focus) keeps showing the real, unsynced value — the reported
+    // "XP inconsistent between pages" bug. Reconcile once by re-fetching the
+    // server's authoritative stats instead of silently leaving the drift.
     fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}`, {
       method:  'PUT',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(stats),
-    }).catch(() => {});
+    }).catch(() => {
+      fetchWithRetry(`${LEADERBOARD_SERVICE_URL}/student/${studentId}`)
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (data) {
+            reconcilingRef.current = true;
+            setStats(prev => ({ ...prev, ...data }));
+          }
+        })
+        .catch(() => {});
+    });
   }, [stats, loaded, studentId]);
 
   // Study time is recorded only by screens where real learning happens —
@@ -273,9 +328,18 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       });
   }
 
-  function completeChallenge() {
-    setStats(prev => ({ ...prev, challengesCompleted: prev.challengesCompleted + 1, lastActiveDate: todayISO() }));
-    addXP(100);
+  function completeChallenge(xpAwarded: number = 100) {
+    setStats(prev => {
+      const newXP = prev.xpPoints + xpAwarded;
+      return {
+        ...prev,
+        challengesCompleted: prev.challengesCompleted + 1,
+        xpPoints:            newXP,
+        level:               computeLevel(newXP),
+        todayXP:             prev.todayXP + xpAwarded,
+        lastActiveDate:      todayISO(),
+      };
+    });
   }
 
   function completeAssignment() {
@@ -284,7 +348,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <StudentDataContext.Provider value={{ stats, studentId, addXP, exploreTopic, completeLesson, completeChallenge, completeAssignment, recordStudyTime }}>
+    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, completeLesson, completeChallenge, completeAssignment, recordStudyTime }}>
       {children}
     </StudentDataContext.Provider>
   );

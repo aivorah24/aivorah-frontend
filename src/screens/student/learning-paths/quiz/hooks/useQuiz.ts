@@ -150,8 +150,17 @@ export function useQuiz(params: {
       }).catch(() => {});
     }
 
+    // Bug #22 ("XP inconsistent between pages"): this used to ALSO call
+    // addXP(pct>=80?100:pct>=60?60:30) here — a separate, purely local-only
+    // XP bump never sent to any server, on top of completeLesson()'s real,
+    // server-persisted, idempotent flat-150 award. That meant: a first
+    // pass showed 150+60/100 XP but only 150 was ever persisted (the extra
+    // vanished on any refetch); a REPEAT pass of an already-done topic kept
+    // adding local XP every single retry with no idempotency; and a failing
+    // attempt (pct<60, completeLesson not even called) showed +30 XP that
+    // was 100% fake. completeLesson() is now the only XP source for this
+    // event, so what's shown always matches what a fresh page load shows.
     if (pct >= 60) completeLesson(topic, subject, grade, curriculum);
-    addXP(pct >= 80 ? 100 : pct >= 60 ? 60 : 30);
 
     // Quiz time is real learning time too — a student who skips straight to the
     // quiz (no lesson-reading session beforehand) was getting 0 study time
