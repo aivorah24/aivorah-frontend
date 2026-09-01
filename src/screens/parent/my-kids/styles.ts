@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
 
 export const makeStyles = (c: AppColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.bgDark },
