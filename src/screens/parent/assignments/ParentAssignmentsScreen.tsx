@@ -117,6 +117,7 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
                   style={[styles.filterTab, activeFilter === f && styles.filterTabActive]}
                   onPress={() => setActiveFilter(f)}
                   activeOpacity={0.7}
+                  accessibilityLabel={`filter-${f}`}
                 >
                   <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
                 </TouchableOpacity>
