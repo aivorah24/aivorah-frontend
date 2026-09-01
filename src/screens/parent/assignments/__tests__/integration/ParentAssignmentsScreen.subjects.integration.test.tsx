@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
-import ParentAssignmentsScreen from '@legacy/parent/ParentAssignmentsScreen';
+import ParentAssignmentsScreen from '../../ParentAssignmentsScreen';
 
 jest.mock('react-native-webview', () => ({ WebView: 'WebView' }));
 jest.mock('@react-navigation/native', () => ({
@@ -16,13 +16,13 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), openDrawer: jest.fn() }),
   useRoute: () => ({ name: 'ParentAssignments' }),
 }));
-jest.mock('../../../hooks/useResponsive', () => ({
+jest.mock('../../../../../hooks/useResponsive', () => ({
   useResponsive: () => ({ showPermanentSidebar: false }),
 }));
-jest.mock('../../../context/AuthContext', () => ({
+jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'parent@example.com' } }),
 }));
-jest.mock('../../../context/NotificationContext', () => ({
+jest.mock('../../../../../context/NotificationContext', () => ({
   useNotification: () => ({
     unreadCount: 0, unreadAssignments: 0, unreadChallenges: 0, unreadEvents: 0,
     unreadJoinRequests: 0, latestNotif: null, notificationItems: [],
@@ -30,7 +30,7 @@ jest.mock('../../../context/NotificationContext', () => ({
     clearUnreadChallenges: jest.fn(), clearUnreadEvents: jest.fn(),
   }),
 }));
-jest.mock('../../../context/ThemeContext', () => ({
+jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
       textMuted: '#000', textDim: '#000', accentYellow: '#000', accentRed: '#000',
