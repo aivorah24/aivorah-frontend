@@ -18,7 +18,7 @@ describe('parentAssignmentsService', () => {
         json: jest.fn().mockResolvedValueOnce([{ id: 'c1', name: 'Kid 1' }]),
       });
       const res = await parentAssignmentsService.fetchChildren('parent@test.com');
-      expect(fetch).toHaveBeenCalledWith(`${STUDENTS_SERVER_URL}/parent/parent%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/parent/parent%40test.com/children`);
       expect(res).toEqual([{ id: 'c1', name: 'Kid 1' }]);
     });
 
