@@ -396,8 +396,12 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
                     </View>
                   )}
 
-                  {/* Plain-text questions preview (assignments, or a quiz with no options) */}
-                  {!(type === 'quiz' && quizQuestions.length > 0) && questions.filter(q => q.trim()).length > 0 && (
+                  {/* Plain-text questions preview (assignments, or a quiz with no options).
+                      Gates on questions.length, not on any question having text yet - the
+                      form starts with a single empty slot (see resetForm), so gating on
+                      trimmed content made this block (and the only text input that could
+                      ever fill that slot) permanently invisible on a fresh form. */}
+                  {!(type === 'quiz' && quizQuestions.length > 0) && questions.length > 0 && (
                     <View style={{ gap: 8 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={styles.fieldLabel}>Questions</Text>
