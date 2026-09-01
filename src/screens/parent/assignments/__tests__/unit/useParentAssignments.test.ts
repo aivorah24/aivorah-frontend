@@ -2,7 +2,16 @@ import { renderHook, waitFor, act } from '@testing-library/react-native';
 import { useParentAssignments } from '../../hooks/useParentAssignments';
 import * as parentAssignmentsService from '../../services/parentAssignmentsService';
 
-jest.mock('../../services/parentAssignmentsService');
+jest.mock('../../services/parentAssignmentsService', () => ({
+  __esModule: true,
+  fetchChildren: jest.fn(),
+  fetchAssignmentsAndStats: jest.fn(),
+  fetchCurriculumTopics: jest.fn(),
+  fetchSubjectOptions: jest.fn(),
+  generateWithAI: jest.fn(),
+  createAssignment: jest.fn(),
+  IB_PYP_SUBJECTS: ['Mathematics', 'Science', 'English', 'Social Studies', 'Arts', 'Physical Education', 'ICT'],
+}));
 
 const mockUseFocusEffect = jest.fn();
 jest.mock('@react-navigation/native', () => ({
@@ -146,6 +155,18 @@ describe('useParentAssignments', () => {
     expect(mockedService.fetchSubjectOptions).toHaveBeenCalledWith('IB PYP', 'Grade 3');
   });
 
+  it('handles fetchAssignments error and sets loading to false', async () => {
+    (mockedService.fetchAssignmentsAndStats as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    const { result } = await renderAndSettle({ assignments: [] });
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('handles fetchSubjectOptions error and falls back', async () => {
+    (mockedService.fetchSubjectOptions as jest.Mock).mockRejectedValueOnce(new Error('Error'));
+    const { result } = await renderAndSettle();
+    expect(result.current.subjectOptions).toEqual(['Mathematics', 'Science', 'English', 'Social Studies', 'Arts', 'Physical Education', 'ICT']);
+  });
+
   it('computes filtered assignments based on activeFilter', async () => {
     const { result } = await renderAndSettle({ assignments: MOCK_ASSIGNMENTS });
 
@@ -161,6 +182,9 @@ describe('useParentAssignments', () => {
     await act(async () => { result.current.setActiveFilter('Done'); });
     await waitFor(() => expect(result.current.filtered.length).toBe(1));
     expect(result.current.filtered[0].status).toBe('completed');
+    
+    await act(async () => { result.current.setActiveFilter('All'); });
+    await waitFor(() => expect(result.current.filtered.length).toBe(3));
   });
 
   it('computes stats (completed, pending, overdue, completionPct)', async () => {
@@ -241,6 +265,22 @@ describe('useParentAssignments', () => {
     expect(result.current.assignments[0]).toEqual(created);
     expect(result.current.formError).toBe('');
     expect(result.current.showModal).toBe(false);
+  });
+
+  it('handles createAssignment error', async () => {
+    mockedService.createAssignment.mockRejectedValue(new Error('Server error'));
+    const { result } = await renderAndSettle();
+
+    await act(async () => {
+      result.current.setTitle('New Assignment');
+      result.current.setDueDate('2099-12-31');
+    });
+
+    await act(async () => {
+      await result.current.createAssignment();
+    });
+
+    expect(result.current.formError).toBe('Server error');
   });
 
   it('generateWithAI calls service and populates form', async () => {

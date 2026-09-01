@@ -94,6 +94,15 @@ describe('parentAssignmentsService', () => {
       const res = await parentAssignmentsService.fetchCurriculumTopics('Grade 5');
       expect(res).toEqual([{ subject: 'Math', topic: 'Algebra', grade: 'Grade 5' }]);
     });
+
+    it('returns empty array if topics is missing', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({}),
+      });
+
+      const res = await parentAssignmentsService.fetchCurriculumTopics('Grade 5');
+      expect(res).toEqual([]);
+    });
   });
 
   describe('fetchSubjectOptions', () => {
@@ -127,6 +136,14 @@ describe('parentAssignmentsService', () => {
       });
       await parentAssignmentsService.fetchSubjectOptions('IB PYP', 'Grade 3');
       expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/curriculum/subjects?grade=Grade%203&curriculum=IB%20PYP`);
+    });
+
+    it('falls back to IB_PYP_SUBJECTS if subjects is missing', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValueOnce({}),
+      });
+      const res = await parentAssignmentsService.fetchSubjectOptions('IB PYP', 'Grade 3');
+      expect(res).toEqual(parentAssignmentsService.IB_PYP_SUBJECTS);
     });
 
     it('returns subjects as string array handling objects with name', async () => {
