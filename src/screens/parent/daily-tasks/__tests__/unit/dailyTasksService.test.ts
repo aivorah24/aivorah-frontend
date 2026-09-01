@@ -1,6 +1,6 @@
 import * as dailyTasksService from '../../services/dailyTasksService';
-import SERVER_URL from '../../../../../config/serverUrl';
 import DAILY_HABITS_SERVER_URL from '../../../../../config/dailyHabitsServerUrl';
+import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
 
 global.fetch = jest.fn();
 
@@ -10,14 +10,14 @@ describe('dailyTasksService', () => {
   });
 
   describe('fetchChildren', () => {
-    it('calls the monolith children endpoint and returns the list', async () => {
+    it('calls aivorah-students-service\'s children endpoint and returns the list', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce([{ id: 'c1', name: 'Kid' }]),
       });
 
       const res = await dailyTasksService.fetchChildren('parent@test.com');
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/parent/parent%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${STUDENTS_SERVER_URL}/parent/parent%40test.com/children`);
       expect(res).toEqual([{ id: 'c1', name: 'Kid' }]);
     });
 

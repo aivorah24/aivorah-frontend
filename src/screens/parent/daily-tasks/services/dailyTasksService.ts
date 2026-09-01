@@ -1,11 +1,11 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import DAILY_HABITS_SERVER_URL from '../../../../config/dailyHabitsServerUrl';
+import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 
-// Children list stays on the monolith (ai-mentor/server routes/parent.js) —
-// no dedicated parent/children microservice exists yet at the time this was
-// written. Repoint this once aivorah-parent-service (or equivalent) exists.
+// aivorah-students-service now owns GET /parent/:email/children (ported off
+// the monolith) - every other /parent/* route is still monolith-only, so
+// only this one call moved.
 export async function fetchChildren(parentEmail: string): Promise<any[]> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   if (!res.ok) throw new Error('Could not load children.');
   const data = await res.json();
   return Array.isArray(data) ? data : [];

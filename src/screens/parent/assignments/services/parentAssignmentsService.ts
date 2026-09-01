@@ -1,5 +1,6 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
+import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 
 // Fallback only - used before the child's curriculum/grade is known, or if
 // the /curriculum/subjects lookup below fails. The real subject list is
@@ -9,8 +10,13 @@ import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl
 // Studies, etc. instead.
 export const IB_PYP_SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Studies', 'Arts', 'Physical Education', 'ICT'];
 
+// aivorah-students-service now owns GET /parent/:email/children (ported off
+// the monolith, totalTopics sourced from aivorah-learning-paths-service's
+// Qdrant-backed /curriculum/topic-count instead of embedded here) - every
+// other /parent/* route (credentials, init-auth, link-created, ...) is still
+// monolith-only, so only this one call moved.
 export async function fetchChildren(parentEmail: string): Promise<any[]> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   return Array.isArray(data) && data.length > 0 ? data : [];
 }

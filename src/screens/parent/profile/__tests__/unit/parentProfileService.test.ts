@@ -2,6 +2,7 @@ import { syncUser, saveProfile, fetchChildrenActivity } from '../../services/par
 import SERVER_URL from '../../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../../config/profileServerUrl';
 import AUTH_SERVER_URL from '../../../../../config/authServerUrl';
+import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
 
 global.fetch = jest.fn();
 
@@ -70,7 +71,7 @@ describe('parentProfileService', () => {
 
       const res = await fetchChildrenActivity('test@test.com');
       
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/parent/test%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${STUDENTS_SERVER_URL}/parent/test%40test.com/children`);
       expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/student/c1/weekly`);
       expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/student/c2/weekly`);
 

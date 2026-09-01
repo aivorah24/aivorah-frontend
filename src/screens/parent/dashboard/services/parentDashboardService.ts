@@ -1,4 +1,5 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import type { ChildData } from '../types';
 
 export function mapChild(c: any): ChildData {
@@ -21,8 +22,12 @@ export function mapChild(c: any): ChildData {
   };
 }
 
+// aivorah-students-service now owns GET /parent/:email/children (ported off
+// the monolith, totalTopics sourced from aivorah-learning-paths-service's
+// Qdrant-backed /curriculum/topic-count instead of embedded here) - the
+// /credentials and /ai-report routes below are still monolith-only.
 export async function fetchChildren(parentEmail: string): Promise<ChildData[] | null> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   if (Array.isArray(data) && data.length > 0) return data.map(mapChild);
   return null;
