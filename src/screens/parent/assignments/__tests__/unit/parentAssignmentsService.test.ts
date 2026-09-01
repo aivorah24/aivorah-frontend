@@ -44,8 +44,8 @@ describe('parentAssignmentsService', () => {
 
       const res = await parentAssignmentsService.fetchAssignmentsAndStats('child1');
       expect(fetch).toHaveBeenCalledTimes(2);
-      expect(fetch).toHaveBeenNthCalledWith(1, `${SERVER_URL}/assignments?studentId=child1&viewerRole=parent`);
-      expect(fetch).toHaveBeenNthCalledWith(2, `${SERVER_URL}/student/child1`);
+      expect(fetch).toHaveBeenNthCalledWith(1, `${ASSIGNMENTS_SERVER_URL}/assignments?studentId=child1&viewerRole=parent`);
+      expect(fetch).toHaveBeenNthCalledWith(2, `${STUDENTS_SERVER_URL}/student/child1`);
       
       expect(res).toEqual({
         assignments: [{ id: 'a1' }],
@@ -231,7 +231,7 @@ describe('parentAssignmentsService', () => {
       });
       const res = await parentAssignmentsService.createAssignment(mockPayload);
 
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/assignments`, expect.objectContaining({
+      expect(fetch).toHaveBeenCalledWith(`${ASSIGNMENTS_SERVER_URL}/assignments`, expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -259,7 +259,7 @@ describe('parentAssignmentsService', () => {
       });
       await parentAssignmentsService.createAssignment({ ...mockPayload, type: 'quiz' });
 
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/assignments`, expect.objectContaining({
+      expect(fetch).toHaveBeenCalledWith(`${ASSIGNMENTS_SERVER_URL}/assignments`, expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining(JSON.stringify([{ q: 'q1' }])), // quizQuestions is populated
       }));
