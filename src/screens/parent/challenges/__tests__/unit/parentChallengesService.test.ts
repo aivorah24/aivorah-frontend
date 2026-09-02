@@ -75,6 +75,12 @@ describe('parentChallengesService', () => {
       const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' }, 'parent@x.com');
       expect(res).toEqual([]);
     });
+
+    it('returns an empty array when the payload is ok but not an array', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({ error: 'unexpected shape' }) });
+      const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' }, 'parent@x.com');
+      expect(res).toEqual([]);
+    });
   });
 
   describe('assignChallenge', () => {
