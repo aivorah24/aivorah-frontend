@@ -87,7 +87,63 @@ describe('ParentAIProgressReportScreen', () => {
       expect(screen.queryAllByText('Aanya', { exact: false }).length).toBeGreaterThan(0);
       expect(screen.queryAllByText('Generate', { exact: false }).length).toBeGreaterThan(0);
     }, { timeout: 10000 });
+
+    fireEvent.press(screen.getAllByText('Generate', { exact: true })[0]);
+
+    // Report card actually rendered from the mocked /ai-report response, not
+    // a static shell - covers the metrics grid, every ReportSection branch,
+    // the message-to-child card, and the Regenerate control.
+    await waitFor(() => expect(screen.getByText('Regenerate Report')).toBeTruthy(), { timeout: 10000 });
+    expect(screen.getByText('500')).toBeTruthy(); // Total XP
+    expect(screen.getAllByText('5d').length).toBeGreaterThan(0); // Streak (metrics grid + consistency chip)
+    expect(screen.getByText('80%')).toBeTruthy(); // Avg Score
+    expect(screen.getByText(REPORT.report.learning_pattern_insight)).toBeTruthy();
+    expect(screen.getByText(REPORT.report.whats_going_well)).toBeTruthy();
+    expect(screen.getByText(REPORT.report.where_to_focus)).toBeTruthy();
+    expect(screen.getByText(REPORT.report.consistency_insight)).toBeTruthy();
+    expect(screen.getByText(REPORT.report.assignment_insight)).toBeTruthy();
+    expect(screen.getByText('Review Chapter 1 together')).toBeTruthy();
+    expect(screen.getByText(`"${REPORT.report.message_to_child}"`)).toBeTruthy();
+    expect(screen.getByText('Trend: improving')).toBeTruthy();
+
+    // Regenerating re-fetches rather than reusing the stale report.
+    (global.fetch as jest.Mock).mockClear();
+    fireEvent.press(screen.getByText('Regenerate Report'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
   }, 15000);
+
+  test('reportData.noData renders the "not enough activity" empty state instead of a report', async () => {
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD] },
+      '/ai-report': { body: { noData: true, student: { name: 'Aanya' } } },
+    });
+
+    render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{}} />);
+    await waitFor(() => expect(screen.getAllByText('Generate', { exact: true }).length).toBeGreaterThan(0));
+    fireEvent.press(screen.getAllByText('Generate', { exact: true })[0]);
+
+    await waitFor(() => expect(screen.getByText('Not enough activity yet')).toBeTruthy());
+    expect(screen.queryByText('Regenerate Report')).toBeNull();
+  });
+
+  test('switching to a second linked child clears the first child\'s report', async () => {
+    const CHILD_2 = { id: 'child-2', name: 'Rohan', grade: 'Grade 5' };
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD, CHILD_2] },
+      '/ai-report': { body: REPORT },
+    });
+
+    render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{}} />);
+    await waitFor(() => expect(screen.getAllByText('Generate', { exact: true }).length).toBeGreaterThan(0));
+    fireEvent.press(screen.getAllByText('Generate', { exact: true })[0]);
+    await waitFor(() => expect(screen.getByText('Regenerate Report')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Rohan'));
+
+    // selectChild() clears reportData/error - back to the pre-generation hero state.
+    await waitFor(() => expect(screen.queryByText('Regenerate Report')).toBeNull());
+    expect(screen.getAllByText('Generate', { exact: true }).length).toBeGreaterThan(0);
+  });
 
   test('shows the failure banner and Try again when generation fails, matching the live "Failed to generate report" bug', async () => {
     mockFetchByUrl({
