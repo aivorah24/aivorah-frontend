@@ -20,7 +20,7 @@ export default function ParentChallengesScreen({ navigation }: any) {
     children, selectedIdx, setSelectedIdx, child,
     childStats, loadingStats,
     challenges, loadingCh,
-    schoolChallenges, olympiadChallenges, advancedPractice,
+    challengeGroups,
     refresh,
   } = useParentChallenges();
 
@@ -105,62 +105,24 @@ export default function ParentChallengesScreen({ navigation }: any) {
             <ActivityIndicator color={colors.accentYellow} style={{ paddingVertical: 32 }} />
           ) : (
             <>
-              {schoolChallenges.length > 0 && (
-                <>
-                  <View style={styles.sectionHeader}>
+              {challengeGroups.map((group, idx) => (
+                <View key={group.key}>
+                  <View style={[styles.sectionHeader, idx > 0 && { marginTop: spacing.sm }]}>
                     <View style={[styles.sectionIcon, { backgroundColor: colors.accentYellow + '22' }]}>
                       <Feather name="award" size={15} color={colors.accentYellow} />
                     </View>
                     <View>
-                      <Text style={styles.sectionLabel}>School Challenges</Text>
-                      <Text style={styles.sectionDesc}>School-wide competitive challenges for {child.name}</Text>
+                      <Text style={styles.sectionLabel}>{group.label}</Text>
+                      <Text style={styles.sectionDesc}>{group.items.length} {group.items.length === 1 ? 'challenge' : 'challenges'} for {child.name}</Text>
                     </View>
                   </View>
                   <View style={styles.cardGrid}>
-                    {schoolChallenges.map(ch => (
+                    {group.items.map(ch => (
                       <ChallengeCard key={ch.id} ch={ch} colors={colors} styles={styles} onAssign={() => openAssign(ch)} />
                     ))}
                   </View>
-                </>
-              )}
-
-              {olympiadChallenges.length > 0 && (
-                <>
-                  <View style={[styles.sectionHeader, { marginTop: spacing.sm }]}>
-                    <View style={[styles.sectionIcon, { backgroundColor: colors.accentYellow + '18' }]}>
-                      <Feather name="target" size={15} color={colors.accentYellow} />
-                    </View>
-                    <View>
-                      <Text style={styles.sectionLabel}>Olympiad-Style Questions</Text>
-                      <Text style={styles.sectionDesc}>Competitive exam prep — logical reasoning and beyond</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cardGrid}>
-                    {olympiadChallenges.map(ch => (
-                      <ChallengeCard key={ch.id} ch={ch} colors={colors} styles={styles} onAssign={() => openAssign(ch)} />
-                    ))}
-                  </View>
-                </>
-              )}
-
-              {advancedPractice.length > 0 && (
-                <>
-                  <View style={[styles.sectionHeader, { marginTop: spacing.sm }]}>
-                    <View style={[styles.sectionIcon, { backgroundColor: colors.accentOrange + '18' }]}>
-                      <Feather name="trending-up" size={15} color={colors.accentOrange} />
-                    </View>
-                    <View>
-                      <Text style={styles.sectionLabel}>Advanced Practice</Text>
-                      <Text style={styles.sectionDesc}>Push beyond normal assignments</Text>
-                    </View>
-                  </View>
-                  <View style={styles.cardGrid}>
-                    {advancedPractice.map(ch => (
-                      <ChallengeCard key={ch.id} ch={ch} colors={colors} styles={styles} onAssign={() => openAssign(ch)} />
-                    ))}
-                  </View>
-                </>
-              )}
+                </View>
+              ))}
 
               {challenges.length === 0 && (
                 <View style={styles.emptyState}>

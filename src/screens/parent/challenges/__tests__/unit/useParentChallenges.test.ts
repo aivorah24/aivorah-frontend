@@ -31,9 +31,10 @@ describe('useParentChallenges', () => {
     mockedService.fetchChildren.mockResolvedValue([mockChild, mockChild2]);
     mockedService.fetchChildStats.mockResolvedValue({ xpPoints: 100, challengesCompleted: 2, currentStreak: 3 });
     mockedService.fetchChallenges.mockResolvedValue([
-      { id: 'ch1', type: 'school_challenge' } as any,
-      { id: 'ch2', type: 'olympiad' } as any,
-      { id: 'ch3', type: 'advanced_practice' } as any,
+      { id: 'ch1', type: 'school_challenge', category: 'School Challenges' } as any,
+      { id: 'ch2', type: 'olympiad', category: 'Olympiad' } as any,
+      { id: 'ch3', type: 'advanced_practice', category: 'Advanced Practice' } as any,
+      { id: 'ch4', type: 'pattern_challenge', category: 'Pattern Challenge' } as any,
     ]);
   });
 
@@ -54,14 +55,27 @@ describe('useParentChallenges', () => {
     expect(result.current.children).toEqual([mockChild, mockChild2]);
     expect(result.current.child).toEqual(mockChild);
     expect(result.current.childStats).toEqual({ xpPoints: 100, challengesCompleted: 2, currentStreak: 3 });
-    expect(result.current.challenges).toHaveLength(3);
+    expect(result.current.challenges).toHaveLength(4);
   });
 
-  it('buckets challenges by type', async () => {
+  it('groups challenges by category, one group per distinct category', async () => {
     const { result } = await renderAndSettle();
-    expect(result.current.schoolChallenges).toEqual([{ id: 'ch1', type: 'school_challenge' }]);
-    expect(result.current.olympiadChallenges).toEqual([{ id: 'ch2', type: 'olympiad' }]);
-    expect(result.current.advancedPractice).toEqual([{ id: 'ch3', type: 'advanced_practice' }]);
+    expect(result.current.challengeGroups).toHaveLength(4);
+    expect(result.current.challengeGroups.map(g => g.label)).toEqual([
+      'School Challenges', 'Olympiad', 'Advanced Practice', 'Pattern Challenge',
+    ]);
+  });
+
+  it('does not drop challenges whose type is outside the legacy three-type set', async () => {
+    mockedService.fetchChallenges.mockResolvedValue([
+      { id: 'ch-new', type: 'real_world_application', category: 'Real-World Application' } as any,
+    ]);
+    const { result, unmount } = await renderHook(() => useParentChallenges());
+    currentUnmount = unmount;
+    await waitFor(() => expect(result.current.loadingCh).toBe(false));
+    expect(result.current.challengeGroups).toEqual([
+      { key: 'Real-World Application', label: 'Real-World Application', items: [{ id: 'ch-new', type: 'real_world_application', category: 'Real-World Application' }] },
+    ]);
   });
 
   it('switches child on setSelectedIdx and refetches', async () => {
