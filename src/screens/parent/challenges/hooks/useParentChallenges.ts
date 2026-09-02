@@ -60,15 +60,26 @@ export function useParentChallenges() {
     };
   }, [loadChallenges, loadStats]));
 
-  const schoolChallenges = challenges.filter(c => c.type === 'school_challenge');
-  const olympiadChallenges = challenges.filter(c => c.type === 'olympiad');
-  const advancedPractice = challenges.filter(c => c.type === 'advanced_practice');
+  // Group challenges by whatever `category` the API actually returns
+  // (e.g. "Pattern Challenge", "Real-World Application") instead of a fixed
+  // set of `type` strings — the challenge type taxonomy has grown since the
+  // three-section layout was designed, and a hardcoded filter silently drops
+  // any challenge whose type isn't one of the original three (bug found via
+  // live E2E: zero challenges rendered because none of the seeded data
+  // matches 'school_challenge'/'olympiad'/'advanced_practice' anymore).
+  const challengeGroups: { key: string; label: string; items: Challenge[] }[] = [];
+  for (const c of challenges) {
+    const key = c.category || c.type || 'Other';
+    let group = challengeGroups.find(g => g.key === key);
+    if (!group) { group = { key, label: key, items: [] }; challengeGroups.push(group); }
+    group.items.push(c);
+  }
 
   return {
     children, selectedIdx, setSelectedIdx, child,
     childStats, loadingStats,
     challenges, loadingCh,
-    schoolChallenges, olympiadChallenges, advancedPractice,
+    challengeGroups,
     refresh: () => { loadChallenges(); loadStats(); },
   };
 }
