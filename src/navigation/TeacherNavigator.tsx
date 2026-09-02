@@ -9,7 +9,7 @@ import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboar
 import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
+import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
 // Bug tracker / Student Progress work-order (2026-08-29): the legacy screen
 // was a dummy — hardcoded "Alice Smith"/"Bob Jones", zero real backend call.
 // Replaced with the real screen, backed by the extracted heatmap route in

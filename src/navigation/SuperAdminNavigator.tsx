@@ -8,7 +8,7 @@ import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboar
 import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '@legacy/teacher-legacy/TeacherChallengesScreen';
+import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
