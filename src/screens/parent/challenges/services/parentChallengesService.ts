@@ -57,8 +57,12 @@ export async function fetchChildStats(childId: string): Promise<any> {
   return res.json();
 }
 
-export async function fetchChallenges(child: Pick<Child, 'id' | 'grade' | 'curriculum'>): Promise<Challenge[]> {
-  const url = `${CHALLENGES_SERVER_URL}/challenges?grade=${encodeURIComponent(child.grade)}&curriculum=${encodeURIComponent(child.curriculum || 'IB PYP')}&studentId=${child.id}`;
+// parentEmail is required server-side (aivorah-challenges-service verifies
+// it's actually linked to child.id via parent_children before returning
+// anything - added 2026-09-02, closes a previously-open gap where any
+// studentId was accepted with no ownership check at all).
+export async function fetchChallenges(child: Pick<Child, 'id' | 'grade' | 'curriculum'>, parentEmail: string): Promise<Challenge[]> {
+  const url = `${CHALLENGES_SERVER_URL}/challenges?grade=${encodeURIComponent(child.grade)}&curriculum=${encodeURIComponent(child.curriculum || 'IB PYP')}&studentId=${child.id}&parentEmail=${encodeURIComponent(parentEmail)}`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();

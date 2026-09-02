@@ -55,24 +55,24 @@ describe('parentChallengesService', () => {
         ok: true,
         json: jest.fn().mockResolvedValueOnce([{ id: 'ch1', type: 'school_challenge' }]),
       });
-      const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' });
+      const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' }, 'parent@x.com');
       expect(fetch).toHaveBeenCalledWith(
-        `${CHALLENGES_SERVER_URL}/challenges?grade=Grade%203&curriculum=CBSE&studentId=c1`,
+        `${CHALLENGES_SERVER_URL}/challenges?grade=Grade%203&curriculum=CBSE&studentId=c1&parentEmail=parent%40x.com`,
       );
       expect(res).toEqual([{ id: 'ch1', type: 'school_challenge' }]);
     });
 
     it('defaults curriculum to IB PYP when missing', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce([]) });
-      await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3' } as any);
+      await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3' } as any, 'parent@x.com');
       expect(fetch).toHaveBeenCalledWith(
-        `${CHALLENGES_SERVER_URL}/challenges?grade=Grade%203&curriculum=IB%20PYP&studentId=c1`,
+        `${CHALLENGES_SERVER_URL}/challenges?grade=Grade%203&curriculum=IB%20PYP&studentId=c1&parentEmail=parent%40x.com`,
       );
     });
 
     it('returns an empty array on non-ok response', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({ ok: false });
-      const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' });
+      const res = await parentChallengesService.fetchChallenges({ id: 'c1', grade: 'Grade 3', curriculum: 'CBSE' }, 'parent@x.com');
       expect(res).toEqual([]);
     });
   });
