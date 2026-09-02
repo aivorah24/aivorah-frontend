@@ -43,7 +43,13 @@ const CHALLENGE = {
   id: 'ch-1', title: 'Fractions Sprint', description: 'Quick fractions drill',
   grade: 'Grade 3', curriculum: 'CBSE', subject: 'Math', chapterId: 1, topic: 'Fractions',
   difficulty: 'Easy', xpReward: 50, questionCount: 5, timeLimitMinutes: 10,
-  type: 'school_challenge', category: 'math',
+  type: 'school_challenge', category: 'School Challenges',
+};
+const NEW_TYPE_CHALLENGE = {
+  id: 'ch-2', title: 'Multiplication Mystery', description: 'Pattern puzzle',
+  grade: 'Grade 3', curriculum: 'CBSE', subject: 'Math', chapterId: 2, topic: 'Multiplication',
+  difficulty: 'Easy', xpReward: 140, questionCount: 5, timeLimitMinutes: 10,
+  type: 'pattern_challenge', category: 'Pattern Challenge',
 };
 
 function mockFetchByUrl(handlers: Record<string, any>) {
@@ -70,6 +76,19 @@ describe('ParentChallengesScreen', () => {
     await waitFor(() => expect(screen.getByText('Fractions Sprint')).toBeTruthy());
     expect(screen.getByText('School Challenges')).toBeTruthy();
     expect(screen.getByText('120')).toBeTruthy();
+  });
+
+  test('renders a challenge whose type is outside the legacy three-type set (regression for the type-taxonomy bug)', async () => {
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD] },
+      '/student/': { body: { xpPoints: 120, challengesCompleted: 1, currentStreak: 2 } },
+      '/challenges?': { body: [NEW_TYPE_CHALLENGE] },
+    });
+
+    await render(<ParentChallengesScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} />);
+
+    await waitFor(() => expect(screen.getByText('Multiplication Mystery')).toBeTruthy());
+    expect(screen.getByText('Pattern Challenge')).toBeTruthy();
   });
 
   test('shows the empty state when the child has no challenges for their grade', async () => {
