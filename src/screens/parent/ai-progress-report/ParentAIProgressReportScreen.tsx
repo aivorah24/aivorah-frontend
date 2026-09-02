@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,75 +9,29 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import SERVER_URL from '../../config/serverUrl';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useParentAIProgressReport } from './hooks/useParentAIProgressReport';
+import ReportSection from './components/ReportSection';
 
-interface ChildOption {
-  id: string;
-  name: string;
-  grade: string;
-}
-
-export default function ParentAIReportsScreen({ navigation, route }: any) {
+export default function ParentAIProgressReportScreen({ navigation, route }: any) {
   const { colors } = useTheme();
-  const { user } = useAuth();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const parentEmail = user?.email || '';
   const incomingChildId = route?.params?.childId;
 
-  const [children, setChildren] = useState<ChildOption[]>([]);
-  const [selectedChild, setSelectedChild] = useState<ChildOption | null>(null);
-  const [loadingChildren, setLoadingChildren] = useState(true);
-
-  const [reportData, setReportData] = useState<any>(null);
-  const [loadingReport, setLoadingReport] = useState(false);
-  const [error, setError] = useState('');
-
-  // Load children on mount, then auto-generate if childId was passed
-  useEffect(() => {
-    fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const opts: ChildOption[] = data.map(c => ({ id: c.id, name: c.name, grade: c.grade }));
-          setChildren(opts);
-          const target = incomingChildId ? (opts.find(c => c.id === incomingChildId) ?? opts[0]) : opts[0];
-          setSelectedChild(target);
-          if (incomingChildId) {
-            // auto-kick report generation when navigated from dashboard
-            generateReportFor(target, parentEmail);
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingChildren(false));
-  }, [parentEmail]);
-
-  async function generateReportFor(child: ChildOption, email: string) {
-    setReportData(null);
-    setError('');
-    setLoadingReport(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(email)}/children/${child.id}/ai-report`);
-      if (!res.ok) throw new Error('Failed to generate report');
-      const data = await res.json();
-      setReportData(data);
-    } catch (e: any) {
-      setError(e.message || 'Could not generate report. Please try again.');
-    } finally {
-      setLoadingReport(false);
-    }
-  }
-
-  function generateReport(child: ChildOption) {
-    setSelectedChild(child);
-    generateReportFor(child, parentEmail);
-  }
+  const {
+    children,
+    selectedChild,
+    loadingChildren,
+    reportData,
+    loadingReport,
+    error,
+    generateReport,
+    selectChild,
+  } = useParentAIProgressReport(incomingChildId);
 
   async function downloadPDF() {
     if (!reportData || Platform.OS !== 'web') return;
@@ -526,7 +480,7 @@ export default function ParentAIReportsScreen({ navigation, route }: any) {
                       <TouchableOpacity
                         key={child.id}
                         style={[styles.childPill, isActive && { backgroundColor: colors.accentYellow + '18', borderColor: colors.accentYellow }]}
-                        onPress={() => { setSelectedChild(child); setReportData(null); setError(''); }}
+                        onPress={() => selectChild(child)}
                         activeOpacity={0.8}
                       >
                         <View style={[styles.childDot, { backgroundColor: isActive ? '#ffffff40' : colors.accentYellow + '25' }]}>
@@ -841,20 +795,6 @@ export default function ParentAIReportsScreen({ navigation, route }: any) {
         </ScrollView>
       </View>
     </ScreenLayout>
-  );
-}
-
-function ReportSection({ title, icon, colors, styles, children }: any) {
-  return (
-    <View style={styles.sectionCard}>
-      <View style={styles.sectionTitleRow}>
-        <View style={styles.sectionIcon}>
-          <Feather name={icon} size={13} color={colors.accentYellow} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      <View style={{ gap: 6 }}>{children}</View>
-    </View>
   );
 }
 

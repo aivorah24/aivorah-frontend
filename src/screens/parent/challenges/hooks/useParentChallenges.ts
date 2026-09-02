@@ -1,0 +1,74 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../../../context/AuthContext';
+import {
+  fetchChildren, fetchChildStats, fetchChallenges as fetchChallengesApi,
+  Child, Challenge,
+} from '../services/parentChallengesService';
+
+export function useParentChallenges() {
+  const { user } = useAuth();
+
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [childStats, setChildStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loadingCh, setLoadingCh] = useState(false);
+
+  // Fetch children on every focus so a newly added child appears instantly.
+  useFocusEffect(useCallback(() => {
+    if (!user?.email) return;
+    fetchChildren(user.email).then(data => { if (data.length > 0) setChildren(data); }).catch(() => {});
+  }, [user?.email]));
+
+  const child = children[selectedIdx] ?? null;
+
+  const loadStats = useCallback((showSpinner = false) => {
+    if (!child?.id) return;
+    if (showSpinner) setLoadingStats(true);
+    fetchChildStats(child.id)
+      .then(data => setChildStats(data))
+      .catch(() => {})
+      .finally(() => { if (showSpinner) setLoadingStats(false); });
+  }, [child?.id]);
+
+  useEffect(() => { loadStats(true); }, [child?.id]);
+
+  const loadChallenges = useCallback((showSpinner = false) => {
+    if (!child?.grade) return;
+    if (showSpinner) setLoadingCh(true);
+    fetchChallengesApi(child)
+      .then(data => setChallenges(data))
+      .catch(() => {})
+      .finally(() => { if (showSpinner) setLoadingCh(false); });
+  }, [child?.id, child?.grade]);
+
+  useEffect(() => { loadChallenges(true); }, [loadChallenges]);
+
+  // Reload on focus + poll every 30s while screen is visible. showSpinner=false
+  // for background refreshes so the already-loaded list doesn't blank back to
+  // a spinner (matches the student ChallengesScreen fix for the same bug).
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useFocusEffect(useCallback(() => {
+    loadChallenges();
+    loadStats();
+    intervalRef.current = setInterval(() => { loadChallenges(); loadStats(); }, 30000);
+    return () => {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    };
+  }, [loadChallenges, loadStats]));
+
+  const schoolChallenges = challenges.filter(c => c.type === 'school_challenge');
+  const olympiadChallenges = challenges.filter(c => c.type === 'olympiad');
+  const advancedPractice = challenges.filter(c => c.type === 'advanced_practice');
+
+  return {
+    children, selectedIdx, setSelectedIdx, child,
+    childStats, loadingStats,
+    challenges, loadingCh,
+    schoolChallenges, olympiadChallenges, advancedPractice,
+    refresh: () => { loadChallenges(); loadStats(); },
+  };
+}
