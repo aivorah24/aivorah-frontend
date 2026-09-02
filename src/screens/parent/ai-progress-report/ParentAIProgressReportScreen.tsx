@@ -33,6 +33,15 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
     selectChild,
   } = useParentAIProgressReport(incomingChildId);
 
+  // Accepted coverage gap (2026-09-02): this function (~410 lines of jsPDF
+  // page/layout composition) is Platform.OS === 'web'-gated and calls a
+  // real jsPDF instance's drawing API - there's no meaningful way to
+  // exercise its actual output in RN Testing Library's non-DOM jest
+  // environment without mocking jsPDF into a no-op, which would only prove
+  // the mock was called, not that the PDF renders correctly. Same accepted
+  // pattern as other PDF-export code in this repo. Everything else in this
+  // screen (data fetching, all render branches, error/empty states, child
+  // switching) is covered by ParentAIProgressReportScreen.integration.test.tsx.
   async function downloadPDF() {
     if (!reportData || Platform.OS !== 'web') return;
     const { jsPDF } = await import('jspdf');
@@ -452,6 +461,11 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
         <Header
           title="AI Progress Report"
           subtitle="AI-generated performance analysis for your child"
+          // onMenuPress body itself is untestable here: Header only renders
+          // the hamburger button when its internal `isMobile` layout check
+          // is true, which isn't controllable via this screen's existing
+          // useResponsive mock - not worth widening that mock for one
+          // trivial arrow-function line.
           onMenuPress={() => navigation.openDrawer()}
         />
 
