@@ -37,13 +37,13 @@ export function useParentChallenges() {
   useEffect(() => { loadStats(true); }, [child?.id]);
 
   const loadChallenges = useCallback((showSpinner = false) => {
-    if (!child?.grade) return;
+    if (!child?.grade || !user?.email) return;
     if (showSpinner) setLoadingCh(true);
-    fetchChallengesApi(child)
+    fetchChallengesApi(child, user.email)
       .then(data => setChallenges(data))
       .catch(() => {})
       .finally(() => { if (showSpinner) setLoadingCh(false); });
-  }, [child?.id, child?.grade]);
+  }, [child?.id, child?.grade, user?.email]);
 
   useEffect(() => { loadChallenges(true); }, [loadChallenges]);
 
