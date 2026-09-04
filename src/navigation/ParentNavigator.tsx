@@ -16,7 +16,7 @@ import ParentChallengesScreen from '../screens/parent/challenges/ParentChallenge
 import ParentLeaderboardScreen from '@legacy/parent/ParentLeaderboardScreen';
 import ParentProgressScreen from '../screens/parent/progress/ParentProgressScreen';
 import ParentAIProgressReportScreen from '../screens/parent/ai-progress-report/ParentAIProgressReportScreen';
-import ParentSettingsScreen from '@legacy/parent/ParentSettingsScreen';
+import ParentSettingsScreen from '../screens/parent/settings/ParentSettingsScreen';
 import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';
 import ParentAnnouncementsScreen from '@legacy/parent/ParentAnnouncementsScreen';
 import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
@@ -26,6 +26,9 @@ import TimetableScreen from '../features/timetable/components/TimetableScreen';
 import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import ParentAttendanceScreen from '@legacy/parent/ParentAttendanceScreen';
+import ParentControlsScreen from '../screens/parent/parental-controls/ParentControlsScreen';
+import ParentLearningScreen from '../screens/parent/learning/ParentLearningScreen';
+import ParentHelpScreen from '@legacy/parent/ParentHelpScreen';
 
 const Drawer = createDrawerNavigator<ParentDrawerParamList>();
 
@@ -66,6 +69,9 @@ export default function ParentNavigator() {
       <Drawer.Screen name="ParentMessages" component={ParentMessagesScreen} />
       <Drawer.Screen name="ParentAnnouncements" component={ParentAnnouncementsScreen} />
       <Drawer.Screen name="ParentAttendance" component={ParentAttendanceScreen} />
+      <Drawer.Screen name="ParentControls" component={ParentControlsScreen} />
+      <Drawer.Screen name="ParentLearning" component={ParentLearningScreen} />
+      <Drawer.Screen name="ParentHelp" component={ParentHelpScreen} />
       <Drawer.Screen name="ParentSubscription" component={SubscriptionScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
