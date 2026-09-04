@@ -61,10 +61,12 @@ export async function harvestSession(browser, { account, email, password, baseUR
   const page = await context.newPage();
   // setup.mjs drives Playwright's library directly (no test runner), so
   // playwright.config.js's timeouts don't apply here - only the library's
-  // own 30s-per-action default did, letting one stuck account burn minutes.
-  // Cap it so a bad account fails fast instead of stalling the whole batch.
-  page.setDefaultTimeout(20000);
-  page.setDefaultNavigationTimeout(20000);
+  // own 30s-per-action default did. A CI run confirmed 20s is too tight for
+  // a cold `serve` process on its first request (2026-09-04: login button
+  // inside the landing-page iframe hadn't rendered yet at 20s) - keep the
+  // original 30s default explicit, rather than guessing a shorter one.
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
 
   await page.goto('/');
   await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
@@ -86,7 +88,7 @@ export async function harvestSession(browser, { account, email, password, baseUR
   // 15 accounts failed or what the screen showed. So we catch it and say both,
   // plus save a screenshot.
   try {
-    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 20000 });
+    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 30000 });
   } catch {
     const shot = path.join(AUTH_DIR, `${account}.login-failed.png`);
     fs.mkdirSync(AUTH_DIR, { recursive: true });
