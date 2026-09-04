@@ -176,6 +176,12 @@ jobs:
           name: e2e-session
           path: e2e/
 
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
+
       - name: Run Playwright Shard
         run: |
           cd e2e
@@ -231,6 +237,12 @@ jobs:
         with:
           name: e2e-session
           path: e2e/
+
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
 
       - name: Teardown Mutated Accounts
         run: |
