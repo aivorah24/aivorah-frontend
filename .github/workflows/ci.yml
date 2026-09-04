@@ -94,8 +94,8 @@ jobs:
             exit 1
           fi
 
-          node tests/ci/setup.mjs
-          SETUP_EXIT=$?
+          node tests/ci/setup.mjs 2>&1 | tee /tmp/setup-output.log
+          SETUP_EXIT=${PIPESTATUS[0]}
 
           pkill -P "$SERVER_PID" || true
           kill "$SERVER_PID" || true
@@ -103,7 +103,24 @@ jobs:
           exit $SETUP_EXIT
         env:
           ACCOUNT_FILTER: ${{ github.event.inputs.accountFilter }}
-          
+
+      # Diagnostic-only artifact: setup.mjs's own stdout (never contains
+      # secret values - the script only logs account keys/emails/counts)
+      # plus any failure screenshots harvestSession saved, uploaded even
+      # when the setup step above failed so a hung/failed login can
+      # actually be inspected instead of guessed at.
+      - name: Upload Diagnostic Logs + Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-setup-diagnostics
+          path: |
+            /tmp/setup-output.log
+            /tmp/serve.log
+            e2e/.auth/*.png
+          retention-days: 3
+          if-no-files-found: ignore
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:

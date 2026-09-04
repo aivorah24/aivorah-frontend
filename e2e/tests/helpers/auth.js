@@ -65,11 +65,27 @@ export async function harvestSession(browser, { account, email, password, baseUR
   // a cold `serve` process on its first request (2026-09-04: login button
   // inside the landing-page iframe hadn't rendered yet at 20s) - keep the
   // original 30s default explicit, rather than guessing a shorter one.
-  page.setDefaultTimeout(30000);
-  page.setDefaultNavigationTimeout(30000);
+  //
+  // TEMPORARY DIAGNOSTIC (2026-09-04): raised to 60s and the initial
+  // goto+click wrapped in its own try/catch (previously only the
+  // post-Sign-In wait saved a screenshot on failure - the actual failure
+  // seen in CI, the pre-login iframe click, saved nothing). Revert to
+  // 30000 and drop this wrapping once the root cause is confirmed.
+  page.setDefaultTimeout(60000);
+  page.setDefaultNavigationTimeout(60000);
 
-  await page.goto('/');
-  await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
+  try {
+    await page.goto('/');
+    await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
+  } catch (err) {
+    const shot = path.join(AUTH_DIR, `${account}.landing-failed.png`);
+    fs.mkdirSync(AUTH_DIR, { recursive: true });
+    await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
+    await context.close();
+    throw new Error(
+      `Landing page never became interactive for ${account} - ${err.message}\n  Screenshot: ${shot}`,
+    );
+  }
   await page.getByPlaceholder('you@example.com').fill(email);
   await page.getByPlaceholder('••••••••').fill(password);
   await page.getByText('Sign In', { exact: true }).click();
@@ -88,7 +104,7 @@ export async function harvestSession(browser, { account, email, password, baseUR
   // 15 accounts failed or what the screen showed. So we catch it and say both,
   // plus save a screenshot.
   try {
-    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 30000 });
+    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 60000 });
   } catch {
     const shot = path.join(AUTH_DIR, `${account}.login-failed.png`);
     fs.mkdirSync(AUTH_DIR, { recursive: true });
