@@ -54,10 +54,16 @@ jobs:
         run: |
           cd e2e
           echo "${{ secrets.E2E_ENV_FILE }}" > .env
-          # Temporarily serve the app so setup can hit it locally
+          # Temporarily serve the app so setup can hit it locally. A flat
+          # `sleep 3` raced `serve`'s actual startup on the runner (every
+          # login failed with ERR_CONNECTION_REFUSED, 2026-09-04) - poll
+          # until it's really accepting connections instead.
           npx serve -s ../dist -l 3006 &
           SERVER_PID=$!
-          sleep 3 # Wait for server
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3006/ > /dev/null && break
+            sleep 1
+          done
           node tests/ci/setup.mjs
           kill $SERVER_PID
         env:
