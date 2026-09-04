@@ -61,19 +61,14 @@ export async function harvestSession(browser, { account, email, password, baseUR
   const page = await context.newPage();
   // setup.mjs drives Playwright's library directly (no test runner), so
   // playwright.config.js's timeouts don't apply here - only the library's
-  // own 30s-per-action default did. A CI run confirmed 20s is too tight for
-  // a cold `serve` process on its first request (2026-09-04: login button
-  // inside the landing-page iframe hadn't rendered yet at 20s) - keep the
-  // original 30s default explicit, rather than guessing a shorter one.
-  //
-  // TEMPORARY DIAGNOSTIC (2026-09-04): raised to 60s and the initial
-  // goto+click wrapped in its own try/catch (previously only the
-  // post-Sign-In wait saved a screenshot on failure - the actual failure
-  // seen in CI, the pre-login iframe click, saved nothing). Revert to
-  // 30000 and drop this wrapping once the root cause is confirmed.
-  page.setDefaultTimeout(60000);
-  page.setDefaultNavigationTimeout(60000);
+  // own 30s-per-action default did. Keep it explicit rather than relying on
+  // the implicit default.
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
 
+  // Screenshot on failure here too, not just the post-Sign-In wait below -
+  // this is where a real CI bug (serve's cleanUrls redirecting
+  // /landing.html, 2026-09-04, fixed via e2e/serve.json) actually failed.
   try {
     await page.goto('/');
     await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
