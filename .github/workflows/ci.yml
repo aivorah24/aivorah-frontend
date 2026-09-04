@@ -75,6 +75,12 @@ jobs:
           # it never holds the runner's own stdout pipe open, and kill its
           # whole process group afterward so it can't be left as an orphan -
           # both were found to hang this step for up to ~60 minutes.
+          #
+          # DIAGNOSTIC (2026-09-04): serve.json (cleanUrls:false) stops serve
+          # from 301-redirecting /landing.html -> /landing, which server.log
+          # showed being re-requested in an infinite loop. serve reads
+          # serve.json from the served directory itself, not cwd.
+          cp serve.json ../dist/serve.json
           npx serve -s ../dist -l 3006 > /tmp/serve.log 2>&1 &
           SERVER_PID=$!
 
