@@ -4,16 +4,16 @@
 
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import OnboardingParentBoxes from '@legacy/onboarding/OnboardingParentBoxes';
+import OnboardingParentBoxes from '../../OnboardingParentBoxes';
 
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(), deleteApp: jest.fn() }));
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(), createUserWithEmailAndPassword: jest.fn(), signOut: jest.fn(),
   updateProfile: jest.fn(), RecaptchaVerifier: jest.fn(), signInWithPhoneNumber: jest.fn(),
 }));
-jest.mock('../../../config/firebase', () => ({}));
+jest.mock('../../../../../config/firebase', () => ({}));
 
-jest.mock('../../../context/AuthContext', () => ({
+jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { email: 'parent@a.com', role: 'parent' },
     updateUser: jest.fn(),
@@ -23,7 +23,7 @@ jest.mock('../../../context/AuthContext', () => ({
   getPendingReturnRole: () => null,
   setPendingReturnRole: jest.fn(),
 }));
-jest.mock('../../../context/ThemeContext', () => ({
+jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {}, isDark: true }),
 }));
 

@@ -1,88 +1,37 @@
 /**
  * OnboardingParentBoxes.tsx
  * Parent onboarding — all sections shown as cards on a single page
- * (Personal Info, Your Child(ren), Child's Account, Your Avatar).
- * Everything is visible and editable at once; "Complete Setup" saves
- * the profile, links/creates child accounts, and finishes onboarding.
+ * (Personal Info, Your Child(ren), Child's Learning Profile, Child's
+ * Account, Your Avatar). Everything is visible and editable at once;
+ * "Complete Setup" saves the profile, links/creates child accounts, and
+ * finishes onboarding. Screen-level orchestration only - form state lives
+ * in hooks/, network calls in services/, sections in components/.
  */
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, TextInput, ScrollView,
-  StyleSheet, Platform, Modal, Share,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Rect, Circle } from 'react-native-svg';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
-import { useAuth, getPendingReturnRole } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import PROFILE_SERVER_URL from '../../config/profileServerUrl';
-import STUDENTS_SERVER_URL from '../../config/studentsServerUrl';
-import firebaseApp from '../../config/firebase';
-import { AVATAR_STYLES } from '../../constants/avatarStyles';
-import { CURRICULA, getGradesForCurriculum, DatePickerInput } from '../../screens/onboarding/OnboardingScreen';
-import { computeParentCompletion } from '../../screens/onboarding/utils/parentCompletion';
-import { resolveOnboardingSaveResult } from '../../screens/onboarding/utils/resolveOnboardingSaveResult';
-import {
-  AutocompleteField, CardHeader, BBox, fetchCitySuggestions, locateCity, locateFull,
-  SelectField, COUNTRIES, INDIA_STATES, INDIA_CITIES, PhoneCodeSelect,
-} from '../../screens/onboarding/OnboardingSharedFields';
-import { PhoneOtpModal } from '../../screens/onboarding/phoneOtpVerification';
-import { useMobileOtpVerification, MOBILE_VERIFICATION_ENABLED } from '../../screens/onboarding/mobileOtpVerification';
+import { useAuth, getPendingReturnRole } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { computeParentCompletion } from './utils/parentCompletion';
+import { PhoneOtpModal } from '../../onboarding/phoneOtpVerification';
 
-const FOREST = '#5A8A70';
-// Override imported TEAL with Aivorah gold for parent onboarding
-// eslint-disable-next-line @typescript-eslint/no-shadow
+import { usePersonalInfo } from './hooks/usePersonalInfo';
+import { useChildrenForm } from './hooks/useChildrenForm';
+import { useChildEmailOtp } from './hooks/useChildEmailOtp';
+import { useOnboardingSubmit } from './hooks/useOnboardingSubmit';
+
+import { PersonalInfoCard } from './components/PersonalInfoCard';
+import { ChildrenCard } from './components/ChildrenCard';
+import { LearningProfileCard } from './components/LearningProfileCard';
+import { ChildAccountCard } from './components/ChildAccountCard';
+import { AvatarCard } from './components/AvatarCard';
+import { ChildCredentialsModal } from './components/ChildCredentialsModal';
+import { LeaveConfirmModal } from './components/LeaveConfirmModal';
+
 const TEAL = '#5F8A86';
-const GRADE_GROUPS = [
-  { label: 'Early Years', grades: ['Nursery', 'LKG', 'UKG'] },
-  { label: 'Primary', grades: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'] },
-  { label: 'Middle School', grades: ['Grade 6', 'Grade 7', 'Grade 8'] },
-  { label: 'Senior School', grades: ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'] },
-];
-
-interface ChildEntry {
-  name: string;
-  age: string;
-  grade: string;
-  curriculum: string;
-  school: string;
-  schoolCity: string;
-  email: string;
-  linkEmail: string;
-  password: string;
-  verifiedEmail: string;   // the child email that has been OTP-verified (must equal `email`)
-}
-function emptyChild(): ChildEntry {
-  return { name: '', age: '', grade: '', curriculum: '', school: '', schoolCity: '', email: '', linkEmail: '', password: '', verifiedEmail: '' };
-}
-
-function generateStudentId(name: string) {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 4) || 'STU';
-  const suffix = Math.floor(100000 + Math.random() * 900000);
-  return `STU-${initials}-${suffix}`;
-}
-
-function IndiaFlagIcon() {
-  return (
-    <Svg width={18} height={12} viewBox="0 0 18 12">
-      <Rect x={0} y={0} width={18} height={4} fill="#FF9933" />
-      <Rect x={0} y={4} width={18} height={4} fill="#FFFFFF" />
-      <Rect x={0} y={8} width={18} height={4} fill="#138808" />
-      <Circle cx={9} cy={6} r={1.6} fill="none" stroke="#000088" strokeWidth={0.3} />
-      <Circle cx={9} cy={6} r={0.3} fill="#000088" />
-    </Svg>
-  );
-}
 
 export default function OnboardingParentBoxes() {
-  const { user, updateUser, logout, cancelAddParentProfile } = useAuth();
+  const { logout, cancelAddParentProfile } = useAuth();
   // Teacher adding a parent profile → Back returns to the teacher dashboard
   // (no sign-out, nothing persisted), instead of the "leave home" sign-out modal.
   const isAddingParent = getPendingReturnRole() === 'teacher';
@@ -90,47 +39,10 @@ export default function OnboardingParentBoxes() {
   const styles = useStyles(colors);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [locating, setLocating] = useState(false);
-  const [schoolLocating, setSchoolLocating] = useState(false);
-  const cityBBoxCache = useRef<Map<string, BBox | null>>(new Map());
 
-  // Form state
-  const [fullName, setFullName] = useState(user?.name || '');
-  const [dob, setDob] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [mobileCode, setMobileCode] = useState('+91');
-  const [city, setCity] = useState((user as any)?.location || '');
-  const [stateProv, setStateProv] = useState((user as any)?.state || '');
-  const [country, setCountry] = useState((user as any)?.country || 'India');
-  const [avatarStyle, setAvatarStyle] = useState('default');
-
-  // Hydrate fields not carried on the `user` object (dob, mobile, avatar) from
-  // previously saved preferences — otherwise reopening onboarding after a
-  // partial/complete save shows these as blank even though they're saved server-side.
-  useEffect(() => {
-    if (!user?.email) return;
-    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then((p) => {
-        if (!p) return;
-        if (p.dob) setDob(p.dob);
-        if (p.phone) {
-          const m = String(p.phone).match(/^(\+\d+)\s*(.*)$/);
-          if (m) { setMobileCode(m[1]); setMobile(m[2]); } else setMobile(String(p.phone));
-        }
-        if (p.avatarStyle) setAvatarStyle(p.avatarStyle);
-      })
-      .catch(() => {});
-  }, [user?.email]);
-
-  const mobileOtp = useMobileOtpVerification(mobile, setMobile, mobileCode);
-  // Editing the number after verifying invalidates the previous verification.
-  const onMobileChange = (v: string) => {
-    setMobile(v);
-    if (mobileOtp.mobileVerified) mobileOtp.setMobileVerified(false);
-  };
+  const personal = usePersonalInfo();
+  const childrenForm = useChildrenForm();
+  const otp = useChildEmailOtp(childrenForm.activeChild, childrenForm.activeChildIdx, childrenForm.setChildren, childrenForm.updateChild);
 
   // Web: trap the browser Back button for the whole parent onboarding flow (#171 —
   // previously only trapped while a teacher adds a parent profile, so a normal new
@@ -149,472 +61,36 @@ export default function OnboardingParentBoxes() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Pre-fill from teacher profile when a teacher is adding a parent profile
-  useEffect(() => {
-    const isTeacherAddingParent = getPendingReturnRole() === 'teacher'
-      || (user as any)?.roles?.includes('teacher');
-    if (!isTeacherAddingParent || !user?.email) return;
-
-    function applyMobile(raw: string) {
-      const parts = raw.match(/^(\+\d+)\s(.+)$/);
-      if (parts) { setMobileCode(parts[1]); setMobile(parts[2]); }
-      else setMobile(raw);
-    }
-
-    // Immediate fill from user object
-    const u = user as any;
-    if (u?.name && !fullName)     setFullName(u.name);
-    if (u?.dob)                   setDob(u.dob);
-    if (u?.mobile)                applyMobile(u.mobile);
-    if (u?.phone)                 applyMobile(u.phone);
-    if (u?.state)                 setStateProv(u.state);
-    if (u?.country)               setCountry(u.country);
-    if (u?.location)              setCity(u.location);
-
-    // Fetch preferences for fresher DB values
-    fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(user.email)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(prefs => {
-        if (!prefs) return;
-        if (prefs.name)    setFullName(prefs.name);
-        if (prefs.dob)     setDob(prefs.dob);
-        const phoneRaw = prefs.mobile || prefs.phone;
-        if (phoneRaw)      applyMobile(phoneRaw);
-        if (prefs.state)   setStateProv(prefs.state);
-        if (prefs.country) setCountry(prefs.country);
-        if (prefs.location) setCity(prefs.location);
-        else if (u?.location) setCity(u.location);
-      })
-      .catch(() => {});
-  }, []);
-
-  const [children, setChildren] = useState<ChildEntry[]>([emptyChild()]);
-  const [activeChildIdx, setActiveChildIdx] = useState(0);
-  const [showChildPassword, setShowChildPassword] = useState(false);
-  const [showChildCreds, setShowChildCreds] = useState(false);
-  const [copiedField, setCopiedField] = useState('');
-  const [createdChildCreds, setCreatedChildCreds] = useState<Array<{
-    name: string; loginId: string; password: string; studentId: string; verificationRequired: boolean;
-  }>>([]);
-
-  const pendingPatchRef = useRef<any | null>(null);
-
-  const activeChild = children[activeChildIdx] || emptyChild();
-  const updateChild = (field: keyof ChildEntry, value: string) => {
-    setChildren(prev => prev.map((c, i) => i === activeChildIdx ? { ...c, [field]: value } : c));
-  };
-
-  // ── Child email OTP verification (inline, code-based) ───────────────────────
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpErr, setOtpErr] = useState('');
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpCooldown, setOtpCooldown] = useState(0);
-
-  // Reset the OTP UI when switching between children.
-  useEffect(() => {
-    setOtpSent(false); setOtpCode(''); setOtpErr(''); setOtpCooldown(0);
-  }, [activeChildIdx]);
-
-  // Cooldown countdown for resending.
-  useEffect(() => {
-    if (otpCooldown <= 0) return;
-    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [otpCooldown]);
-
-  // Editing the email invalidates any prior verification + OTP session.
-  const onChildEmailChange = (v: string) => {
-    setChildren(prev => prev.map((c, i) => i === activeChildIdx ? { ...c, email: v, verifiedEmail: '' } : c));
-    setOtpSent(false); setOtpCode(''); setOtpErr('');
-  };
-
-  async function sendChildOtp() {
-    const email = activeChild.email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { setOtpErr('Enter a valid email first.'); return; }
-    setOtpSending(true); setOtpErr('');
-    try {
-      const res = await fetch(`${STUDENTS_SERVER_URL}/parent/children/email-otp/send`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name: activeChild.name.trim() || 'there' }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Could not send the code.');
-      setOtpSent(true); setOtpCooldown(30);
-    } catch (e: any) {
-      setOtpErr(e?.message || 'Could not send the code. Please try again.');
-    } finally { setOtpSending(false); }
-  }
-
-  async function verifyChildOtp() {
-    const email = activeChild.email.trim().toLowerCase();
-    const code = otpCode.trim();
-    if (code.length < 4) { setOtpErr('Enter the 6-digit code.'); return; }
-    setOtpVerifying(true); setOtpErr('');
-    try {
-      const res = await fetch(`${STUDENTS_SERVER_URL}/parent/children/email-otp/verify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: code }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.verified) throw new Error(data?.error || 'Incorrect or expired code.');
-      updateChild('verifiedEmail', email);
-      setOtpSent(false); setOtpCode('');
-    } catch (e: any) {
-      setOtpErr(e?.message || 'Incorrect or expired code.');
-    } finally { setOtpVerifying(false); }
-  }
-
-  const childEmailVal = activeChild.email.trim().toLowerCase();
-  const childEmailValid = /^\S+@\S+\.\S+$/.test(childEmailVal);
-  const childEmailVerified = childEmailValid && activeChild.verifiedEmail.trim().toLowerCase() === childEmailVal;
-  const addAnotherChild = () => {
-    const newIdx = children.length;
-    setChildren(prev => [...prev, emptyChild()]);
-    setActiveChildIdx(newIdx);
-    setShowChildPassword(false);
-  };
-  const removeChild = (idx: number) => {
-    if (children.length <= 1) return;
-    setChildren(prev => prev.filter((_, i) => i !== idx));
-    setActiveChildIdx(prev => Math.min(prev, children.length - 2));
-  };
-
-  // Native share sheet (WhatsApp, SMS, mail, etc.) instead of a mail-only
-  // "forward" link — on web, uses the Web Share API where available and
-  // falls back to a WhatsApp click-to-chat link on desktop browsers that
-  // don't support navigator.share.
-  async function shareCredentials(cred: { name: string; loginId: string; password: string }) {
-    const text = `Hi ${cred.name},\n\nHere are your Aivorah login details:\n\nLogin ID: ${cred.loginId}\nPassword: ${cred.password}\n\nLog in at https://aivorah.ai`;
-    if (Platform.OS === 'web') {
-      const nav: any = typeof navigator !== 'undefined' ? navigator : null;
-      if (nav?.share) {
-        try { await nav.share({ title: 'Aivorah Login Details', text }); return; } catch { return; }
-      }
-      if (typeof window !== 'undefined') window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-      return;
-    }
-    try { await Share.share({ message: text }); } catch {}
-  }
-
-  function copyToClipboard(text: string, field: string) {
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => {});
-    }
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(''), 1500);
-  }
-
   // ── Per-card completion ────────────────────────────
   // Adding children is OPTIONAL during onboarding (client feedback, 2026-06-13):
   // a parent may skip and add kids later from the dashboard. A child only has to
   // be completed if the parent actually started adding one (entered a name).
   const {
     personalDone, addingChildren, startedChildren, curriculumDone, accountDone, avatarDone, requiredDone, completionPct,
-  } = computeParentCompletion({ fullName, city, dob, mobile, children, avatarStyle });
+  } = computeParentCompletion({
+    fullName: personal.fullName, city: personal.city, dob: personal.dob, mobile: personal.mobile,
+    children: childrenForm.children, avatarStyle: personal.avatarStyle,
+  });
 
-  // finalize=false is the "Save & go back" path (dual-role: teacher pausing
-  // partway through adding a parent profile) — it persists the fields entered
-  // so far but must NOT grant the parent role/switch-profile access, since the
-  // user hasn't confirmed via "Complete Setup". Only finalize=true (the real
-  // Complete Setup button) is allowed to flip role/roles/onboarding_complete.
-  async function handleFinish(finalize: boolean = true) {
-    if (finalize && !requiredDone) {
-      setSaveError(addingChildren
-        ? 'Please finish the child details you started (curriculum, grade and account), or remove that child to skip.'
-        : 'Please complete your Personal Info to continue.');
-      return;
-    }
-    if (finalize && mobile.trim()) {
-      const digits = mobile.replace(/\D/g, '');
-      const minDigits = mobileCode === '+91' ? 10 : 7;
-      if (digits.length < minDigits) {
-        setSaveError(`Mobile number must have at least ${minDigits} digits.`);
-        return;
-      }
-      // Verification is optional here — it can be completed later from Settings.
-    }
-    setSaving(true);
-    setSaveError('');
-    try {
-      const email = user?.email || '';
-
-      const body: any = {
-        email,
-        name: fullName.trim(),
-        school: children[0]?.school || '',
-        location: city,
-        ...(finalize ? { role: 'parent', complete: true } : {}),
-        children: children
-          .filter(c => {
-            const age = c.age ? parseInt(c.age, 10) : 0;
-            return age < 14 && c.name.trim();
-          })
-          .map(c => ({
-            name: c.name.trim(),
-            grade: c.grade,
-            school: c.school,
-            schoolCity: c.schoolCity,
-            curriculum: c.curriculum,
-            email: c.email.trim().toLowerCase() || undefined,
-          })),
-      };
-
-      const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!profileRes.ok) {
-        const errText = await profileRes.text().catch(() => '');
-        throw new Error(`Profile save failed (${profileRes.status}): ${errText.slice(0, 200)}`);
-      }
-      const saved = await profileRes.json().catch(() => ({}));
-      // Trust the server's own onboardingComplete field on a real finalize
-      // rather than assuming success from a 200 status — see
-      // BUGS_AND_FIXES.md Bug #1. A "Save & go back" draft never sends
-      // complete:true, so it's exempt from this check (handled by the early
-      // `!finalize` return below, before onboardingComplete is ever set).
-      const saveResult = finalize ? resolveOnboardingSaveResult(saved) : null;
-      if (finalize && !saveResult!.ok) {
-        throw new Error(saveResult!.error);
-      }
-
-      // Only grant the parent role/switch-profile access on a real "Complete
-      // Setup" (finalize) — a "Save & go back" must not add "parent" to roles.
-      const mergedRoles = finalize
-        ? (getPendingReturnRole() === 'teacher' ? ['teacher', 'parent'] : ['parent'])
-        : undefined;
-
-      fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name: fullName.trim(),
-          ...(finalize ? { role: 'parent' } : {}),
-          location: city,
-          state: stateProv || undefined,
-          country: country || undefined,
-          dob: dob || undefined,
-          mobile: mobile ? `${mobileCode} ${mobile}` : undefined,
-          mobileVerified: mobile ? (mobileOtp.mobileVerified && mobile === mobileOtp.verifiedMobile) : undefined,
-          avatarStyle,
-          ...(mergedRoles ? { roles: mergedRoles } : {}),
-        }),
-      }).catch(() => {});
-
-      // ── Draft "Save & go back" (teacher pausing parent onboarding) ──────────
-      // The entered fields are now persisted (above), but we must NOT create
-      // child accounts or grant the parent role. Restore the teacher session so
-      // the app routes back to the teacher DASHBOARD — beginAddParentProfile had
-      // forced onboardingComplete=false to show parent onboarding, so without
-      // this restore we'd land back on teacher ONBOARDING instead.
-      if (!finalize) {
-        if (isAddingParent) {
-          cancelAddParentProfile();
-        } else {
-          await logout();
-        }
-        return;
-      }
-
-      const localCompletionPatch: any = {
-        name: fullName.trim(),
-        location: city,
-        avatarStyle,
-        role: getPendingReturnRole() === 'teacher' ? 'teacher' : 'parent',
-        activeRole: getPendingReturnRole() === 'teacher' ? 'teacher' : 'parent',
-        onboardingComplete: saveResult!.onboardingComplete,
-        roles: mergedRoles,
-      };
-
-      // ── Child account handling ─────────────────────────────────────
-      const allCreds: Array<{ name: string; loginId: string; password: string; studentId: string; verificationRequired: boolean }> = [];
-
-      for (const child of children) {
-        if (!child.name.trim()) continue;
-        const ageNum = child.age ? parseInt(child.age, 10) : 0;
-
-        // ── Age >= 14: Link existing student account ──────────────────
-        if (ageNum >= 14 && child.linkEmail.trim()) {
-          const linkRes = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(email)}/children`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ childEmail: child.linkEmail.trim().toLowerCase() }),
-          });
-          if (!linkRes.ok) {
-            const err = await linkRes.json().catch(() => ({}));
-            throw new Error(err?.error || `Could not link ${child.name}'s account. Make sure they have a registered Aivorah account.`);
-          }
-          continue;
-        }
-
-        // ── Age < 14: Auto-create student account ──────────────────────
-        const cleanName = child.name.trim();
-        const candidateStudentId = generateStudentId(cleanName);
-        const initRes = await fetch(`${STUDENTS_SERVER_URL}/parent/children/init-auth`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: cleanName,
-            studentId: candidateStudentId,
-            email: child.email.trim().toLowerCase() || undefined,
-            age: child.age ? parseInt(child.age, 10) : undefined,
-            password: child.password.trim() || undefined,
-            // Without this, an auto-generated login draws from a single
-            // GLOBAL ch1/ch2/ch3... counter shared by every parent instead
-            // of a per-parent-scoped one - found via real collisions with
-            // old orphaned test accounts during E2E verification.
-            parentEmail: email,
-          }),
-        });
-        const init = await initRes.json().catch(() => ({}));
-        if (!initRes.ok) throw new Error(init?.error || `Could not prepare ${cleanName}'s account credentials.`);
-
-        const finalEmail = String(init.email || '').toLowerCase();
-        const finalPassword = String(init.password || '');
-        const finalStudentId = init.studentId || candidateStudentId;
-        const emailProvided = Boolean(init.emailProvided);
-
-        const secondaryName = `onboarding-child-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const childApp = initializeApp((firebaseApp as any).options, secondaryName);
-        const childAuth = getAuth(childApp);
-        let firebaseUid = '';
-        try {
-          const childCred = await createUserWithEmailAndPassword(childAuth, finalEmail, finalPassword);
-          firebaseUid = childCred.user.uid;
-          await updateProfile(childCred.user, { displayName: `${cleanName}|student` }).catch(() => {});
-        } catch (fbErr: any) {
-          console.log('[DEBUG child-create error]', JSON.stringify({ code: fbErr?.code, message: fbErr?.message, email: finalEmail }, null, 2));
-          if (fbErr?.code === 'auth/email-already-in-use') {
-            throw new Error(`${cleanName}'s email already exists. Use another email or leave it blank for auto-generated login.`);
-          }
-          throw new Error(fbErr?.message || `Could not create ${cleanName}'s account.`);
-        } finally {
-          await signOut(childAuth).catch(() => {});
-          await deleteApp(childApp).catch(() => {});
-        }
-
-        const createRes = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(email)}/children/link-created`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firebaseUid,
-            name: cleanName,
-            studentId: finalStudentId,
-            email: finalEmail,
-            grade: child.grade,
-            curriculum: child.curriculum,
-            school: child.school,
-            schoolCity: child.schoolCity,
-            verificationRequired: emailProvided,
-            age: child.age ? parseInt(child.age, 10) : undefined,
-            initialPassword: finalPassword,
-          }),
-        });
-        if (!createRes.ok) {
-          const err = await createRes.json().catch(() => ({}));
-          if (createRes.status === 409) {
-            throw new Error(err?.error || `A child named "${cleanName}" with this grade already exists on your account.`);
-          }
-          throw new Error(err?.error || `Could not create ${cleanName}'s account during onboarding.`);
-        }
-        const created = await createRes.json().catch(() => null);
-        if (!created) throw new Error(`Could not read ${cleanName}'s account response. Please try again.`);
-        const createdChild = created?.child;
-
-        allCreds.push({
-          name: cleanName,
-          loginId: createdChild?.email || finalEmail,
-          password: finalPassword,
-          studentId: createdChild?.studentId || finalStudentId,
-          verificationRequired: emailProvided,
-        });
-      }
-
-      if (allCreds.length > 0) {
-        setCreatedChildCreds(allCreds);
-        setShowChildCreds(true);
-        // updateUser is applied once the parent acknowledges the credentials modal.
-        pendingPatchRef.current = localCompletionPatch;
-        return;
-      }
-
-      updateUser(localCompletionPatch as any);
-    } catch (err: any) {
-      console.error('Onboarding save error:', err);
-      setSaveError(err?.message || 'Could not save your profile. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function confirmChildCredsAndFinish() {
-    setShowChildCreds(false);
-    if (pendingPatchRef.current) {
-      updateUser(pendingPatchRef.current);
-      pendingPatchRef.current = null;
-    }
-  }
+  const submit = useOnboardingSubmit({
+    fullName: personal.fullName, city: personal.city, dob: personal.dob, mobile: personal.mobile,
+    mobileCode: personal.mobileCode, stateProv: personal.stateProv, country: personal.country,
+    avatarStyle: personal.avatarStyle, children: childrenForm.children,
+    mobileVerified: personal.mobileOtp.mobileVerified, verifiedMobile: personal.mobileOtp.verifiedMobile,
+    requiredDone, addingChildren,
+  });
 
   return (
     <View style={styles.screen}>
-      {/* ── Child credentials modal ── */}
-      <Modal visible={showChildCreds} transparent animationType="fade" onRequestClose={confirmChildCredsAndFinish}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { maxHeight: '80%' as any }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: TEAL + '20', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="key" size={17} color={TEAL} />
-              </View>
-              <View>
-                <Text style={styles.modalTitle}>{createdChildCreds.length > 1 ? 'Child Accounts Created' : 'Child Account Created'}</Text>
-                <Text style={styles.modalText}>Share these login details with your {createdChildCreds.length > 1 ? 'children' : 'child'}</Text>
-              </View>
-            </View>
-            <ScrollView style={{ flexGrow: 0 }}>
-              {createdChildCreds.map((cred, idx) => (
-                <View key={idx} style={{ backgroundColor: colors.bgDark, borderRadius: 10, padding: 14, gap: 12, borderWidth: 1, borderColor: colors.borderColor, marginBottom: idx < createdChildCreds.length - 1 ? 12 : 0 }}>
-                  {createdChildCreds.length > 1 && <Text style={{ fontSize: 14, fontWeight: '700', color: TEAL }}>{cred.name}</Text>}
-                  <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>Save these — {cred.name} uses them to log in as a Student on any device.</Text>
-                  {[
-                    { label: 'Login ID (Email)', value: cred.loginId, field: `loginId-${idx}` },
-                    ...(cred.password ? [{ label: 'Password', value: cred.password, field: `password-${idx}` }] : []),
-                  ].map(({ label, value, field }) => (
-                    <View key={field} style={{ gap: 4 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Text>
-                      <TouchableOpacity
-                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cardDark, borderWidth: 1, borderColor: copiedField === field ? TEAL : colors.borderColor, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, gap: 8 }}
-                        onPress={() => copyToClipboard(value, field)} activeOpacity={0.7}>
-                        <Text style={{ flex: 1, color: colors.textMain, fontSize: 13, fontFamily: 'monospace' }} selectable>{value}</Text>
-                        <Feather name={copiedField === field ? 'check' : 'copy'} size={14} color={copiedField === field ? TEAL : colors.textDim} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  {cred.verificationRequired && (
-                    <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>
-                      Login details were also emailed to <Text style={{ fontWeight: '700', color: colors.textMain }}>{cred.loginId}</Text>.
-                    </Text>
-                  )}
-                  {!!cred.password && (
-                    <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: TEAL + '15', borderWidth: 1, borderColor: TEAL + '40', borderRadius: 8, paddingVertical: 9 }}
-                      onPress={() => shareCredentials(cred)} activeOpacity={0.8}>
-                      <Feather name="share-2" size={13} color={TEAL} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: TEAL }}>Share credentials</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalBtn} onPress={confirmChildCredsAndFinish} activeOpacity={0.85}>
-              <Text style={styles.modalBtnText}>Got it, I've saved these</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ChildCredentialsModal
+        colors={colors} styles={styles} teal={TEAL}
+        visible={submit.showChildCreds}
+        onClose={submit.confirmChildCredsAndFinish}
+        creds={submit.createdChildCreds}
+        copiedField={submit.copiedField}
+        onCopy={submit.copyToClipboard}
+        onShare={submit.shareCredentials}
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -650,417 +126,64 @@ export default function OnboardingParentBoxes() {
               <Text style={{ color: TEAL, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>Parent Onboarding</Text>
             </View>
           </View>
-          <Text style={styles.greetMain}>Welcome — let's set up your family profile</Text>
-          <Text style={styles.greetSub}>Fill in each section so we can connect you with your child's learning journey.</Text>
+          <Text style={styles.greetMain}>Welcome — let&apos;s set up your family profile</Text>
+          <Text style={styles.greetSub}>Fill in each section so we can connect you with your child&apos;s learning journey.</Text>
         </View>
 
-        {/* ── Row 1: Personal Info / Your Child(ren) / Child's Account ── */}
+        {/* ── Row 1: Personal Info / Your Child(ren) ── */}
         <View style={[styles.rowWrap, styles.rowWrapStretch, { zIndex: 20 }]}>
-          {/* Personal Info */}
-          <View style={[styles.card, styles.card3, { zIndex: 10 }]}>
-            <CardHeader icon="user" title="1. Personal Info" subtitle="Tell us about yourself." done={personalDone} styles={styles} />
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>Full Name</Text>
-              <TextInput style={styles.input} value={fullName} onChangeText={setFullName}
-                placeholder="Your name" placeholderTextColor={colors.textDim} autoCapitalize="words" />
-            </View>
-            {Platform.OS === 'web' && (
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 2 }}>
-                <TouchableOpacity style={styles.locateBtn} onPress={() => locateFull(({ city: c, state: s, country: co }) => { if (co) setCountry(co); if (s) setStateProv(s); if (c) setCity(c); }, setLocating)} disabled={locating} activeOpacity={0.8}>
-                  <Feather name="crosshair" size={12} color={TEAL} />
-                  <Text style={styles.locateTxt}>{locating ? 'Locating...' : 'Use my location'}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <View style={[styles.fieldRow, { zIndex: 10 }]}>
-              <View style={[styles.fieldGroup, { flex: 1, minWidth: 140, zIndex: 20 }]}>
-                <Text style={styles.lbl}>Country</Text>
-                <SelectField
-                  value={country}
-                  onChange={(c) => { setCountry(c); if (c !== 'India') setStateProv(''); setCity(''); }}
-                  options={COUNTRIES}
-                  placeholder="Select your country"
-                  searchPlaceholder="Search country..."
-                  colors={colors}
-                  styles={styles}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1, minWidth: 140, zIndex: 15 }]}>
-                <Text style={styles.lbl}>State / Province</Text>
-                <SelectField
-                  value={stateProv}
-                  onChange={(s) => { setStateProv(s); setCity(''); }}
-                  options={country === 'India' ? INDIA_STATES : []}
-                  placeholder="Select your state"
-                  searchPlaceholder="Search state..."
-                  colors={colors}
-                  styles={styles}
-                />
-              </View>
-            </View>
-            <View style={[styles.fieldGroup, { zIndex: 9 }]}>
-              <Text style={styles.lbl}>City</Text>
-              {country === 'India' && INDIA_CITIES[stateProv] ? (
-                <SelectField
-                  value={city}
-                  onChange={setCity}
-                  options={[...INDIA_CITIES[stateProv]].sort()}
-                  placeholder="Select your city"
-                  searchPlaceholder="Search city..."
-                  colors={colors}
-                  styles={styles}
-                />
-              ) : (
-                <AutocompleteField
-                  value={city}
-                  onChange={setCity}
-                  fetchSuggestions={(q) => fetchCitySuggestions(q, { state: stateProv, country })}
-                  placeholder={stateProv || country ? 'Search for your city' : 'Select country & state first'}
-                  colors={colors}
-                  styles={styles}
-                />
-              )}
-            </View>
-            <View style={[styles.fieldRow, { zIndex: 8 }]}>
-              <View style={[styles.fieldGroup, { flex: 1, minWidth: 140 }]}>
-                <Text style={styles.lbl}>Date of Birth</Text>
-                {Platform.OS === 'web' ? (
-                  <DatePickerInput value={dob} onChange={setDob} colors={colors} />
-                ) : (
-                  <TextInput style={styles.input} value={dob} onChangeText={setDob}
-                    placeholder="DD/MM/YYYY" placeholderTextColor={colors.textDim} keyboardType="numeric" />
-                )}
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1, minWidth: 200 }]}>
-                <Text style={styles.lbl}>Mobile Number</Text>
-                <View style={styles.phoneRow}>
-                  <PhoneCodeSelect value={mobileCode} onChange={setMobileCode} colors={colors} styles={styles} />
-                  <TextInput style={[styles.input, styles.phoneInput]} value={mobile}
-                    onChangeText={onMobileChange}
-                    placeholder="98765 43210" placeholderTextColor={colors.textDim} keyboardType="phone-pad" />
-                  {MOBILE_VERIFICATION_ENABLED && (
-                    mobileOtp.mobileVerified && mobile === mobileOtp.verifiedMobile ? (
-                    <View style={styles.verifiedBadge}>
-                      <Feather name="check-circle" size={14} color={TEAL} />
-                      <Text style={styles.verifiedTxt}>Verified</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.verifyBtn}
-                      onPress={mobileOtp.handleSendOtp}
-                      disabled={mobileOtp.otpSending || !mobile.trim()}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.verifyBtnTxt}>{mobileOtp.otpSending ? 'Sending...' : 'Verify'}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {MOBILE_VERIFICATION_ENABLED && mobileOtp.otpError ? <Text style={styles.warnTxt}>{mobileOtp.otpError}</Text> : null}
-              </View>
-            </View>
-
-            <View style={[styles.hintBox, styles.hintBoxRow, { backgroundColor: TEAL + '10', borderColor: TEAL + '25' }]}>
-              <Feather name="shield" size={16} color={TEAL} />
-              <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17, flex: 1 }}>
-                The details you provide are used to create and secure your account. Your information is stored securely and treated as strictly confidential.
-              </Text>
-            </View>
-          </View>
-
-          {/* Your Child(ren) */}
-          <View style={[styles.card, styles.card3]}>
-            <CardHeader icon="users" title="2. Your Children" badge="Optional" subtitle="Add now, or skip and add them anytime from your dashboard." done={true} styles={styles} subtitleColor={TEAL} />
-
-            {children.length > 1 && (
-              <View style={styles.chipRow}>
-                {children.map((c, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.chip, activeChildIdx === i && styles.chipActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
-                    onPress={() => { setActiveChildIdx(i); setShowChildPassword(false); }}
-                    activeOpacity={0.8}>
-                    <Text style={[styles.chipTxt, activeChildIdx === i && styles.chipTxtActive]}>
-                      {c.name.trim() || `Child ${i + 1}`}
-                    </Text>
-                    <TouchableOpacity onPress={() => removeChild(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Feather name="x" size={12} color={activeChildIdx === i ? '#fff' : colors.textDim} />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>Child's Full Name</Text>
-              <TextInput style={styles.input} value={activeChild.name} onChangeText={v => updateChild('name', v)}
-                placeholder="Enter your child's name" placeholderTextColor={colors.textDim} autoCapitalize="words" />
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>Child's Age</Text>
-              <TextInput style={styles.input} value={activeChild.age} onChangeText={v => updateChild('age', v)}
-                placeholder="e.g. 9" placeholderTextColor={colors.textDim} keyboardType="numeric" maxLength={2} />
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>{children.length > 1 ? `${activeChild.name || 'Child'}'s School` : "Child's School"}</Text>
-              <TextInput style={styles.input} value={activeChild.school} onChangeText={v => updateChild('school', v)}
-                placeholder="e.g. Hyderabad International School" placeholderTextColor={colors.textDim} />
-            </View>
-            <View style={styles.fieldGroup}>
-              <View style={styles.lblRow}>
-                <Text style={styles.lbl}>School Location</Text>
-                {Platform.OS === 'web' && (
-                  <TouchableOpacity style={styles.locateBtn} onPress={() => locateCity(v => updateChild('schoolCity', v), setSchoolLocating)} disabled={schoolLocating} activeOpacity={0.8}>
-                    <Feather name="crosshair" size={12} color={TEAL} />
-                    <Text style={styles.locateTxt}>{schoolLocating ? 'Locating...' : 'Use my location'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <AutocompleteField
-                value={activeChild.schoolCity}
-                onChange={v => updateChild('schoolCity', v)}
-                fetchSuggestions={fetchCitySuggestions}
-                placeholder="Search for the school's city"
-                colors={colors}
-                styles={styles}
-              />
-            </View>
-
-            {activeChild.age.length > 0 && (
-              <View style={[styles.hintBox, { backgroundColor: (parseInt(activeChild.age, 10) >= 14 ? TEAL : FOREST) + '15', borderColor: (parseInt(activeChild.age, 10) >= 14 ? TEAL : FOREST) + '40' }]}>
-                <Text style={{ fontSize: 12, color: parseInt(activeChild.age, 10) >= 14 ? TEAL : FOREST, lineHeight: 17 }}>
-                  {parseInt(activeChild.age, 10) >= 14
-                    ? 'Students 14 and older should have their own account. Enter their registered Aivorah email in the Account box to link it.'
-                    : 'Aivorah will create a login ID and password for your child in the Account box.'}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.fillCenter}>
-              <TouchableOpacity style={styles.addChildBtn} onPress={addAnotherChild} activeOpacity={0.7}>
-                <Feather name="plus-circle" size={16} color={TEAL} />
-                <Text style={styles.addChildTxt}>Add Another Child</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <PersonalInfoCard
+            colors={colors} styles={styles} teal={TEAL} done={personalDone}
+            fullName={personal.fullName} setFullName={personal.setFullName}
+            country={personal.country} setCountry={personal.setCountry}
+            stateProv={personal.stateProv} setStateProv={personal.setStateProv}
+            city={personal.city} setCity={personal.setCity}
+            dob={personal.dob} setDob={personal.setDob}
+            mobile={personal.mobile} mobileCode={personal.mobileCode}
+            setMobileCode={personal.setMobileCode} onMobileChange={personal.onMobileChange}
+            mobileOtp={personal.mobileOtp}
+            locating={personal.locating} setLocating={personal.setLocating}
+          />
+          <ChildrenCard
+            colors={colors} styles={styles} teal={TEAL}
+            childrenList={childrenForm.children} activeChildIdx={childrenForm.activeChildIdx}
+            activeChild={childrenForm.activeChild} selectChild={childrenForm.selectChild}
+            removeChild={childrenForm.removeChild} updateChild={childrenForm.updateChild}
+            addAnotherChild={childrenForm.addAnotherChild}
+            schoolLocating={childrenForm.schoolLocating} setSchoolLocating={childrenForm.setSchoolLocating}
+          />
         </View>
 
         {/* Sections 3 & 4 only appear once the parent starts adding a child
             (keeps onboarding clean for parents who skip the optional child step). */}
         {addingChildren && (<>
-        {/* ── Row 2: Child's Learning Profile ── */}
-        <View style={styles.rowWrap}>
-          <View style={[styles.card, styles.cardFull]}>
-            <CardHeader icon="book-open" title="3. Child's Learning Profile" subtitle="What is your child learning?" done={curriculumDone} styles={styles} />
-
-            {children.length > 1 && (
-              <View style={styles.chipRow}>
-                {children.map((c, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.chip, activeChildIdx === i && styles.chipActive]}
-                    onPress={() => { setActiveChildIdx(i); setShowChildPassword(false); }}
-                    activeOpacity={0.8}>
-                    <Text style={[styles.chipTxt, activeChildIdx === i && styles.chipTxtActive]}>
-                      {c.name.trim() || `Child ${i + 1}`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>Child's Curriculum</Text>
-              <View style={styles.fieldBox}>
-                <View style={styles.chipRow}>
-                  {CURRICULA.map(c => (
-                    <TouchableOpacity key={c} style={[styles.chip, activeChild.curriculum === c && styles.chipActive]}
-                      onPress={() => { updateChild('curriculum', c); updateChild('grade', ''); }} activeOpacity={0.8}>
-                      <Text style={[styles.chipTxt, activeChild.curriculum === c && styles.chipTxtActive]}>{c}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.lbl}>Child's Grade</Text>
-              <View style={styles.gradeGroupsWrap}>
-                {GRADE_GROUPS.map(group => {
-                  const available = group.grades.filter(g => getGradesForCurriculum(activeChild.curriculum).includes(g));
-                  if (available.length === 0) return null;
-                  return (
-                    <View key={group.label} style={styles.gradeGroup}>
-                      <View style={styles.gradeGroupHead}>
-                        <View style={styles.gradeGroupDot} />
-                        <Text style={styles.gradeGroupLbl}>{group.label}</Text>
-                      </View>
-                      <View style={styles.chipRow}>
-                        {available.map(g => (
-                          <TouchableOpacity key={g} style={[styles.chip, activeChild.grade === g && styles.chipActive]}
-                            onPress={() => updateChild('grade', g)} activeOpacity={0.8}>
-                            <Text style={[styles.chipTxt, activeChild.grade === g && styles.chipTxtActive]}>{g}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
+          <View style={styles.rowWrap}>
+            <LearningProfileCard
+              styles={styles} done={curriculumDone}
+              childrenList={childrenForm.children} activeChildIdx={childrenForm.activeChildIdx}
+              activeChild={childrenForm.activeChild} selectChild={childrenForm.selectChild}
+              updateChild={childrenForm.updateChild}
+            />
           </View>
-        </View>
 
-        {/* ── Row 3: Child's Account ── */}
-        <View style={styles.rowWrap}>
-          <View style={[styles.card, styles.cardFull]}>
-            <CardHeader icon="key" title="4. Child's Account" subtitle="Link or create their login." done={accountDone} styles={styles} />
-
-            {children.length > 1 && (
-              <View style={styles.chipRow}>
-                {children.map((c, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.chip, activeChildIdx === i && styles.chipActive]}
-                    onPress={() => { setActiveChildIdx(i); setShowChildPassword(false); }}
-                    activeOpacity={0.8}>
-                    <Text style={[styles.chipTxt, activeChildIdx === i && styles.chipTxtActive]}>
-                      {c.name.trim() || `Child ${i + 1}`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {(activeChild.age ? parseInt(activeChild.age, 10) : 0) >= 14 ? (
-              <>
-                <View style={[styles.hintBox, { backgroundColor: TEAL + '12', borderColor: TEAL + '30' }]}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: TEAL, marginBottom: 4 }}>Link {activeChild.name || 'your child'}'s Account</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
-                    Students 14+ have their own Aivorah account. Ask your child for their registered email, then enter it below to link it to your parent dashboard.
-                  </Text>
-                </View>
-                <View style={styles.fieldRow}>
-                  <View style={[styles.fieldGroup, styles.fieldThird]}>
-                    <Text style={styles.lbl}>Child's Registered Email</Text>
-                    <TextInput style={styles.input} value={activeChild.linkEmail} onChangeText={v => updateChild('linkEmail', v)}
-                      placeholder="child@email.com" placeholderTextColor={colors.textDim}
-                      keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-                  </View>
-                  <View style={[styles.fieldGroup, styles.fieldThird, { justifyContent: 'center' }]}>
-                    <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
-                      If your child hasn't signed up yet, ask them to create a Student account first, then come back to complete this step.
-                    </Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={[styles.hintBox, { backgroundColor: FOREST + '12', borderColor: FOREST + '30' }]}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: FOREST, marginBottom: 4 }}>Create {activeChild.name || "your child"}'s Login</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
-                    Aivorah will set up a Student account for {activeChild.name || 'your child'} using the details below — you'll get their login ID and password to share with them.
-                  </Text>
-                </View>
-                <View style={styles.fieldRow}>
-                  <View style={[styles.fieldGroup, styles.fieldHalf]}>
-                    <Text style={styles.lbl}>{children.length > 1 ? `${activeChild.name || 'Child'}'s Email (optional)` : "Child's Email (optional)"}</Text>
-                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                      <TextInput style={[styles.input, { flex: 1 }]} value={activeChild.email} onChangeText={onChildEmailChange}
-                        placeholder="child@email.com" placeholderTextColor={colors.textDim}
-                        keyboardType="email-address" autoCapitalize="none" editable={!childEmailVerified} />
-                      {childEmailValid && !childEmailVerified && (
-                        <TouchableOpacity
-                          onPress={sendChildOtp}
-                          disabled={otpSending || otpCooldown > 0}
-                          style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 8, backgroundColor: TEAL, opacity: (otpSending || otpCooldown > 0) ? 0.5 : 1 }}
-                          activeOpacity={0.85}>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0b0b0b' }}>
-                            {otpSending ? 'Sending…' : otpCooldown > 0 ? `Resend (${otpCooldown}s)` : (otpSent ? 'Resend' : 'Send Code')}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                      {childEmailVerified && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, backgroundColor: 'rgba(143,230,174,0.15)', borderWidth: 1, borderColor: 'rgba(143,230,174,0.4)' }}>
-                          <Feather name="check-circle" size={14} color="#8FE6AE" />
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#8FE6AE' }}>Verified</Text>
-                        </View>
-                      )}
-                    </View>
-                    {otpSent && !childEmailVerified && (
-                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                        <TextInput style={[styles.input, { flex: 1 }]} value={otpCode} onChangeText={setOtpCode}
-                          placeholder="Enter 6-digit code" placeholderTextColor={colors.textDim}
-                          keyboardType="number-pad" maxLength={6} />
-                        <TouchableOpacity onPress={verifyChildOtp} disabled={otpVerifying}
-                          style={{ paddingHorizontal: 16, paddingVertical: 11, borderRadius: 8, backgroundColor: TEAL, opacity: otpVerifying ? 0.5 : 1 }}
-                          activeOpacity={0.85}>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0b0b0b' }}>{otpVerifying ? 'Verifying…' : 'Verify'}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    {otpErr !== '' && <Text style={[styles.subHint, { color: '#E07F7F' }]}>{otpErr}</Text>}
-                    <Text style={styles.subHint}>
-                      {childEmailVerified
-                        ? 'Email verified. You can continue.'
-                        : 'Leave blank — Aivorah auto-generates a login ID. If you enter a real email, verify it with the code we send.'}
-                    </Text>
-                  </View>
-                  <View style={[styles.fieldGroup, styles.fieldHalf]}>
-                    <Text style={styles.lbl}>Password (optional)</Text>
-                    <View style={{ position: 'relative' }}>
-                      <TextInput
-                        style={[styles.input, { paddingRight: 48 }]}
-                        value={activeChild.password}
-                        onChangeText={v => updateChild('password', v)}
-                        placeholder="Leave blank to auto-generate"
-                        placeholderTextColor={colors.textDim}
-                        secureTextEntry={!showChildPassword}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        autoComplete="off"
-                        importantForAutofill="no"
-                      />
-                      <TouchableOpacity
-                        style={{ position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' }}
-                        onPress={() => setShowChildPassword(v => !v)}
-                        activeOpacity={0.7}>
-                        <Feather name={showChildPassword ? 'eye-off' : 'eye'} size={16} color={colors.textDim} />
-                      </TouchableOpacity>
-                    </View>
-                    {activeChild.password.length > 0 && activeChild.password.length < 6 && (
-                      <Text style={{ fontSize: 12, color: '#ef4444' }}>Password must be at least 6 characters.</Text>
-                    )}
-                    <Text style={styles.subHint}>Set a password your child will remember, or leave blank to auto-generate one.</Text>
-                  </View>
-                </View>
-              </>
-            )}
+          <View style={styles.rowWrap}>
+            <ChildAccountCard
+              colors={colors} styles={styles} teal={TEAL} done={accountDone}
+              childrenList={childrenForm.children} activeChildIdx={childrenForm.activeChildIdx}
+              activeChild={childrenForm.activeChild} selectChild={childrenForm.selectChild}
+              updateChild={childrenForm.updateChild}
+              showChildPassword={childrenForm.showChildPassword} setShowChildPassword={childrenForm.setShowChildPassword}
+              otp={otp}
+            />
           </View>
-        </View>
         </>)}
 
         {/* ── Row 4: Your Avatar ── */}
         <View style={styles.rowWrap}>
-          <View style={[styles.card, styles.cardFull]}>
-            <CardHeader icon="smile" title="5. Your Avatar" subtitle="Choose an avatar that represents you." done={avatarDone} styles={styles} />
-            <View style={styles.avatarGrid}>
-              {AVATAR_STYLES.map(av => (
-                <TouchableOpacity key={av.id}
-                  style={[styles.avatarTile, avatarStyle === av.id && styles.avatarTileActive]}
-                  onPress={() => setAvatarStyle(av.id)} activeOpacity={0.8}>
-                  <LinearGradient colors={av.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatarCircle}>
-                    <Feather name={av.icon as any} size={20} color="#fff" />
-                  </LinearGradient>
-                  <Text style={[styles.avatarLbl, avatarStyle === av.id && { color: TEAL }]}>{av.label}</Text>
-                  {avatarStyle === av.id && (
-                    <View style={styles.tileCheck}><Feather name="check" size={10} color="#fff" /></View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <AvatarCard styles={styles} teal={TEAL} done={avatarDone} avatarStyle={personal.avatarStyle} setAvatarStyle={personal.setAvatarStyle} />
         </View>
 
-        {saveError ? <Text style={styles.errorTxt}>{saveError}</Text> : null}
+        {submit.saveError ? <Text style={styles.errorTxt}>{submit.saveError}</Text> : null}
 
         {/* ── Footer ── */}
         <View style={styles.footer}>
@@ -1075,14 +198,14 @@ export default function OnboardingParentBoxes() {
                 if (!personalDone) missing.push('Personal Info');
                 // Child sections only matter once a child has been started.
                 if (!curriculumDone) {
-                  const who = startedChildren.filter(c => !(c.curriculum.length > 0 && c.grade.length > 0)).map(c => c.name.trim() || 'a child');
+                  const who = startedChildren.filter((c) => !(c.curriculum.length > 0 && c.grade.length > 0)).map((c) => c.name.trim() || 'a child');
                   missing.push(`Learning Profile (curriculum & grade${who.length ? ' for ' + who.join(', ') : ''})`);
                 }
                 if (!accountDone) {
-                  const who = startedChildren.filter(c => {
+                  const who = startedChildren.filter((c) => {
                     const age = c.age ? parseInt(c.age, 10) : 0;
                     return age >= 14 ? !/^\S+@\S+\.\S+$/.test(c.linkEmail.trim()) : c.school.trim().length < 2;
-                  }).map(c => c.name.trim() || 'a child');
+                  }).map((c) => c.name.trim() || 'a child');
                   missing.push(`Child's Account${who.length ? ' for ' + who.join(', ') : ''}`);
                 }
                 return missing.length ? `Still needed: ${missing.join('; ')}` : 'Complete all sections above to continue';
@@ -1093,95 +216,40 @@ export default function OnboardingParentBoxes() {
             )}
             <TouchableOpacity
               style={[styles.completeBtn, !requiredDone && { opacity: 0.4 }]}
-              disabled={!requiredDone || saving}
-              onPress={() => handleFinish(true)} activeOpacity={0.85}>
-              <Text style={styles.completeTxt}>{saving ? 'Saving...' : (addingChildren ? 'Complete Setup' : 'Skip for now & Finish')}</Text>
-              {!saving && <Feather name="arrow-right" size={16} color="#fff" />}
+              disabled={!requiredDone || submit.saving}
+              onPress={() => submit.handleFinish(true)} activeOpacity={0.85}>
+              <Text style={styles.completeTxt}>{submit.saving ? 'Saving...' : (addingChildren ? 'Complete Setup' : 'Skip for now & Finish')}</Text>
+              {!submit.saving && <Feather name="arrow-right" size={16} color="#fff" />}
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
       {/* ── Leave confirmation (home page, or back-to-teacher-dashboard when adding a parent profile) ── */}
-      <Modal transparent visible={showLeaveConfirm} animationType="fade" onRequestClose={() => setShowLeaveConfirm(false)}>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
-            <View style={styles.confirmIcon}>
-              <Feather name="log-out" size={22} color={TEAL} />
-            </View>
-            <Text style={styles.confirmTitle}>
-              {isAddingParent ? 'Save this parent profile before going back?' : 'Return to the home page?'}
-            </Text>
-            <Text style={styles.confirmBody}>
-              {isAddingParent
-                ? "You'll return to your teacher dashboard. Save what you've entered so far, or discard it and go back without saving."
-                : "You'll be signed out and taken back to the Aivorah home page. Any details you haven't saved on this page won't be kept."}
-            </Text>
-            {isAddingParent ? (
-              <>
-                <TouchableOpacity
-                  style={styles.confirmPrimary}
-                  activeOpacity={0.85}
-                  disabled={saving}
-                  onPress={() => { setShowLeaveConfirm(false); handleFinish(false); }}
-                >
-                  <Text style={styles.confirmPrimaryTxt}>{saving ? 'Saving...' : 'Save & go back'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.confirmSecondary, { marginBottom: 10 }]}
-                  activeOpacity={0.7}
-                  onPress={() => { setShowLeaveConfirm(false); cancelAddParentProfile(); }}
-                >
-                  <Text style={styles.confirmSecondaryTxt}>Discard & go back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.confirmSecondary}
-                  activeOpacity={0.7}
-                  onPress={() => setShowLeaveConfirm(false)}
-                >
-                  <Text style={styles.confirmSecondaryTxt}>Stay here</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.confirmPrimary}
-                  activeOpacity={0.85}
-                  disabled={saving}
-                  onPress={() => { setShowLeaveConfirm(false); handleFinish(false); }}
-                >
-                  <Text style={styles.confirmPrimaryTxt}>{saving ? 'Saving...' : 'Save draft & sign out'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.confirmSecondary, { marginBottom: 10 }]}
-                  activeOpacity={0.7}
-                  onPress={async () => { setShowLeaveConfirm(false); await logout(); }}
-                >
-                  <Text style={styles.confirmSecondaryTxt}>Discard draft & sign out</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.confirmSecondary}
-                  activeOpacity={0.7}
-                  onPress={() => setShowLeaveConfirm(false)}
-                >
-                  <Text style={styles.confirmSecondaryTxt}>Stay here</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <LeaveConfirmModal
+        styles={styles} teal={TEAL}
+        visible={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        isAddingParent={isAddingParent}
+        saving={submit.saving}
+        onSaveAndGoBack={() => { setShowLeaveConfirm(false); submit.handleFinish(false); }}
+        onDiscardAndGoBack={() => {
+          setShowLeaveConfirm(false);
+          if (isAddingParent) cancelAddParentProfile();
+          else logout();
+        }}
+      />
 
       <PhoneOtpModal
-        mobile={mobile}
-        mobileCode={mobileCode}
-        otpModalVisible={mobileOtp.otpModalVisible}
-        otpCode={mobileOtp.otpCode}
-        setOtpCode={mobileOtp.setOtpCode}
-        otpError={mobileOtp.otpError}
-        otpVerifying={mobileOtp.otpVerifying}
-        handleVerifyOtp={mobileOtp.handleVerifyOtp}
-        handleCancelOtp={mobileOtp.handleCancelOtp}
+        mobile={personal.mobile}
+        mobileCode={personal.mobileCode}
+        otpModalVisible={personal.mobileOtp.otpModalVisible}
+        otpCode={personal.mobileOtp.otpCode}
+        setOtpCode={personal.mobileOtp.setOtpCode}
+        otpError={personal.mobileOtp.otpError}
+        otpVerifying={personal.mobileOtp.otpVerifying}
+        handleVerifyOtp={personal.mobileOtp.handleVerifyOtp}
+        handleCancelOtp={personal.mobileOtp.handleCancelOtp}
         colors={colors}
         styles={styles}
       />
