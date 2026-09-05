@@ -28,7 +28,7 @@ import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import ParentAttendanceScreen from '@legacy/parent/ParentAttendanceScreen';
 import ParentControlsScreen from '../screens/parent/parental-controls/ParentControlsScreen';
 import ParentLearningScreen from '../screens/parent/learning/ParentLearningScreen';
-import ParentHelpScreen from '@legacy/parent/ParentHelpScreen';
+import ParentHelpScreen from '../screens/parent/help-center/ParentHelpScreen';
 
 const Drawer = createDrawerNavigator<ParentDrawerParamList>();
 
