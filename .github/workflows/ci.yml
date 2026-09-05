@@ -33,19 +33,19 @@ jobs:
 
       - name: Install Frontend Dependencies
         run: npm ci
-        
-      # - name: TypeScript check
-      #   run: npx tsc --noEmit
-        
-      # - name: Lint check
-      #   run: npm run lint
-        
-      # - name: Unit tests
-      #   run: npm run test:unit -- --ci
-        
-      # - name: Integration tests
-      #   run: npm run test:integration -- --ci
-        
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit -- --ci
+
+      - name: Integration tests
+        run: npm run test:integration -- --ci
+
       - name: Build Web Application
         run: npm run vercel-build
         
@@ -144,8 +144,78 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # Small, fixed set of read-only specs (one per persona's login + one per
+  # persona's core landing screen) that PR-gates every push. Kept separate
+  # from the full 4-shard e2e_tests job below, which currently has a known
+  # 207/365 failing baseline (2026-09-04) and is far too slow/unreliable to
+  # block merges on - see docs backlog. Do not add more specs here without
+  # checking they're read-only and fast; this suite's whole value is that
+  # every PR can trust a green run.
+  smoke_e2e:
+    needs: build_and_setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install E2E Dependencies
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium chrome
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: dist/
+
+      - name: Download Auth Session Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-session
+          path: e2e/
+
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
+
+      - name: Run Smoke Specs
+        run: |
+          cd e2e
+          npx playwright test \
+            tests/parent/b2b-login.spec.js \
+            tests/parent/dashboard/dashboard.spec.js \
+            tests/student/b2b-login.spec.js \
+            tests/student/learning-paths.spec.js \
+            tests/teacher/b2b-login.spec.js \
+            tests/teacher/dashboard/dashboard.spec.js \
+            --reporter=blob
+        env:
+          PLAYWRIGHT_SKIP_GLOBAL_HOOKS: 'true'
+
+      - name: Upload Smoke Blob Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-smoke
+          path: e2e/blob-report
+          retention-days: 1
+
+  # Full 365-test suite, sharded. Known baseline (2026-09-04): 158 passed /
+  # 207 failed - not reliable enough to gate PRs on yet, so it only runs
+  # on demand, never on push/pull_request. The 207 failures are a tracked
+  # backlog, not this workflow's job to fix. Nightly full regression lives
+  # in aivorah-e2e-tests/.github/workflows/e2e.yml instead (runs against
+  # real staging infra, not this local build).
   e2e_tests:
     needs: build_and_setup
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -199,7 +269,7 @@ jobs:
 
   teardown_and_report:
     if: always()
-    needs: [build_and_setup, e2e_tests]
+    needs: [build_and_setup, smoke_e2e, e2e_tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
