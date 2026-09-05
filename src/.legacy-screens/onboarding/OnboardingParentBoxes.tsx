@@ -17,8 +17,8 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { useAuth, getPendingReturnRole } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
+import STUDENTS_SERVER_URL from '../../config/studentsServerUrl';
 import firebaseApp from '../../config/firebase';
 import { AVATAR_STYLES } from '../../constants/avatarStyles';
 import { CURRICULA, getGradesForCurriculum, DatePickerInput } from '../../screens/onboarding/OnboardingScreen';
@@ -235,7 +235,7 @@ export default function OnboardingParentBoxes() {
     if (!/^\S+@\S+\.\S+$/.test(email)) { setOtpErr('Enter a valid email first.'); return; }
     setOtpSending(true); setOtpErr('');
     try {
-      const res = await fetch(`${SERVER_URL}/user/email-otp/send`, {
+      const res = await fetch(`${STUDENTS_SERVER_URL}/parent/children/email-otp/send`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name: activeChild.name.trim() || 'there' }),
       });
@@ -253,7 +253,7 @@ export default function OnboardingParentBoxes() {
     if (code.length < 4) { setOtpErr('Enter the 6-digit code.'); return; }
     setOtpVerifying(true); setOtpErr('');
     try {
-      const res = await fetch(`${SERVER_URL}/user/email-otp/verify`, {
+      const res = await fetch(`${STUDENTS_SERVER_URL}/parent/children/email-otp/verify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: code }),
       });
@@ -439,7 +439,7 @@ export default function OnboardingParentBoxes() {
 
         // ── Age >= 14: Link existing student account ──────────────────
         if (ageNum >= 14 && child.linkEmail.trim()) {
-          const linkRes = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(email)}/children`, {
+          const linkRes = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(email)}/children`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ childEmail: child.linkEmail.trim().toLowerCase() }),
@@ -454,7 +454,7 @@ export default function OnboardingParentBoxes() {
         // ── Age < 14: Auto-create student account ──────────────────────
         const cleanName = child.name.trim();
         const candidateStudentId = generateStudentId(cleanName);
-        const initRes = await fetch(`${SERVER_URL}/parent/children/init-auth`, {
+        const initRes = await fetch(`${STUDENTS_SERVER_URL}/parent/children/init-auth`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -463,6 +463,11 @@ export default function OnboardingParentBoxes() {
             email: child.email.trim().toLowerCase() || undefined,
             age: child.age ? parseInt(child.age, 10) : undefined,
             password: child.password.trim() || undefined,
+            // Without this, an auto-generated login draws from a single
+            // GLOBAL ch1/ch2/ch3... counter shared by every parent instead
+            // of a per-parent-scoped one - found via real collisions with
+            // old orphaned test accounts during E2E verification.
+            parentEmail: email,
           }),
         });
         const init = await initRes.json().catch(() => ({}));
@@ -492,7 +497,7 @@ export default function OnboardingParentBoxes() {
           await deleteApp(childApp).catch(() => {});
         }
 
-        const createRes = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(email)}/children/link-created`, {
+        const createRes = await fetch(`${STUDENTS_SERVER_URL}/parent/${encodeURIComponent(email)}/children/link-created`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
