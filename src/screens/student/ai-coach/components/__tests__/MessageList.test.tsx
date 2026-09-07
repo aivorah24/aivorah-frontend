@@ -10,6 +10,20 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   select: (obj: any) => obj.web ?? obj.default ?? obj.ios,
 }));
 
+// ThinkingIndicator's own dedicated test covers its real Animated.loop
+// behavior. Here, MessageList only needs to know the indicator rendered —
+// the real loop uses real (600ms) timers that outlive this test's render/
+// unmount cycle, leaking into whichever suite runs next and crashing it
+// ("Cannot access .container on unmounted test renderer"). Stub it to a
+// static, timer-free component.
+jest.mock('../ThinkingIndicator', () => {
+  const { Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => <Text>Aivorah is thinking...</Text>,
+  };
+});
+
 const colors = {
   accentRed: '#f00', cardDark: '#111', borderColor: '#333',
   textDim: '#666', textMuted: '#888', textMain: '#fff',
