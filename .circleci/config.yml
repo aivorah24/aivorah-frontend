@@ -57,8 +57,16 @@ jobs:
             printf '%s\n' "$E2E_ENV_FILE" > .env
 
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+
+            # E2E_ENV_FILE is a large multi-line paste into CircleCI's UI, which has
+            # silently truncated large values before. Fall back to small, dedicated
+            # project env vars for the keys this step hard-requires, rather than
+            # depending on the whole blob surviving one perfect paste.
+            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
+            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
+
             for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
-              grep -q "^${k}=." .env || { echo "E2E_ENV_FILE is missing required key ${k}"; exit 1; }
+              grep -q "^${k}=." .env || { echo "E2E_ENV_FILE is missing required key ${k} (and no dedicated ${k} project env var is set as a fallback)"; exit 1; }
             done
             echo "[ci] .env loaded: $(wc -c < .env) bytes, $(grep -c '=' .env) keys"
 
@@ -122,6 +130,8 @@ jobs:
             cd e2e
             printf '%s\n' "$E2E_ENV_FILE" > .env
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
+            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
       - run:
           name: Run Smoke Specs
           command: |
@@ -159,6 +169,8 @@ jobs:
             cd e2e
             printf '%s\n' "$E2E_ENV_FILE" > .env
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
+            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
       - run:
           name: Run Playwright Shard
           command: |
@@ -187,6 +199,8 @@ jobs:
             cd e2e
             printf '%s\n' "$E2E_ENV_FILE" > .env
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
+            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
       - run:
           name: Teardown Mutated Accounts
           command: |
