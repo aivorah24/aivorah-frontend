@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Svg, { Circle } from 'react-native-svg';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -30,13 +30,18 @@ export default function ParentControlsScreen(_props: any) {
   // not a stale-ref bug the way a plain ref read during render would be.
   // eslint-disable-next-line react-hooks/refs
   const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const showToast = useCallback(() => {
     toastOpacity.setValue(1);
-    Animated.sequence([
+    toastAnimRef.current?.stop();
+    toastAnimRef.current = Animated.sequence([
       Animated.delay(1800),
       Animated.timing(toastOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]).start();
+    ]);
+    toastAnimRef.current.start();
   }, [toastOpacity]);
+
+  useEffect(() => () => toastAnimRef.current?.stop(), []);
 
   const { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings } =
     useParentControlsData(parentEmail, showToast);
