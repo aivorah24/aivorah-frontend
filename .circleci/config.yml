@@ -37,10 +37,10 @@ jobs:
           command: npm run lint
       - run:
           name: Unit tests
-          command: npm run test:unit -- --ci
+          command: npm run test:unit -- --ci --maxWorkers=2
       - run:
           name: Integration tests
-          command: npm run test:integration -- --ci
+          command: npm run test:integration -- --ci --maxWorkers=2
       - run:
           name: Build Web Application
           command: npm run vercel-build
