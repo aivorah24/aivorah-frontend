@@ -95,6 +95,7 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
 
   useEffect(() => {
     isInitialLoadRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the initial + polling fetch, not derivable from render-time values
     fetchControls(true);
     const interval = setInterval(() => fetchControls(false), 15 * 1000);
     return () => clearInterval(interval);
@@ -131,7 +132,7 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
     }
     return null;
   }, [selectedChild, parentEmail, ctrl, onSaved]);
-  saveSettingsRef.current = saveSettings;
+  useEffect(() => { saveSettingsRef.current = saveSettings; }, [saveSettings]);
 
   return { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings };
 }

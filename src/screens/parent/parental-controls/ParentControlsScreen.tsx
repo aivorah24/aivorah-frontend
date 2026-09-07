@@ -25,6 +25,10 @@ export default function ParentControlsScreen(_props: any) {
   const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const parentEmail = user?.email || '';
 
+  // Animated.Value is designed to be read directly during render and passed
+  // into a style prop (native-driven, doesn't trigger React re-renders) -
+  // not a stale-ref bug the way a plain ref read during render would be.
+  // eslint-disable-next-line react-hooks/refs
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const showToast = useCallback(() => {
     toastOpacity.setValue(1);

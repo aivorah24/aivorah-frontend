@@ -58,11 +58,15 @@ export function useParentLearningData(parentEmail: string, targetChildId?: strin
     }
   }, [child, childGrade, childCurriculum]);
 
-  // Reset analytics when child switches, then fetch fresh data.
+  // Reset analytics when child switches, then fetch fresh data — clears the
+  // previous child's report immediately so it's never shown for the wrong
+  // child during the fetch gap; not derivable from render-time values alone.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnalyticsReport(null);
   }, [selectedIdx]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async fetch for the (possibly new) child
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const refresh = useCallback(() => {

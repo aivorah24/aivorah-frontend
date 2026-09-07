@@ -448,7 +448,7 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
                   <View style={styles.infoNote}>
                     <Feather name="user" size={13} color={colors.accentGreen} />
                     <Text style={styles.infoNoteText}>
-                      This assignment will appear in {child?.name ?? 'your child'}'s Assignments screen.
+                      This assignment will appear in {child?.name ?? 'your child'}&apos;s Assignments screen.
                     </Text>
                   </View>
 

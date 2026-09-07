@@ -80,7 +80,7 @@ export default function ProgressScreen({ navigation }: any) {
             >
               <Feather name="wifi-off" size={16} color="#C9A24E" />
               <Text style={styles.loadErrorText}>
-                Couldn't load your latest progress. Tap to retry.
+                Couldn&apos;t load your latest progress. Tap to retry.
               </Text>
               <Feather name="refresh-cw" size={14} color="#C9A24E" />
             </TouchableOpacity>

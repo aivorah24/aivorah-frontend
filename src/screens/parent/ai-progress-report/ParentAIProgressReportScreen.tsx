@@ -538,7 +538,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                         AI Performance{'\n'}<Text style={{ color: colors.accentYellow }}>Report</Text>
                       </Text>
                       <Text style={styles.heroDesc}>
-                        Get a personalised AI generated analysis of {selectedChild?.name}'s learning patterns, strengths, areas to improve, and a weekly action plan — all based on their real activity data.
+                        Get a personalised AI generated analysis of {selectedChild?.name}&apos;s learning patterns, strengths, areas to improve, and a weekly action plan — all based on their real activity data.
                       </Text>
                       <TouchableOpacity
                         style={styles.heroBtn}
@@ -572,7 +572,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                   <View style={styles.insideCard}>
                     <View style={styles.insideHeader}>
                       <Feather name="zap" size={14} color={colors.accentYellow} />
-                      <Text style={styles.insideTitle}>What's Inside Your Report</Text>
+                      <Text style={styles.insideTitle}>What&apos;s Inside Your Report</Text>
                     </View>
                     <View style={styles.insideGrid}>
                       {[
@@ -605,7 +605,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
               {loadingReport && (
                 <View style={styles.loadingBox}>
                   <ActivityIndicator color={colors.accentYellow} size="large" />
-                  <Text style={styles.loadingText}>Analyzing {selectedChild?.name}'s learning data...</Text>
+                  <Text style={styles.loadingText}>Analyzing {selectedChild?.name}&apos;s learning data...</Text>
                   <Text style={styles.loadingSubText}>This takes a few seconds</Text>
                 </View>
               )}
@@ -616,7 +616,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                   <Feather name="inbox" size={36} color={colors.textDim} />
                   <Text style={[styles.emptyTitle, { textAlign: 'center' }]}>Not enough activity yet</Text>
                   <Text style={[styles.emptyDesc, { textAlign: 'center', maxWidth: 300 }]}>
-                    {reportData.student?.name} hasn't started learning on Aivorah yet. Once they complete topics, assignments, or log study time, the AI report will have real data to analyze.
+                    {reportData.student?.name} hasn&apos;t started learning on Aivorah yet. Once they complete topics, assignments, or log study time, the AI report will have real data to analyze.
                   </Text>
                 </View>
               )}
@@ -787,7 +787,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                           Share with {reportData.student.name}
                         </Text>
                         <Text style={[styles.bodyText, { fontStyle: 'italic', color: colors.textMain }]}>
-                          "{reportData.report.message_to_child}"
+                          &quot;{reportData.report.message_to_child}&quot;
                         </Text>
                       </View>
                     </View>

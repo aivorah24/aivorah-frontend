@@ -21,7 +21,7 @@ export function useParentChallenges() {
   useFocusEffect(useCallback(() => {
     if (!user?.email) return;
     fetchChildren(user.email).then(data => { if (data.length > 0) setChildren(data); }).catch(() => {});
-  }, [user?.email]));
+  }, [user]));
 
   const child = children[selectedIdx] ?? null;
 
@@ -32,8 +32,11 @@ export function useParentChallenges() {
       .then(data => setChildStats(data))
       .catch(() => {})
       .finally(() => { if (showSpinner) setLoadingStats(false); });
-  }, [child?.id]);
+  }, [child]);
 
+  // Triggers a new fetch (with spinner) exactly when the selected child
+  // changes — not derivable from render-time values alone.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadStats(true); }, [child?.id]);
 
   const loadChallenges = useCallback((showSpinner = false) => {
@@ -45,6 +48,9 @@ export function useParentChallenges() {
       .finally(() => { if (showSpinner) setLoadingCh(false); });
   }, [child?.id, child?.grade, user?.email]);
 
+  // Same as above: triggers a new fetch (with spinner) when loadChallenges'
+  // identity changes (child/grade/email changed).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadChallenges(true); }, [loadChallenges]);
 
   // Reload on focus + poll every 30s while screen is visible. showSpinner=false
