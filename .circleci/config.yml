@@ -148,7 +148,7 @@ jobs:
               tests/student/learning-paths.spec.js \
               tests/teacher/b2b-login.spec.js \
               tests/teacher/dashboard/dashboard.spec.js \
-              --reporter=blob
+              --workers=2 --reporter=blob
           environment:
             PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
       - store_artifacts:
