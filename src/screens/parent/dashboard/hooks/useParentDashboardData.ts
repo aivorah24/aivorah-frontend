@@ -51,9 +51,10 @@ export function useParentDashboardData({
           setSelectedChild(prev => mapped.find(ch => ch.id === prev.id) ?? mapped[0]);
         }).catch(() => {});
     };
-    const unsubFocus = navigation.addListener('focus', () => { refresh(); interval = setInterval(refresh, 30000); });
+    const startPolling = () => { stopPolling(); interval = setInterval(refresh, 30000); };
+    const unsubFocus = navigation.addListener('focus', () => { refresh(); startPolling(); });
     const unsubBlur = navigation.addListener('blur', stopPolling);
-    interval = setInterval(refresh, 30000);
+    startPolling();
     return () => { stopPolling(); unsubFocus(); unsubBlur(); };
   }, [navigation, parentEmail, selectedChild.id]);
 
