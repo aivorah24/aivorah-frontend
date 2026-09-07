@@ -1,0 +1,221 @@
+version: 2.1
+
+parameters:
+  account_filter:
+    type: string
+    default: ""
+  run_full_e2e:
+    type: boolean
+    default: false
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:22.11-browsers
+    working_directory: ~/project
+
+jobs:
+  build_and_setup:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-deps-v1-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install Frontend Dependencies
+          command: npm ci
+      - save_cache:
+          key: npm-deps-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      - run:
+          name: TypeScript check
+          command: npx tsc --noEmit
+      - run:
+          name: Lint check
+          command: npm run lint
+      - run:
+          name: Unit tests
+          command: npm run test:unit -- --ci
+      - run:
+          name: Integration tests
+          command: npm run test:integration -- --ci
+      - run:
+          name: Build Web Application
+          command: npm run vercel-build
+      - run:
+          name: Install E2E Dependencies
+          command: |
+            cd e2e
+            npm ci
+            npx playwright install --with-deps chromium chrome
+      - run:
+          name: Run E2E Setup (Warmup + Login + Snapshot)
+          command: |
+            cd e2e
+            printf '%s\n' "$E2E_ENV_FILE" > .env
+
+            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+            for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+              grep -q "^${k}=." .env || { echo "E2E_ENV_FILE is missing required key ${k}"; exit 1; }
+            done
+            echo "[ci] .env loaded: $(wc -c < .env) bytes, $(grep -c '=' .env) keys"
+
+            cp serve.json ../dist/serve.json
+            npx serve -s ../dist -l 3006 > /tmp/serve.log 2>&1 &
+            SERVER_PID=$!
+
+            ready=false
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3006/ > /dev/null; then
+                ready=true
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" != "true" ]; then
+              echo "serve never became ready on :3006 after 30s"
+              cat /tmp/serve.log
+              pkill -P "$SERVER_PID" || true
+              kill "$SERVER_PID" || true
+              exit 1
+            fi
+
+            node tests/ci/setup.mjs 2>&1 | tee /tmp/setup-output.log
+            SETUP_EXIT=${PIPESTATUS[0]}
+
+            pkill -P "$SERVER_PID" || true
+            kill "$SERVER_PID" || true
+
+            exit $SETUP_EXIT
+          environment:
+            ACCOUNT_FILTER: << pipeline.parameters.account_filter >>
+      - store_artifacts:
+          path: /tmp/setup-output.log
+          destination: e2e-setup-diagnostics/setup-output.log
+      - store_artifacts:
+          path: /tmp/serve.log
+          destination: e2e-setup-diagnostics/serve.log
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - e2e/.auth
+            - e2e/.profile-snapshot.json
+
+  smoke_e2e:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install E2E Dependencies
+          command: |
+            cd e2e
+            npm ci
+            npx playwright install --with-deps chromium chrome
+      - run:
+          name: Write env file
+          command: |
+            cd e2e
+            printf '%s\n' "$E2E_ENV_FILE" > .env
+            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+      - run:
+          name: Run Smoke Specs
+          command: |
+            cd e2e
+            npx playwright test \
+              tests/parent/b2b-login.spec.js \
+              tests/parent/dashboard/dashboard.spec.js \
+              tests/student/b2b-login.spec.js \
+              tests/student/learning-paths.spec.js \
+              tests/teacher/b2b-login.spec.js \
+              tests/teacher/dashboard/dashboard.spec.js \
+              --reporter=blob
+          environment:
+            PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
+      - store_artifacts:
+          path: e2e/blob-report
+          destination: blob-report-smoke
+
+  e2e_tests:
+    executor: node
+    parallelism: 4
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install E2E Dependencies
+          command: |
+            cd e2e
+            npm ci
+            npx playwright install --with-deps chromium chrome
+      - run:
+          name: Write env file
+          command: |
+            cd e2e
+            printf '%s\n' "$E2E_ENV_FILE" > .env
+            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+      - run:
+          name: Run Playwright Shard
+          command: |
+            cd e2e
+            npx playwright test --shard=$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL --workers=2 --reporter=blob
+          environment:
+            PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
+      - store_artifacts:
+          path: e2e/blob-report
+          destination: blob-report-<< pipeline.number >>
+
+  teardown_and_report:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install E2E Dependencies
+          command: |
+            cd e2e
+            npm ci
+      - run:
+          name: Write env file
+          command: |
+            cd e2e
+            printf '%s\n' "$E2E_ENV_FILE" > .env
+            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
+      - run:
+          name: Teardown Mutated Accounts
+          command: |
+            cd e2e
+            node tests/ci/teardown.mjs
+
+workflows:
+  version: 2
+  ci:
+    when:
+      not: << pipeline.parameters.run_full_e2e >>
+    jobs:
+      - build_and_setup
+      - smoke_e2e:
+          requires:
+            - build_and_setup
+      - teardown_and_report:
+          requires:
+            - build_and_setup
+            - smoke_e2e
+
+  manual_full_e2e:
+    when: << pipeline.parameters.run_full_e2e >>
+    jobs:
+      - build_and_setup
+      - e2e_tests:
+          requires:
+            - build_and_setup
+      - teardown_and_report:
+          requires:
+            - build_and_setup
+            - e2e_tests
