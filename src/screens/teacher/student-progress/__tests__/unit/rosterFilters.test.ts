@@ -4,7 +4,7 @@ import type { RosterStudent } from '../../types';
 function student(overrides: Partial<RosterStudent> = {}): RosterStudent {
   return {
     id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'IB PYP', section: null, class: null, photoUrl: null, scopedSubjects: ['Mathematics'],
-    studyTime: 0, learningPathTime: 0, assignmentTime: 0, challengeTime: 0, progressPct: 0, totalTopics: 0, completedTopics: [],
+    studyTime: 0, learningPathTime: 0, learningPathTimeToday: null, assignmentTime: 0, challengeTime: 0, progressPct: 0, totalTopics: 0, completedTopics: [],
     quizAttempts: 0, quizBestScore: null, lastActive: null, needsAttention: false,
     ...overrides,
   };
