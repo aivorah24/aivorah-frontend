@@ -3,7 +3,11 @@ version: 2.1
 parameters:
   account_filter:
     type: string
-    default: ""
+    # Regular CI only runs the 6-spec smoke suite (smoke_e2e job), which
+    # needs just these 3 accounts (parent-a/student-a/teacher-a) for their
+    # storageState - not the full ~64-account pool. manual_full_e2e can
+    # still override this via a pipeline parameter for a real full run.
+    default: "parent-a,student-a,teacher-a"
   run_full_e2e:
     type: boolean
     default: false
