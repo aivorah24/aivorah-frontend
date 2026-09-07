@@ -52,7 +52,7 @@ export default function SubjectCard({
             <Text style={[cardStyles.pctText, { color: accent }]}>{pct}%</Text>
           </View>
         </View>
-        <Text style={[cardStyles.subjectName, { color: '#1C2A28' }]} numberOfLines={2}>{data.subject}</Text>
+        <Text testID="subject-card-name" style={[cardStyles.subjectName, { color: '#1C2A28' }]} numberOfLines={2}>{data.subject}</Text>
         <View style={cardStyles.statRow}>
           <Text style={[cardStyles.statMini, { color: '#3A5A56' }]}>{countLabel}</Text>
           <Text style={[cardStyles.statMini, { color: '#3A5A56' }]}>{done} completed</Text>
