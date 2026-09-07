@@ -3,7 +3,7 @@ import type { HeatmapStudent, HeatmapTopic } from '../../types';
 
 function student(overrides: Partial<HeatmapStudent> = {}): HeatmapStudent {
   return {
-    id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'CBSE', section: null, photoUrl: null,
+    id: 's1', name: 'A', grade: 'Grade 4', curriculum: 'CBSE', section: null, class: null, photoUrl: null,
     scopedSubjects: ['Mathematics'], topicStatus: {},
     ...overrides,
   };

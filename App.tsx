@@ -170,7 +170,7 @@ import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import OnboardingDemo from './src/screens/onboarding/OnboardingDemo';
 import OnboardingStudentBoxes from './src/screens/onboarding/OnboardingStudentBoxes';
 import OnboardingTeacherBoxes from './src/screens/onboarding/OnboardingTeacherBoxes';
-import OnboardingParentBoxes from './src/.legacy-screens/onboarding/OnboardingParentBoxes';
+import OnboardingParentBoxes from './src/screens/parent/onboarding/OnboardingParentBoxes';
 import SetPasswordScreen from './src/screens/onboarding/SetPasswordScreen';
 import { AuthProvider, useAuth, getPendingReturnRole } from './src/context/AuthContext';
 import { StudentDataProvider } from './src/context/StudentDataContext';
