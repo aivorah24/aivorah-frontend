@@ -115,7 +115,7 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
   useFocusEffect(useCallback(() => { fetchControls(false); }, [fetchControls]));
 
   const saveSettings = useCallback(async () => {
-    if (!selectedChild || !parentEmail) return;
+    if (!selectedChild || !parentEmail) return null;
     setSaving(true);
     try {
       const data = await saveScreenTime(parentEmail, selectedChild.id, ctrl);

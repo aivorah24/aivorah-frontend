@@ -9,7 +9,7 @@ const colors: any = {
 
 function makeStudents(n: number): RosterStudent[] {
   return Array.from({ length: n }, (_, i) => ({
-    id: `s${i + 1}`, name: `Student ${i + 1}`, grade: 'Grade 4', curriculum: 'CBSE', section: null, photoUrl: null,
+    id: `s${i + 1}`, name: `Student ${i + 1}`, grade: 'Grade 4', curriculum: 'CBSE', section: null, class: null, photoUrl: null,
     scopedSubjects: ['Mathematics'], studyTime: 10, learningPathTime: 5, learningPathTimeToday: 2, assignmentTime: 3, challengeTime: 2,
     progressPct: 40, totalTopics: 10, completedTopics: ['Fractions', 'Decimals', 'Ratios', 'Algebra'],
     quizAttempts: 2, quizBestScore: 70, lastActive: '2026-08-20', needsAttention: false,

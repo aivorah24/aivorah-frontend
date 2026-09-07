@@ -20,7 +20,7 @@ export function useDailyTasks(parentEmail: string) {
     try {
       const list = await dailyTasksService.fetchChildren(parentEmail);
       setChildren(list);
-      setSelectedChild(prev => prev ?? (list.length > 0 ? list[0] : null));
+      setSelectedChild((prev: any) => prev ?? (list.length > 0 ? list[0] : null));
     } catch {
       // best-effort; keep previous state on failure
     } finally {
