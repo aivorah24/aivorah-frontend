@@ -7,7 +7,7 @@ jest.mock('../../services/teacherChallengesService', () => ({
   assignChallenge: jest.fn(),
 }));
 
-const CH = { id: 'c1', title: 'Quiz', grade: 'Grade 3', curriculum: 'CBSE', subject: 'Math', chapterId: 1, topic: 'x', difficulty: 'Easy' as const, xpReward: 10, questionCount: 5, timeLimitMinutes: 10, type: 'quiz', category: 'Chapter Quiz' };
+const CH = { id: 'c1', title: 'Quiz', description: 'A quick quiz', grade: 'Grade 3', curriculum: 'CBSE', subject: 'Math', chapterId: 1, topic: 'x', difficulty: 'Easy' as const, xpReward: 10, questionCount: 5, timeLimitMinutes: 10, type: 'quiz', category: 'Chapter Quiz' };
 const STUDENT = { id: 's1', name: 'Alice', grade: 'Grade 3' };
 
 describe('useAssignChallenge', () => {

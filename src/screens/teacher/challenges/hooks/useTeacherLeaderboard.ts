@@ -16,6 +16,7 @@ export function useTeacherLeaderboard(activeTab: 'challenges' | 'leaderboard', t
   useEffect(() => {
     if (activeTab !== 'leaderboard') return;
     if (!teacherEmail) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the leaderboard fetch, not derivable from render-time values
     setLbLoading(true);
     fetchClassLeaderboard(teacherEmail)
       .then(data => {
@@ -52,6 +53,7 @@ export function useTeacherLeaderboard(activeTab: 'challenges' | 'leaderboard', t
 
   // Weekly activity for the logged-in user (if they appear in the leaderboard).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets weekly state when the selected entry changes, external sync
     if (!yourEntry?.id) { setWeekly([0, 0, 0, 0, 0, 0, 0]); return; }
     fetchStudentWeekly(yourEntry.id)
       .then(res => {

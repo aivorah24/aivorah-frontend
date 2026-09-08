@@ -51,7 +51,10 @@ export function useTeacherChallenges(teacherEmail: string | undefined, defaultCu
       .finally(() => setLoading(false));
   }, [selectedGrade, defaultCurriculum]);
 
-  useEffect(() => { loadChallenges(); }, [loadChallenges]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the challenges fetch, not derivable from render-time values
+    loadChallenges();
+  }, [loadChallenges]);
 
   return { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students };
 }
