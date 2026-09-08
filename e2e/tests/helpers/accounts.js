@@ -484,5 +484,19 @@ export function accountFor(key) {
   const account = ACCOUNTS[key];
   if (!account) throw new Error(`Unknown test account "${key}".`);
   if (!account.email) throw new Error(`Missing .env email for test account "${key}".`);
-  return { ...account, email: clean(account.email) };
+  const cleaned = clean(account.email);
+  // Diagnostic only, not a failure by itself: if clean() actually changed
+  // something, or the result still doesn't look like an email, log the raw
+  // char codes so a login failure logged right after this is immediately
+  // explainable from CI output instead of requiring another guess-and-check
+  // round trip against a write-only CircleCI env var (2026-09-08, parent-a).
+  if (cleaned !== account.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+    const codes = (s) => Array.from(s).map((c) => c.codePointAt(0).toString(16)).join(' ');
+    console.warn(
+      `[accounts] "${key}" email needed cleaning or still looks malformed after cleaning.\n` +
+        `  raw:     ${JSON.stringify(account.email)} (codepoints: ${codes(account.email)})\n` +
+        `  cleaned: ${JSON.stringify(cleaned)} (codepoints: ${codes(cleaned)})`,
+    );
+  }
+  return { ...account, email: cleaned };
 }
