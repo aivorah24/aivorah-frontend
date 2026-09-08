@@ -59,9 +59,28 @@ function readFirebaseRows(page) {
 export async function harvestSession(browser, { account, email, password, baseURL }) {
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
+  // setup.mjs drives Playwright's library directly (no test runner), so
+  // playwright.config.js's timeouts don't apply here - only the library's
+  // own 30s-per-action default did. Keep it explicit rather than relying on
+  // the implicit default.
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
 
-  await page.goto('/');
-  await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
+  // Screenshot on failure here too, not just the post-Sign-In wait below -
+  // this is where a real CI bug (serve's cleanUrls redirecting
+  // /landing.html, 2026-09-04, fixed via e2e/serve.json) actually failed.
+  try {
+    await page.goto('/');
+    await page.frameLocator('iframe').getByRole('button', { name: 'Login' }).click();
+  } catch (err) {
+    const shot = path.join(AUTH_DIR, `${account}.landing-failed.png`);
+    fs.mkdirSync(AUTH_DIR, { recursive: true });
+    await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
+    await context.close();
+    throw new Error(
+      `Landing page never became interactive for ${account} - ${err.message}\n  Screenshot: ${shot}`,
+    );
+  }
   await page.getByPlaceholder('you@example.com').fill(email);
   await page.getByPlaceholder('••••••••').fill(password);
   await page.getByText('Sign In', { exact: true }).click();
@@ -80,7 +99,7 @@ export async function harvestSession(browser, { account, email, password, baseUR
   // 15 accounts failed or what the screen showed. So we catch it and say both,
   // plus save a screenshot.
   try {
-    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 30000 });
+    await page.getByText('Aivorah', { exact: true }).first().waitFor({ timeout: 60000 });
   } catch {
     const shot = path.join(AUTH_DIR, `${account}.login-failed.png`);
     fs.mkdirSync(AUTH_DIR, { recursive: true });

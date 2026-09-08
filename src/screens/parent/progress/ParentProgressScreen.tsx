@@ -199,7 +199,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
           {loading ? (
             <View style={{ alignItems: 'center', paddingTop: 60, gap: 12 }}>
               <ActivityIndicator color='#BAA467' size="large" />
-              <Text style={{ color: colors.textDim, fontFamily: fonts.serif, fontSize: 13 }}>Loading {child?.name}'s progress...</Text>
+              <Text style={{ color: colors.textDim, fontFamily: fonts.serif, fontSize: 13 }}>Loading {child?.name}&apos;s progress...</Text>
             </View>
           ) : (
             <>
@@ -453,7 +453,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
                   {insightsGenerating ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 }}>
                       <ActivityIndicator size="small" color={gold} />
-                      <Text style={{ fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, fontStyle: 'italic' }}>Analysing {child?.name}'s progress...</Text>
+                      <Text style={{ fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, fontStyle: 'italic' }}>Analysing {child?.name}&apos;s progress...</Text>
                     </View>
                   ) : aiInsights.length === 0 ? (
                     <View style={{ alignItems: 'center', paddingVertical: 16 }}>

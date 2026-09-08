@@ -20,7 +20,7 @@ export function useDailyTasks(parentEmail: string) {
     try {
       const list = await dailyTasksService.fetchChildren(parentEmail);
       setChildren(list);
-      setSelectedChild(prev => prev ?? (list.length > 0 ? list[0] : null));
+      setSelectedChild((prev: any) => prev ?? (list.length > 0 ? list[0] : null));
     } catch {
       // best-effort; keep previous state on failure
     } finally {
@@ -41,12 +41,14 @@ export function useDailyTasks(parentEmail: string) {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the initial async fetch, not derivable from render-time values
   useEffect(() => { fetchChildren(); }, [fetchChildren]);
 
   // Load the selected child's tasks + auto-refresh every 10s (silent, no
   // spinner) so the student's completions show up here without a manual refresh.
   useEffect(() => {
     if (!selectedChild) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- triggers a fetch for the newly selected child
     fetchTasks(selectedChild);
     const interval = setInterval(() => fetchTasks(selectedChild, true), POLL_INTERVAL_MS);
     return () => clearInterval(interval);

@@ -46,7 +46,7 @@ export function useParentAssignments() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [childStats, setChildStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -82,12 +82,10 @@ export function useParentAssignments() {
   }, [parentEmail]));
 
   // Without a linked child, fetchAssignments below never runs (it bails out
-  // early when `child` is undefined) — so loading must be resolved here
-  // instead, or a parent with zero linked children spins on "Loading..."
-  // forever instead of showing an empty/no-child state.
-  useEffect(() => {
-    if (childrenLoaded && children.length === 0) setLoading(false);
-  }, [childrenLoaded, children.length]);
+  // early when `child` is undefined) — so a parent with zero linked children
+  // must not spin on "Loading..." forever; derived directly during render
+  // instead of a copy-into-state effect.
+  const loading = !childrenLoaded ? true : children.length === 0 ? false : assignmentsLoading;
 
   // Mark assignments as seen only when this screen is actually focused (viewed),
   // not on mount, and not during the post-refresh grace period — otherwise a page
@@ -106,14 +104,18 @@ export function useParentAssignments() {
       .then(({ assignments: a, stats }) => {
         setAssignments(a);
         if (stats) setChildStats(stats);
-        setLoading(false);
+        setAssignmentsLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => setAssignmentsLoading(false));
   }, [child?.id]);
 
   useEffect(() => {
     if (!child) return;
-    setLoading(true);
+    // Flips the loading flag exactly when a new fetch starts (child.id
+    // changed) — not derivable from existing render-time values, since it
+    // must go back to true even though the previous fetch already resolved.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAssignmentsLoading(true);
     fetchAssignments();
   }, [fetchAssignments]);
 
@@ -140,24 +142,24 @@ export function useParentAssignments() {
   // Accountancy/Business Studies/etc.
   const [subjectOptions, setSubjectOptions] = useState<string[]>(IB_PYP_SUBJECTS);
   useEffect(() => {
-    if (!child?.curriculum || !child?.grade) { setSubjectOptions(IB_PYP_SUBJECTS); return; }
+    if (!child?.curriculum || !child?.grade) return;
     let cancelled = false;
     parentAssignmentsService.fetchSubjectOptions(child.curriculum, child.grade)
       .then((names) => { if (!cancelled) setSubjectOptions(names); })
       .catch(() => { if (!cancelled) setSubjectOptions(IB_PYP_SUBJECTS); });
     return () => { cancelled = true; };
   }, [child?.curriculum, child?.grade]);
+  // No curriculum/grade yet -> fall back directly during render instead of
+  // writing the fallback into state from the effect above.
+  const effectiveSubjectOptions = !child?.curriculum || !child?.grade ? IB_PYP_SUBJECTS : subjectOptions;
 
   // If the previously-selected subject isn't valid for the newly-loaded
   // curriculum's subject list, fall back to the first available option
   // instead of silently submitting a subject the child's curriculum doesn't
   // have (e.g. "Mathematics" carried over is fine, but "Arts" isn't valid
-  // for a CBSE Grade 11 subject list).
-  useEffect(() => {
-    if (subjectOptions.length > 0 && !subjectOptions.includes(subject)) {
-      setSubject(subjectOptions[0]);
-    }
-  }, [subjectOptions]);
+  // for a CBSE Grade 11 subject list) — derived during render instead of a
+  // copy-into-state effect.
+  const effectiveSubject = effectiveSubjectOptions.length > 0 && !effectiveSubjectOptions.includes(subject) ? effectiveSubjectOptions[0] : subject;
 
   const filtered = useMemo(() => {
     if (activeFilter === 'All') return assignments;
@@ -193,7 +195,7 @@ export function useParentAssignments() {
     try {
       const data = await parentAssignmentsService.generateWithAI({
         prompt: aiPrompt.trim(),
-        subject,
+        subject: effectiveSubject,
         grade: child.grade,
         curriculum: child.curriculum || 'IB PYP',
         count: quizCount,
@@ -222,7 +224,7 @@ export function useParentAssignments() {
     try {
       const created = await parentAssignmentsService.createAssignment({
         title: title.trim(),
-        subject,
+        subject: effectiveSubject,
         chapter: chapter.trim(),
         dueDate,
         type,
@@ -249,7 +251,7 @@ export function useParentAssignments() {
     loading, completed, pending, overdue, totalStudyMins, completionPct, onTrackPct,
     showModal, setShowModal, reportAssignment, setReportAssignment,
     detailAssignment, setDetailAssignment,
-    title, setTitle, subject, setSubject, subjectOptions,
+    title, setTitle, subject: effectiveSubject, setSubject, subjectOptions: effectiveSubjectOptions,
     chapter, setChapter, dueDate, setDueDate, type, setType, note, setNote,
     questions, setQuestions, quizQuestions, setQuizQuestions,
     creating, formError, setFormError,

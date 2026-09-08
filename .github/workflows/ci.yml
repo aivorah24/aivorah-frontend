@@ -19,6 +19,11 @@ env:
 jobs:
   build_and_setup:
     runs-on: ubuntu-latest
+    # A hung setup step used to silently burn ~60 minutes with no clear
+    # signal (2026-09-04, orphaned `serve` process holding the runner's
+    # stdout pipe open). Cap the whole job so a stuck step fails loudly
+    # instead of running until GitHub's own default timeout.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,19 +33,19 @@ jobs:
 
       - name: Install Frontend Dependencies
         run: npm ci
-        
-      # - name: TypeScript check
-      #   run: npx tsc --noEmit
-        
-      # - name: Lint check
-      #   run: npm run lint
-        
-      # - name: Unit tests
-      #   run: npm run test:unit -- --ci
-        
-      # - name: Integration tests
-      #   run: npm run test:integration -- --ci
-        
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit -- --ci
+
+      - name: Integration tests
+        run: npm run test:integration -- --ci
+
       - name: Build Web Application
         run: npm run vercel-build
         
@@ -51,18 +56,77 @@ jobs:
           npx playwright install --with-deps chromium chrome
           
       - name: Run E2E Setup (Warmup + Login + Snapshot)
+        timeout-minutes: 20
         run: |
           cd e2e
-          echo "${{ secrets.E2E_ENV_FILE }}" > .env
-          # Temporarily serve the app so setup can hit it locally
-          npx serve -s ../dist -l 3006 &
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+
+          # Validate required keys exist WITHOUT ever printing values.
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
+          for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+            grep -q "^${k}=." .env || { echo "::error::E2E_ENV_FILE is missing required key ${k}"; exit 1; }
+          done
+          echo "[ci] .env loaded: $(wc -c < .env) bytes, $(grep -c '=' .env) keys"
+
+          # Temporarily serve the app so setup can hit it locally. `serve` is
+          # now a devDependency (was previously downloaded on the fly by
+          # npx, which raced a flat `sleep 3` and caused every login to fail
+          # with ERR_CONNECTION_REFUSED, 2026-09-04). Redirect its output so
+          # it never holds the runner's own stdout pipe open, and kill its
+          # whole process group afterward so it can't be left as an orphan -
+          # both were found to hang this step for up to ~60 minutes.
+          #
+          # DIAGNOSTIC (2026-09-04): serve.json (cleanUrls:false) stops serve
+          # from 301-redirecting /landing.html -> /landing, which server.log
+          # showed being re-requested in an infinite loop. serve reads
+          # serve.json from the served directory itself, not cwd.
+          cp serve.json ../dist/serve.json
+          npx serve -s ../dist -l 3006 > /tmp/serve.log 2>&1 &
           SERVER_PID=$!
-          sleep 3 # Wait for server
-          node tests/ci/setup.mjs
-          kill $SERVER_PID
+
+          ready=false
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3006/ > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            echo "::error::serve never became ready on :3006 after 30s"
+            cat /tmp/serve.log
+            pkill -P "$SERVER_PID" || true
+            kill "$SERVER_PID" || true
+            exit 1
+          fi
+
+          node tests/ci/setup.mjs 2>&1 | tee /tmp/setup-output.log
+          SETUP_EXIT=${PIPESTATUS[0]}
+
+          pkill -P "$SERVER_PID" || true
+          kill "$SERVER_PID" || true
+
+          exit $SETUP_EXIT
         env:
           ACCOUNT_FILTER: ${{ github.event.inputs.accountFilter }}
-          
+
+      # Diagnostic-only artifact: setup.mjs's own stdout (never contains
+      # secret values - the script only logs account keys/emails/counts)
+      # plus any failure screenshots harvestSession saved, uploaded even
+      # when the setup step above failed so a hung/failed login can
+      # actually be inspected instead of guessed at.
+      - name: Upload Diagnostic Logs + Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-setup-diagnostics
+          path: |
+            /tmp/setup-output.log
+            /tmp/serve.log
+            e2e/.auth/*.png
+          retention-days: 3
+          if-no-files-found: ignore
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -80,8 +144,78 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # Small, fixed set of read-only specs (one per persona's login + one per
+  # persona's core landing screen) that PR-gates every push. Kept separate
+  # from the full 4-shard e2e_tests job below, which currently has a known
+  # 207/365 failing baseline (2026-09-04) and is far too slow/unreliable to
+  # block merges on - see docs backlog. Do not add more specs here without
+  # checking they're read-only and fast; this suite's whole value is that
+  # every PR can trust a green run.
+  smoke_e2e:
+    needs: build_and_setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install E2E Dependencies
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium chrome
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: dist/
+
+      - name: Download Auth Session Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-session
+          path: e2e/
+
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
+
+      - name: Run Smoke Specs
+        run: |
+          cd e2e
+          npx playwright test \
+            tests/parent/b2b-login.spec.js \
+            tests/parent/dashboard/dashboard.spec.js \
+            tests/student/b2b-login.spec.js \
+            tests/student/learning-paths.spec.js \
+            tests/teacher/b2b-login.spec.js \
+            tests/teacher/dashboard/dashboard.spec.js \
+            --reporter=blob
+        env:
+          PLAYWRIGHT_SKIP_GLOBAL_HOOKS: 'true'
+
+      - name: Upload Smoke Blob Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-smoke
+          path: e2e/blob-report
+          retention-days: 1
+
+  # Full 365-test suite, sharded. Known baseline (2026-09-04): 158 passed /
+  # 207 failed - not reliable enough to gate PRs on yet, so it only runs
+  # on demand, never on push/pull_request. The 207 failures are a tracked
+  # backlog, not this workflow's job to fix. Nightly full regression lives
+  # in aivorah-e2e-tests/.github/workflows/e2e.yml instead (runs against
+  # real staging infra, not this local build).
   e2e_tests:
     needs: build_and_setup
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -112,6 +246,12 @@ jobs:
           name: e2e-session
           path: e2e/
 
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
+
       - name: Run Playwright Shard
         run: |
           cd e2e
@@ -129,7 +269,7 @@ jobs:
 
   teardown_and_report:
     if: always()
-    needs: [build_and_setup, e2e_tests]
+    needs: [build_and_setup, smoke_e2e, e2e_tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -167,6 +307,12 @@ jobs:
         with:
           name: e2e-session
           path: e2e/
+
+      - name: Write env file
+        run: |
+          cd e2e
+          printf '%s\n' "${{ secrets.E2E_ENV_FILE }}" > .env
+          test -s .env || { echo "::error::e2e/.env is empty - E2E_ENV_FILE secret missing or not set"; exit 1; }
 
       - name: Teardown Mutated Accounts
         run: |

@@ -9,7 +9,7 @@ import TeacherAIPanel from './TeacherAIPanel';
 import ParentAIPanel from './ParentAIPanel';
 import type { AppColors } from '../../theme';
 import { Feather } from '@expo/vector-icons';
-import SERVER_URL from '../../config/serverUrl';
+import PARENTAL_CONTROLS_SERVER_URL from '../../config/parentalControlsServerUrl';
 import { setStudentLocked } from '../../services/lockStatus';
 
 interface ScreenLayoutProps {
@@ -123,7 +123,7 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
   useEffect(() => {
     if (!isStudent || !user?.email) return;
     const fetch_ = () => {
-      fetch(`${SERVER_URL}/parent/screen-time-status/${encodeURIComponent(user.email)}`)
+      fetch(`${PARENTAL_CONTROLS_SERVER_URL}/parent/screen-time-status/${encodeURIComponent(user.email)}`)
         .then(r => r.json())
         .then(data => { setControls(data); saveCachedControls(data); })
         .catch(() => {})

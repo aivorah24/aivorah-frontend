@@ -63,7 +63,7 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
               </View>
               <View>
                 <Text style={styles.pageTitle}>Daily Tasks</Text>
-                <Text style={styles.pageSubtitle}>Tasks you assign appear in your child's Daily Habits screen</Text>
+                <Text style={styles.pageSubtitle}>Tasks you assign appear in your child&apos;s Daily Habits screen</Text>
               </View>
             </View>
           </View>

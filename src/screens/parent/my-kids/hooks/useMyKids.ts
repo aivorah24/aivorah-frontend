@@ -232,6 +232,7 @@ export function useMyKids() {
   }, [parentEmail, isDemo, user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the initial + polling fetch, not derivable from render-time values
     fetchChildren();
     const interval = setInterval(fetchChildren, 15 * 1000);
     return () => clearInterval(interval);
