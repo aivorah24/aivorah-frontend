@@ -69,6 +69,7 @@ export default function ConversationList({
       <View style={styles.convoSearchBar}>
         <Feather name="search" size={14} color={colors.textDim} />
         <TextInput
+          testID="messages-search-input"
           style={styles.convoSearchInput}
           value={convoSearch}
           onChangeText={setConvoSearch}
@@ -100,7 +101,7 @@ export default function ConversationList({
           const active = convoFilter === tab;
           const icon = tab === 'all' ? 'message-square' : tab === 'unread' ? 'mail' : tab === 'staff' ? 'users' : 'star';
           return (
-            <TouchableOpacity key={tab} style={[styles.filterTab, active && styles.filterTabActive]} onPress={() => setConvoFilter(tab)} activeOpacity={0.7}>
+            <TouchableOpacity key={tab} testID={`messages-filter-${tab}`} style={[styles.filterTab, active && styles.filterTabActive]} onPress={() => setConvoFilter(tab)} activeOpacity={0.7}>
               <Feather name={icon as any} size={11} color={active ? colors.accentYellow : colors.textDim} />
               <Text style={[styles.filterTabText, active && styles.filterTabTextActive]}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</Text>
               {count > 0 && <View style={[styles.filterBadge, active && styles.filterBadgeActive]}><Text style={[styles.filterBadgeText, active && { color: '#0B0B0B' }]}>{count}</Text></View>}

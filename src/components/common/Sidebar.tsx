@@ -95,7 +95,7 @@ const PARENT_NAV_ITEMS = [
   { label: 'Challenges',        icon: 'target',         screen: 'ParentChallenges',   group: 'CHILDREN', premium: false },
   { label: 'Messages',          icon: 'message-square', screen: 'ParentMessages',     group: 'CHILDREN', premium: false },
   { label: 'Announcements',     icon: 'volume-2',       screen: 'ParentAnnouncements', group: 'CHILDREN', premium: false },
-  { label: 'Parental Controls', icon: 'shield',         screen: 'ParentControls',     group: 'CHILDREN', premium: true  },
+  { label: 'Parental Controls', icon: 'shield',         screen: 'ParentControls',     group: 'CHILDREN', premium: false },
   { label: 'Plans & Billing',   icon: 'credit-card',    screen: 'ParentSubscription', group: 'SYSTEM',   premium: false },
   { label: 'Help',              icon: 'help-circle',    screen: 'ParentHelp',         group: 'SYSTEM',   premium: false },
   { label: 'Settings',          icon: 'settings',       screen: 'ParentSettings',     group: 'SYSTEM',   premium: false },

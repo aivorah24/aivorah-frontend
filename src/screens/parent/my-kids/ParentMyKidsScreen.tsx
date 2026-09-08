@@ -64,7 +64,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
                 <TouchableOpacity style={styles.emptyState} activeOpacity={0.7} onPress={() => k.openModal('create')}>
                   <Feather name="user-plus" size={40} color={colors.textDim} />
                   <Text style={styles.emptyTitle}>No children linked yet</Text>
-                  <Text style={styles.emptySub}>Tap here, or use "Add Child" above, to create a new account or link an existing one.</Text>
+                  <Text style={styles.emptySub}>Tap here, or use &quot;Add Child&quot; above, to create a new account or link an existing one.</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -79,7 +79,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Daily Tasks</Text>
-                <Text style={[styles.modalDesc, { marginBottom: 0 }]}>{k.taskModalChild?.name}'s tasks</Text>
+                <Text style={[styles.modalDesc, { marginBottom: 0 }]}>{k.taskModalChild?.name}&apos;s tasks</Text>
               </View>
               <TouchableOpacity onPress={() => k.setShowTaskModal(false)}>
                 <Feather name="x" size={20} color={colors.textMuted} />
@@ -253,7 +253,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
                       value={k.newEmail} onChangeText={t => { k.setNewEmail(t); k.setCreateError(''); }}
                       keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
                     <Text style={[styles.modalDesc, { marginTop: 3, fontSize: 11, opacity: 0.7 }]}>
-                      Leave blank — we'll auto-generate a login ID
+                      Leave blank — we&apos;ll auto-generate a login ID
                     </Text>
                   </View>
 
@@ -373,7 +373,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Account Created</Text>
-                  <Text style={styles.modalDesc}>{k.credsName}'s login details</Text>
+                  <Text style={styles.modalDesc}>{k.credsName}&apos;s login details</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => k.setCredsModal(false)}>
@@ -412,7 +412,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
               onPress={() => k.setCredsModal(false)} activeOpacity={0.8}
             >
               <Feather name="check" size={15} color="#fff" />
-              <Text style={styles.linkBtnText}>Got it, I've saved these</Text>
+              <Text style={styles.linkBtnText}>Got it, I&apos;ve saved these</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -479,7 +479,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
             {k.showOtpInput && k.otpPurpose === 'edit' ? (
               <View style={{ gap: 15, paddingVertical: 10 }}>
                 <Text style={styles.modalDesc}>
-                  We have sent a 6-digit OTP verification code to <Text style={{ fontWeight: '700' }}>{k.otpSentEmail}</Text> to verify the child's email address change.
+                  We have sent a 6-digit OTP verification code to <Text style={{ fontWeight: '700' }}>{k.otpSentEmail}</Text> to verify the child&apos;s email address change.
                 </Text>
                 <TextInput
                   style={[styles.input, { textAlign: 'center', fontSize: 20, letterSpacing: 5 }]}
@@ -584,7 +584,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Login Info</Text>
-                  <Text style={styles.modalDesc}>{k.viewCredsChild?.name}'s credentials</Text>
+                  <Text style={styles.modalDesc}>{k.viewCredsChild?.name}&apos;s credentials</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => { k.setViewCredsChild(null); k.setViewCreds(null); k.setResetPasswordSuccess(false); }}>
@@ -651,7 +651,7 @@ export default function ParentMyKidsScreen({ navigation }: any) {
                 ? <ActivityIndicator color="white" size="small" />
                 : k.resetPasswordSuccess
                   ? <><Feather name="check" size={15} color="#fff" /><Text style={styles.linkBtnText}>Reset Link Sent to Your Email!</Text></>
-                  : <><Feather name="lock" size={15} color="#fff" /><Text style={styles.linkBtnText}>Reset Child's Password</Text></>}
+                  : <><Feather name="lock" size={15} color="#fff" /><Text style={styles.linkBtnText}>Reset Child&apos;s Password</Text></>}
             </TouchableOpacity>
 
             <TouchableOpacity

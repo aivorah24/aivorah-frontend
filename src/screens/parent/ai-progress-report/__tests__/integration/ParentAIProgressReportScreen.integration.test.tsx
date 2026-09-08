@@ -59,6 +59,20 @@ const REPORT = {
   generatedAt: '2026-09-02T10:00:00.000Z',
 };
 
+// Same shape as REPORT, but with strong_topics/weak_topics/subject_insights
+// populated - REPORT above leaves them empty so those specific chip/bullet
+// render branches (ParentAIProgressReportScreen.tsx ~lines 673-714) were
+// otherwise never exercised.
+const REPORT_WITH_TOPICS = {
+  ...REPORT,
+  report: {
+    ...REPORT.report,
+    subject_insights: [{ subject: 'Maths', insight: 'Strong grasp of multiplication.' }],
+    strong_topics: [{ topic: 'Multiplication', score: 92 }],
+    weak_topics: [{ topic: 'Fractions', score: 48 }],
+  },
+};
+
 function mockFetchByUrl(handlers: Record<string, any>) {
   (global as any).fetch = jest.fn((url: string) => {
     // Longest-key-first: /ai-report URLs also contain "/parent/", so the
@@ -166,4 +180,58 @@ describe('ParentAIProgressReportScreen', () => {
 
     await waitFor(() => expect(screen.getByText('No children linked')).toBeTruthy());
   });
+
+  test('"Go to My Kids" from the empty state navigates to ParentMyKids', async () => {
+    mockFetchByUrl({ '/parent/': { body: [] } });
+    const navigation = { navigate: jest.fn(), openDrawer: jest.fn() };
+
+    render(<ParentAIProgressReportScreen navigation={navigation} route={{}} />);
+    await waitFor(() => expect(screen.getByText('No children linked')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Go to My Kids'));
+    expect(navigation.navigate).toHaveBeenCalledWith('ParentMyKids');
+  });
+
+  test('the hero "Generate Report for {name}" CTA (shown before any report exists) generates a report', async () => {
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD] },
+      '/ai-report': { body: REPORT },
+    });
+
+    render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{}} />);
+    await waitFor(() => expect(screen.getByText('Generate Report for Aanya')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Generate Report for Aanya'));
+    await waitFor(() => expect(screen.getByText('Regenerate Report')).toBeTruthy(), { timeout: 10000 });
+  }, 15000);
+
+  test('pressing "Try again" after a failed generation retries the request', async () => {
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD] },
+      '/ai-report': { ok: false, body: { error: 'model_not_found' } },
+    });
+
+    render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{ params: { childId: 'child-1' } }} />);
+    await waitFor(() => expect(screen.getAllByText('Try again').length).toBeGreaterThan(0), { timeout: 10000 });
+
+    (global.fetch as jest.Mock).mockClear();
+    fireEvent.press(screen.getAllByText('Try again')[0]);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+  }, 15000);
+
+  test('renders strong topics, weak topics, and subject-insight bullets when the report includes them', async () => {
+    mockFetchByUrl({
+      '/parent/': { body: [CHILD] },
+      '/ai-report': { body: REPORT_WITH_TOPICS },
+    });
+
+    render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{}} />);
+    await waitFor(() => expect(screen.getAllByText('Generate', { exact: true }).length).toBeGreaterThan(0));
+    fireEvent.press(screen.getAllByText('Generate', { exact: true })[0]);
+
+    await waitFor(() => expect(screen.getByText('Regenerate Report')).toBeTruthy(), { timeout: 10000 });
+    expect(screen.getByText('Multiplication · 92%')).toBeTruthy();
+    expect(screen.getByText('Fractions · 48%')).toBeTruthy();
+    expect(screen.getByText(/Strong grasp of multiplication\./)).toBeTruthy();
+  }, 15000);
 });

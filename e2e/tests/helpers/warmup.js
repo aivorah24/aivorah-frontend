@@ -27,31 +27,41 @@ const DEFAULT_TIMEOUT_MS = 20000;
 const MAX_ATTEMPTS = 4; // ~ handles a 60-90s cold start via backoff below
 const BACKOFF_MS = [0, 3000, 8000, 15000];
 
-// name -> [envVarName, localDevDefault] - same override convention already
+// name -> [envVarName, fallback] - same override convention already
 // used by tests/helpers/api.js (BACKEND_URL, SCHEDULE_SERVICE_URL, etc.),
 // extended here to cover every Render service the app talks to, not just
 // the ones api.js calls directly (specs also reach these indirectly, by
 // loading real screens through the UI).
+//
+// The fallback is the real production onrender.com URL, not a local dev
+// port. CircleCI's E2E_ENV_FILE is one giant multi-line paste into its UI,
+// which has silently truncated before (see .circleci/config.yml's own
+// SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY fallback comment) - if any of
+// these *_SERVICE_URL keys get dropped the same way, falling back to a
+// dead localhost port means THIS warm-up step silently no-ops for that
+// service, the real Render instance never gets woken, and the first real
+// request against it (inside the actual test) eats the 30-60s cold-start
+// penalty instead - exactly the student-a Learning Paths timeout and the
+// parent-a setup-login failure this fallback is meant to prevent. These
+// URLs aren't secrets (they're the same public hosts baked into the app's
+// own src/config/*.ts), so defaulting to production here is safe - a
+// developer running local services still overrides via the env var.
 const SERVICES = {
-  monolith:         ['BACKEND_URL',                  'http://localhost:3007'],
-  schedule:         ['SCHEDULE_SERVICE_URL',          'http://localhost:3009'],
-  challenges:       ['CHALLENGES_SERVICE_URL',        'http://localhost:3008'],
-  leaderboard:      ['LEADERBOARD_SERVICE_URL',       'http://localhost:4003'],
-  assignments:      ['ASSIGNMENTS_SERVICE_URL',       'http://localhost:3015'],
-  profile:          ['PROFILE_SERVICE_URL',           'http://localhost:4002'],
-  teacherDashboard: ['TEACHER_DASHBOARD_SERVICE_URL', 'http://localhost:3016'],
-  learningPaths:    ['LEARNING_PATHS_SERVICE_URL',    'http://localhost:3014'],
-  students:         ['STUDENTS_SERVICE_URL',          'http://localhost:3017'],
-  dailyHabits:      ['DAILY_HABITS_SERVICE_URL',      'http://localhost:3012'],
-  worldAndYou:      ['WORLD_AND_YOU_SERVICE_URL',     'http://localhost:3010'],
-  // aivorah-ai-coach-service's own .env really does default to PORT=3007,
-  // same as the monolith's local default above - a pre-existing collision
-  // in that service's own config, not introduced here. Override one of the
-  // two via env vars if running both locally at once.
-  aiCoach:          ['AI_COACH_SERVICE_URL',          'http://localhost:3007'],
-  bedtimeStories:   ['BEDTIME_STORIES_SERVICE_URL',   'http://localhost:3011'],
-  helpCenter:       ['HELP_SERVICE_URL',               'http://localhost:3013'],
-  auth:             ['AUTH_SERVICE_URL',               'http://localhost:4001'],
+  monolith:         ['BACKEND_URL',                  'https://aivorah.ai'],
+  schedule:         ['SCHEDULE_SERVICE_URL',          'https://aivorah-schedule-service.onrender.com'],
+  challenges:       ['CHALLENGES_SERVICE_URL',        'https://aivorah-challenges-service.onrender.com'],
+  leaderboard:      ['LEADERBOARD_SERVICE_URL',       'https://aivorah-leaderboard-service.onrender.com'],
+  assignments:      ['ASSIGNMENTS_SERVICE_URL',       'https://aivorah-assignments-service.onrender.com'],
+  profile:          ['PROFILE_SERVICE_URL',           'https://aivorah-profile-service.onrender.com'],
+  teacherDashboard: ['TEACHER_DASHBOARD_SERVICE_URL', 'https://aivorah-teacher-dashboard-service.onrender.com'],
+  learningPaths:    ['LEARNING_PATHS_SERVICE_URL',    'https://aivorah-learning-paths-service.onrender.com'],
+  students:         ['STUDENTS_SERVICE_URL',          'https://aivorah-students-service.onrender.com'],
+  dailyHabits:      ['DAILY_HABITS_SERVICE_URL',      'https://aivorah-daily-habits-service.onrender.com'],
+  worldAndYou:      ['WORLD_AND_YOU_SERVICE_URL',     'https://aivorah-world-and-you-service.onrender.com'],
+  aiCoach:          ['AI_COACH_SERVICE_URL',          'https://aivorah-ai-coach-service.onrender.com'],
+  bedtimeStories:   ['BEDTIME_STORIES_SERVICE_URL',   'https://aivorah-bedtime-stories-service.onrender.com'],
+  helpCenter:       ['HELP_SERVICE_URL',               'https://aivorah-help-center-service.onrender.com'],
+  auth:             ['AUTH_SERVICE_URL',               'https://aivorah-auth-service.onrender.com'],
 };
 
 function resolveServiceUrls() {
@@ -111,7 +121,7 @@ async function warmOne(name, url) {
 // itself (the login phase's own retry/backoff is the real safety net if a
 // service is still cold by the time its account tries to log in).
 export async function warmupServices(baseURL) {
-  return { results: [], slow: [], failed: [] };
+  const urls = resolveServiceUrls();
   const targets = [
     ...Object.entries(urls).map(([name, url]) => [name, url]),
     ['frontend', baseURL],

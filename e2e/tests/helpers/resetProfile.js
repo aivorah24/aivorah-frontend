@@ -17,7 +17,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Node's fetch has no default timeout, so a stalled connection (e.g. a CI
+// runner that can't actually reach Supabase) hangs this call forever instead
+// of failing - which hung the whole CI job for 38-59 minutes (2026-09-04)
+// instead of surfacing a clear error. A 15s per-request timeout turns that
+// into a fast, diagnosable failure.
+const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  global: {
+    fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) }),
+  },
+});
 
 // The profile fields that live as plain columns on the `users` table.
 // (photo_url is the uploaded profile picture; the rest are the edit-popup fields.)

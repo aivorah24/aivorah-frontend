@@ -104,4 +104,22 @@ describe('useParentChallenges', () => {
     });
     expect(mockedService.fetchChallenges.mock.calls.length).toBeGreaterThan(callsBefore);
   });
+
+  it('clears the 30s poll interval on unmount (useFocusEffect cleanup)', async () => {
+    // The real jest.mock above only invokes the useFocusEffect callback,
+    // never its returned cleanup - unmount() alone can't reach it. Capture
+    // the cleanup ourselves and call it directly, matching what React
+    // Navigation actually does when the screen loses focus/unmounts.
+    let capturedCleanup: (() => void) | undefined;
+    mockUseFocusEffect.mockImplementation((cb: any) => { capturedCleanup = cb(); });
+    const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+
+    const { result, unmount } = await renderHook(() => useParentChallenges());
+    currentUnmount = unmount;
+    await waitFor(() => expect(result.current.loadingCh).toBe(false));
+
+    capturedCleanup?.();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    clearIntervalSpy.mockRestore();
+  });
 });

@@ -14,13 +14,16 @@ export function useParentProgress(route: any) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [stats, setStats] = useState<any>(null);
   const [weekly, setWeekly] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const firstLoadDoneRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [practiceInsights, setPracticeInsights] = useState<any>(null);
   const [insightsGenerating, setInsightsGenerating] = useState(false);
   
-  // Need to be very careful with useMemo on Animated.Value so they don't recreate constantly
+  // Need to be very careful with useMemo on Animated.Value so they don't recreate constantly.
+  // Animated.Value is designed to be read directly during render (native-driven,
+  // doesn't trigger React re-renders) - not a stale-ref bug the way a plain ref read during render would be.
+  // eslint-disable-next-line react-hooks/refs
   const insightAnims = useRef([0, 1, 2, 3].map(() => new Animated.Value(0))).current;
   
   const child = children[selectedIdx];
@@ -47,34 +50,34 @@ export function useParentProgress(route: any) {
     return () => { active = false; };
   }, [parentEmail, route?.params?.childId]);
 
-  // 2. Handle empty children case
-  useEffect(() => {
-    if (childrenLoaded && children.length === 0) setLoading(false);
-  }, [childrenLoaded, children.length]);
+  // 2. No linked children -> derived directly during render instead of a
+  // copy-into-state effect.
+  const loading = !childrenLoaded ? true : children.length === 0 ? false : dataLoading;
 
   // 3. Fetch data for current child
   const fetchData = async () => {
     if (!child) return;
-    if (!firstLoadDoneRef.current) setLoading(true);
-    
+    if (!firstLoadDoneRef.current) setDataLoading(true);
+
     try {
       const data: ProgressData = await parentProgressService.fetchProgressData(child);
       if (data.stats) setStats(data.stats);
       setWeekly(data.weekly);
       setPracticeInsights(data.practiceInsights);
-    } catch { 
+    } catch {
       // ignore
     } finally {
       if (!firstLoadDoneRef.current) {
         firstLoadDoneRef.current = true;
-        setLoading(false);
+        setDataLoading(false);
       }
       setRefreshing(false);
     }
   };
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async fetch for the (possibly new) child, not derivable from render-time values
+    fetchData();
   }, [selectedIdx, children]);
 
   // 4. Polling & Focus Refresh
@@ -105,6 +108,7 @@ export function useParentProgress(route: any) {
   useEffect(() => {
     if (!practiceInsights) return;
     insightAnims.forEach(a => a.setValue(0));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off a timed animation sequence tied to new insights arriving, not derivable from render-time values
     setInsightsGenerating(true);
     const timer = setTimeout(() => {
       setInsightsGenerating(false);
@@ -115,6 +119,9 @@ export function useParentProgress(route: any) {
     return () => clearTimeout(timer);
   }, [practiceInsights, insightAnims]);
 
+  // insightAnims below is the already-unwrapped Animated.Value array from
+  // the ref declared above (see its comment) - safe to expose to callers.
+  // eslint-disable-next-line react-hooks/refs
   return {
     children,
     childrenLoaded,

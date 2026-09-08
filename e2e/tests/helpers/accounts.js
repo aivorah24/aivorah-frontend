@@ -12,7 +12,40 @@
 //
 // Seeded by ai-mentor/server/scripts/seed-e2e-suite.js.
 
-export const PASSWORD = process.env.E2E_PASSWORD;
+// CircleCI's "Add Environment Variable" UI has no way to preview what got
+// saved, and a stray leading/trailing space, newline, or a pair of quotes
+// typed as part of the value (rather than around it) silently makes the
+// value invalid without CircleCI ever complaining - e.g. `The email address
+// is badly formatted` from Firebase during login, even though the value
+// looks right when you compare screenshots (2026-09-08, parent-a).
+// Every credential read from process.env goes through this first so a paste
+// mistake like that fails loudly (wrong email) instead of confusingly (a
+// well-formed email string that still gets rejected).
+// 2026-09-08: trimming alone did NOT fix parent-a's "The email address is
+// badly formatted" - confirmed by re-deleting and hand-retyping
+// E2E_PARENT_A in CircleCI and getting the byte-identical failure again.
+// That rules out stray leading/trailing whitespace and points at an
+// invisible Unicode character (BOM, zero-width space/joiner, etc.) that
+// looks like nothing when you read or retype the value, survives a plain
+// .trim() (those aren't whitespace by JS's definition), but still breaks
+// Firebase's client-side email regex. Strip the common invisible ones from
+// anywhere in the string, not just the edges - a paste can embed one
+// mid-string just as easily as at an end.
+const INVISIBLE_CHARS = /[​-‍﻿ ⁠]/g;
+
+function clean(value) {
+  if (!value) return value;
+  // BOM, zero-width space/non-joiner/joiner, word joiner, LTR/RTL marks,
+  // and other invisible format characters (Unicode category Cf) - built
+  // from explicit \u escapes rather than pasted literals so the source
+  // itself can never carry one of the very characters it's meant to strip.
+  const noInvisibles = value.replace(/[​-‏‪-‮⁠﻿]/g, '');
+  const trimmed = noInvisibles.trim();
+  const unquoted = /^(['"]).*\1$/.test(trimmed) ? trimmed.slice(1, -1) : trimmed;
+  return unquoted.trim();
+}
+
+export const PASSWORD = clean(process.env.E2E_PASSWORD);
 
 export const ACCOUNTS = {
   // ── school_admin ──
@@ -451,5 +484,19 @@ export function accountFor(key) {
   const account = ACCOUNTS[key];
   if (!account) throw new Error(`Unknown test account "${key}".`);
   if (!account.email) throw new Error(`Missing .env email for test account "${key}".`);
-  return account;
+  const cleaned = clean(account.email);
+  // Diagnostic only, not a failure by itself: if clean() actually changed
+  // something, or the result still doesn't look like an email, log the raw
+  // char codes so a login failure logged right after this is immediately
+  // explainable from CI output instead of requiring another guess-and-check
+  // round trip against a write-only CircleCI env var (2026-09-08, parent-a).
+  if (cleaned !== account.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+    const codes = (s) => Array.from(s).map((c) => c.codePointAt(0).toString(16)).join(' ');
+    console.warn(
+      `[accounts] "${key}" email needed cleaning or still looks malformed after cleaning.\n` +
+        `  raw:     ${JSON.stringify(account.email)} (codepoints: ${codes(account.email)})\n` +
+        `  cleaned: ${JSON.stringify(cleaned)} (codepoints: ${codes(cleaned)})`,
+    );
+  }
+  return { ...account, email: cleaned };
 }

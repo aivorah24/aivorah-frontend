@@ -216,7 +216,7 @@ export default function LearningBlocks({
     <View style={{ gap: spacing.md }}>
       {!!whatYoullLearn?.length && (
         <View style={[{ borderRadius: 10, padding: 12, gap: 4 }, { backgroundColor: colors.primary + '14', borderWidth: 1, borderColor: colors.primary + '40' }]}>
-          <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 0.5, color: colors.primary }}>WHAT YOU'LL LEARN</Text>
+          <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 0.5, color: colors.primary }}>WHAT YOU&apos;LL LEARN</Text>
           {whatYoullLearn.map((w, i) => (
             <Text key={i} style={{ fontSize: 13, color: colors.textMain }}>{'•'} {w}</Text>
           ))}

@@ -42,3 +42,9 @@ if (loginFailures.length === totalAccounts) {
   console.error('[ci/setup] Every single account failed to log in - treating this as a hard environment failure.');
   process.exit(1);
 }
+
+// Explicit exit so a lingering handle (browser process, open socket) can
+// never keep this script - and the CI step waiting on it - alive past a
+// successful run. Without this, the step only terminated via the job's
+// own timeout (up to ~60 minutes observed, 2026-09-04).
+process.exit(0);
