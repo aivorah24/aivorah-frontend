@@ -21,9 +21,26 @@
 // Every credential read from process.env goes through this first so a paste
 // mistake like that fails loudly (wrong email) instead of confusingly (a
 // well-formed email string that still gets rejected).
+// 2026-09-08: trimming alone did NOT fix parent-a's "The email address is
+// badly formatted" - confirmed by re-deleting and hand-retyping
+// E2E_PARENT_A in CircleCI and getting the byte-identical failure again.
+// That rules out stray leading/trailing whitespace and points at an
+// invisible Unicode character (BOM, zero-width space/joiner, etc.) that
+// looks like nothing when you read or retype the value, survives a plain
+// .trim() (those aren't whitespace by JS's definition), but still breaks
+// Firebase's client-side email regex. Strip the common invisible ones from
+// anywhere in the string, not just the edges - a paste can embed one
+// mid-string just as easily as at an end.
+const INVISIBLE_CHARS = /[​-‍﻿ ⁠]/g;
+
 function clean(value) {
   if (!value) return value;
-  const trimmed = value.trim();
+  // BOM, zero-width space/non-joiner/joiner, word joiner, LTR/RTL marks,
+  // and other invisible format characters (Unicode category Cf) - built
+  // from explicit \u escapes rather than pasted literals so the source
+  // itself can never carry one of the very characters it's meant to strip.
+  const noInvisibles = value.replace(/[​-‏‪-‮⁠﻿]/g, '');
+  const trimmed = noInvisibles.trim();
   const unquoted = /^(['"]).*\1$/.test(trimmed) ? trimmed.slice(1, -1) : trimmed;
   return unquoted.trim();
 }
