@@ -58,7 +58,17 @@ jobs:
           name: Run E2E Setup (Warmup + Login + Snapshot)
           command: |
             cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
+            # E2E_ENV_FILE_B64 is a single-line base64 encoding of the whole
+            # .env file - pasting a large multi-line value into CircleCI's
+            # env var UI has silently truncated/collapsed newlines before
+            # (E2E_ENV_FILE, the old plain-text var, still kept as a
+            # fallback below for any project that hasn't switched over yet).
+            # A single line has nothing for that bug to truncate.
+            if [ -n "$E2E_ENV_FILE_B64" ]; then
+              echo "$E2E_ENV_FILE_B64" | base64 -d > .env
+            else
+              printf '%s\n' "$E2E_ENV_FILE" > .env
+            fi
 
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
 
@@ -133,7 +143,17 @@ jobs:
           name: Write env file
           command: |
             cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
+            # E2E_ENV_FILE_B64 is a single-line base64 encoding of the whole
+            # .env file - pasting a large multi-line value into CircleCI's
+            # env var UI has silently truncated/collapsed newlines before
+            # (E2E_ENV_FILE, the old plain-text var, still kept as a
+            # fallback below for any project that hasn't switched over yet).
+            # A single line has nothing for that bug to truncate.
+            if [ -n "$E2E_ENV_FILE_B64" ]; then
+              echo "$E2E_ENV_FILE_B64" | base64 -d > .env
+            else
+              printf '%s\n' "$E2E_ENV_FILE" > .env
+            fi
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
             grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
             grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
@@ -172,7 +192,17 @@ jobs:
           name: Write env file
           command: |
             cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
+            # E2E_ENV_FILE_B64 is a single-line base64 encoding of the whole
+            # .env file - pasting a large multi-line value into CircleCI's
+            # env var UI has silently truncated/collapsed newlines before
+            # (E2E_ENV_FILE, the old plain-text var, still kept as a
+            # fallback below for any project that hasn't switched over yet).
+            # A single line has nothing for that bug to truncate.
+            if [ -n "$E2E_ENV_FILE_B64" ]; then
+              echo "$E2E_ENV_FILE_B64" | base64 -d > .env
+            else
+              printf '%s\n' "$E2E_ENV_FILE" > .env
+            fi
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
             grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
             grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
@@ -202,7 +232,17 @@ jobs:
           name: Write env file
           command: |
             cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
+            # E2E_ENV_FILE_B64 is a single-line base64 encoding of the whole
+            # .env file - pasting a large multi-line value into CircleCI's
+            # env var UI has silently truncated/collapsed newlines before
+            # (E2E_ENV_FILE, the old plain-text var, still kept as a
+            # fallback below for any project that hasn't switched over yet).
+            # A single line has nothing for that bug to truncate.
+            if [ -n "$E2E_ENV_FILE_B64" ]; then
+              echo "$E2E_ENV_FILE_B64" | base64 -d > .env
+            else
+              printf '%s\n' "$E2E_ENV_FILE" > .env
+            fi
             test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
             grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
             grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
