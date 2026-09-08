@@ -148,6 +148,19 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const scrollAnchorFix = document.createElement('style');
   scrollAnchorFix.textContent = `* { overflow-anchor: none !important; }`;
   document.head.appendChild(scrollAnchorFix);
+
+  // S28: every RN TextInput renders as a real HTML <input>/<textarea> on web,
+  // and browsers draw their own default focus outline (a solid black box in
+  // Chrome) around it while the user is typing. ~20 screens had already
+  // worked around this one-by-one with a local `outlineStyle: 'none'`, but
+  // over 80 other TextInputs across the app never got that fix, so the black
+  // box kept reappearing wherever a screen hadn't been individually patched.
+  // One global rule covers every current and future TextInput on web —
+  // per-component `outlineStyle: 'none'` overrides are now redundant, not
+  // conflicting, so nothing needs to be removed from the 20 files that have it.
+  const inputOutlineFix = document.createElement('style');
+  inputOutlineFix.textContent = `input, textarea { outline: none !important; }`;
+  document.head.appendChild(inputOutlineFix);
 }
 
 // @ts-ignore
