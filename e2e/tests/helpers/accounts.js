@@ -12,7 +12,23 @@
 //
 // Seeded by ai-mentor/server/scripts/seed-e2e-suite.js.
 
-export const PASSWORD = process.env.E2E_PASSWORD;
+// CircleCI's "Add Environment Variable" UI has no way to preview what got
+// saved, and a stray leading/trailing space, newline, or a pair of quotes
+// typed as part of the value (rather than around it) silently makes the
+// value invalid without CircleCI ever complaining - e.g. `The email address
+// is badly formatted` from Firebase during login, even though the value
+// looks right when you compare screenshots (2026-09-08, parent-a).
+// Every credential read from process.env goes through this first so a paste
+// mistake like that fails loudly (wrong email) instead of confusingly (a
+// well-formed email string that still gets rejected).
+function clean(value) {
+  if (!value) return value;
+  const trimmed = value.trim();
+  const unquoted = /^(['"]).*\1$/.test(trimmed) ? trimmed.slice(1, -1) : trimmed;
+  return unquoted.trim();
+}
+
+export const PASSWORD = clean(process.env.E2E_PASSWORD);
 
 export const ACCOUNTS = {
   // ── school_admin ──
@@ -451,5 +467,5 @@ export function accountFor(key) {
   const account = ACCOUNTS[key];
   if (!account) throw new Error(`Unknown test account "${key}".`);
   if (!account.email) throw new Error(`Missing .env email for test account "${key}".`);
-  return account;
+  return { ...account, email: clean(account.email) };
 }
