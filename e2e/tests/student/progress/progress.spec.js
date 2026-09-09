@@ -102,7 +102,9 @@ async function mockWeekly(page, data, { status = 200 } = {}) {
 async function mockWeeklyByRange(page, { week, month }) {
   await page.route('**/student/*/weekly*', (route) => {
     const url = new URL(route.request().url());
-    const data = url.searchParams.get('range') === 'month' ? month : week;
+    // Real app sends ?period=week|month (see progressService.ts's
+    // fetchWeeklyActivity) - not "range".
+    const data = url.searchParams.get('period') === 'month' ? month : week;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
   });
 }

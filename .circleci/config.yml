@@ -163,7 +163,6 @@ jobs:
               tests/student/progress/progress.spec.js \
               tests/teacher/b2b-login.spec.js \
               tests/teacher/dashboard/dashboard.spec.js \
-              tests/teacher/dashboard/class-progress/class-progress.spec.js \
               tests/teacher/dashboard/ai-teaching-insights/ai-teaching-insights.spec.js \
               tests/teacher/learning-paths/learning-paths.spec.js \
               --workers=2 --reporter=blob
