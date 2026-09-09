@@ -151,13 +151,21 @@ jobs:
           name: Run Smoke Specs
           command: |
             cd e2e
+            # Smoke = critical path per persona. Every spec here must be
+            # read-only and use an account from `account_filter` above, so
+            # this job needs no extra logins in setup and no teardown.
             npx playwright test \
               tests/parent/b2b-login.spec.js \
               tests/parent/dashboard/dashboard.spec.js \
+              tests/parent/challenges/challenges-empty-state.spec.js \
               tests/student/b2b-login.spec.js \
               tests/student/learning-paths.spec.js \
+              tests/student/progress/progress.spec.js \
               tests/teacher/b2b-login.spec.js \
               tests/teacher/dashboard/dashboard.spec.js \
+              tests/teacher/dashboard/class-progress/class-progress.spec.js \
+              tests/teacher/dashboard/ai-teaching-insights/ai-teaching-insights.spec.js \
+              tests/teacher/learning-paths/learning-paths.spec.js \
               --workers=2 --reporter=blob
           environment:
             PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
