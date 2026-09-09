@@ -28,6 +28,7 @@ import MessageList from './components/MessageList';
 import FeedbackStrip from './components/FeedbackStrip';
 import InputBar from './components/InputBar';
 import ImageZoomModal from './components/ImageZoomModal';
+import ClearChatModal from './components/ClearChatModal';
 
 export default function AICoachScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -60,6 +61,9 @@ export default function AICoachScreen({ navigation }: any) {
     submitFeedback,
     dismissFeedback,
     clearChat,
+    showClearConfirm,
+    cancelClearChat,
+    confirmClearChat,
   } = useAICoachChat({
     firstName,
     userGrade,
@@ -149,6 +153,14 @@ export default function AICoachScreen({ navigation }: any) {
     {zoomedImage && (
       <ImageZoomModal zoomedImage={zoomedImage} onClose={() => setZoomedImage(null)} />
     )}
+
+    <ClearChatModal
+      visible={showClearConfirm}
+      onCancel={cancelClearChat}
+      onConfirm={confirmClearChat}
+      colors={colors}
+      styles={styles}
+    />
 
     </View>{/* screenWrap */}
     </ScreenLayout>
@@ -348,4 +360,32 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   feedbackBtnText: { fontSize: 18 },
   feedbackBtnNum: { fontSize: 9, color: c.textDim, fontWeight: '700' },
   feedbackSkip: { padding: 6 },
+
+  // ── Clear Chat confirmation ──
+  clearChatOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  clearChatBox: {
+    width: '100%', maxWidth: 360,
+    backgroundColor: c.cardDark,
+    borderRadius: 18, borderWidth: 1, borderColor: c.borderColor + '60',
+    padding: 22, alignItems: 'center',
+  },
+  clearChatIcon: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: c.accentRed + '18',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  clearChatTitle: { fontSize: 17, fontWeight: '700', color: c.textMain, marginBottom: 6 },
+  clearChatBody: { fontSize: 13, color: c.textMuted, textAlign: 'center', marginBottom: 20 },
+  clearChatConfirmBtn: {
+    width: '100%', paddingVertical: 12, borderRadius: 12,
+    backgroundColor: c.accentRed, alignItems: 'center', marginBottom: 10,
+  },
+  clearChatConfirmText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  clearChatCancelBtn: { width: '100%', paddingVertical: 10, alignItems: 'center' },
+  clearChatCancelText: { fontSize: 14, fontWeight: '600', color: c.textMuted },
 });
