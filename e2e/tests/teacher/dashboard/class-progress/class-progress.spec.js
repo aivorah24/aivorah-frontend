@@ -32,7 +32,7 @@
 import { test, expect } from '@playwright/test';
 import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
-import { getStudentIdByEmail, completeLesson } from '../../../helpers/api.js';
+import { getStudentIdByEmail, completeLesson, BACKEND_URL } from '../../../helpers/api.js';
 
 const TEACHER = 'teacher-a';
 const STUDENT = 'student-teacher-a';
@@ -89,7 +89,7 @@ test.describe('Teacher Dashboard - Class Progress', () => {
     // purely to compute the expected Typical Study Time figure - not an
     // assertion in itself. The verification below is UI-only.
     const finalStudents = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json());
     const combinedStudyTimes = finalStudents.map(
       (s) => (s.learningPathTime || 0) + (s.assignmentTime || 0) + (s.challengeTime || 0),

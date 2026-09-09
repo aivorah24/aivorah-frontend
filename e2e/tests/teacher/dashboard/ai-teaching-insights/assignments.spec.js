@@ -19,7 +19,7 @@
 import { test, expect } from '@playwright/test';
 import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
-import { getStudentIdByEmail, getTeacherIdByEmail, createAssignment, submitAssignment } from '../../../helpers/api.js';
+import { getStudentIdByEmail, getTeacherIdByEmail, createAssignment, submitAssignment, BACKEND_URL, TEACHER_DASHBOARD_SERVICE_URL } from '../../../helpers/api.js';
 import { computeAssignmentTiles } from '../../../helpers/expectedTiles.js';
 
 const TEACHER = 'teacher-a';
@@ -57,7 +57,7 @@ test.describe('Teacher Dashboard - Assignment Analytics', () => {
     ]);
 
     const before = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
+      .get(`${TEACHER_DASHBOARD_SERVICE_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
       .then((r) => r.json());
     const beforeSubmissions = before.totals?.totalSubmissions ?? 0;
 
@@ -76,7 +76,7 @@ test.describe('Teacher Dashboard - Assignment Analytics', () => {
       .poll(
         async () => {
           const after = await request
-            .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
+            .get(`${TEACHER_DASHBOARD_SERVICE_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
             .then((r) => r.json());
           return after.totals?.totalSubmissions ?? 0;
         },
@@ -90,8 +90,8 @@ test.describe('Teacher Dashboard - Assignment Analytics', () => {
     // interval, so these only pass if the dashboard genuinely updated
     // itself in the background.
     const [finalStudents, finalInsights] = await Promise.all([
-      request.get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`).then((r) => r.json()),
-      request.get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`).then((r) => r.json()),
+      request.get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`).then((r) => r.json()),
+      request.get(`${TEACHER_DASHBOARD_SERVICE_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`).then((r) => r.json()),
     ]);
     const expected = computeAssignmentTiles(finalStudents, finalInsights);
 

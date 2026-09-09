@@ -38,6 +38,8 @@ import {
   logStudyTime,
   trackQuizResult,
   markAttendance,
+  BACKEND_URL,
+  STUDENTS_SERVICE_URL,
 } from '../../../helpers/api.js';
 import { dismissAnnouncementIfPresent } from '../../../helpers/dismissAnnouncement.js';
 import { assertAttendanceStat } from '../../../helpers/assertAttendanceStat.js';
@@ -102,7 +104,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f group)', () => {
     // interval, so the real verification below only passes if the
     // dashboard genuinely updated itself in the background.
     const children = await request
-      .get(`/parent/${encodeURIComponent(parentEmail)}/children`)
+      .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then((r) => r.json());
     const child = children.find((c) => c.id === studentId);
 
@@ -274,7 +276,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f2 group)', () => {
     });
 
     const attendance = await request
-      .get(`/attendance/student/${studentId}/summary`)
+      .get(`${BACKEND_URL}/attendance/student/${studentId}/summary`)
       .then((r) => r.json());
 
     await applySession(context, PARENT);
@@ -330,7 +332,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f3 group)', () => {
     // auto-refresh in the background; loading the page AFTER mutating is
     // the correct way to observe a real change here, not a workaround.
     const before = await request
-      .get(`/attendance/student/${studentId}/summary`)
+      .get(`${BACKEND_URL}/attendance/student/${studentId}/summary`)
       .then((r) => r.json());
 
     // A unique, far-future marker date so this never collides with a real
@@ -344,7 +346,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f3 group)', () => {
     // itself. Synchronization/verification happens entirely through the
     // browser below.
     const after = await request
-      .get(`/attendance/student/${studentId}/summary`)
+      .get(`${BACKEND_URL}/attendance/student/${studentId}/summary`)
       .then((r) => r.json());
 
     await applySession(context, PARENT);
@@ -402,7 +404,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f4 group)', () => {
     // alone without a server-side change. Left as a flagged gap rather than
     // silently changing the API contract in a test-only session.
     const todayName = WEEK_DAYS_ORDER[new Date().getDay()];
-    const before = await request.get(`/student/${studentId}/weekly`).then((r) => r.json());
+    const before = await request.get(`${STUDENTS_SERVICE_URL}/student/${studentId}/weekly`).then((r) => r.json());
     const beforeMins = (before?.days ?? []).find((d) => d.day === todayName)?.studyMinutes ?? 0;
 
     // 2 hours, same as a real lesson screen logs while a student works
@@ -569,7 +571,7 @@ test.describe('Parent Dashboard - Weekly Snapshot (parent-f7 group)', () => {
     await logStudyTime(request, studentId, { minutes: 130, subject: 'Science' });
 
     const child = await request
-      .get(`/parent/${encodeURIComponent(parentEmail)}/children`)
+      .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then((r) => r.json())
       .then((children) => children.find((c) => c.id === studentId));
 

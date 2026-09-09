@@ -9,7 +9,7 @@
 import { test, expect } from '@playwright/test';
 import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
-import { getStudentIdByEmail, completeLesson } from '../../../helpers/api.js';
+import { getStudentIdByEmail, completeLesson, BACKEND_URL } from '../../../helpers/api.js';
 import { computeStudentOverview } from '../../../helpers/expectedTiles.js';
 
 function todayISO() {
@@ -71,7 +71,7 @@ test.describe('Teacher Dashboard - Student Overview', () => {
       .poll(
         async () => {
           const after = await request
-            .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+            .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
             .then((r) => r.json())
             .then((students) => students.find((s) => s.id === studentId));
           return after.lastActive;
@@ -84,7 +84,7 @@ test.describe('Teacher Dashboard - Student Overview', () => {
     // tests/helpers/expectedTiles.js) from the SAME live data the dashboard
     // itself just fetched.
     const finalStudents = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json());
     const expected = computeStudentOverview(finalStudents);
 
@@ -156,7 +156,7 @@ test.describe('Teacher Dashboard - Student Overview', () => {
   test('clicking Active Today opens Students filtered to students active today', async ({ page, request }) => {
     const teacherEmail = accountFor(ACCOUNT).email;
     const students = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json());
     const today = todayISO();
     const activeToday = students.filter((s) => s.lastActive === today);
@@ -182,7 +182,7 @@ test.describe('Teacher Dashboard - Student Overview', () => {
   test('clicking Need Attention opens Students filtered to students needing attention', async ({ page, request }) => {
     const teacherEmail = accountFor(ACCOUNT).email;
     const students = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json());
     const needAttention = students.filter((s) => s.needsAttention);
     const notNeedAttention = students.filter((s) => !s.needsAttention);

@@ -26,6 +26,7 @@ import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
 import { dismissAnnouncementIfPresent } from '../../../helpers/dismissAnnouncement.js';
 import { assertAttendanceStat } from '../../../helpers/assertAttendanceStat.js';
+import { BACKEND_URL, STUDENTS_SERVICE_URL } from '../../../helpers/api.js';
 
 // Mirrors formatStudyTime() in ParentDashboardScreen.tsx - Learning Journey's
 // value and the Attendance card's numbers are plain integers, but Learning
@@ -93,7 +94,7 @@ test.describe('Parent Dashboard - Child Switching', () => {
     // each child's real name/XP/streak/etc. to compare the UI against -
     // never mutated, never asserted on directly as the test outcome.
     const children = await request
-      .get(`/parent/${encodeURIComponent(parentEmail)}/children`)
+      .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then((r) => r.json());
 
     expect(children.length, 'expected parent-e to have 2 linked children').toBeGreaterThanOrEqual(
@@ -164,7 +165,7 @@ test.describe('Parent Dashboard - Child Switching', () => {
       // per-child from /attendance/student/{id}/summary (line 374) - parent-e
       // and both children are seeded under school TSRA, so it always renders.
       const attendance = await request
-        .get(`/attendance/student/${child.id}/summary`)
+        .get(`${BACKEND_URL}/attendance/student/${child.id}/summary`)
         .then((r) => (r.ok() ? r.json() : null));
       if (attendance?.summary) {
         await expect(
@@ -239,7 +240,7 @@ test.describe('Parent Dashboard - Child Switching', () => {
     const parentEmail = accountFor(ACCOUNT).email;
     // Read-only expected-value lookup (see the other test's comment above).
     const children = await request
-      .get(`/parent/${encodeURIComponent(parentEmail)}/children`)
+      .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then((r) => r.json());
     expect(children.length, 'expected parent-e to have 2 linked children').toBeGreaterThanOrEqual(
       2,

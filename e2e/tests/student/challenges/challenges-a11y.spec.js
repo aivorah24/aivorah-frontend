@@ -122,7 +122,7 @@ test.describe('Student Challenges - Accessibility', () => {
     await expect(quizModal(page)).toBeVisible({ timeout: 10000 });
   });
 
-  test('the quiz modal has an accessible role and an accessible name (known bug - no aria-label)', async ({
+  test('the quiz modal has an accessible role and an accessible name (known bug - no aria-label)', { tag: '@a11y' }, async ({
     page,
   }) => {
     await page
@@ -141,7 +141,7 @@ test.describe('Student Challenges - Accessibility', () => {
     expect(accessibleName, 'quiz dialog should have an accessible name').toBeTruthy();
   });
 
-  test('the close (X) button has an accessible name (known bug - icon-only, unlabeled)', async ({
+  test('the close (X) button has an accessible name (known bug - icon-only, unlabeled)', { tag: '@a11y' }, async ({
     page,
   }) => {
     await page
@@ -172,7 +172,7 @@ test.describe('Student Challenges - Accessibility', () => {
     expect(focusInsideDialog, 'focus should move into the dialog on open').toBe(true);
   });
 
-  test('questions and answer options are exposed with proper semantic roles (known bug - plain unlabeled divs)', async ({
+  test('questions and answer options are exposed with proper semantic roles (known bug - plain unlabeled divs)', { tag: '@a11y' }, async ({
     page,
     request,
   }) => {
@@ -192,7 +192,7 @@ test.describe('Student Challenges - Accessibility', () => {
     await expect(page.getByRole('radio').first()).toBeVisible();
   });
 
-  test('selected/unselected answer state is exposed to assistive tech (known bug - no aria-checked)', async ({
+  test('selected/unselected answer state is exposed to assistive tech (known bug - no aria-checked)', { tag: '@a11y' }, async ({
     page,
     request,
   }) => {
@@ -263,7 +263,7 @@ test.describe('Student Challenges - Accessibility', () => {
     expect(text).toMatch(/^\d{2}:\d{2}$/);
   });
 
-  test('the result screen announces completion to assistive tech (known bug - no live region)', async ({
+  test('the result screen announces completion to assistive tech (known bug - no live region)', { tag: '@a11y' }, async ({
     page,
     request,
   }) => {

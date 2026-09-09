@@ -19,6 +19,7 @@ import { test, expect } from '@playwright/test';
 import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
 import { dismissAnnouncementIfPresent } from '../../../helpers/dismissAnnouncement.js';
+import { STUDENTS_SERVICE_URL } from '../../../helpers/api.js';
 
 const ACCOUNT = 'parent-e';
 const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -74,7 +75,7 @@ test.describe('Parent Dashboard - Activity Overview group (per-child data)', () 
     // data to compare the UI against - never mutated, never asserted on
     // directly as the test outcome.
     const children = await request
-      .get(`/parent/${encodeURIComponent(parentEmail)}/children`)
+      .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then((r) => r.json());
 
     expect(children.length, 'expected parent-e to have 2 linked children').toBeGreaterThanOrEqual(
@@ -102,7 +103,7 @@ test.describe('Parent Dashboard - Activity Overview group (per-child data)', () 
 
       // ── Activity Overview graph ──
       // Real per-day study minutes, same endpoint the screen itself calls.
-      const weekly = await request.get(`/student/${child.id}/weekly`).then((r) => r.json());
+      const weekly = await request.get(`${STUDENTS_SERVICE_URL}/student/${child.id}/weekly`).then((r) => r.json());
       const minutesByDay = {};
       (weekly?.days ?? []).forEach((d) => {
         minutesByDay[d.day] = d.studyMinutes;
@@ -150,7 +151,7 @@ test.describe('Parent Dashboard - Activity Overview group (per-child data)', () 
       // calls (line 367-370); "No quiz data yet" is the real empty state,
       // not a broken widget, when a child has no scored quizzes.
       const aiReport = await request
-        .get(`/parent/${encodeURIComponent(parentEmail)}/children/${child.id}/ai-report`)
+        .get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children/${child.id}/ai-report`)
         .then((r) => (r.ok() ? r.json() : null));
       const subjectPerf = aiReport?.subjectPerformance ?? [];
       if (subjectPerf.length === 0) {

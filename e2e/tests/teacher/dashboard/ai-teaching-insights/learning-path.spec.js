@@ -19,7 +19,7 @@
 import { test, expect } from '@playwright/test';
 import { applySession, statePath } from '../../../helpers/auth.js';
 import { accountFor } from '../../../helpers/accounts.js';
-import { getStudentIdByEmail, completeLesson, logStudyTime } from '../../../helpers/api.js';
+import { getStudentIdByEmail, completeLesson, logStudyTime, BACKEND_URL } from '../../../helpers/api.js';
 import { computeLearningPathTiles } from '../../../helpers/expectedTiles.js';
 
 const TEACHER = 'teacher-a';
@@ -58,7 +58,7 @@ test.describe('Teacher Dashboard - Learning Path Analytics', () => {
     // not about a hardcoded expected value (activity accumulates run over
     // run since student-teacher-a is dedicated but not reset between runs).
     const before = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json())
       .then((students) => students.find((s) => s.id === studentId));
 
@@ -80,7 +80,7 @@ test.describe('Teacher Dashboard - Learning Path Analytics', () => {
       .poll(
         async () => {
           const after = await request
-            .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+            .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
             .then((r) => r.json())
             .then((students) => students.find((s) => s.id === studentId));
           return after.completedTopics?.length ?? 0;
@@ -96,7 +96,7 @@ test.describe('Teacher Dashboard - Learning Path Analytics', () => {
     // itself in the background, the way a teacher watching the screen
     // live would actually see it happen.
     const finalStudents = await request
-      .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+      .get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then((r) => r.json());
     const expected = computeLearningPathTiles(finalStudents);
 

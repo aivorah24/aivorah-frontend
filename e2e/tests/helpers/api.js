@@ -28,15 +28,36 @@ const SCHEDULE_SERVICE_URL = process.env.SCHEDULE_SERVICE_URL || 'http://localho
 // features this suite actually exercises (2026-08-26 migration pass —
 // verified against each service's real routes, not assumed): challenges,
 // student stats/XP/lesson-progress, assignments, and profile (used only
-// for the read-only user-id-by-email lookup below). Parent-persona features
-// and non-refactored teacher screens (Attendance, Challenges' teacher/parent
-// side) still depend on the monolith and are deliberately NOT covered by
-// this pass - see the migration-plan discussion, not a gap here.
+// for the read-only user-id-by-email lookup below). Non-refactored teacher
+// screens (Attendance) still depend on the monolith and are deliberately
+// NOT covered by this pass - see the migration-plan discussion, not a gap
+// here. Parent Challenges was migrated off the monolith 2026-09-02 (see
+// aivorah-frontend PR #36) - assignChallenge/assignChallengeAsParent/
+// listAssignedChallenges/completeChallenge below were missed in that pass
+// and still posted to BACKEND_URL (the monolith), which 404s on any
+// microservice-only challenge id (fixed 2026-09-02, same day as PR #36 -
+// only surfaced once the type-taxonomy fix let a real microservice
+// challenge id become a selectable E2E target).
 const CHALLENGES_SERVICE_URL      = process.env.CHALLENGES_SERVICE_URL      || 'http://localhost:3008';
+// Student stats/XP (GET /student/:id) live on aivorah-students-service, the
+// same backend the refactored ParentChallengesScreen's fetchChildStats calls
+// (aivorah-frontend PR #36) - not BACKEND_URL/the monolith, which the parent
+// challenges spec previously (wrongly) used relative /student/:id calls for.
+const STUDENTS_SERVICE_URL        = process.env.STUDENTS_SERVICE_URL        || 'http://localhost:3017';
+// Screen-time limits/weekly cap/allowed hours/break enforcer/subject filter -
+// extracted from the monolith into its own service 2026-09-03. Same Supabase
+// project (Dev DB) as STUDENTS_SERVICE_URL, so child ids resolved via that
+// service line up with this one's parent_children/screen_time checks.
+const PARENTAL_CONTROLS_SERVICE_URL = process.env.PARENTAL_CONTROLS_SERVICE_URL || 'http://localhost:3018';
 const LEADERBOARD_SERVICE_URL     = process.env.LEADERBOARD_SERVICE_URL     || 'http://localhost:4003';
 const ASSIGNMENTS_SERVICE_URL     = process.env.ASSIGNMENTS_SERVICE_URL     || 'http://localhost:3015';
 const PROFILE_SERVICE_URL         = process.env.PROFILE_SERVICE_URL         || 'http://localhost:4002';
 const TEACHER_DASHBOARD_SERVICE_URL = process.env.TEACHER_DASHBOARD_SERVICE_URL || 'http://localhost:3016';
+export {
+  BACKEND_URL, SCHEDULE_SERVICE_URL, CHALLENGES_SERVICE_URL, STUDENTS_SERVICE_URL,
+  PARENTAL_CONTROLS_SERVICE_URL, LEADERBOARD_SERVICE_URL, ASSIGNMENTS_SERVICE_URL,
+  PROFILE_SERVICE_URL, TEACHER_DASHBOARD_SERVICE_URL,
+};
 
 export async function getTeacherIdByEmail(email) {
   const { data, error } = await supabaseAdmin
@@ -232,6 +253,25 @@ export async function getChildIdByParentEmail(request, { parentEmail, childEmail
   return match.id;
 }
 
+// Same lookup as getChildIdByParentEmail, but against aivorah-students-service
+// (Dev DB) instead of the monolith - use this when the id will be passed to
+// another Dev-DB-backed service (e.g. aivorah-parental-controls-service),
+// since the monolith and Dev DB have separate `users` rows with DIFFERENT
+// ids for the same test account email (confirmed via a live check
+// 2026-09-03).
+export async function getChildIdByParentEmailFromStudentsService(request, { parentEmail, childEmail }) {
+  const res = await request.get(`${STUDENTS_SERVICE_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  if (!res.ok()) {
+    throw new Error(`GET ${STUDENTS_SERVICE_URL}/parent/${parentEmail}/children failed: ${res.status()}`);
+  }
+  const children = await res.json();
+  const match = children.find((c) => c.email === childEmail);
+  if (!match) {
+    throw new Error(`No child with email ${childEmail} found under parent ${parentEmail} in the Dev DB.`);
+  }
+  return match.id;
+}
+
 // Lists the real challenges available for a grade/curriculum - used to pick
 // a real challengeId instead of guessing one. Passing studentId includes
 // each challenge's assignment status for that student (GET /challenges?
@@ -256,7 +296,7 @@ export async function listChallenges(request, { grade, curriculum, studentId }) 
 // listChallenges() to compute a real expected Assigned count - using
 // listChallenges() alone undercounts it.
 export async function listAssignedChallenges(request, { studentId }) {
-  const res = await request.get(`${BACKEND_URL}/challenges/assigned?studentId=${studentId}`);
+  const res = await request.get(`${CHALLENGES_SERVICE_URL}/challenges/assigned?studentId=${studentId}`);
   if (!res.ok()) {
     throw new Error(`GET /challenges/assigned failed: ${res.status()}`);
   }
@@ -266,7 +306,7 @@ export async function listAssignedChallenges(request, { studentId }) {
 // Assigns a challenge to a student, the same way a teacher's "Assign
 // Challenge" flow does (POST /challenges/assign).
 export async function assignChallenge(request, { challengeId, studentId, teacherId }) {
-  const res = await request.post(BACKEND_URL + '/challenges/assign', {
+  const res = await request.post(CHALLENGES_SERVICE_URL + '/challenges/assign', {
     data: { challengeId, studentId, assignedById: teacherId, assignedByRole: 'teacher' },
   });
   if (!res.ok()) {
@@ -283,7 +323,7 @@ export async function assignChallengeAsParent(
   request,
   { challengeId, studentId, parentEmail, dueDate },
 ) {
-  const res = await request.post(BACKEND_URL + '/challenges/assign', {
+  const res = await request.post(CHALLENGES_SERVICE_URL + '/challenges/assign', {
     data: { challengeId, studentId, assignedById: parentEmail, assignedByRole: 'parent', dueDate },
   });
   if (!res.ok()) {
@@ -355,7 +395,7 @@ export async function assignChallengeAsStudent(request, { challengeId, studentId
 
 // Completes an assigned challenge as a student (POST /challenges/:id/complete).
 export async function completeChallenge(request, assignmentId, { studentId, score }) {
-  const res = await request.post(`${BACKEND_URL}/challenges/${assignmentId}/complete`, {
+  const res = await request.post(`${CHALLENGES_SERVICE_URL}/challenges/${assignmentId}/complete`, {
     data: { studentId, score },
   });
   if (!res.ok()) {

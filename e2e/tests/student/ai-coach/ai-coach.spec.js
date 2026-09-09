@@ -24,13 +24,11 @@
 //    service. See ai-coach-mic.spec.js for the real-STT version of this
 //    flow (kept separately, and its failures are NOT treated as product
 //    regressions - STT service flakiness isn't something this app controls).
-// 7. KNOWN BUG: Clear Chat (trash icon) calls RN's Alert.alert(), which
-//    react-native-web stubs out as a total no-op (confirmed by reading
-//    node_modules/react-native-web/dist/exports/Alert/index.js - static
-//    alert() {} does nothing on web). So on the web build clicking Clear
-//    Chat does not show a confirmation and does not clear anything. This
-//    test is written for the CORRECT behavior and is expected to fail until
-//    the app gets a web-safe confirm flow.
+// 7. Clear Chat (trash icon) used to call RN's Alert.alert(), which
+//    react-native-web stubs out as a total no-op - the confirmation never
+//    appeared and nothing cleared on web. Fixed (aivorah-frontend
+//    fix/ai-coach-clear-chat-web): a real cross-platform modal
+//    (ClearChatModal) now backs the confirmation on every platform.
 // 8. Shift+Enter inserts a newline instead of sending.
 // 9. Mic button is disabled while the AI is replying.
 // 10. Rapid double-click on Send doesn't submit the message twice.
@@ -194,7 +192,7 @@ test.describe('Student AI Coach', () => {
     await expect(page.getByText('Aivorah is thinking...')).toBeVisible({ timeout: 10000 });
   });
 
-  test('Clear Chat shows a confirmation and clears the conversation (known bug - Alert.alert is a no-op on web)', async ({
+  test('Clear Chat shows a confirmation and clears the conversation', async ({
     page,
   }) => {
     await messageInput(page).fill('Hello');
@@ -205,8 +203,16 @@ test.describe('Student AI Coach', () => {
     const { clearChat } = await inputBarButtons(page);
     await clearChat.click();
 
-    // Expected (correct) behavior: a confirmation to clear the chat.
     await expect(page.getByText('Clear Chat')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Start a new conversation?')).toBeVisible();
+
+    // Complete the flow: confirm, and the conversation actually resets to
+    // the single welcome message (the real point of this test, not just
+    // that a dialog appeared). "Hello" (the message sent above) must be
+    // gone from the transcript once the reset takes effect.
+    await page.getByText('Clear', { exact: true }).click();
+    await expect(page.getByText('Clear Chat')).toBeHidden();
+    await expect(page.getByText('Hello', { exact: true })).toBeHidden();
   });
 
   test('Shift+Enter inserts a newline instead of sending', async ({ page }) => {

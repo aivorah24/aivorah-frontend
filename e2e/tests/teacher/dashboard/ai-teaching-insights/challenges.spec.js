@@ -17,6 +17,8 @@ import {
   listChallenges,
   assignChallenge,
   completeChallenge,
+  BACKEND_URL,
+  TEACHER_DASHBOARD_SERVICE_URL,
 } from '../../../helpers/api.js';
 import { computeChallengeTiles } from '../../../helpers/expectedTiles.js';
 
@@ -77,9 +79,9 @@ test.describe('Teacher Dashboard - Challenge Analytics', () => {
     // verification below only passes if the dashboard genuinely updated
     // itself in the background.
     const [finalStudents, finalInsights] = await Promise.all([
-      request.get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}`).then((r) => r.json()),
+      request.get(`${BACKEND_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`).then((r) => r.json()),
       request
-        .get(`/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
+        .get(`${TEACHER_DASHBOARD_SERVICE_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}/insights`)
         .then((r) => r.json()),
     ]);
     const expected = computeChallengeTiles(finalStudents, finalInsights);
