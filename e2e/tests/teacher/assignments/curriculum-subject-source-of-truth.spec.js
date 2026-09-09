@@ -34,6 +34,7 @@ import { test, expect } from '@playwright/test';
 import { newPageAs } from '../../helpers/session.js';
 import { accountFor } from '../../helpers/accounts.js';
 import { snapshotTeaches, restoreTeaches, setTeacherTeaches } from '../../helpers/teacherTeaches.js';
+import { ASSIGNMENTS_SERVICE_URL } from '../../helpers/api.js';
 
 async function withCurriculum(accountKey, curriculum, grade, run) {
   const email = accountFor(accountKey).email;
@@ -50,7 +51,7 @@ async function withCurriculum(accountKey, curriculum, grade, run) {
 // the backend endpoint the app itself would call - not a hardcoded list.
 async function realSubjectsFor(request, curriculum, grade) {
   const res = await request.get(
-    `http://localhost:3007/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
+    `${ASSIGNMENTS_SERVICE_URL}/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
   );
   expect(res.ok(), `GET /curriculum/subjects?curriculum=${curriculum}&grade=${grade} must succeed`).toBeTruthy();
   const body = await res.json();

@@ -28,6 +28,7 @@ import { test, expect } from '@playwright/test';
 import { newPageAs } from '../../helpers/session.js';
 import { accountFor } from '../../helpers/accounts.js';
 import { snapshotTeaches, restoreTeaches, setTeacherTeaches } from '../../helpers/teacherTeaches.js';
+import { ASSIGNMENTS_SERVICE_URL } from '../../helpers/api.js';
 
 async function withCurriculum(curriculum, teaches, run) {
   const email = accountFor('teacher-l').email;
@@ -52,7 +53,7 @@ async function openGenerateForm(page) {
 // real teacher would - a human picks a readable topic, not a code.
 async function realTopicFor(request, curriculum, grade, subject) {
   const res = await request.get(
-    `http://localhost:3007/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
+    `${ASSIGNMENTS_SERVICE_URL}/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
   );
   expect(res.ok()).toBeTruthy();
   const body = await res.json();
@@ -71,7 +72,7 @@ async function realTopicFor(request, curriculum, grade, subject) {
 // across spec files would blur which file is responsible for what.
 async function realSubjectsFor(request, curriculum, grade) {
   const res = await request.get(
-    `http://localhost:3007/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
+    `${ASSIGNMENTS_SERVICE_URL}/curriculum/subjects?curriculum=${encodeURIComponent(curriculum)}&grade=${encodeURIComponent(grade)}`,
   );
   expect(res.ok()).toBeTruthy();
   const body = await res.json();
