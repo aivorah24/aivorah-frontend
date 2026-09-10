@@ -78,6 +78,15 @@ export function useQuizSession({
           const asgn = await assignRes.json();
           assignmentId = asgn.id;
           setActiveChallenge(prev => prev ? { ...prev, assignmentId: asgn.id } : prev);
+        } else {
+          // Without an assignmentId, submitQuiz() can never succeed — letting the
+          // student answer a whole quiz that's guaranteed to fail on Submit is
+          // worse than telling them now. Close the quiz instead of silently
+          // continuing (the previous behavior this bug was reported for).
+          Alert.alert('Could not start challenge', 'Please try again in a moment.');
+          setQuizVisible(false);
+          setQuizLoading(false);
+          return;
         }
       }
 
@@ -152,12 +161,21 @@ export function useQuizSession({
           }, 1000);
         }
       }
-    } catch {}
+    } catch {
+      // Network/API failure while starting the challenge (assign or question
+      // fetch) — previously swallowed silently, leaving the student staring at
+      // a quiz modal with zero questions and no explanation.
+      Alert.alert('Could not start challenge', 'Please check your connection and try again.');
+      setQuizVisible(false);
+    }
     setQuizLoading(false);
   }, [studentId, grade, userEmail]);
 
   const submitQuiz = useCallback(async () => {
-    if (!activeChallenge?.assignmentId) return;
+    if (!activeChallenge?.assignmentId) {
+      Alert.alert('Could not submit', 'This challenge could not be started properly. Please close and try again.');
+      return;
+    }
     const correct = questions.filter((q, i) => isQuestionCorrect(q, answers[i])).length;
     const score = Math.round((correct / questions.length) * 100);
     setQuizSubmitting(true);
@@ -182,8 +200,14 @@ export function useQuizSession({
           const rows = lb.leaderboard ?? lb; // backward compat
           if (Array.isArray(rows)) setLeaderboard(rows);
         } catch { /* ignore */ } finally { setLeaderLoading(false); }
+      } else {
+        // Previously silent: the button's spinner would clear and nothing
+        // would happen — no result, no error, matching "submit doesn't work".
+        Alert.alert('Could not submit', 'Please try again.');
       }
-    } catch {}
+    } catch {
+      Alert.alert('Could not submit', 'Please check your connection and try again.');
+    }
     setQuizSubmitting(false);
   }, [activeChallenge, questions, answers, studentId, grade, completeChallenge, onChallengeCompleted]);
 

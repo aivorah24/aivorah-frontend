@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
+import { normalizeGrade } from '../../../student-progress/utils/rosterFilters';
 
 interface Props {
   colors: AppColors;
@@ -95,7 +96,7 @@ export default function LinkExistingTab({
             .filter(s => {
               const q = linkSearch.toLowerCase();
               const matchSearch = !q || s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
-              const matchGrade = linkGradeFilter === 'All' || s.grade === linkGradeFilter;
+              const matchGrade = linkGradeFilter === 'All' || normalizeGrade(s.grade) === normalizeGrade(linkGradeFilter);
               return matchSearch && matchGrade;
             })
             .map(s => {

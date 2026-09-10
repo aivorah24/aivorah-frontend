@@ -8,12 +8,12 @@
 // These functions deliberately return the raw `Response` (and let network errors
 // propagate) rather than parsing/swallowing, so each caller keeps the exact
 // success/failure handling the monolithic screen had.
-import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
+import TEACHER_DASHBOARD_SERVER_URL from '../../../../config/teacherDashboardServerUrl';
 
 export function fetchStudentsByTeacher(email: string): Promise<Response> {
-  return fetch(`${SERVER_URL}/student/by-teacher/${encodeURIComponent(email)}`);
+  return fetch(`${TEACHER_DASHBOARD_SERVER_URL}/student/by-teacher/${encodeURIComponent(email)}`);
 }
 
 // Already migrated — aivorah-profile-service owns user preferences.
