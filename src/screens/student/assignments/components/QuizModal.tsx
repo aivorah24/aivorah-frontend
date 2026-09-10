@@ -14,6 +14,15 @@ import type { Assignment, QuizQuestion, PerQ, GradeResult } from '../types';
 import { AssignmentErrorBoundary } from './AssignmentErrorBoundary';
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
+import { PhotoUploadStep } from './PhotoUploadStep';
+
+// B04: a drawing question's answer is an image, not text - reuses the same
+// PhotoUploadStep component ScaffoldedModal already uses for drawing/
+// art_creation steps, not a second upload implementation.
+type DrawingAnswer = { drawingBase64: string; drawingMime: string };
+function isDrawingAnswer(a: string | DrawingAnswer | undefined): a is DrawingAnswer {
+  return !!a && typeof a === 'object' && 'drawingBase64' in a;
+}
 
 // ── Quiz Modal ────────────────────────────────────────────────────────────────
 
@@ -28,7 +37,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
   const questions = assignment.quizQuestions || [];
 
   const [currentQ,       setCurrentQ]      = useState(0);
-  const [answers,        setAnswers]       = useState<Record<number, string>>({});
+  const [answers,        setAnswers]       = useState<Record<number, string | DrawingAnswer>>({});
   const [showHint,       setShowHint]      = useState(false);
   const [submitting,     setSubmitting]    = useState(false);
   const [result,         setResult]        = useState<GradeResult | null>(null);
@@ -106,7 +115,14 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
   async function handleSubmit() {
     setShowReview(false); setSubmitting(true);
     try {
-      const quizAnswers = questions.map((_, i) => ({ answer: answers[i] || '' }));
+      // B04: a drawing question's answer is an image, not text - send
+      // drawingBase64/drawingMime instead of (or in addition to) `answer`,
+      // matching the shape the backend's drawing/photo grading branch reads.
+      const quizAnswers = questions.map((_, i) => {
+        const a = answers[i];
+        if (isDrawingAnswer(a)) return { answer: '', drawingBase64: a.drawingBase64, drawingMime: a.drawingMime };
+        return { answer: a || '' };
+      });
       const ctrl1 = new AbortController();
       const t1 = setTimeout(() => ctrl1.abort(), 120_000);
       const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/${assignment.id}/submit`, {
@@ -394,6 +410,10 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
                   {(() => {
                     const ans = answers[i];
                     if (!ans) return <Text style={{ fontSize: 11, color: colors.accentRed, marginTop: 2, fontWeight: '600' }}>Not answered — tap to answer</Text>;
+                    // B04: a drawing answer is an image, not text - the
+                    // fill_blank-specific [revealed]/[attempt:N] parsing
+                    // below only ever applies to text answers.
+                    if (isDrawingAnswer(ans)) return <Text style={{ fontSize: 11, color: colors.accentGreen, marginTop: 2, fontWeight: '600' }}>Drawing submitted</Text>;
                     if (ans.startsWith('[revealed]')) return <Text style={{ fontSize: 11, color: colors.accentRed, marginTop: 2, fontWeight: '600' }}>Revealed: {ans.replace(/^\[revealed\]\s*/, '')}</Text>;
                     const attemptMatch = ans.match(/^\[attempt:(\d+)\]\s*/);
                     const displayAns = attemptMatch ? ans.replace(/^\[attempt:\d+\]\s*/, '') : ans;
@@ -460,7 +480,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
             {/* Question */}
             <View style={[styles.questionCard, { borderColor: color + '30', backgroundColor: color + '06' }]}>
               <View style={[styles.qNumBadge, { backgroundColor: color }]}>
-                <Text style={styles.qNumBadgeText}>Q{currentQ + 1} - {q.type === 'mcq' ? 'Multiple Choice' : q.type === 'fill_blank' ? 'Fill in the Blank' : 'Short Answer'}</Text>
+                <Text style={styles.qNumBadgeText}>Q{currentQ + 1} - {q.type === 'mcq' ? 'Multiple Choice' : q.type === 'fill_blank' ? 'Fill in the Blank' : q.type === 'drawing' ? 'Drawing' : 'Short Answer'}</Text>
               </View>
               <Text style={styles.questionText}>{q.question}</Text>
 
@@ -508,9 +528,9 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
                 {answers[currentQ] ? (
                   <View style={{ gap: 6 }}>
                     <View style={{ padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: color + '60', backgroundColor: color + '08' }}>
-                      <Text style={{ fontSize: 14, color: colors.textMain, lineHeight: 22 }}>{answers[currentQ]}</Text>
+                      <Text style={{ fontSize: 14, color: colors.textMain, lineHeight: 22 }}>{answers[currentQ] as string}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => { setAnswers(prev => { const n = {...prev}; delete n[currentQ]; return n; }); setShortInput(answers[currentQ] || ''); }}
+                    <TouchableOpacity onPress={() => { setAnswers(prev => { const n = {...prev}; delete n[currentQ]; return n; }); setShortInput((answers[currentQ] as string) || ''); }}
                       activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center' }}>
                       <Feather name="edit-2" size={12} color={color} />
                       <Text style={{ fontSize: 12, color, fontWeight: '600' }}>Edit answer</Text>
@@ -540,12 +560,30 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
               </View>
             )}
 
+            {/* B04: Drawing — reuses the same PhotoUploadStep component
+                ScaffoldedModal already uses for drawing/art_creation steps. */}
+            {q.type === 'drawing' && (() => {
+              const drawingAns = answers[currentQ];
+              const currentDrawing = isDrawingAnswer(drawingAns) ? drawingAns : null;
+              return (
+                <PhotoUploadStep
+                  stepColor={color}
+                  colors={colors}
+                  drawingBase64={currentDrawing?.drawingBase64 ?? null}
+                  drawingMime={currentDrawing?.drawingMime ?? null}
+                  isArt={false}
+                  onCapture={(b64, mime) => setAnswers(prev => ({ ...prev, [currentQ]: { drawingBase64: b64, drawingMime: mime } }))}
+                />
+              );
+            })()}
+
             {/* Fill in the blank */}
             {q.type === 'fill_blank' && (() => {
               const fb = fillFeedback[currentQ];
               const isRevealed = fb === 'revealed';
-              const isCorrect  = answers[currentQ] && !answers[currentQ].startsWith('[revealed]');
-              const displayAnswer = (answers[currentQ] || '').replace(/^\[attempt:\d+\]\s*/, '');
+              const fillAns = answers[currentQ] as string | undefined;
+              const isCorrect  = fillAns && !fillAns.startsWith('[revealed]');
+              const displayAnswer = (fillAns || '').replace(/^\[attempt:\d+\]\s*/, '');
               const attemptNum = fillCorrectAttempt[currentQ] || 1;
 
               if (isCorrect) return (

@@ -33,7 +33,7 @@ export interface Assignment {
 export interface QuizQuestion {
   id: string;
   question: string;
-  type: 'mcq' | 'short_answer' | 'fill_blank';
+  type: 'mcq' | 'short_answer' | 'fill_blank' | 'drawing' | 'photo';
   options?: string[];
   correct: string;
   hint?: string;

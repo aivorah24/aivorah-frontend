@@ -24,7 +24,7 @@ afterEach(() => { global.fetch = realFetch; alertSpy.mockRestore(); });
 
 const BASE_ARGS = {
   user: { school: 'Green Valley' }, title: '', setTitle: () => {}, chapter: '', setChapter: () => {},
-  subject: 'Maths', setSubject: () => {}, grade: 'Grade 4', setGrade: () => {}, curriculum: 'IB PYP',
+  subject: 'Maths', setSubject: () => {}, grade: 'Grade 4', setGrade: () => {}, curriculum: 'IB PYP', setCurriculum: () => {},
   gradeOptions: ['Grade 4'], effectiveGrade: 'Grade 4', effectiveCurriculum: 'IB PYP',
   setSelectedLanguage: () => {}, setSuccessCriteria: () => {}, setTeacherNotes: () => {},
   setIbWordBank: () => {}, setIbStamps: () => {}, setFormError: () => {},
@@ -125,5 +125,113 @@ describe('useUploadWorksheet.generateInteractiveQuiz integration', () => {
     await render(<Harness docFiles={[]} />);
     await user.press(screen.getByTestId('generate'));
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+});
+
+// B04 — generateQuizFromExtracted() must never force a drawing-response
+// question through MCQ conversion (the original reported bug: the teacher's
+// generated activity treated "Draw your farm" as a paper-only task with no
+// submission path, because it got converted into a multiple-choice question
+// like every other extracted question).
+describe('useUploadWorksheet.generateQuizFromExtracted — drawing question preservation (B04)', () => {
+  // Renders the hook, seeds extractedQuestions, waits for that state update
+  // to actually land (avoids a stale-closure bug: capturing the hook object
+  // BEFORE setExtractedQuestions's re-render would call
+  // generateQuizFromExtracted against the OLD, empty extractedQuestions),
+  // then calls generateQuizFromExtracted from the freshest hook reference.
+  async function runWithExtractedQuestions(extracted: any[], extraArgs: any = {}) {
+    let latest: any;
+    const args = { ...BASE_ARGS, ...extraArgs };
+    function Harness2() {
+      const h = useUploadWorksheet(args);
+      latest = h;
+      return null;
+    }
+    await render(<Harness2 />);
+    await waitFor(() => expect(latest).toBeDefined());
+    latest.setExtractedQuestions(extracted);
+    await waitFor(() => expect(latest.extractedQuestions).toHaveLength(extracted.length));
+    await latest.generateQuizFromExtracted();
+  }
+
+  test('THE ORIGINAL GAP: a drawing question used to be sent through MCQ conversion along with every text question', async () => {
+    let mcqCallBody: any = null;
+    global.fetch = jest.fn().mockImplementation((url: string, opts: any) => {
+      if (String(url).includes('/pdf-to-quiz')) return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      if (String(url).includes('/generate-quiz')) {
+        mcqCallBody = JSON.parse(opts.body);
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [{ question: 'Mock MCQ', type: 'mcq', options: ['A', 'B', 'C', 'D'], correct: 'A' }] }) });
+      }
+      throw new Error('unexpected url: ' + url);
+    }) as any;
+
+    await runWithExtractedQuestions([
+      { question: 'Draw your farm in the space provided.', answer: '', comment: '', responseType: 'drawing' },
+    ]);
+
+    // Before the fix, this would be called with the drawing question's text
+    // baked into the "Convert these worksheet questions into MCQ format"
+    // prompt - documented here as the gap, verified not to happen below.
+    expect(mcqCallBody).toBeNull();
+  });
+
+  test('a drawing-only worksheet is preserved as its own quiz question type, not converted to MCQ, with zero network calls', async () => {
+    const setQuizQuestions = jest.fn();
+    const setType = jest.fn();
+    // No text questions at all - generateQuizFromExtracted must not call
+    // pdf-to-quiz/generate-quiz for a drawing-only extraction.
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      throw new Error('unexpected url: ' + url);
+    }) as any;
+
+    await runWithExtractedQuestions(
+      [{ question: 'Draw your farm in the space provided.', answer: '', comment: '', responseType: 'drawing' }],
+      { setQuizQuestions, setType },
+    );
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(setQuizQuestions).toHaveBeenCalledWith([{ question: 'Draw your farm in the space provided.', type: 'drawing', correct: '' }]);
+    expect(setType).toHaveBeenCalledWith('quiz');
+  });
+
+  test('a mix of text and drawing questions: text goes through MCQ conversion, drawing is preserved, both end up in the final quiz', async () => {
+    const setQuizQuestions = jest.fn();
+    const setType = jest.fn();
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (String(url).includes('/pdf-to-quiz')) return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      if (String(url).includes('/generate-quiz')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [{ question: 'What is 2+2?', type: 'mcq', options: ['3', '4', '5', '6'], correct: '4' }] }) });
+      throw new Error('unexpected url: ' + url);
+    }) as any;
+
+    await runWithExtractedQuestions(
+      [
+        { question: 'What is 2+2?', answer: '', comment: '', responseType: 'text' },
+        { question: 'Draw your farm in the space provided.', answer: '', comment: '', responseType: 'drawing' },
+      ],
+      { setQuizQuestions, setType },
+    );
+
+    expect(setQuizQuestions).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ type: 'mcq' }),
+      expect.objectContaining({ type: 'drawing', question: 'Draw your farm in the space provided.' }),
+    ]));
+  });
+
+  test('REGRESSION: a worksheet with ONLY text questions still converts to MCQ exactly as before', async () => {
+    const setQuizQuestions = jest.fn();
+    const setType = jest.fn();
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (String(url).includes('/pdf-to-quiz')) return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      if (String(url).includes('/generate-quiz')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ questions: [{ question: 'What is 2+2?', type: 'mcq', options: ['3', '4', '5', '6'], correct: '4' }] }) });
+      throw new Error('unexpected url: ' + url);
+    }) as any;
+
+    await runWithExtractedQuestions(
+      [{ question: 'What is 2+2?', answer: '', comment: '', responseType: 'text' }],
+      { setQuizQuestions, setType },
+    );
+
+    expect(setQuizQuestions).toHaveBeenCalledWith([{ question: 'What is 2+2?', type: 'mcq', options: ['3', '4', '5', '6'], correct: '4' }]);
+    expect(setType).toHaveBeenCalledWith('quiz');
   });
 });

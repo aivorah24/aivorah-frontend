@@ -5,6 +5,7 @@ import { pdfToImages, imagesToPdfBase64 } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
 import { pollJob } from '../services/jobsService';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseUploadWorksheetArgs {
   user: any;
@@ -17,6 +18,7 @@ interface UseUploadWorksheetArgs {
   grade: string;
   setGrade: (v: string) => void;
   curriculum: string;
+  setCurriculum: (v: string) => void;
   gradeOptions: string[];
   effectiveGrade: string;
   effectiveCurriculum: string;
@@ -38,6 +40,7 @@ interface UseUploadWorksheetArgs {
 // useBulkUpload's shape.
 export function useUploadWorksheet({
   user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
+  setCurriculum,
   gradeOptions, effectiveGrade, effectiveCurriculum, setSelectedLanguage,
   setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
   quizDifficulty, setQuizQuestions, setType,
@@ -46,8 +49,11 @@ export function useUploadWorksheet({
   const originalPdfRef = React.useRef<{ name: string; base64: string; mime: string } | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [extractingQuestions, setExtractingQuestions] = useState(false);
-  // Extracted questions from PDF/image — editable by teacher before publishing
-  const [extractedQuestions, setExtractedQuestions] = useState<{ question: string; answer: string; comment: string }[]>([]);
+  // Extracted questions from PDF/image — editable by teacher before publishing.
+  // responseType ('text' | 'drawing') comes from extraction (B04) - a
+  // drawing-response question must never be force-converted into MCQ, see
+  // generateQuizFromExtracted() below.
+  const [extractedQuestions, setExtractedQuestions] = useState<{ question: string; answer: string; comment: string; responseType?: 'text' | 'drawing' }[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [generatingFromExtracted, setGeneratingFromExtracted] = useState(false);
   // Interactive quiz generation (Claude Vision primary, Mistral fallback)
@@ -170,8 +176,14 @@ export function useUploadWorksheet({
           const allBase64 = uploadedFiles.map(f => ({ base64: f.base64, mimeType: f.mime }));
           // Queued (Kafka/db job) instead of one blocking request — the browser
           // tab polls for the result rather than holding a connection open for
-          // the whole AI extraction pipeline.
-          const jobRes = await fetch(`${SERVER_URL}/assignments/extract-questions-async`, {
+          // the whole AI extraction pipeline. Ported to ASSIGNMENTS_SERVER_URL
+          // 2026-09-10 (B02/B04 follow-up) - extractWorksheetContent now lives
+          // in aivorah-assignments-service, not the monolith. pollJob() below
+          // still reads GET /jobs/:id from the monolith deliberately - both
+          // services share the same upload_jobs table (same Supabase
+          // project), so that read is correct regardless of which service
+          // actually processed the job.
+          const jobRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/extract-questions-async`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(
@@ -217,6 +229,19 @@ export function useUploadWorksheet({
               else if (gradeStr) setGrade(`Grade ${gradeStr}`);
               else setGrade(rawGrade);
             }
+            // B02: the worksheet's own curriculum (e.g. "PYP 2" -> "IB PYP")
+            // must win over the teacher's profile default (e.g. "CBSE") -
+            // extractWorksheetContent() already normalizes this to a
+            // canonical name server-side, only when the page actually shows
+            // curriculum evidence (empty string otherwise) - mirrors the
+            // language block above (direct set, no guessing) rather than
+            // grade's fallback chain, since there's nothing to reconstruct.
+            // useTeacherCurriculumGrade's curriculumOptions already makes
+            // this value selectable even if outside the teacher's usual list
+            // (same reasoning already documented there for grade).
+            if (eData.curriculum) {
+              setCurriculum(String(eData.curriculum).trim());
+            }
             // Purpose and learning outcomes no longer auto-fill Note — teacher writes their own notes
             // if (eData.purpose) setNote(prev => prev || eData.purpose);
             // if (eData.learningOutcomes) ... removed to avoid duplication
@@ -236,7 +261,10 @@ export function useUploadWorksheet({
                 const qText = typeof q === 'string' ? q : q.text || q;
                 const needsImg = typeof q === 'object' ? !!q.needsImage : false;
                 const pageIdx = typeof q === 'object' ? q.pageIndex : undefined;
-                return { question: qText, answer: '', comment: '', pageIndex: pageIdx, needsImage: needsImg };
+                // B04: preserve the extraction's responseType so a real
+                // drawing task never gets force-converted into MCQ below.
+                const responseType = (typeof q === 'object' && q.responseType === 'drawing') ? 'drawing' : 'text';
+                return { question: qText, answer: '', comment: '', pageIndex: pageIdx, needsImage: needsImg, responseType };
               });
               setExtractedQuestions(prev => [...prev, ...mappedQuestions]);
             }
@@ -361,30 +389,46 @@ export function useUploadWorksheet({
     if (qs.length === 0) return;
     setGeneratingFromExtracted(true);
     try {
-      const prompt = qs.map((q, i) => `${i + 1}. ${q.question}${q.answer ? ` (Answer: ${q.answer})` : ''}`).join('\n');
-      const res = await fetch(`${SERVER_URL}/assignments/pdf-to-quiz`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileBase64: '', mimeType: 'text/plain',
-          subject, grade,
-          difficulty: quizDifficulty || 'medium',
-          count: qs.length,
-        }),
-      });
-      // We'll use a direct LLM call via the existing generate-quiz with the questions as teacherNotes
-      const res2 = await fetch(`${SERVER_URL}/assignments/generate-quiz`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject, chapter: chapter.trim(), grade, curriculum,
-          difficulty: quizDifficulty, count: qs.length,
-          teacherNotes: `Convert these worksheet questions into MCQ format. Use these exact questions:\n${prompt}`,
-        }),
-      });
-      const data = await res2.json();
-      if (res2.ok && Array.isArray(data.questions) && data.questions.length > 0) {
-        setQuizQuestions(data.questions);
+      // B04: a drawing-response question (e.g. "Draw your farm") must never
+      // be sent through MCQ conversion below - that would destroy the one
+      // thing that made it a drawing task in the first place. Only text
+      // questions go through the AI MCQ-conversion call; drawing questions
+      // are passed straight through as their own quiz question type,
+      // exactly as extraction identified them.
+      const textQs = qs.filter(q => q.responseType !== 'drawing');
+      const drawingQs = qs.filter(q => q.responseType === 'drawing');
+      const drawingQuizQuestions = drawingQs.map(q => ({ question: q.question, type: 'drawing', correct: '' }));
+
+      let mcqQuizQuestions: any[] = [];
+      if (textQs.length > 0) {
+        const prompt = textQs.map((q, i) => `${i + 1}. ${q.question}${q.answer ? ` (Answer: ${q.answer})` : ''}`).join('\n');
+        await fetch(`${SERVER_URL}/assignments/pdf-to-quiz`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileBase64: '', mimeType: 'text/plain',
+            subject, grade,
+            difficulty: quizDifficulty || 'medium',
+            count: textQs.length,
+          }),
+        });
+        // We'll use a direct LLM call via the existing generate-quiz with the questions as teacherNotes
+        const res2 = await fetch(`${SERVER_URL}/assignments/generate-quiz`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject, chapter: chapter.trim(), grade, curriculum,
+            difficulty: quizDifficulty, count: textQs.length,
+            teacherNotes: `Convert these worksheet questions into MCQ format. Use these exact questions:\n${prompt}`,
+          }),
+        });
+        const data = await res2.json();
+        if (res2.ok && Array.isArray(data.questions)) mcqQuizQuestions = data.questions;
+      }
+
+      const combined = [...mcqQuizQuestions, ...drawingQuizQuestions];
+      if (combined.length > 0) {
+        setQuizQuestions(combined);
         setType('quiz');
       }
     } catch {}
