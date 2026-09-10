@@ -1,16 +1,10 @@
 version: 2.1
 
-parameters:
-  account_filter:
-    type: string
-    # Regular CI only runs the 6-spec smoke suite (smoke_e2e job), which
-    # needs just these 3 accounts (parent-a/student-a/teacher-a) for their
-    # storageState - not the full ~64-account pool. manual_full_e2e can
-    # still override this via a pipeline parameter for a real full run.
-    default: "parent-a,student-a,teacher-a"
-  run_full_e2e:
-    type: boolean
-    default: false
+# E2E tests do NOT live here. The canonical E2E suite is the aivorah-e2e-tests
+# repo - this pipeline never runs Playwright directly. Once this repo's build
+# passes, it fires a repository_dispatch into aivorah-e2e-tests, which runs
+# its own smoke suite against this PR's real deployed Vercel preview and
+# reports the result back here as a commit status. See trigger-e2e below.
 
 executors:
   node:
@@ -19,7 +13,7 @@ executors:
     working_directory: ~/project
 
 jobs:
-  build_and_setup:
+  build_and_test:
     executor: node
     steps:
       - checkout
@@ -27,7 +21,7 @@ jobs:
           keys:
             - npm-deps-v1-{{ checksum "package-lock.json" }}
       - run:
-          name: Install Frontend Dependencies
+          name: Install Dependencies
           command: npm ci
       - save_cache:
           key: npm-deps-v1-{{ checksum "package-lock.json" }}
@@ -48,193 +42,60 @@ jobs:
       - run:
           name: Build Web Application
           command: npm run vercel-build
+
+  trigger-e2e:
+    executor: node
+    steps:
       - run:
-          name: Install E2E Dependencies
+          name: Find this commit's Vercel preview URL, then dispatch to aivorah-e2e-tests
           command: |
-            cd e2e
-            npm ci
-            npx playwright install --with-deps chromium chrome
-      - run:
-          name: Run E2E Setup (Warmup + Login + Snapshot)
-          command: |
-            cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
+            # Vercel's GitHub integration posts a Deployment + DeploymentStatus
+            # for every commit it builds. Poll GitHub's Deployments API for it
+            # instead of guessing the URL from a branch-name slug (Vercel's
+            # slugging/truncation/collision rules aren't worth reimplementing).
+            SHA="$CIRCLE_SHA1"
+            REPO="aivorah24/aivorah-frontend"
+            AUTH="Authorization: token $GH_DISPATCH_TOKEN"
+            PREVIEW_URL=""
 
-            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
-
-            # E2E_ENV_FILE is a large multi-line paste into CircleCI's UI, which has
-            # silently truncated large values before. Fall back to small, dedicated
-            # project env vars for the keys this step hard-requires, rather than
-            # depending on the whole blob surviving one perfect paste.
-            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
-            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
-
-            for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
-              grep -q "^${k}=." .env || { echo "E2E_ENV_FILE is missing required key ${k} (and no dedicated ${k} project env var is set as a fallback)"; exit 1; }
-            done
-            echo "[ci] .env loaded: $(wc -c < .env) bytes, $(grep -c '=' .env) keys"
-
-            cp serve.json ../dist/serve.json
-            npx serve -s ../dist -l 3006 > /tmp/serve.log 2>&1 &
-            SERVER_PID=$!
-
-            ready=false
             for i in $(seq 1 30); do
-              if curl -sf http://localhost:3006/ > /dev/null; then
-                ready=true
-                break
+              DEPLOYMENT_ID=$(curl -sf -H "$AUTH" \
+                "https://api.github.com/repos/$REPO/deployments?sha=$SHA&environment=Preview" \
+                | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d[0] && d[0].id || '')" 2>/dev/null || true)
+
+              if [ -n "$DEPLOYMENT_ID" ]; then
+                PREVIEW_URL=$(curl -sf -H "$AUTH" \
+                  "https://api.github.com/repos/$REPO/deployments/$DEPLOYMENT_ID/statuses" \
+                  | node -e "
+                      const s = JSON.parse(require('fs').readFileSync(0,'utf8'));
+                      const ok = s.find(x => x.state === 'success' && x.environment_url);
+                      console.log(ok ? ok.environment_url : '');
+                    " 2>/dev/null || true)
+                [ -n "$PREVIEW_URL" ] && break
               fi
-              sleep 1
+              echo "[trigger-e2e] Vercel preview not ready yet (attempt $i/30), waiting 10s..."
+              sleep 10
             done
-            if [ "$ready" != "true" ]; then
-              echo "serve never became ready on :3006 after 30s"
-              cat /tmp/serve.log
-              pkill -P "$SERVER_PID" || true
-              kill "$SERVER_PID" || true
-              exit 1
+
+            if [ -z "$PREVIEW_URL" ]; then
+              echo "[trigger-e2e] No successful Vercel preview deployment found for $SHA after 5 minutes - skipping E2E dispatch (build/lint/unit/integration already gated this PR)."
+              exit 0
             fi
 
-            node tests/ci/setup.mjs 2>&1 | tee /tmp/setup-output.log
-            SETUP_EXIT=${PIPESTATUS[0]}
-
-            pkill -P "$SERVER_PID" || true
-            kill "$SERVER_PID" || true
-
-            exit $SETUP_EXIT
-          environment:
-            ACCOUNT_FILTER: << pipeline.parameters.account_filter >>
-            BASE_URL: http://localhost:3006
-      - store_artifacts:
-          path: /tmp/setup-output.log
-          destination: e2e-setup-diagnostics/setup-output.log
-      - store_artifacts:
-          path: /tmp/serve.log
-          destination: e2e-setup-diagnostics/serve.log
-      - persist_to_workspace:
-          root: .
-          paths:
-            - dist
-            - e2e/.auth
-            - e2e/.profile-snapshot.json
-
-  smoke_e2e:
-    executor: node
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Install E2E Dependencies
-          command: |
-            cd e2e
-            npm ci
-            npx playwright install --with-deps chromium chrome
-      - run:
-          name: Write env file
-          command: |
-            cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
-            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
-            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
-            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
-      - run:
-          name: Run Smoke Specs
-          command: |
-            cd e2e
-            npx playwright test \
-              tests/parent/b2b-login.spec.js \
-              tests/parent/dashboard/dashboard.spec.js \
-              tests/student/b2b-login.spec.js \
-              tests/student/learning-paths.spec.js \
-              tests/teacher/b2b-login.spec.js \
-              tests/teacher/dashboard/dashboard.spec.js \
-              --workers=2 --reporter=blob
-          environment:
-            PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
-      - store_artifacts:
-          path: e2e/blob-report
-          destination: blob-report-smoke
-
-  e2e_tests:
-    executor: node
-    parallelism: 4
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Install E2E Dependencies
-          command: |
-            cd e2e
-            npm ci
-            npx playwright install --with-deps chromium chrome
-      - run:
-          name: Write env file
-          command: |
-            cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
-            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
-            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
-            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
-      - run:
-          name: Run Playwright Shard
-          command: |
-            cd e2e
-            npx playwright test --shard=$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL --workers=2 --reporter=blob
-          environment:
-            PLAYWRIGHT_SKIP_GLOBAL_HOOKS: "true"
-      - store_artifacts:
-          path: e2e/blob-report
-          destination: blob-report-<< pipeline.number >>
-
-  teardown_and_report:
-    executor: node
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Install E2E Dependencies
-          command: |
-            cd e2e
-            npm ci
-      - run:
-          name: Write env file
-          command: |
-            cd e2e
-            printf '%s\n' "$E2E_ENV_FILE" > .env
-            test -s .env || { echo "e2e/.env is empty - E2E_ENV_FILE env var missing or not set"; exit 1; }
-            grep -q "^SUPABASE_URL=." .env || { [ -n "$SUPABASE_URL" ] && echo "SUPABASE_URL=$SUPABASE_URL" >> .env; }
-            grep -q "^SUPABASE_SERVICE_ROLE_KEY=." .env || { [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env; }
-      - run:
-          name: Teardown Mutated Accounts
-          command: |
-            cd e2e
-            node tests/ci/teardown.mjs
+            echo "[trigger-e2e] Preview URL: $PREVIEW_URL"
+            echo "[trigger-e2e] Dispatching to aivorah-e2e-tests..."
+            curl -sf -X POST \
+              -H "$AUTH" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/aivorah24/aivorah-e2e-tests/dispatches" \
+              -d "{\"event_type\":\"frontend-pr-preview\",\"client_payload\":{\"base_url\":\"$PREVIEW_URL\",\"sha\":\"$SHA\",\"source_repo\":\"$REPO\"}}"
+            echo "[trigger-e2e] Dispatched. aivorah-e2e-tests will report a commit status back on $SHA when its run finishes."
 
 workflows:
   version: 2
   ci:
-    when:
-      not: << pipeline.parameters.run_full_e2e >>
     jobs:
-      - build_and_setup
-      - smoke_e2e:
+      - build_and_test
+      - trigger-e2e:
           requires:
-            - build_and_setup
-      - teardown_and_report:
-          requires:
-            - build_and_setup
-            - smoke_e2e
-
-  manual_full_e2e:
-    when: << pipeline.parameters.run_full_e2e >>
-    jobs:
-      - build_and_setup
-      - e2e_tests:
-          requires:
-            - build_and_setup
-      - teardown_and_report:
-          requires:
-            - build_and_setup
-            - e2e_tests
+            - build_and_test

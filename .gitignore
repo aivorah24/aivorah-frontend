@@ -34,9 +34,6 @@ yarn-error.*
 .env
 .env*.local
 
-# saved browser sessions for e2e tests (may contain real login cookies)
-e2e/.auth/
-
 # typescript
 *.tsbuildinfo
 
