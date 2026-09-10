@@ -1,10 +1,13 @@
 version: 2.1
 
 # E2E tests do NOT live here. The canonical E2E suite is the aivorah-e2e-tests
-# repo - this pipeline never runs Playwright directly. Once this repo's build
-# passes, it fires a repository_dispatch into aivorah-e2e-tests, which runs
-# its own smoke suite against this PR's real deployed Vercel preview and
-# reports the result back here as a commit status. See trigger-e2e below.
+# repo, and it runs on its OWN CircleCI project (not GitHub Actions - that
+# repo's Actions billing/secrets setup is unreliable, confirmed by GitHub's
+# secrets API rejecting even trivial values with a 400). This pipeline never
+# runs Playwright directly. Once this repo's build passes, trigger-e2e finds
+# this commit's live Vercel preview URL, then triggers a pipeline in
+# aivorah-e2e-tests' own CircleCI project with that URL, which runs its smoke
+# suite against it and reports the result back here as a commit status.
 
 executors:
   node:
@@ -83,13 +86,13 @@ jobs:
             fi
 
             echo "[trigger-e2e] Preview URL: $PREVIEW_URL"
-            echo "[trigger-e2e] Dispatching to aivorah-e2e-tests..."
+            echo "[trigger-e2e] Triggering a pipeline in aivorah-e2e-tests' CircleCI project..."
             curl -sf -X POST \
-              -H "$AUTH" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/aivorah24/aivorah-e2e-tests/dispatches" \
-              -d "{\"event_type\":\"frontend-pr-preview\",\"client_payload\":{\"base_url\":\"$PREVIEW_URL\",\"sha\":\"$SHA\",\"source_repo\":\"$REPO\"}}"
-            echo "[trigger-e2e] Dispatched. aivorah-e2e-tests will report a commit status back on $SHA when its run finishes."
+              -H "Circle-Token: $CIRCLECI_DISPATCH_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://circleci.com/api/v2/project/gh/aivorah24/aivorah-e2e-tests/pipeline" \
+              -d "{\"branch\":\"main\",\"parameters\":{\"run_pr_preview_check\":true,\"base_url\":\"$PREVIEW_URL\",\"target_sha\":\"$SHA\",\"target_repo\":\"$REPO\"}}"
+            echo "[trigger-e2e] Triggered. aivorah-e2e-tests will report a commit status back on $SHA when its run finishes."
 
 workflows:
   version: 2
