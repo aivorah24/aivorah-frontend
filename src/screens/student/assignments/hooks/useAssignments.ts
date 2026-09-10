@@ -42,6 +42,23 @@ function normalizeQuizQuestions(rawQuestions: any[]): QuizQuestion[] {
       return acc;
     }
 
+    // drawing/photo type (B04) - same no-options shape as fill_blank. Without
+    // this case these fell through to the mcq/short_answer branch below,
+    // which drops anything without exactly 4 options - losing the question
+    // entirely and triggering the generate-quiz fallback in hydrateQuizQuestions.
+    if (q.type === 'drawing' || q.type === 'photo') {
+      acc.push({
+        id: String(q.id || `q${i + 1}`),
+        question: questionText,
+        type: q.type,
+        options: [],
+        correct: typeof q.correct === 'string' ? q.correct.trim() : '',
+        hint: q.hint ? String(q.hint) : '',
+        explanation: q.explanation ? String(q.explanation) : '',
+      });
+      return acc;
+    }
+
     const normalizedType: 'mcq' | 'short_answer' =
       (q.type === 'short_answer' || !optionTexts || optionTexts.length === 0) ? 'short_answer' : 'mcq';
     if (normalizedType !== 'mcq') return acc;

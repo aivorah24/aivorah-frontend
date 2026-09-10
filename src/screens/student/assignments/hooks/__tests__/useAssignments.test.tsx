@@ -51,6 +51,8 @@ function Harness({ highlightId }: { highlightId?: string }) {
       <Text testID="activeId">{h.activeAssignment?.id ?? ''}</Text>
       <Text testID="activeQuizCount">{h.activeAssignment?.quizQuestions?.length ?? -1}</Text>
       <Text testID="activeFillBlankCorrect">{h.activeAssignment?.quizQuestions?.[0]?.type === 'fill_blank' ? h.activeAssignment.quizQuestions[0].correct : ''}</Text>
+      <Text testID="activeQuizType0">{h.activeAssignment?.quizQuestions?.[0]?.type ?? ''}</Text>
+      <Text testID="activeQuizQuestion0">{h.activeAssignment?.quizQuestions?.[0]?.question ?? ''}</Text>
       <Text testID="openingId">{h.openingAssignmentId ?? ''}</Text>
       <Text testID="quizProgress">{JSON.stringify(h.quizProgress)}</Text>
       <Text testID="expandedExplain">{JSON.stringify(h.expandedExplain)}</Text>
@@ -304,6 +306,33 @@ describe('useAssignments — fill_blank quiz normalization', () => {
     await waitFor(() => expect(screen.getByTestId('activeQuizCount').props.children).toBe(1));
     // Correct answer is trimmed, and the fill_blank type/shape survives normalization.
     expect(screen.getByTestId('activeFillBlankCorrect').props.children).toBe('Paris');
+  });
+});
+
+describe('useAssignments — drawing/photo quiz normalization (B04)', () => {
+  test('opening a real quiz with a local drawing question preserves it, instead of dropping it and regenerating a bogus MCQ quiz', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue(jsonRes([baseAssignment({
+      id: 'a1', type: 'quiz', subject: 'Visual Arts',
+      quizQuestions: [{ id: 'q1', question: 'Draw your farm in the space provided.', type: 'drawing', correct: '' }],
+    })])) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('open-a1'));
+
+    // Before the fix: the local normalizeQuizQuestions() in this hook dropped
+    // the drawing question (no options, not fill_blank), local.length became
+    // 0, and openAssignment fell through to hydrateQuizQuestions()'s
+    // generate-quiz fallback - silently replacing it with an unrelated
+    // freshly-generated MCQ quiz. This assertion locks in that the REAL
+    // drawing question survives instead.
+    await waitFor(() => expect(screen.getByTestId('activeQuizCount').props.children).toBe(1));
+    expect(screen.getByTestId('activeQuizType0').props.children).toBe('drawing');
+    expect(screen.getByTestId('activeQuizQuestion0').props.children).toBe('Draw your farm in the space provided.');
+    // The generate-quiz fallback would have been a second fetch call beyond
+    // the initial assignments list load - confirms it was never reached.
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(1);
   });
 });
 
