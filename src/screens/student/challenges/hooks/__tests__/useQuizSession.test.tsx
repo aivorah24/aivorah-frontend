@@ -139,7 +139,7 @@ describe('useQuizSession — starting a challenge', () => {
     await waitFor(() => expect(screen.getByTestId('assignmentId').props.children).toBe('new-asg-99'));
   });
 
-  test('a failed auto-assign leaves assignmentId unset but still attempts the quiz fetch', async () => {
+  test('a failed auto-assign alerts and closes the quiz instead of letting an unsubmittable quiz open (Bug 2)', async () => {
     global.fetch = jest.fn((url: string) => {
       if (url.includes('/challenges/assign')) return jsonRes({}, false);
       if (url.includes('/ncert/quiz')) return jsonRes({ questions: [] });
@@ -151,10 +151,14 @@ describe('useQuizSession — starting a challenge', () => {
     await user.press(screen.getByTestId('startUnassigned'));
 
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(Alert.alert).toHaveBeenCalledWith('Could not start challenge', expect.any(String));
+    expect(screen.getByTestId('visible').props.children).toBe('false');
     expect(screen.getByTestId('assignmentId').props.children).toBe('null');
+    // The question-fetch never runs once assign has failed — nothing to answer.
+    expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/ncert/quiz'), expect.anything());
   });
 
-  test('a network error during start is swallowed, loading resolves to false', async () => {
+  test('a network error during start alerts and closes the quiz, not a silent failure (Bug 2)', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
     const user = userEvent.setup();
     await render(<Harness />);
@@ -162,6 +166,8 @@ describe('useQuizSession — starting a challenge', () => {
     await user.press(screen.getByTestId('start'));
 
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(Alert.alert).toHaveBeenCalledWith('Could not start challenge', expect.any(String));
+    expect(screen.getByTestId('visible').props.children).toBe('false');
   });
 });
 
@@ -238,7 +244,7 @@ describe('useQuizSession — timer', () => {
 });
 
 describe('useQuizSession — submitting', () => {
-  test('submitQuiz with no active assignment is a no-op', async () => {
+  test('submitQuiz with no active assignment alerts instead of submitting (Bug 2 — cannot proceed while not initialized)', async () => {
     global.fetch = jest.fn();
     const user = userEvent.setup();
     await render(<Harness />);
@@ -246,6 +252,7 @@ describe('useQuizSession — submitting', () => {
     await user.press(screen.getByTestId('submit'));
 
     expect(global.fetch).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Could not submit', expect.any(String));
   });
 
   test('scores real answers, posts the real score, awards XP, and reports completion', async () => {
@@ -305,7 +312,7 @@ describe('useQuizSession — submitting', () => {
     await waitFor(() => expect(screen.getByTestId('resultScore').props.children).toBe('100'));
   });
 
-  test('a non-ok /complete response leaves quizResult unset', async () => {
+  test('a non-ok /complete response alerts the student instead of silently doing nothing (Bug 2)', async () => {
     global.fetch = jest.fn((url: string) => {
       if (url.includes('/ncert/quiz')) return jsonRes({ questions: [{ question: 'Q1', options: ['A'], correct: 0 }] });
       if (url.includes('/complete')) return jsonRes({}, false);
@@ -321,6 +328,25 @@ describe('useQuizSession — submitting', () => {
 
     await waitFor(() => expect(screen.getByTestId('submitting').props.children).toBe('false'));
     expect(screen.getByTestId('resultScore').props.children).toBe('undefined');
+    expect(Alert.alert).toHaveBeenCalledWith('Could not submit', expect.any(String));
+  });
+
+  test('a network error during submit alerts instead of silently doing nothing (Bug 2)', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/ncert/quiz')) return jsonRes({ questions: [{ question: 'Q1', options: ['A'], correct: 0 }] });
+      if (url.includes('/complete')) return Promise.reject(new Error('down'));
+      return jsonRes({});
+    }) as any;
+    const user = userEvent.setup();
+    await render(<Harness />);
+
+    await user.press(screen.getByTestId('start'));
+    await waitFor(() => expect(screen.getByTestId('questionsCount').props.children).toBe(1));
+    await user.press(screen.getByTestId('answerAll'));
+    await user.press(screen.getByTestId('submit'));
+
+    await waitFor(() => expect(screen.getByTestId('submitting').props.children).toBe('false'));
+    expect(Alert.alert).toHaveBeenCalledWith('Could not submit', expect.any(String));
   });
 });
 
