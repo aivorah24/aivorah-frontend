@@ -138,7 +138,15 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 f.title = 'Quiz Preview';
                 f.onload = () => {
                   try {
-                    const h = f.contentDocument?.documentElement?.scrollHeight;
+                    const doc = f.contentDocument;
+                    // The outer wrapper div is the only element meant to scroll - the
+                    // iframe itself is sized to match its content height below, so its
+                    // OWN document must never grow its own scrollbar too. Without this,
+                    // rounding in scrollHeight (or content that reflows after this fires,
+                    // e.g. late-loading fonts/images) leaves a second, inner scrollbar.
+                    if (doc?.documentElement) doc.documentElement.style.overflow = 'hidden';
+                    if (doc?.body) doc.body.style.overflow = 'hidden';
+                    const h = doc?.documentElement?.scrollHeight;
                     if (h && h > 100) f.style.height = h + 'px';
                   } catch {}
                   URL.revokeObjectURL(url);
