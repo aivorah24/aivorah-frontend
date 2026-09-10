@@ -11,7 +11,7 @@ This file is an INDEX, not the architecture. Read the relevant `docs/*.md` file 
 - API documentation status (no OpenAPI specs exist) → `docs/API_MAP.md`
 
 ## Hard architectural rules — do not violate these
-1. **E2E tests belong in `aivorah-e2e-tests`.** That is the canonical E2E repo. `aivorah-frontend/e2e/` is an embedded legacy copy from a 2026-08-29 submodule-to-directory conversion — it is NOT canonical, NOT the source of truth, and is a pending cleanup/migration item. Do not add new E2E tests there. Do not describe it as canonical in any future work.
+1. **E2E tests belong in `aivorah-e2e-tests`.** That is the canonical E2E repo — the only one. The former `aivorah-frontend/e2e/` embedded copy (a legacy leftover from a 2026-08-29 submodule-to-directory conversion) was deleted (2026-09-10); do not recreate it. CircleCI here no longer runs Playwright at all — after `build_and_test` passes, a `trigger-e2e` job dispatches a `repository_dispatch` to `aivorah-e2e-tests` with this commit's live Vercel preview URL; that repo runs its own smoke suite against it and reports a commit status back here.
 2. **The monolith is `ai-mentor/server`** (Node/Express) + a separate Python half `ai-mentor/backend` (RAG/Qdrant). Never edit the monolith incidentally — only as a deliberate, scoped task. Never add NEW dependencies on it. Check `docs/SERVICE_MAP.md` for whether a feature already has a dedicated microservice before assuming monolith use.
 3. **15 microservices, 1 frontend, 1 E2E repo, 1 monolith, 1 db-schema repo = 19 repos total.** Full list in `REPO_MAP.md`.
 
