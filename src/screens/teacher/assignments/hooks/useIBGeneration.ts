@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { StepType, TaskStep } from '../types';
 import { STEP_DEFAULTS } from '../constants';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseIBGenerationArgs {
   title: string;
@@ -42,7 +42,7 @@ export function useIBGeneration({
     if (!topic) { setFormError('Please fill in the Title or Chapter / Topic field before generating'); return; }
     setGeneratingIB(true); setFormError('');
     try {
-      const res = await fetch(`${SERVER_URL}/assignments/generate-ibpyp`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-ibpyp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
