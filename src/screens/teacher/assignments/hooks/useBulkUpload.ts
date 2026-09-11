@@ -68,7 +68,7 @@ export function useBulkUpload({
         try {
           let working: { name: string; base64: string; mime: string } = { name: item.name, base64: item.base64, mime: item.mime };
           if (working.mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const dRes = await fetch(`${SERVER_URL}/assignments/docx-to-pdf`, {
+            const dRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/docx-to-pdf`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileBase64: working.base64 }),
             });

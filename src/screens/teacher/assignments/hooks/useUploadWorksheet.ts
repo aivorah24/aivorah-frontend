@@ -95,7 +95,7 @@ export function useUploadWorksheet({
         if (fd.mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
           try {
             console.log('[upload] Converting DOCX to PDF:', fd.name);
-            const dRes = await fetch(`${SERVER_URL}/assignments/docx-to-pdf`, {
+            const dRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/docx-to-pdf`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileBase64: fd.base64 }),
