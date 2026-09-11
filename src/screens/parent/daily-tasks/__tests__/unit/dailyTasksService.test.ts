@@ -1,6 +1,6 @@
 import * as dailyTasksService from '../../services/dailyTasksService';
 import DAILY_HABITS_SERVER_URL from '../../../../../config/dailyHabitsServerUrl';
-import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
+import PARENT_SERVER_URL from '../../../../../config/parentServerUrl';
 
 global.fetch = jest.fn();
 
@@ -10,14 +10,19 @@ describe('dailyTasksService', () => {
   });
 
   describe('fetchChildren', () => {
-    it('calls aivorah-students-service\'s children endpoint and returns the list', async () => {
+    // Regression (2026-09-11): this used to call aivorah-students-service,
+    // whose parent_children data is empty for real accounts — every real
+    // parent/child link is created exclusively through the monolith (see
+    // parentMyKidsService.ts). A freshly-added child showed up on My Kids
+    // but never on Daily Tasks. Must read the same source of truth.
+    it('calls the same backend My Kids uses (the monolith via PARENT_SERVER_URL) and returns the list', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce([{ id: 'c1', name: 'Kid' }]),
       });
 
       const res = await dailyTasksService.fetchChildren('parent@test.com');
-      expect(fetch).toHaveBeenCalledWith(`${STUDENTS_SERVER_URL}/parent/parent%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${PARENT_SERVER_URL}/parent/parent%40test.com/children`);
       expect(res).toEqual([{ id: 'c1', name: 'Kid' }]);
     });
 
