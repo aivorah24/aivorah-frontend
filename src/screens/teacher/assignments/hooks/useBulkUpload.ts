@@ -5,7 +5,6 @@ import { pdfToImages } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
 import { groupedImageIdSet, resolveImageGroups } from '../utils/imageGrouping';
 import { extractViaQueue } from '../services/jobsService';
-import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseBulkUploadArgs {
@@ -236,7 +235,7 @@ export function useBulkUpload({
       formData.append('grade', item.grade || 'Grade 3');
       formData.append('subject', item.subject || 'Mathematics');
       formData.append('school', user?.school || '');
-      const qRes = await fetch(`${SERVER_URL}${isImage ? '/quiz/generate-image' : '/quiz/generate'}`, { method: 'POST', body: formData });
+      const qRes = await fetch(`${ASSIGNMENTS_SERVER_URL}${isImage ? '/quiz/generate-image' : '/quiz/generate'}`, { method: 'POST', body: formData });
       const qData = await qRes.json();
       if (!qRes.ok || !qData.quiz) throw new Error(qData.error || 'Quiz generation failed');
 

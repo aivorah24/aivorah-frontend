@@ -4,7 +4,6 @@ import { SUBJECTS, LANGUAGES } from '../constants';
 import { pdfToImages, imagesToPdfBase64 } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
 import { pollJob } from '../services/jobsService';
-import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseUploadWorksheetArgs {
@@ -306,13 +305,13 @@ export function useUploadWorksheet({
         formData.append('grade', grade || effectiveGrade);
         formData.append('subject', subject || 'Mathematics');
         formData.append('school', user?.school || '');
-        const res = await fetch(`${SERVER_URL}/quiz/generate-image`, { method: 'POST', body: formData });
+        const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/generate-image`, { method: 'POST', body: formData });
         data = await res.json();
         if (!res.ok) data = { error: data.error || 'Failed to generate interactive quiz' };
       } else {
         // Queued (Kafka/db job) — the browser tab polls for the result rather
         // than holding a connection open for the whole AI generation pipeline.
-        const jobRes = await fetch(`${SERVER_URL}/quiz/generate-async`, {
+        const jobRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/generate-async`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -322,7 +321,7 @@ export function useUploadWorksheet({
         });
         const jobData = await jobRes.json();
         if (!jobRes.ok || !jobData.jobId) throw new Error(jobData.error || 'Could not start quiz generation.');
-        data = await pollJob(jobData.jobId, SERVER_URL);
+        data = await pollJob(jobData.jobId, ASSIGNMENTS_SERVER_URL);
       }
       if (data.quiz) {
         // Force school/curriculum to the teacher's REAL account values, always —
