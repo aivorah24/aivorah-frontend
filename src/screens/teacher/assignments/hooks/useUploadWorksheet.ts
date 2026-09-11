@@ -147,7 +147,7 @@ export function useUploadWorksheet({
       const uploadedFiles: { name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string }[] = [];
       for (const fd of fileDataArr) {
         try {
-          const res = await fetch(`${SERVER_URL}/assignments/upload-doc`, {
+          const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/upload-doc`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileBase64: fd.base64, fileName: fd.name, mimeType: fd.mime }),
@@ -363,7 +363,7 @@ export function useUploadWorksheet({
     setGeneratingFromExtracted(true);
     try {
       const prompt = qs.map((q, i) => `${i + 1}. ${q.question}${q.answer ? ` (Answer: ${q.answer})` : ''}`).join('\n');
-      const res = await fetch(`${SERVER_URL}/assignments/pdf-to-quiz`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/pdf-to-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
