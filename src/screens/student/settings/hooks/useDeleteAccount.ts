@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, deleteUser } from 'firebase/auth';
 import { auth } from '../../../../config/firebase';
-import SERVER_URL from '../../../../config/serverUrl';
+import AUTH_SERVER_URL from '../../../../config/authServerUrl';
 
 export function useDeleteAccount(isPasswordUser: boolean, isGoogleUser: boolean, logout: () => void) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -34,7 +34,7 @@ export function useDeleteAccount(isPasswordUser: boolean, isGoogleUser: boolean,
         // Delete from Supabase + Firebase Auth (server uses the Admin SDK, so this
         // works for any provider). Client deleteUser below is just a best-effort
         // fallback and must not block the flow if the server already removed it.
-        await fetch(`${SERVER_URL}/user/delete-account`, {
+        await fetch(`${AUTH_SERVER_URL}/user/delete-account`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: firebaseUser.email }),

@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useDeleteAccount } from '../useDeleteAccount';
+import AUTH_SERVER_URL from '../../../../../config/authServerUrl';
 
 jest.setTimeout(15000);
 
@@ -76,7 +77,7 @@ describe('useDeleteAccount — happy path', () => {
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalled());
     expect(mockReauthenticateWithCredential).toHaveBeenCalled();
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/delete-account'), expect.objectContaining({ method: 'DELETE' }));
+    expect(global.fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/delete-account`, expect.objectContaining({ method: 'DELETE' }));
     expect(mockDeleteUser).toHaveBeenCalled();
   });
 
