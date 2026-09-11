@@ -365,7 +365,10 @@ const [editingName, setEditingName] = useState(false);
                             navigation.navigate(screenNames.challenges, { highlightId: item.id, tab: 'assigned' });
                           } else if (isEvent) {
                             void clearUnreadEvents();
-                            navigation.navigate(screenNames.schedule);
+                            // Event notification items are prefixed 'evt_' + the real
+                            // schedule_events.id (see notifications-summary) — strip it
+                            // so the Schedule screen can look the event up directly.
+                            navigation.navigate(screenNames.schedule, { highlightId: String(item.id).replace(/^evt_/, '') });
                           } else if (isPortfolio) {
                             void clearUnreadEvents();
                             navigation.navigate('ClassDetail', {

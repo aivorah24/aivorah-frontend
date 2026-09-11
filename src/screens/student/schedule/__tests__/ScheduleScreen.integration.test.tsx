@@ -156,6 +156,39 @@ describe('ScheduleScreen — event detail + navigation', () => {
   });
 });
 
+describe('ScheduleScreen — deep-linking from an event notification', () => {
+  test('a real highlightId (outside the currently-visible week) fetches that event directly and opens its detail modal', async () => {
+    // Event notification items are 'evt_' + id (see Header.tsx) — this
+    // screen receives the id already stripped, via route.params.
+    global.fetch = jest.fn((url: string) => {
+      if (String(url).includes('/schedule/event/ev-far-away')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ev({ id: 'ev-far-away', title: 'Science Fair', date: '2026-05-01' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    }) as any;
+    const nav = { ...navProp(), setParams: jest.fn() };
+
+    await render(<ScheduleScreen navigation={nav} route={{ params: { highlightId: 'ev-far-away' } }} />);
+
+    expect(await screen.findByText('Science Fair')).toBeTruthy();
+    expect(nav.setParams).toHaveBeenCalledWith({ highlightId: undefined });
+  });
+
+  test('a real highlightId that no longer exists (404) does not crash the screen', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (String(url).includes('/schedule/event/')) return Promise.resolve({ ok: false });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    }) as any;
+
+    await render(<ScheduleScreen navigation={navProp()} route={{ params: { highlightId: 'deleted-event' } }} />);
+
+    expect(await screen.findByTestId('schedule-week-label')).toBeTruthy();
+  });
+});
+
 describe('ScheduleScreen — removing an event', () => {
   test('deleting a real event calls the real removeEvent from useScheduleEvents', async () => {
     scheduleEventsState = baseScheduleEventsState({ eventsMap: { '2026-04-13': [ev({ id: 'ev-77' })] } });

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
@@ -7,6 +7,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useStudentData } from '../../../context/StudentDataContext';
 import { useNotification } from '../../../context/NotificationContext';
+import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
 
 import type { ScheduleEvent, SelectedEventDetail } from './types';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
@@ -26,7 +27,8 @@ import UpcomingDeadlines from './components/UpcomingDeadlines';
 import AddEventModal from './components/AddEventModal';
 import EventDetailModal from './components/EventDetailModal';
 
-export default function ScheduleScreen({ navigation }: any) {
+export default function ScheduleScreen({ navigation, route }: any) {
+  const highlightId = route?.params?.highlightId;
   const { colors } = useTheme();
   const { clearUnreadEvents } = useNotification();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -93,6 +95,25 @@ export default function ScheduleScreen({ navigation }: any) {
   function handleEventPress(event: ScheduleEvent, [accent, fill, textCol]: [string, string, string]) {
     setSelectedEvent({ ...event, accent, fill, textCol });
   }
+
+  // Deep-link open: a tapped event notification passes highlightId (the real
+  // schedule_events.id). The visible week's eventsMap often won't contain it
+  // (the event may be outside the currently-displayed week), so fetch it
+  // directly by id instead of searching what's already loaded. Clearing the
+  // param prevents reopening on refocus.
+  useEffect(() => {
+    if (!highlightId) return;
+    let cancelled = false;
+    fetch(`${SCHEDULE_SERVER_URL}/schedule/event/${highlightId}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((event: ScheduleEvent | null) => {
+        if (cancelled || !event) return;
+        handleEventPress(event, typeColors(event.type));
+        navigation.setParams?.({ highlightId: undefined });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [highlightId]);
 
   return (
     <ScreenLayout>
