@@ -1,4 +1,5 @@
 import { buildUploadedExtractedQuestions, buildAssignmentPayload, postCreateAssignment } from '../../services/assignmentsService';
+import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
 
 jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
 
@@ -126,6 +127,12 @@ describe('postCreateAssignment', () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ id: 'a1' })) }) as any;
     const result = await postCreateAssignment({ title: 'X' });
     expect(result).toEqual({ ok: true, data: { id: 'a1' } });
+  });
+
+  test('posts to aivorah-assignments-service, not the monolith', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, text: () => Promise.resolve('{}') }) as any;
+    await postCreateAssignment({ title: 'X' });
+    expect(fetch).toHaveBeenCalledWith(`${ASSIGNMENTS_SERVER_URL}/assignments`, expect.objectContaining({ method: 'POST' }));
   });
 
   test('a non-ok response with a parseable error body surfaces that message', async () => {

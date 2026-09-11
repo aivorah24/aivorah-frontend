@@ -176,7 +176,7 @@ export function useBulkUpload({
     for (const item of items) {
       updateBulkItem(item.id, { publishStatus: 'publishing' });
       try {
-        const cRes = await fetch(`${SERVER_URL}/assignments`, {
+        const cRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: item.title, subject: item.subject, chapter: item.chapter,

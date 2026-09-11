@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import type { TaskStep } from '../types';
 import { stripInternalQuizFields } from '../utils/quizHtml';
 
@@ -132,12 +132,14 @@ export type PostCreateAssignmentResult =
   | { ok: false; error: string };
 
 // POST /assignments + response parsing — extracted verbatim (no behavior
-// change) from TeacherAssignmentsScreen.tsx's createAssignment(). Network
+// change) from TeacherAssignmentsScreen.tsx's createAssignment(), then
+// repointed to aivorah-assignments-service (2026-09-11, B05) once that
+// service's POST / was extended to accept the full field set. Network
 // failures are surfaced as { ok: false, error: 'Network error...' }, same
 // message the screen showed before.
 export async function postCreateAssignment(payload: any): Promise<PostCreateAssignmentResult> {
   try {
-    const res = await fetch(`${SERVER_URL}/assignments`, {
+    const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
