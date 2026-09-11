@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { StepType, TaskStep } from '../types';
 import { STEP_DEFAULTS } from '../constants';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseTaskStepsArgs {
   title: string;
@@ -43,8 +43,8 @@ export function useTaskSteps({ title, chapter, subject, effectiveGrade, effectiv
     }
     setGeneratingSteps(true);
     try {
-      console.log('[generateSteps] Calling API with topic:', topic, 'grade:', effectiveGrade, 'curriculum:', effectiveCurriculum, 'SERVER_URL:', SERVER_URL);
-      const res = await fetch(`${SERVER_URL}/assignments/generate-steps`, {
+      console.log('[generateSteps] Calling API with topic:', topic, 'grade:', effectiveGrade, 'curriculum:', effectiveCurriculum, 'ASSIGNMENTS_SERVER_URL:', ASSIGNMENTS_SERVER_URL);
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-steps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, subject, grade: effectiveGrade, curriculum: effectiveCurriculum }),
