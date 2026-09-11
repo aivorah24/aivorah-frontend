@@ -1,9 +1,9 @@
 import * as svc from '../../services/teacherChallengesService';
 import CHALLENGES_SERVER_URL from '../../../../../config/challengesServerUrl';
 import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
-import SERVER_URL from '../../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../../config/profileServerUrl';
 import TEACHER_DASHBOARD_SERVER_URL from '../../../../../config/teacherDashboardServerUrl';
+import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
 
 describe('teacherChallengesService', () => {
   beforeEach(() => {
@@ -58,10 +58,10 @@ describe('teacherChallengesService', () => {
   });
 
   describe('fetchClassLeaderboard', () => {
-    it('fetches teacher-scoped leaderboard from the monolith (documented gap - no class-scoped leaderboard on any microservice yet)', async () => {
+    it('fetches the teacher-scoped leaderboard from aivorah-leaderboard-service, not the monolith', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({ json: jest.fn().mockResolvedValueOnce([{ id: 's1', rank: 1 }]) });
       const res = await svc.fetchClassLeaderboard('teacher@x.com');
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/student/leaderboard?limit=50&teacherEmail=teacher%40x.com`);
+      expect(fetch).toHaveBeenCalledWith(`${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=teacher%40x.com`);
       expect(res).toEqual([{ id: 's1', rank: 1 }]);
     });
 

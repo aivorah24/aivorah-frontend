@@ -1,8 +1,8 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import CHALLENGES_SERVER_URL from '../../../../config/challengesServerUrl';
 import TEACHER_DASHBOARD_SERVER_URL from '../../../../config/teacherDashboardServerUrl';
+import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 
 export interface Challenge {
   id: string;
@@ -33,18 +33,6 @@ export type LeaderEntry = {
 // screen, migrated 2026-08-26) — this call was left pointed at the stale
 // monolith route, which is why the roster (and thus student names /
 // specific-student assignment) went missing here.
-//
-// TODO(monolith removal blocked): GET /student/leaderboard?teacherEmail=...
-// (class-scoped leaderboard) has no equivalent on aivorah-students-service or
-// aivorah-challenges-service yet - confirmed 2026-09-02 by reading both
-// services' routes directly (aivorah-students-service/routes/student.js
-// even has a dead "GET /student/leaderboard?...&teacherEmail=xxx" doc
-// comment with no route implementation below it - the endpoint was
-// planned but never built). Building a real class-scoped leaderboard
-// requires cross-service aggregation (student roster lives in
-// aivorah-students-service, XP/completions live in
-// aivorah-challenges-service) - a deliberate backend design task, not a
-// quick repoint. Left on the monolith until that's built.
 export function fetchStudentsByTeacher(teacherEmail: string): Promise<StudentItem[]> {
   return fetch(`${TEACHER_DASHBOARD_SERVER_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
     .then(r => r.ok ? r.json() : [])
@@ -62,9 +50,15 @@ export function fetchChallenges(grade: string, curriculum: string): Promise<Chal
     .then(data => Array.isArray(data) ? data : []);
 }
 
-// See TODO above fetchStudentsByTeacher - same missing-endpoint gap.
+// GET /student/leaderboard?teacherEmail=... — aivorah-leaderboard-service
+// already implements this exact teacher-scoped query (roster via users/
+// user_preferences.teaches + XP via student_stats, same response shape:
+// rank/id/name/grade/score/level/streak/topics) and it's already used by the
+// student-facing Leaderboard screen (see useLeaderboard.ts). This call was
+// left pointed at the monolith instead — confirmed 2026-09-11 by reading
+// aivorah-leaderboard-service/services/leaderboard.js directly.
 export function fetchClassLeaderboard(teacherEmail: string): Promise<LeaderEntry[]> {
-  return fetch(`${SERVER_URL}/student/leaderboard?limit=50&teacherEmail=${encodeURIComponent(teacherEmail)}`)
+  return fetch(`${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=${encodeURIComponent(teacherEmail)}`)
     .then(r => r.json())
     .then(data => Array.isArray(data) ? data : []);
 }
