@@ -104,19 +104,25 @@ function todayISO(): string {
 }
 
 // Resolve the Supabase UUID for a logged-in user's email
-async function resolveStudentId(email: string): Promise<string> {
+//
+// The server is always the source of truth: a cached UUID from AsyncStorage
+// is used ONLY as an offline fallback when /user/sync itself can't be
+// reached, never trusted ahead of it. Cached-first (the previous order)
+// caused a real bug — if an account is deleted and recreated (e.g. via
+// Settings > Delete Account, then signing back in with the same email),
+// the server hands out a brand-new id, but a stale device kept returning
+// the OLD id forever since some cached value existed and matched the UUID
+// shape, regardless of whether it still pointed at a real row. The student
+// then silently queried every assignment/challenge/stats endpoint with a
+// dead id — assigned work never appeared, with no error anywhere, because
+// every request "succeeded" against an id nothing is actually attached to.
+export async function resolveStudentId(email: string): Promise<string> {
   const key = `@student_id_${email}`;
 
   // 1. Demo shortcut
   if (DEMO_IDS[email]) return DEMO_IDS[email];
 
-  // 2. Cached value
-  const cached = await AsyncStorage.getItem(key);
-  if (cached && cached.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-    return cached;
-  }
-
-  // 3. Sync with server → get real UUID
+  // 2. Sync with server → get the current, authoritative UUID
   try {
     const res = await fetchWithRetry(`${AUTH_SERVER_URL}/user/sync`, {
       method: 'POST',
@@ -130,7 +136,13 @@ async function resolveStudentId(email: string): Promise<string> {
         return data.id;
       }
     }
-  } catch { /* offline — fall through */ }
+  } catch { /* offline — fall through to cache */ }
+
+  // 3. Offline fallback: last known-good id from a previous successful sync
+  const cached = await AsyncStorage.getItem(key);
+  if (cached && cached.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    return cached;
+  }
 
   // 4. Last resort: generate stable offline ID from email hash
   const fallback = await AsyncStorage.getItem(key + '_offline');
