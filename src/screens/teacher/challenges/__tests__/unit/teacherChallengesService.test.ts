@@ -3,6 +3,7 @@ import CHALLENGES_SERVER_URL from '../../../../../config/challengesServerUrl';
 import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
 import SERVER_URL from '../../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../../config/profileServerUrl';
+import TEACHER_DASHBOARD_SERVER_URL from '../../../../../config/teacherDashboardServerUrl';
 
 describe('teacherChallengesService', () => {
   beforeEach(() => {
@@ -10,10 +11,10 @@ describe('teacherChallengesService', () => {
   });
 
   describe('fetchStudentsByTeacher', () => {
-    it('fetches students from the monolith (documented gap - no roster endpoint on students-service yet)', async () => {
+    it('fetches students from aivorah-teacher-dashboard-service, not the stale monolith route', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce([{ id: 's1', name: 'A', grade: 'Grade 3' }]) });
       const res = await svc.fetchStudentsByTeacher('teacher@x.com');
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/student/by-teacher/teacher%40x.com`);
+      expect(fetch).toHaveBeenCalledWith(`${TEACHER_DASHBOARD_SERVER_URL}/student/by-teacher/teacher%40x.com`);
       expect(res).toEqual([{ id: 's1', name: 'A', grade: 'Grade 3' }]);
     });
 

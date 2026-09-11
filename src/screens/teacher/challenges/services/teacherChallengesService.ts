@@ -2,6 +2,7 @@ import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import CHALLENGES_SERVER_URL from '../../../../config/challengesServerUrl';
+import TEACHER_DASHBOARD_SERVER_URL from '../../../../config/teacherDashboardServerUrl';
 
 export interface Challenge {
   id: string;
@@ -27,9 +28,14 @@ export type LeaderEntry = {
   score: number; level: number; streak: number; topics: number;
 };
 
-// TODO(monolith removal blocked): GET /student/by-teacher/:email (class
-// roster) and GET /student/leaderboard?teacherEmail=... (class-scoped
-// leaderboard) have no equivalent on aivorah-students-service or
+// GET /student/by-teacher/:email (class roster) was extracted to
+// aivorah-teacher-dashboard-service on 2026-08-24 (see Teacher Students
+// screen, migrated 2026-08-26) — this call was left pointed at the stale
+// monolith route, which is why the roster (and thus student names /
+// specific-student assignment) went missing here.
+//
+// TODO(monolith removal blocked): GET /student/leaderboard?teacherEmail=...
+// (class-scoped leaderboard) has no equivalent on aivorah-students-service or
 // aivorah-challenges-service yet - confirmed 2026-09-02 by reading both
 // services' routes directly (aivorah-students-service/routes/student.js
 // even has a dead "GET /student/leaderboard?...&teacherEmail=xxx" doc
@@ -40,7 +46,7 @@ export type LeaderEntry = {
 // aivorah-challenges-service) - a deliberate backend design task, not a
 // quick repoint. Left on the monolith until that's built.
 export function fetchStudentsByTeacher(teacherEmail: string): Promise<StudentItem[]> {
-  return fetch(`${SERVER_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+  return fetch(`${TEACHER_DASHBOARD_SERVER_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
     .then(r => r.ok ? r.json() : [])
     .then(data => Array.isArray(data) ? data : []);
 }

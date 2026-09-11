@@ -12,7 +12,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import Header from '../../../components/common/Header';
-import SERVER_URL from '../../../config/serverUrl';
+import TEACHER_DASHBOARD_SERVER_URL from '../../../config/teacherDashboardServerUrl';
 
 import type { Assignment, StudentItem } from './types';
 import {
@@ -243,7 +243,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   // teacher just added shows up in the assign picker instantly — no manual refresh.
   useFocusEffect(useCallback(() => {
     if (!teacherEmail) return;
-    fetch(`${SERVER_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
+    fetch(`${TEACHER_DASHBOARD_SERVER_URL}/student/by-teacher/${encodeURIComponent(teacherEmail)}`)
       .then(r => r.ok ? r.json() : [])
       .then((data: StudentItem[]) => {
         // Filter to only show students matching the teacher's curriculum
