@@ -17,6 +17,21 @@ function getDueDateLabel(offset: number) {
 
 const normGrade = (g?: string) => (g ?? '').toLowerCase().replace(/grade/g, '').replace(/\s+/g, '').trim();
 
+// Only students in the SAME grade as the challenge may be assigned it — a
+// Grade 4 challenge must never be assignable to a Grade 6 student. But a
+// roster grade string that doesn't normalize-match the challenge's grade
+// format (a stale value, "3rd Grade", "G3", ...) must not make the whole
+// roster disappear — that showed "No Grade 3 students linked to your
+// account" even when the teacher's real students were fetched correctly,
+// making challenge assignment impossible. Same fallback-to-full-roster fix
+// already applied to the Assignments flow's equivalent picker
+// (AssignToPicker.tsx).
+export function filterStudentsForChallenge(students: StudentItem[], challenge: Challenge | null, search: string): StudentItem[] {
+  const base = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const gradeMatched = base.filter(s => !challenge?.grade || normGrade(s.grade) === normGrade(challenge.grade));
+  return gradeMatched.length > 0 ? gradeMatched : base;
+}
+
 export default function AssignChallengeModal({
   visible, challenge, students, studentSearch, setStudentSearch,
   selectedStudent, setSelectedStudent, assigning, assignError, assignSuccess,
@@ -41,13 +56,7 @@ export default function AssignChallengeModal({
 }) {
   const gold = colors.accentYellow;
 
-  // Only students in the SAME grade as the challenge may be assigned it — a
-  // Grade 4 challenge must never be assignable to a Grade 6 student.
-  const filteredStudents = students.filter(s => {
-    const matchesName  = s.name.toLowerCase().includes(studentSearch.toLowerCase());
-    const matchesGrade = !challenge?.grade || normGrade(s.grade) === normGrade(challenge.grade);
-    return matchesName && matchesGrade;
-  });
+  const filteredStudents = filterStudentsForChallenge(students, challenge, studentSearch);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
