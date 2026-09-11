@@ -1,25 +1,29 @@
 import { pollJob, extractViaQueue } from '../../services/jobsService';
 
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
-
 describe('pollJob', () => {
   const realFetch = global.fetch;
   afterEach(() => { global.fetch = realFetch; jest.useRealTimers(); });
 
+  test('polls the given serverUrl, not a hardcoded one', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve({ status: 'done', result: { ok: true } }) }) as any;
+    await pollJob('job-1', 'https://assignments.test', { intervalMs: 1 });
+    expect(fetch).toHaveBeenCalledWith('https://assignments.test/jobs/job-1');
+  });
+
   test('returns job.result as soon as status is "done"', async () => {
     global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve({ status: 'done', result: { ok: true } }) }) as any;
-    const result = await pollJob('job-1', { intervalMs: 1 });
+    const result = await pollJob('job-1', 'https://server.test', { intervalMs: 1 });
     expect(result).toEqual({ ok: true });
   });
 
   test('throws with the server-provided error when status is "failed"', async () => {
     global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve({ status: 'failed', error: 'AI blew up' }) }) as any;
-    await expect(pollJob('job-1', { intervalMs: 1 })).rejects.toThrow('AI blew up');
+    await expect(pollJob('job-1', 'https://server.test', { intervalMs: 1 })).rejects.toThrow('AI blew up');
   });
 
   test('throws a generic message when failed with no error field', async () => {
     global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve({ status: 'failed' }) }) as any;
-    await expect(pollJob('job-1', { intervalMs: 1 })).rejects.toThrow('Processing failed. Please try again.');
+    await expect(pollJob('job-1', 'https://server.test', { intervalMs: 1 })).rejects.toThrow('Processing failed. Please try again.');
   });
 
   test('keeps polling through "pending"/"processing" until done', async () => {
@@ -29,14 +33,14 @@ describe('pollJob', () => {
       const status = call < 3 ? 'processing' : 'done';
       return Promise.resolve({ json: () => Promise.resolve({ status, result: call >= 3 ? 'final' : undefined }) });
     }) as any;
-    const result = await pollJob('job-1', { intervalMs: 1 });
+    const result = await pollJob('job-1', 'https://server.test', { intervalMs: 1 });
     expect(result).toBe('final');
     expect(call).toBe(3);
   });
 
   test('times out if the job never resolves within timeoutMs', async () => {
     global.fetch = jest.fn().mockResolvedValue({ json: () => Promise.resolve({ status: 'processing' }) }) as any;
-    await expect(pollJob('job-1', { intervalMs: 1, timeoutMs: 5 })).rejects.toThrow(/Timed out/);
+    await expect(pollJob('job-1', 'https://server.test', { intervalMs: 1, timeoutMs: 5 })).rejects.toThrow(/Timed out/);
   });
 });
 

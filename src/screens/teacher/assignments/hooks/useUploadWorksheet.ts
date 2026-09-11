@@ -5,6 +5,7 @@ import { pdfToImages, imagesToPdfBase64 } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
 import { pollJob } from '../services/jobsService';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseUploadWorksheetArgs {
   user: any;
@@ -171,7 +172,7 @@ export function useUploadWorksheet({
           // Queued (Kafka/db job) instead of one blocking request — the browser
           // tab polls for the result rather than holding a connection open for
           // the whole AI extraction pipeline.
-          const jobRes = await fetch(`${SERVER_URL}/assignments/extract-questions-async`, {
+          const jobRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/extract-questions-async`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(
@@ -182,7 +183,7 @@ export function useUploadWorksheet({
           });
           const jobData = await jobRes.json();
           if (!jobRes.ok || !jobData.jobId) throw new Error(jobData.error || 'Could not start extraction.');
-          const eData = await pollJob(jobData.jobId);
+          const eData = await pollJob(jobData.jobId, ASSIGNMENTS_SERVER_URL);
           console.log('[extract] job done, data:', JSON.stringify(eData).slice(0, 500));
           if (eData.title && !title.trim()) setTitle(stripGradePrefix(eData.title));
             // Use chapter if available, otherwise fall back to title as chapter/topic
@@ -321,7 +322,7 @@ export function useUploadWorksheet({
         });
         const jobData = await jobRes.json();
         if (!jobRes.ok || !jobData.jobId) throw new Error(jobData.error || 'Could not start quiz generation.');
-        data = await pollJob(jobData.jobId);
+        data = await pollJob(jobData.jobId, SERVER_URL);
       }
       if (data.quiz) {
         // Force school/curriculum to the teacher's REAL account values, always —
@@ -373,7 +374,7 @@ export function useUploadWorksheet({
         }),
       });
       // We'll use a direct LLM call via the existing generate-quiz with the questions as teacherNotes
-      const res2 = await fetch(`${SERVER_URL}/assignments/generate-quiz`, {
+      const res2 = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

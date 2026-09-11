@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { GRADES_TEACHER } from '../../../onboarding/OnboardingScreen';
 import { ALL_GRADES, IB_GRADES } from '../constants';
-import SERVER_URL from '../../../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 // Owns the teacher's curriculum/grade/subject-topic derivation for the
 // Generate/Upload/Bulk forms — extracted verbatim (no behavior change) from
@@ -122,7 +122,7 @@ export function useTeacherCurriculumGrade(user: any, subject: string) {
       return;
     }
     setTopicsLoading(true);
-    fetch(`${SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(effectiveGrade)}&curriculum=${encodeURIComponent(effectiveCurriculum)}`)
+    fetch(`${ASSIGNMENTS_SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(effectiveGrade)}&curriculum=${encodeURIComponent(effectiveCurriculum)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled) return;

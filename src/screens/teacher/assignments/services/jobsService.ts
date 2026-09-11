@@ -1,14 +1,16 @@
-import SERVER_URL from '../../../../config/serverUrl';
-
-// Polls a queued job (see server/services/jobQueue.js) until it's done/failed,
-// instead of blocking a single long-lived request — used by the worksheet
-// upload/classify and quiz-generation steps so the browser tab (and any load
-// balancer/proxy in front of it) never has to hold one connection open for
-// the full AI pipeline duration.
-export async function pollJob(jobId: string, { intervalMs = 1500, timeoutMs = 360000 } = {}): Promise<any> {
+// Polls a queued job (see <service>/services/jobQueue.js) until it's
+// done/failed, instead of blocking a single long-lived request — used by the
+// worksheet upload/classify and quiz-generation steps so the browser tab (and
+// any load balancer/proxy in front of it) never has to hold one connection
+// open for the full AI pipeline duration. `serverUrl` must be the base URL of
+// whichever backend the job was enqueued on (worksheet-extraction jobs live
+// on aivorah-assignments-service, quiz-generation jobs still live on the
+// monolith) — jobs aren't shared across backends, so polling the wrong one
+// 404s forever.
+export async function pollJob(jobId: string, serverUrl: string, { intervalMs = 1500, timeoutMs = 360000 } = {}): Promise<any> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const res = await fetch(`${SERVER_URL}/jobs/${jobId}`);
+    const res = await fetch(`${serverUrl}/jobs/${jobId}`);
     const job = await res.json().catch(() => ({}));
     if (job.status === 'done') return job.result;
     if (job.status === 'failed') throw new Error(job.error || 'Processing failed. Please try again.');

@@ -5,6 +5,7 @@ import { pdfToImages } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
 import { extractViaQueue } from '../services/jobsService';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseBulkUploadArgs {
   user: any;
@@ -87,7 +88,7 @@ export function useBulkUpload({
           const pageFiles = pages.length > 0 ? pages : [working];
           const fileList = pageFiles.map(p => ({ base64: p.base64, mimeType: p.mime }));
 
-          const eData = await extractViaQueue(SERVER_URL,
+          const eData = await extractViaQueue(ASSIGNMENTS_SERVER_URL,
             fileList.length === 1 ? { fileBase64: fileList[0].base64, mimeType: fileList[0].mimeType } : { files: fileList }
           );
 

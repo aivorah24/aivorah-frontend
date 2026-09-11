@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseQuizGenerationArgs {
   chapter: string;
@@ -132,7 +133,7 @@ export function useQuizGeneration({
     };
 
     try {
-      const res = await fetch(`${SERVER_URL}/assignments/generate-quiz`, {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, chapter: chapter.trim(), grade, curriculum, difficulty: quizDifficulty, count: quizCount, teacherNotes: teacherNotes.trim(), quizType, language: subject === 'Language Acquisition' ? selectedLanguage : undefined }),
