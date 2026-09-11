@@ -38,8 +38,15 @@ export function useStudentsList(user: any) {
         setStudents([]);
       }
     } catch {
-      if (isDemo) setStudents(deriveStudentsForTeacher(user?.teaches ?? []));
-      else setStudents([]);
+      // A transient fetch failure must not wipe an already-loaded roster —
+      // matches the Teacher Dashboard's deliberate "keep previous data" on
+      // error (useTeacherDashboardData.ts). Previously this always reset to
+      // [] (or demo data), so one flaky poll made this screen's count/list
+      // diverge from the Dashboard's until the next successful refetch.
+      setStudents((prev) => {
+        if (prev.length > 0) return prev;
+        return isDemo ? deriveStudentsForTeacher(user?.teaches ?? []) : [];
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
