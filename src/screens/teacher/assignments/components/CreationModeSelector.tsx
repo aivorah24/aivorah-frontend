@@ -19,7 +19,7 @@ export function CreationModeSelector({
   setType: (t: 'assignment' | 'quiz') => void;
   setUploadStep: (s: 1 | 2 | 3) => void;
   uploadScrollRef: React.RefObject<ScrollView | null>;
-  setBulkPhase: (p: 'pick' | 'classify' | 'generate' | 'assign') => void;
+  setBulkPhase: (p: 'pick' | 'group' | 'classify' | 'generate' | 'assign') => void;
   setBulkItems: (items: any[]) => void;
 }) {
   return (

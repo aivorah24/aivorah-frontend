@@ -18,9 +18,11 @@ export function BulkUploadFlow({
   gradeOptions, setFullscreenImage, setEditingBulkItemId, setInteractiveQuiz, setShowInteractivePreview,
   bulkDueDate, setBulkDueDate, students, studentsLoaded,
   setShowModal, resetForm, colors, gold, styles,
+  pendingImages, imageSelection, imageGroups,
+  toggleImageSelection, confirmImageGroup, dissolveImageGroup, groupedImageIds, finishImageGrouping,
 }: {
-  bulkPhase: 'pick' | 'classify' | 'generate' | 'assign';
-  setBulkPhase: (p: 'pick' | 'classify' | 'generate' | 'assign') => void;
+  bulkPhase: 'pick' | 'group' | 'classify' | 'generate' | 'assign';
+  setBulkPhase: (p: 'pick' | 'group' | 'classify' | 'generate' | 'assign') => void;
   bulkItems: BulkItem[];
   updateBulkItem: (id: string, patch: Partial<BulkItem>) => void;
   pickBulkDocs: () => void;
@@ -41,11 +43,19 @@ export function BulkUploadFlow({
   colors: AppColors;
   gold: string;
   styles: any;
+  pendingImages: Array<{ id: string; name: string; base64: string; mime: string }>;
+  imageSelection: string[];
+  imageGroups: Array<{ id: string; imageIds: string[] }>;
+  toggleImageSelection: (id: string) => void;
+  confirmImageGroup: () => void;
+  dissolveImageGroup: (groupId: string) => void;
+  groupedImageIds: () => Set<string>;
+  finishImageGrouping: () => void;
 }) {
   return (
     <View style={{ gap: 14 }}>
       {/* Phase progress pips */}
-      {bulkPhase !== 'pick' && (
+      {bulkPhase !== 'pick' && bulkPhase !== 'group' && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           {(['classify', 'generate', 'assign'] as const).map((p, i) => (
             <React.Fragment key={p}>
@@ -75,6 +85,95 @@ export function BulkUploadFlow({
           </TouchableOpacity>
         </>
       )}
+
+      {/* ── GROUP: combine images that belong to the same worksheet ──
+          Only reached when 2+ raw images were picked together. Select 2+
+          thumbnails, tap "Group Selected" to combine them into one
+          multi-page worksheet (like a scanner app); anything left ungrouped
+          becomes its own single-page worksheet. */}
+      {bulkPhase === 'group' && (() => {
+        const grouped = groupedImageIds();
+        const ungroupedImages = pendingImages.filter(img => !grouped.has(img.id));
+        return (
+          <View style={{ gap: 14 }}>
+            <Text style={{ fontSize: 13, color: colors.textDim, lineHeight: 18 }}>
+              {pendingImages.length} images selected. If several photos are pages of the SAME worksheet, tap to select them, then group. Anything left ungrouped becomes its own worksheet.
+            </Text>
+
+            {imageGroups.length > 0 && (
+              <View style={{ gap: 8 }}>
+                {imageGroups.map((g, gi) => (
+                  <View key={g.id} style={{ padding: 10, borderRadius: 10, borderWidth: 1, borderColor: gold + '50', backgroundColor: colors.cardDark, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: gold }}>Worksheet {gi + 1} — {g.imageIds.length} pages</Text>
+                      <TouchableOpacity onPress={() => dissolveImageGroup(g.id)} activeOpacity={0.75}>
+                        <Feather name="x-circle" size={16} color={colors.textDim} />
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {g.imageIds.map((id, pi) => {
+                          const img = pendingImages.find(p => p.id === id);
+                          if (!img) return null;
+                          return (
+                            <View key={id} style={{ width: 60, borderRadius: 6, overflow: 'hidden', borderWidth: 1, borderColor: gold + '40' }}>
+                              <Image source={{ uri: `data:${img.mime};base64,${img.base64}` }} style={{ width: 60, height: 80 }} resizeMode="cover" />
+                              <View style={{ paddingVertical: 1, backgroundColor: gold + '20', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 8, fontWeight: '700', color: gold }}>Page {pi + 1}</Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {ungroupedImages.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textDim }}>
+                  {imageGroups.length > 0 ? 'Remaining images' : 'Select images that belong together'}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {ungroupedImages.map(img => {
+                    const isSelected = imageSelection.includes(img.id);
+                    return (
+                      <TouchableOpacity
+                        key={img.id}
+                        onPress={() => toggleImageSelection(img.id)}
+                        activeOpacity={0.8}
+                        style={{ width: 80, borderRadius: 8, overflow: 'hidden', borderWidth: 2, borderColor: isSelected ? gold : colors.borderColor }}
+                      >
+                        <Image source={{ uri: `data:${img.mime};base64,${img.base64}` }} style={{ width: 80, height: 100 }} resizeMode="cover" />
+                        <View style={{ paddingVertical: 3, backgroundColor: isSelected ? gold : colors.cardDark, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                          <Feather name={isSelected ? 'check-square' : 'square'} size={11} color={isSelected ? '#fff' : colors.textDim} />
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: isSelected ? '#fff' : colors.textDim }} numberOfLines={1}>{img.name}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <TouchableOpacity
+                  style={[styles.chip, { opacity: imageSelection.length >= 2 ? 1 : 0.4, alignSelf: 'flex-start' }]}
+                  onPress={() => imageSelection.length >= 2 && confirmImageGroup()}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="layers" size={12} color={gold} />
+                  <Text style={[styles.chipText, { color: gold }]}>Group Selected ({imageSelection.length}) into 1 Worksheet</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.submitBtn} onPress={finishImageGrouping} activeOpacity={0.85}>
+              <Text style={styles.submitBtnText}>
+                Continue — {imageGroups.length + ungroupedImages.length} worksheet{imageGroups.length + ungroupedImages.length === 1 ? '' : 's'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {/* ── PHASE 1: Classify — preview + editable subject/grade/title, ALL files ── */}
       {bulkPhase === 'classify' && (

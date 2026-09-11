@@ -3,6 +3,7 @@ import type { Assignment, BulkItem } from '../types';
 import { SUBJECTS, LANGUAGES } from '../constants';
 import { pdfToImages } from '../utils/pdfHelpers';
 import { stripGradePrefix } from '../utils/helpers';
+import { groupedImageIdSet, resolveImageGroups } from '../utils/imageGrouping';
 import { extractViaQueue } from '../services/jobsService';
 import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
@@ -25,42 +26,64 @@ export function useBulkUpload({
   user, teacherEmail, effectiveGrade, effectiveCurriculum, gradeOptions,
   setAssignments, reloadAssignments,
 }: UseBulkUploadArgs) {
-  const [bulkPhase, setBulkPhase] = useState<'pick' | 'classify' | 'generate' | 'assign'>('pick');
+  type PickedFile = { name: string; base64: string; mime: string };
+
+  const [bulkPhase, setBulkPhase] = useState<'pick' | 'group' | 'classify' | 'generate' | 'assign'>('pick');
   const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
   const [bulkDueDate, setBulkDueDate] = useState('');
+
+  // ── Image grouping (Bulk Upload Images) ────────────────────────────────
+  // Multiple raw images picked in one go (e.g. phone photos of a multi-page
+  // worksheet) used to each become their OWN separate BulkItem — so a
+  // 3-page worksheet photographed as 3 images produced 3 unrelated
+  // "worksheets" instead of one. A PDF's pages were always kept together
+  // (pdfToImages -> one item's `pages[]`); images now go through the same
+  // explicit grouping the teacher controls, matching how a scanner app lets
+  // you combine several shots into one document. Only engaged when 2+ raw
+  // images are picked — a single image, or any PDF/DOCX, is unaffected and
+  // goes straight to Classify exactly as before.
+  const [pendingImages, setPendingImages] = useState<Array<PickedFile & { id: string }>>([]);
+  const [imageSelection, setImageSelection] = useState<string[]>([]);
+  const [imageGroups, setImageGroups] = useState<Array<{ id: string; imageIds: string[] }>>([]);
+
+  function toggleImageSelection(id: string) {
+    setImageSelection(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function confirmImageGroup() {
+    if (imageSelection.length < 2) return;
+    setImageGroups(prev => [...prev, { id: `group-${Date.now()}`, imageIds: imageSelection }]);
+    setImageSelection([]);
+  }
+
+  function dissolveImageGroup(groupId: string) {
+    setImageGroups(prev => prev.filter(g => g.id !== groupId));
+  }
+
+  function groupedImageIds(): Set<string> {
+    return groupedImageIdSet(imageGroups);
+  }
 
   function updateBulkItem(id: string, patch: Partial<BulkItem>) {
     setBulkItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it));
   }
 
-  function pickBulkDocs() {
-    if (typeof document === 'undefined') return;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    input.multiple = true;
-    input.onchange = async (e: any) => {
-      const files: File[] = Array.from(e.target.files || []);
-      if (files.length === 0) return;
-      const readFile = (f: File): Promise<{ name: string; base64: string; mime: string }> =>
-        new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const result = ev.target?.result as string;
-            resolve({ name: f.name, base64: result.split(',')[1], mime: f.type });
-          };
-          reader.readAsDataURL(f);
-        });
-      const picked = await Promise.all(files.map(readFile));
+  function readFile(f: File): Promise<PickedFile> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        resolve({ name: f.name, base64: result.split(',')[1], mime: f.type });
+      };
+      reader.readAsDataURL(f);
+    });
+  }
 
-      const initialItems: BulkItem[] = picked.map((f, i) => ({
-        id: `${Date.now()}-${i}`, name: f.name, mime: f.mime, base64: f.base64,
-        pages: [], status: 'extracting',
-        title: '', subject: 'Mathematics', grade: effectiveGrade, curriculum: effectiveCurriculum, chapter: '', language: '',
-        quiz: null, quizHtml: '', quizStatus: 'idle',
-        assignTo: 'all', selectedStudentId: null,
-        publishStatus: 'idle',
-      }));
+  // Runs the existing extraction/classification loop over already-built
+  // BulkItems (one per resulting worksheet — a grouped item's `pages[]`
+  // already holds all its images). Shared by the no-grouping-needed path
+  // and by finishImageGrouping().
+  async function runExtraction(initialItems: BulkItem[]) {
       setBulkItems(initialItems);
       setBulkPhase('classify');
 
@@ -84,8 +107,16 @@ export function useBulkUpload({
               throw new Error(dData.error || 'Could not read this Word document. Please export it to PDF and upload that.');
             }
           }
-          const pages = working.mime === 'application/pdf' ? await pdfToImages(working.base64) : [working];
-          const pageFiles = pages.length > 0 ? pages : [working];
+          // A pre-grouped multi-image item (see finishImageGrouping) already
+          // has its full pages[] set — its own base64/mime is just the first
+          // image's, a representative cover, so it must NOT be re-derived here.
+          let pageFiles: { name: string; base64: string; mime: string }[];
+          if (item.pages.length > 1) {
+            pageFiles = item.pages;
+          } else {
+            const pages = working.mime === 'application/pdf' ? await pdfToImages(working.base64) : [working];
+            pageFiles = pages.length > 0 ? pages : [working];
+          }
           const fileList = pageFiles.map(p => ({ base64: p.base64, mimeType: p.mime }));
 
           const eData = await extractViaQueue(ASSIGNMENTS_SERVER_URL,
@@ -117,8 +148,74 @@ export function useBulkUpload({
           updateBulkItem(item.id, { status: 'error', error: err.message || 'Extraction failed' });
         }
       }
+  }
+
+  function buildItem(f: PickedFile, id: string): BulkItem {
+    return {
+      id, name: f.name, mime: f.mime, base64: f.base64,
+      pages: [], status: 'extracting',
+      title: '', subject: 'Mathematics', grade: effectiveGrade, curriculum: effectiveCurriculum, chapter: '', language: '',
+      quiz: null, quizHtml: '', quizStatus: 'idle',
+      assignTo: 'all', selectedStudentId: null,
+      publishStatus: 'idle',
+    };
+  }
+
+  function pickBulkDocs() {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    input.multiple = true;
+    input.onchange = async (e: any) => {
+      const files: File[] = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+      const picked = await Promise.all(files.map(readFile));
+
+      const imageFiles = picked.filter(f => f.mime.startsWith('image/'));
+      const otherFiles = picked.filter(f => !f.mime.startsWith('image/'));
+
+      if (imageFiles.length > 1) {
+        // Multiple raw images — let the teacher explicitly group pages of the
+        // same worksheet before extraction runs. Non-image files (PDF/DOCX)
+        // don't need grouping (a PDF's pages already travel together) — they
+        // still go straight into the same batch, built immediately below.
+        setPendingImages(imageFiles.map((f, i) => ({ ...f, id: `img-${Date.now()}-${i}` })));
+        setImageSelection([]);
+        setImageGroups([]);
+        const otherItems = otherFiles.map((f, i) => buildItem(f, `${Date.now()}-other-${i}`));
+        setBulkItems(otherItems);
+        setBulkPhase('group');
+        return;
+      }
+
+      const initialItems = picked.map((f, i) => buildItem(f, `${Date.now()}-${i}`));
+      await runExtraction(initialItems);
     };
     input.click();
+  }
+
+  // Called from the Group step once the teacher is done combining images —
+  // any image left ungrouped becomes its own single-page worksheet, same as
+  // picking just one image always did.
+  async function finishImageGrouping() {
+    const { groups, ungrouped } = resolveImageGroups(pendingImages, imageGroups);
+
+    const groupItems: BulkItem[] = groups.map((images, gi) => {
+      const cover = images[0];
+      const item = buildItem(cover, `${Date.now()}-group-${gi}`);
+      item.pages = images.map(img => ({ name: img.name, base64: img.base64, mime: img.mime }));
+      return item;
+    });
+    const singleItems: BulkItem[] = ungrouped.map((img, i) => buildItem(img, `${Date.now()}-single-${i}`));
+
+    const newItems = [...groupItems, ...singleItems];
+    setPendingImages([]);
+    setImageSelection([]);
+    setImageGroups([]);
+    // Preserve any non-image items already staged (PDF/DOCX picked alongside
+    // the images) — they were set into bulkItems when entering the group phase.
+    await runExtraction([...bulkItems, ...newItems]);
   }
 
   // Generates (or re-generates) the quiz for ONE bulk item. Pulled out of
@@ -203,11 +300,15 @@ export function useBulkUpload({
 
   function resetBulkState() {
     setBulkPhase('pick'); setBulkItems([]); setBulkDueDate('');
+    setPendingImages([]); setImageSelection([]); setImageGroups([]);
   }
 
   return {
     bulkPhase, setBulkPhase, bulkItems, setBulkItems, bulkDueDate, setBulkDueDate,
     updateBulkItem, pickBulkDocs, generateOneBulkQuiz, generateAllBulkQuizzes, publishAllBulkItems,
     resetBulkState,
+    // Image grouping
+    pendingImages, imageSelection, imageGroups,
+    toggleImageSelection, confirmImageGroup, dissolveImageGroup, groupedImageIds, finishImageGrouping,
   };
 }

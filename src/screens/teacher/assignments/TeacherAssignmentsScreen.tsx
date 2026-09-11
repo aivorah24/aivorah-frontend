@@ -159,6 +159,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     bulkPhase, setBulkPhase, bulkItems, setBulkItems, bulkDueDate, setBulkDueDate,
     updateBulkItem, pickBulkDocs, generateOneBulkQuiz, generateAllBulkQuizzes, publishAllBulkItems,
     resetBulkState,
+    pendingImages, imageSelection, imageGroups,
+    toggleImageSelection, confirmImageGroup, dissolveImageGroup, groupedImageIds, finishImageGrouping,
   } = useBulkUpload({
     user, teacherEmail, effectiveGrade, effectiveCurriculum, gradeOptions,
     setAssignments, reloadAssignments: load,
@@ -781,6 +783,10 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                       updateBulkItem={updateBulkItem} pickBulkDocs={pickBulkDocs}
                       generateAllBulkQuizzes={generateAllBulkQuizzes} generateOneBulkQuiz={generateOneBulkQuiz}
                       publishAllBulkItems={publishAllBulkItems}
+                      pendingImages={pendingImages} imageSelection={imageSelection} imageGroups={imageGroups}
+                      toggleImageSelection={toggleImageSelection} confirmImageGroup={confirmImageGroup}
+                      dissolveImageGroup={dissolveImageGroup} groupedImageIds={groupedImageIds}
+                      finishImageGrouping={finishImageGrouping}
                       gradeOptions={gradeOptions} setFullscreenImage={setFullscreenImage}
                       setEditingBulkItemId={setEditingBulkItemId} setInteractiveQuiz={setInteractiveQuiz}
                       setShowInteractivePreview={setShowInteractivePreview}
