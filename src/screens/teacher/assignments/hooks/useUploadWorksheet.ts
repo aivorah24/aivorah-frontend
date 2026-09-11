@@ -341,7 +341,7 @@ export function useUploadWorksheet({
         const sourceDocKey = docFiles.map(f => f.url || f.name).sort().join('|');
         const quizData = { ...data.quiz, school: user?.school || '', curriculum: effectiveCurriculum, _editMode: false, _sourceDocKey: sourceDocKey };
         try {
-          const previewRes = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: quizData }) });
+          const previewRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: quizData }) });
           if (previewRes.ok) quizData._previewHTML = await previewRes.text();
         } catch {}
         setInteractiveQuiz(quizData);

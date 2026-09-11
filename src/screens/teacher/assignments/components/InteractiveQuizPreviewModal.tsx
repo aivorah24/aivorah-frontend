@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { answerToEditText } from '../utils/validation';
 import { generateQuizHTMLPreview, stripInternalQuizFields } from '../utils/quizHtml';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 // The unified Interactive Quiz Preview/Edit-Answers modal — server-rendered
 // HTML preview + a full editable form for every question type (plain,
@@ -44,7 +45,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 // Fetch server-rendered HTML for preview (strip internal props)
                 const cleanQ = stripInternalQuizFields(interactiveQuiz);
                 try {
-                  const res = await fetch(`${SERVER_URL}/quiz/render-preview`, {
+                  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quiz: cleanQ }),
@@ -69,7 +70,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 const _previewHTML = (interactiveQuiz as any)._previewHTML;
                 const cleanQ = stripInternalQuizFields(interactiveQuiz);
                 try {
-                  const res = await fetch(`${SERVER_URL}/quiz/normalize`, {
+                  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/normalize`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quiz: cleanQ }),
@@ -104,7 +105,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 // Otherwise fetch from server (strip internal props)
                 const cleanQuiz = stripInternalQuizFields(interactiveQuiz);
                 try {
-                  const res = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: cleanQuiz }) });
+                  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: cleanQuiz }) });
                   const html = await res.text();
                   const blob = new Blob([html], { type: 'text/html' });
                   window.open(URL.createObjectURL(blob), '_blank');
@@ -157,7 +158,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
               style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: '#93B0AC' }}
               onPress={async () => {
                 try {
-                  const res = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: interactiveQuiz }) });
+                  const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: interactiveQuiz }) });
                   const html = await res.text();
                   setInteractiveQuiz({ ...interactiveQuiz, _previewHTML: html, _editMode: false });
                 } catch {}

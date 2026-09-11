@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
-import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 // The "Reuse a saved quiz" picker (AI-mode quiz generator's shortcut into
 // the Quiz Library) — extracted verbatim (no behavior change) from
@@ -49,7 +49,7 @@ export function ReuseQuizModal({
                   style={{ padding: 16, borderRadius: 12, borderWidth: 1.5, borderColor: colors.borderColor, backgroundColor: colors.bgDark, flexDirection: 'row', alignItems: 'center', gap: 12 }}
                   onPress={async () => {
                     const quizData = q.quiz_data || q;
-                    const previewRes = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: quizData }) });
+                    const previewRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: quizData }) });
                     const previewHtml = await previewRes.text();
                     setInteractiveQuiz({ ...quizData, _previewHTML: previewHtml });
                     onClose();

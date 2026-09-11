@@ -5,6 +5,7 @@ import type { AppColors } from '../../../../theme';
 import type { StudentItem } from '../types';
 import { generateQuizHTMLPreview } from '../utils/quizHtml';
 import SERVER_URL from '../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { AssignmentCommonFields } from './AssignmentCommonFields';
 import { AssignToPicker } from './AssignToPicker';
 
@@ -218,7 +219,7 @@ export function WorksheetUploadFlow(props: {
                 style={{ padding: 14, borderRadius: 12, backgroundColor: gold + '18', borderWidth: 1.5, borderColor: gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 onPress={async () => {
                   try {
-                    const res = await fetch(`${SERVER_URL}/quiz/render-preview`, {
+                    const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ quiz: interactiveQuiz }),

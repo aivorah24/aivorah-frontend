@@ -152,7 +152,7 @@ export function useBulkUpload({
       const brandedQuiz = { ...qData.quiz, school: user?.school || '', curriculum: item.curriculum || effectiveCurriculum };
       let previewHTML = '';
       try {
-        const pRes = await fetch(`${SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: brandedQuiz }) });
+        const pRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: brandedQuiz }) });
         if (pRes.ok) previewHTML = await pRes.text();
       } catch {}
       updateBulkItem(item.id, { quiz: brandedQuiz, quizHtml: previewHTML, quizStatus: 'done' });
