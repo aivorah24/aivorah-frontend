@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { useAuth } from './AuthContext';
 import SERVER_URL from '../config/serverUrl';
 import PROFILE_SERVER_URL from '../config/profileServerUrl';
+import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 
 declare const __DEV__: boolean;
 
@@ -191,7 +192,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       let res: Response;
       try {
-        res = await fetch(`${SERVER_URL}/messages/notifications-summary?${params}`);
+        res = await fetch(`${MESSAGES_SERVER_URL}/messages/notifications-summary?${params}`);
       } catch (err) {
         if (__DEV__) console.warn('[NotifCtx] fetch failed:', err);
         return;
@@ -368,7 +369,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     let ok = false;
     try {
-      const res = await fetch(`${SERVER_URL}/messages/mark-read`, {
+      const res = await fetch(`${MESSAGES_SERVER_URL}/messages/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail: user.email }),
@@ -402,7 +403,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // "seen" timestamp alone doesn't stop them recurring, so persist read state.
       // AWAIT this so the re-poll below sees the messages already marked read
       // (otherwise the backlog re-appears when turning the toggle back on).
-      await fetch(`${SERVER_URL}/messages/mark-system-read`, {
+      await fetch(`${MESSAGES_SERVER_URL}/messages/mark-system-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail: user.email, kind: 'assignment' }),
@@ -422,7 +423,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       prevChallengeRef.current = 0;
       // Same as assignments: persist parent challenge-alert read state server-side, then
       // re-poll so the dismissed backlog doesn't re-appear on the next cycle.
-      await fetch(`${SERVER_URL}/messages/mark-system-read`, {
+      await fetch(`${MESSAGES_SERVER_URL}/messages/mark-system-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail: user.email, kind: 'challenge' }),
