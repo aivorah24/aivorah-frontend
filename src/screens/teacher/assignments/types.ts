@@ -51,6 +51,11 @@ export type BulkItem = {
   pages: { name: string; base64: string; mime: string }[];
   status: 'extracting' | 'ready' | 'error'; error?: string;
   title: string; subject: string; grade: string; curriculum: string; chapter: string; language: string;
+  // mammoth's docx->HTML converted to plain text with exact table cells
+  // preserved (see docxToPdf on the assignments-service) — ground truth
+  // for quiz generation on docx-sourced items, fixing a bug where table
+  // numbers were fabricated instead of read from the source.
+  structuredText?: string;
   quiz: any | null; quizHtml: string; quizStatus: 'idle' | 'generating' | 'done' | 'error'; quizError?: string;
   assignTo: 'all' | 'specific'; selectedStudentId: string | null;
   publishStatus: 'idle' | 'publishing' | 'done' | 'error'; publishError?: string;

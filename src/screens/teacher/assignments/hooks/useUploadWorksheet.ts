@@ -42,8 +42,8 @@ export function useUploadWorksheet({
   setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
   quizDifficulty, setQuizQuestions, setType,
 }: UseUploadWorksheetArgs) {
-  const [docFiles, setDocFiles] = useState<{ name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string }[]>([]);
-  const originalPdfRef = React.useRef<{ name: string; base64: string; mime: string } | null>(null);
+  const [docFiles, setDocFiles] = useState<{ name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string; structuredText?: string }[]>([]);
+  const originalPdfRef = React.useRef<{ name: string; base64: string; mime: string; structuredText?: string } | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [extractingQuestions, setExtractingQuestions] = useState(false);
   // Extracted questions from PDF/image — editable by teacher before publishing
@@ -101,7 +101,13 @@ export function useUploadWorksheet({
             });
             const dData = await dRes.json();
             if (dRes.ok && dData.pdfBase64) {
-              workingFd = { name: fd.name.replace(/\.docx$/i, '.pdf'), base64: dData.pdfBase64, mime: 'application/pdf' };
+              // structuredText (mammoth's docx->HTML converted to plain text
+              // with exact table cells preserved) is ground truth for the
+              // quiz-generation step below — it fixes a real bug where table
+              // numbers (e.g. fractions) were being fabricated instead of
+              // read from the source, because docx tables were flattened to
+              // a PDF and re-guessed from the rendered image.
+              workingFd = { name: fd.name.replace(/\.docx$/i, '.pdf'), base64: dData.pdfBase64, mime: 'application/pdf', structuredText: dData.structuredText } as any;
             } else {
               // Previously fell through silently and sent the RAW (unconverted)
               // Word bytes onward as if they were an image — which can never work
@@ -118,7 +124,7 @@ export function useUploadWorksheet({
         }
         if (workingFd.mime === 'application/pdf') {
           // Save original PDF for interactive quiz generation (which needs full PDF, not single-page images)
-          originalPdfRef.current = { name: workingFd.name, base64: workingFd.base64, mime: workingFd.mime };
+          originalPdfRef.current = { name: workingFd.name, base64: workingFd.base64, mime: workingFd.mime, structuredText: (workingFd as any).structuredText };
           console.log('[upload] Converting PDF to images:', workingFd.name);
           const pageImages = await pdfToImages(workingFd.base64);
           console.log('[upload] PDF converted to', pageImages.length, 'images');
@@ -129,7 +135,7 @@ export function useUploadWorksheet({
             // stale-ref path was the "uploaded Telugu but got a Math quiz" bug:
             // a later image-only upload found no PDF in docFiles and silently fell
             // back to the previous worksheet's PDF still sitting in the ref.
-            for (const p of pageImages) { (p as any).sourcePdfBase64 = workingFd.base64; (p as any).sourcePdfName = workingFd.name; }
+            for (const p of pageImages) { (p as any).sourcePdfBase64 = workingFd.base64; (p as any).sourcePdfName = workingFd.name; (p as any).structuredText = (workingFd as any).structuredText; }
             expanded.push(...pageImages);
           } else {
             console.log('[upload] PDF conversion failed, sending as PDF');
@@ -143,7 +149,7 @@ export function useUploadWorksheet({
       console.log('[upload] Files after PDF conversion:', fileDataArr.map(f => `${f.name} (${f.mime})`));
 
       // Upload all files (now all images)
-      const uploadedFiles: { name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string }[] = [];
+      const uploadedFiles: { name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string; structuredText?: string }[] = [];
       for (const fd of fileDataArr) {
         try {
           const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/upload-doc`, {
@@ -153,7 +159,7 @@ export function useUploadWorksheet({
           });
           const data = await res.json();
           if (res.ok) {
-            uploadedFiles.push({ name: fd.name, base64: fd.base64, mime: fd.mime, url: data.url, sourcePdfBase64: (fd as any).sourcePdfBase64, sourcePdfName: (fd as any).sourcePdfName });
+            uploadedFiles.push({ name: fd.name, base64: fd.base64, mime: fd.mime, url: data.url, sourcePdfBase64: (fd as any).sourcePdfBase64, sourcePdfName: (fd as any).sourcePdfName, structuredText: (fd as any).structuredText });
           }
         } catch {/* skip failed uploads */}
       }
@@ -271,11 +277,11 @@ export function useUploadWorksheet({
       // be generated from a PREVIOUS file (the Telugu→Math mixup).
       const pdfEntry = docFiles.find(f => f.mime === 'application/pdf');
       const carriedPdf = !pdfEntry ? docFiles.find(f => f.sourcePdfBase64) : null;
-      let pdfFile: { name: string; base64: string; mime: string } | null =
+      let pdfFile: { name: string; base64: string; mime: string; structuredText?: string } | null =
         pdfEntry
-          ? { name: pdfEntry.name, base64: pdfEntry.base64, mime: 'application/pdf' }
+          ? { name: pdfEntry.name, base64: pdfEntry.base64, mime: 'application/pdf', structuredText: pdfEntry.structuredText }
           : carriedPdf
-            ? { name: carriedPdf.sourcePdfName || carriedPdf.name, base64: carriedPdf.sourcePdfBase64!, mime: 'application/pdf' }
+            ? { name: carriedPdf.sourcePdfName || carriedPdf.name, base64: carriedPdf.sourcePdfBase64!, mime: 'application/pdf', structuredText: carriedPdf.structuredText }
             : null;
       // Multiple loose images with no PDF: stitch them into one PDF so EVERY page
       // is read, not just docFiles[0] (the old bug — pages 2+ were silently dropped).
@@ -317,6 +323,7 @@ export function useUploadWorksheet({
           body: JSON.stringify({
             fileBase64: file.base64, mimeType: file.mime, filename: file.name || 'worksheet.pdf',
             grade: grade || effectiveGrade, subject: subject || 'Mathematics', school: user?.school || '',
+            structuredText: (file as any).structuredText,
           }),
         });
         const jobData = await jobRes.json();

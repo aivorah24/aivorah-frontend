@@ -88,7 +88,7 @@ export function useBulkUpload({
 
       for (const item of initialItems) {
         try {
-          let working: { name: string; base64: string; mime: string } = { name: item.name, base64: item.base64, mime: item.mime };
+          let working: { name: string; base64: string; mime: string; structuredText?: string } = { name: item.name, base64: item.base64, mime: item.mime };
           if (working.mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const dRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/docx-to-pdf`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,9 @@ export function useBulkUpload({
             });
             const dData = await dRes.json();
             if (dRes.ok && dData.pdfBase64) {
-              working = { name: working.name.replace(/\.docx$/i, '.pdf'), base64: dData.pdfBase64, mime: 'application/pdf' };
+              // structuredText is ground truth for the generate step below —
+              // fixes fabricated table numbers on docx-sourced worksheets.
+              working = { name: working.name.replace(/\.docx$/i, '.pdf'), base64: dData.pdfBase64, mime: 'application/pdf', structuredText: dData.structuredText };
             } else {
               // Previously fell through silently and treated the RAW (unconverted)
               // Word bytes as an "image" page, which can never work — it just
@@ -142,6 +144,7 @@ export function useBulkUpload({
             pages: pageFiles, status: 'ready',
             title: resolvedTitle, chapter: stripGradePrefix(eData.chapter) || resolvedTitle,
             subject: extractedSubj, grade: resolvedGrade, language: matchLang || '',
+            structuredText: working.structuredText,
           });
         } catch (err: any) {
           updateBulkItem(item.id, { status: 'error', error: err.message || 'Extraction failed' });
@@ -235,6 +238,7 @@ export function useBulkUpload({
       formData.append('grade', item.grade || 'Grade 3');
       formData.append('subject', item.subject || 'Mathematics');
       formData.append('school', user?.school || '');
+      if (item.structuredText) formData.append('structuredText', item.structuredText);
       const qRes = await fetch(`${ASSIGNMENTS_SERVER_URL}${isImage ? '/quiz/generate-image' : '/quiz/generate'}`, { method: 'POST', body: formData });
       const qData = await qRes.json();
       if (!qRes.ok || !qData.quiz) throw new Error(qData.error || 'Quiz generation failed');
