@@ -26,6 +26,7 @@ export type DrawerParamList = {
   NCERTChapters: undefined;
   SubjectTopics: { subject: string; curriculum: string; grade: string };
   SubjectSyllabus: { subject: string; curriculum: string; grade: string };
+  TeacherPublishedLearningPath: { curriculumId: string; title: string };
   LessonScreen: { subject: string; curriculum: string; grade: string; chapterTitle: string; chapterIndex: number; topicIndex: number };
   Learn5E: { topic: string; chapterId: number } | undefined;
   MathHelper: { topic: string; chapterId: number; unit: string; subject?: string; grade?: string; curriculum?: string };
@@ -82,6 +83,7 @@ export type TeacherDrawerParamList = {
   TeacherSchedule: undefined;
   TeacherProgress: undefined;
   TeacherLearningPaths: undefined;
+  TeacherCurriculumLearningPath: undefined;
   TeacherSyllabusImport: undefined;
   TeacherAchievements: undefined;
   TeacherVideoLibrary: undefined;

@@ -23,6 +23,7 @@ import VideoPlayerScreen from '@legacy/student-legacy/VideoPlayerScreen';
 import NCERTChaptersScreen from '@legacy/student-legacy/NCERTChaptersScreen';
 import SubjectTopicsScreen from '@legacy/student-legacy/SubjectTopicsScreen';
 import SubjectSyllabusScreen from '../screens/student/learning-paths/subject-syllabus/SubjectSyllabusScreen';
+import TeacherPublishedLearningPathScreen from '../screens/student/learning-paths/teacher-learning-paths/TeacherPublishedLearningPathScreen';
 import LessonScreen from '../screens/student/learning-paths/lesson-screen/LessonScreen';
 import Learn5EScreen from '@legacy/student-legacy/Learn5EScreen';
 import MathHelperScreen from '@legacy/student-legacy/MathHelperScreen';
@@ -90,6 +91,7 @@ export default function AppNavigator() {
       <Drawer.Screen name="NCERTChapters" component={NCERTChaptersScreen} />
       <Drawer.Screen name="SubjectTopics" component={SubjectTopicsScreen} />
       <Drawer.Screen name="SubjectSyllabus" component={SubjectSyllabusScreen} />
+      <Drawer.Screen name="TeacherPublishedLearningPath" component={TeacherPublishedLearningPathScreen} />
       <Drawer.Screen name="LessonScreen" component={LessonScreen} />
       <Drawer.Screen name="Learn5E" component={Learn5EScreen} />
       <Drawer.Screen name="MathHelper" component={MathHelperScreen} />

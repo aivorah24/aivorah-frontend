@@ -1,0 +1,100 @@
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useCurriculumUpload } from './hooks/useCurriculumUpload';
+import { useLearningPathDraft } from './hooks/useLearningPathDraft';
+import LearningPathEditor from './components/LearningPathEditor';
+import { CurriculumStatus } from './types';
+
+const STATUS_LABEL: Record<CurriculumStatus, string> = {
+  uploaded: 'Uploaded',
+  processing: 'Processing document…',
+  processed: 'Document processed',
+  generating: 'Generating learning path…',
+  generated: 'Learning path ready',
+  failed: 'Failed',
+};
+
+export default function TeacherCurriculumLearningPathScreen() {
+  const { curriculum, error: uploadError, busy, pickAndUpload, reset } = useCurriculumUpload();
+  const curriculumId = curriculum?.status === 'generated' ? curriculum.id : null;
+  const draft = useLearningPathDraft(curriculumId);
+
+  useEffect(() => {
+    if (curriculumId) draft.load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curriculumId]);
+
+  const isPublished = draft.learningPath?.status === 'published';
+  const canPublish = !!draft.learningPath && draft.learningPath.status === 'draft' && !draft.saving && !draft.publishing;
+
+  return (
+    <ScreenLayout>
+      <Header title="Curriculum → Learning Path" />
+      <ScrollView contentContainerStyle={styles.container}>
+        {!curriculum && (
+          <TouchableOpacity testID="upload-curriculum-button" style={styles.uploadButton} onPress={pickAndUpload} disabled={busy}>
+            <Text style={styles.uploadButtonText}>Upload Curriculum (PDF, DOCX, XLSX)</Text>
+          </TouchableOpacity>
+        )}
+
+        {curriculum && (
+          <View testID="curriculum-status" style={styles.statusBlock}>
+            <Text style={styles.statusText}>{STATUS_LABEL[curriculum.status]}</Text>
+            {busy && curriculum.status !== 'failed' && <ActivityIndicator />}
+            {curriculum.status === 'failed' && (
+              <>
+                <Text testID="upload-error" style={styles.errorText}>{curriculum.error || uploadError}</Text>
+                <TouchableOpacity testID="retry-upload-button" onPress={() => { reset(); pickAndUpload(); }}>
+                  <Text style={styles.retryText}>Try again</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+
+        {uploadError && curriculum?.status !== 'failed' && (
+          <Text testID="general-error" style={styles.errorText}>{uploadError}</Text>
+        )}
+
+        {draft.loading && <ActivityIndicator testID="draft-loading" />}
+        {draft.error && <Text testID="draft-error" style={styles.errorText}>{draft.error}</Text>}
+
+        {draft.learningPath && (
+          <View testID="learning-path-review">
+            {isPublished && <Text testID="published-banner" style={styles.publishedBanner}>Published</Text>}
+            <LearningPathEditor
+              content={draft.learningPath.content}
+              onChange={draft.updateContent}
+              readOnly={isPublished}
+            />
+            {!isPublished && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity testID="save-draft-button" onPress={draft.save} disabled={draft.saving}>
+                  <Text style={styles.actionText}>{draft.saving ? 'Saving…' : 'Save changes'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="publish-button" onPress={draft.publish} disabled={!canPublish}>
+                  <Text style={styles.actionText}>{draft.publishing ? 'Publishing…' : 'Publish'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </ScreenLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { padding: 16 },
+  uploadButton: { padding: 16, borderRadius: 8, backgroundColor: '#3B82F6', alignItems: 'center' },
+  uploadButtonText: { color: '#fff', fontWeight: '600' },
+  statusBlock: { marginVertical: 12, alignItems: 'flex-start', gap: 6 },
+  statusText: { fontSize: 15, fontWeight: '500' },
+  errorText: { color: '#EF4444' },
+  retryText: { color: '#3B82F6' },
+  publishedBanner: { color: '#16A34A', fontWeight: '700', marginBottom: 8 },
+  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
+  actionText: { color: '#3B82F6', fontWeight: '600' },
+});

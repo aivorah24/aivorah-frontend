@@ -26,6 +26,13 @@ jest.mock('../../../../hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false }),
 }));
 
+// Needed since the new TeacherLearningPathsSection (rendered inline on this
+// screen) pulls in config/firebase transitively — real firebase/auth is ESM
+// and jest can't parse it without this mock.
+jest.mock('../../../../config/firebase', () => ({
+  auth: { currentUser: { getIdToken: jest.fn().mockResolvedValue('token') } },
+}));
+
 let mockUser: any = { name: 'A Student', email: 'a@a.com', curriculum: 'IB PYP', grade: 'Grade 4' };
 jest.mock('../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: mockUser, refreshProfile: jest.fn().mockResolvedValue(undefined) }),
@@ -43,6 +50,7 @@ function mockFetchByUrl(handlers: { subjects?: () => Promise<any>; blocked?: () 
   global.fetch = jest.fn((url: string) => {
     if (String(url).includes('/curriculum/subjects') && handlers.subjects) return handlers.subjects();
     if (String(url).includes('/parent/screen-time-status') && handlers.blocked) return handlers.blocked();
+    if (String(url).includes('/student/learning-paths')) return Promise.resolve({ ok: true, json: async () => ({ learningPaths: [] }) });
     return Promise.resolve({ json: async () => ({}) });
   }) as any;
 }

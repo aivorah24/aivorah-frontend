@@ -85,6 +85,7 @@ const TEACHER_NAV_ITEMS = [
   // src/.legacy-screens/teacher-legacy/.
   { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MENU' },
   { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'TEACHING DEVELOPMENT' },
+  { label: 'Curriculum → Learning Path', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'TEACHING DEVELOPMENT' },
   { label: 'Achievements', icon: 'award', screen: 'TeacherAchievements', group: 'TEACHING DEVELOPMENT' },
   { label: 'Project Details', icon: 'activity', screen: 'ProjectDetails', group: 'SYSTEM' },
   { label: 'Help Center', icon: 'help-circle', screen: 'TeacherHelp', group: 'SYSTEM' },

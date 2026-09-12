@@ -16,6 +16,7 @@ import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
 import SubjectCard from './components/SubjectCard';
+import TeacherLearningPathsSection from './teacher-learning-paths/components/TeacherLearningPathsSection';
 
 export default function LearningPathsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -165,6 +166,10 @@ export default function LearningPathsScreen({ navigation }: any) {
               </View>
             </View>
           </LinearGradient>
+
+          <TeacherLearningPathsSection
+            onOpen={(curriculumId, title) => navigation.navigate('TeacherPublishedLearningPath', { curriculumId, title })}
+          />
 
           <>
             <View style={styles.sectionHead}>

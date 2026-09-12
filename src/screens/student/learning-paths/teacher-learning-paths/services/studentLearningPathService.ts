@@ -1,0 +1,35 @@
+import { auth } from '../../../../../config/firebase';
+import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
+import { TeacherLearningPathSummary, StudentTeacherLearningPath } from '../types';
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error('Not signed in.');
+  return { Authorization: `Bearer ${idToken}` };
+}
+
+export class StudentLearningPathApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function parseOrThrow(res: Response) {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new StudentLearningPathApiError(data.error || `Request failed (${res.status})`, res.status);
+  return data;
+}
+
+export async function listTeacherLearningPaths(): Promise<{ learningPaths: TeacherLearningPathSummary[] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function getTeacherLearningPath(curriculumId: string): Promise<{ learningPath: StudentTeacherLearningPath }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths/${curriculumId}`, { headers });
+  return parseOrThrow(res);
+}
