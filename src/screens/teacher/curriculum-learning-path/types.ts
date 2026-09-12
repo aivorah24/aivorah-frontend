@@ -33,8 +33,15 @@ export interface LearningPathUnit {
   topics: LearningPathTopic[];
 }
 
+export interface LearningPathMetadata {
+  grade?: string;
+  subject?: string;
+  curriculum?: string;
+}
+
 export interface LearningPathContent {
   version: number;
+  metadata?: LearningPathMetadata;
   units: LearningPathUnit[];
 }
 

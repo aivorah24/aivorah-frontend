@@ -64,6 +64,19 @@ export default function TeacherCurriculumLearningPathScreen() {
         {draft.learningPath && (
           <View testID="learning-path-review">
             {isPublished && <Text testID="published-banner" style={styles.publishedBanner}>Published</Text>}
+            <View testID="curriculum-metadata" style={styles.metadataBlock}>
+              {curriculum?.file_name && <Text style={styles.metadataText}>File: {curriculum.file_name}</Text>}
+              {draft.learningPath.content.metadata?.curriculum && (
+                <Text style={styles.metadataText}>Curriculum: {draft.learningPath.content.metadata.curriculum}</Text>
+              )}
+              {draft.learningPath.content.metadata?.grade && (
+                <Text style={styles.metadataText}>Grade: {draft.learningPath.content.metadata.grade}</Text>
+              )}
+              {draft.learningPath.content.metadata?.subject && (
+                <Text style={styles.metadataText}>Subject: {draft.learningPath.content.metadata.subject}</Text>
+              )}
+              <Text style={styles.metadataText}>Learning Path ID: {draft.learningPath.id}</Text>
+            </View>
             <LearningPathEditor
               content={draft.learningPath.content}
               onChange={draft.updateContent}
@@ -95,6 +108,8 @@ const styles = StyleSheet.create({
   errorText: { color: '#EF4444' },
   retryText: { color: '#3B82F6' },
   publishedBanner: { color: '#16A34A', fontWeight: '700', marginBottom: 8 },
+  metadataBlock: { marginBottom: 12, gap: 2 },
+  metadataText: { fontSize: 12, opacity: 0.7 },
   actionsRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
   actionText: { color: '#3B82F6', fontWeight: '600' },
 });
