@@ -23,6 +23,10 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
 }) {
   const interactiveQuiz = quiz;
   const setInteractiveQuiz = setQuiz;
+  const conversionReport = (interactiveQuiz as any).conversionReport;
+  const needsReviewBanner = !!conversionReport && conversionReport.overallStatus !== 'COMPLETE';
+  const nonPreservedCount = needsReviewBanner ? conversionReport.items.filter((i: any) => i.status !== 'PRESERVED').length : 0;
+  const [reviewBannerHeight, setReviewBannerHeight] = React.useState(0);
 
   return (
     <Modal visible transparent={false} animationType="slide" onRequestClose={onClose}>
@@ -88,7 +92,17 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <TouchableOpacity
               style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#2e7d32', flexDirection: 'row', gap: 6, alignItems: 'center' }}
-              onPress={() => { onClose(); Alert.alert('Saved', 'Interactive quiz is ready for publishing.'); }}
+              onPress={() => {
+                if (needsReviewBanner) {
+                  Alert.alert(
+                    'Review needed before saving',
+                    `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} could not be fully verified against the source document (see the banner above). Save anyway?`,
+                    [{ text: 'Cancel', style: 'cancel' }, { text: 'Save anyway', onPress: () => { onClose(); Alert.alert('Saved', 'Interactive quiz is ready for publishing.'); } }]
+                  );
+                  return;
+                }
+                onClose(); Alert.alert('Saved', 'Interactive quiz is ready for publishing.');
+              }}
             >
               <Feather name="check-circle" size={14} color="#fff" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Approve & Save</Text>
@@ -124,6 +138,31 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
           </View>
         </View>
 
+        {/* Conversion status banner — surfaces quiz.conversionReport so a teacher
+            never has to trust "generation succeeded" at face value. Only shown
+            when something needs eyes on it (REVIEW_REQUIRED/FAILED); a fully
+            PRESERVED/COMPLETE report is silent by design (no noise on the happy path). */}
+        {needsReviewBanner && (
+          <View
+            onLayout={(e) => setReviewBannerHeight(e.nativeEvent.layout.height)}
+            style={{ backgroundColor: conversionReport.overallStatus === 'FAILED' ? '#3d1a1a' : '#3d2f0f', borderBottomWidth: 1, borderBottomColor: '#30363d', padding: 12 }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Feather name="alert-triangle" size={15} color={conversionReport.overallStatus === 'FAILED' ? '#f85149' : '#d29922'} />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                {conversionReport.overallStatus === 'FAILED' ? 'Conversion failed' : `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} need your review before publishing`}
+              </Text>
+            </View>
+            {conversionReport.items
+              .filter((i: any) => i.status !== 'PRESERVED')
+              .map((i: any, idx: number) => (
+                <Text key={idx} style={{ color: '#c9d1d9', fontSize: 12, marginTop: 6, marginLeft: 23 }}>
+                  <Text style={{ fontWeight: '700' }}>{i.status === 'FAILED' ? '✕ ' : '⚠ '}{i.title || `Task ${idx + 1}`}:</Text> {i.reason || 'No content could be extracted or generated for this task.'}
+                </Text>
+              ))}
+          </View>
+        )}
+
         {/* Preview Mode — server-rendered HTML embedded */}
         {!(interactiveQuiz as any)._editMode && (interactiveQuiz as any)._previewHTML && Platform.OS === 'web' && (
           <div
@@ -147,7 +186,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 el.appendChild(f);
               }
             }}
-            style={{ position: 'fixed', top: 56, left: 0, right: 0, bottom: 0, overflow: 'auto', background: '#0f1117', zIndex: 9999 } as any}
+            style={{ position: 'fixed', top: needsReviewBanner ? 56 + reviewBannerHeight : 56, left: 0, right: 0, bottom: 0, overflow: 'auto', background: '#0f1117', zIndex: 9999 } as any}
           />
         )}
         {!(interactiveQuiz as any)._editMode && !(interactiveQuiz as any)._previewHTML && (
