@@ -98,8 +98,10 @@ export interface CreateAssignmentPayload {
   type: 'assignment' | 'quiz';
   note: string;
   studentId: string;
+  studentName: string;
   parentEmail: string;
   grade?: string | null;
+  curriculum?: string | null;
   questions: string[];
   quizQuestions: any[];
 }
@@ -116,9 +118,11 @@ export async function createAssignment(payload: CreateAssignmentPayload): Promis
       type: payload.type,
       note: payload.note,
       studentId: payload.studentId,
+      studentName: payload.studentName,
       createdById: payload.parentEmail,
       createdByRole: 'parent',
       grade: payload.grade,
+      curriculum: payload.curriculum,
       questions: payload.questions,
       // For a quiz, send the MCQ questions (with options + correct) so the child
       // gets real multiple-choice, not plain text. Empty for assignments.

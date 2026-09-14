@@ -220,7 +220,9 @@ describe('parentAssignmentsService', () => {
       type: 'assignment',
       note: 'Note',
       studentId: 'child1',
+      studentName: 'Kid One',
       parentEmail: 'parent@test.com',
+      curriculum: 'CBSE',
       questions: ['q1'],
       quizQuestions: [{ q: 'q1' }],
     };
@@ -243,9 +245,11 @@ describe('parentAssignmentsService', () => {
           type: 'assignment',
           note: 'Note',
           studentId: 'child1',
+          studentName: 'Kid One',
           createdById: 'parent@test.com',
           createdByRole: 'parent',
           grade: undefined,
+          curriculum: 'CBSE',
           questions: ['q1'],
           quizQuestions: [], // empty for 'assignment' type
         }),

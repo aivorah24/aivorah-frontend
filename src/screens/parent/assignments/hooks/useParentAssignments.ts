@@ -230,8 +230,10 @@ export function useParentAssignments() {
         type,
         note: note.trim(),
         studentId: child.id,
+        studentName: child.name,
         parentEmail,
         grade: child.grade,
+        curriculum: child.curriculum,
         questions: questions.filter(q => q.trim()),
         quizQuestions,
       });
