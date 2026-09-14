@@ -150,12 +150,19 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Feather name="alert-triangle" size={15} color={conversionReport.overallStatus === 'FAILED' ? '#f85149' : '#d29922'} />
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
-                {conversionReport.overallStatus === 'FAILED' ? 'Conversion failed' : `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} need your review before publishing`}
+                {conversionReport.overallStatus === 'FAILED' ? 'Conversion failed'
+                  : nonPreservedCount > 0 ? `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} need your review before publishing`
+                  : 'This conversion needs your review before publishing'}
               </Text>
             </View>
             {conversionReport.taskCountWarning && (
               <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6, marginLeft: 23, fontWeight: '700' }}>
                 ⚠ {conversionReport.taskCountWarning}
+              </Text>
+            )}
+            {conversionReport.missingContentWarning && (
+              <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6, marginLeft: 23, fontWeight: '700' }}>
+                ⚠ {conversionReport.missingContentWarning}
               </Text>
             )}
             {conversionReport.items
