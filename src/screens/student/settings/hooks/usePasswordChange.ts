@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '../../../../config/firebase';
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 
 export function usePasswordChange(user: any, updateUser: (patch: any) => void, closeModal: () => void) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -51,10 +51,14 @@ export function usePasswordChange(user: any, updateUser: (patch: any) => void, c
       await reauthenticateWithCredential(firebaseUser, cred);
       await updatePassword(firebaseUser, newPw);
       if (user?.mustChangePassword) {
-        fetch(`${SERVER_URL}/user/clear-must-change-password`, {
+        // Was the monolith's /user/clear-must-change-password - it writes to a
+        // different Supabase project than /user/sync reads mustChangePassword
+        // from, so it never actually cleared the flag anywhere that mattered.
+        // See SetPasswordScreen.tsx's matching fix for the full bug.
+        fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: firebaseUser.email }),
+          body: JSON.stringify({ email: firebaseUser.email, mustChangePassword: false }),
         }).catch(() => {});
         updateUser({ mustChangePassword: false });
       }

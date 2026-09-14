@@ -123,7 +123,13 @@ describe('usePasswordChange — happy path', () => {
     await user.press(screen.getByTestId('submit'));
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ mustChangePassword: false }));
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/user/clear-must-change-password'), expect.anything());
+    // Regression: this used to hit the monolith's /user/clear-must-change-password,
+    // which writes to a different Supabase project than /user/sync reads from,
+    // so the flag never actually cleared anywhere that mattered.
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/user/preferences'),
+      expect.objectContaining({ body: expect.stringContaining('"mustChangePassword":false') }),
+    );
   });
 });
 

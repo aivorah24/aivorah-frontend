@@ -17,8 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
+import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 
 const TEAL = '#5F8A86';
 
@@ -108,11 +108,22 @@ export default function SetPasswordScreen() {
         await updatePassword(firebaseUser, newPw);
       }
 
-      // Clear the mustChangePassword flag on server
-      await fetch(`${SERVER_URL}/user/clear-must-change-password`, {
+      // Clear the mustChangePassword flag on server. Was PATCH
+      // ${SERVER_URL}/user/clear-must-change-password (the monolith) — that
+      // endpoint writes to a different Supabase project than aivorah-auth-service's
+      // /user/sync reads mustChangePassword from, so it silently never actually
+      // cleared the flag anywhere that mattered: every fresh login (no cached
+      // AsyncStorage profile - e.g. a new device/browser) sent the student back
+      // to this screen even after they'd already set a real password, and their
+      // actual current Firebase password by then was the NEW one, not the
+      // "temporary" one this screen asks for - a real login that can never
+      // succeed on a fresh session. aivorah-profile-service's /user/preferences
+      // is the correct, already-existing endpoint for this (same as everywhere
+      // else in this app that reads/writes preferences).
+      await fetch(`${PROFILE_SERVER_URL}/user/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email }),
+        body: JSON.stringify({ email: user?.email, mustChangePassword: false }),
       }).catch(() => {});
 
       // Update local state — clears the gate in App.tsx
