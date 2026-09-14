@@ -9,8 +9,7 @@ export function useParentProfileData(email: string, parentEmail: string) {
   const [childrenLoading, setChildrenLoading] = useState(true);
   const [weeklyActivity, setWeeklyActivity] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
 
-  // Load persisted phone + city from server on mount
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
     if (!email) return;
     syncUser(email)
       .then(d => {
@@ -19,6 +18,11 @@ export function useParentProfileData(email: string, parentEmail: string) {
       })
       .catch(() => {});
   }, [email]);
+
+  // Refresh on focus, not just mount - otherwise a location/phone change made
+  // on another screen (e.g. Settings) never shows here if this screen stayed
+  // mounted in the background, same reasoning as loadActivity below.
+  useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
 
   const loadActivity = useCallback(() => {
     fetchChildrenActivity(parentEmail)
