@@ -118,3 +118,61 @@ describe('LessonScreen — tab switching', () => {
     await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith('Quiz', expect.any(Object)));
   });
 });
+
+// A teacher-published Curriculum Learning Path topic (AI-generated content
+// from aivorah-learning-paths-service, opened via TeacherPublishedLearningPathScreen's
+// "Learn · AI Tutor · Ask Aivorah · Practice" button) carries its content
+// directly through route params instead of a topicId/byName lookup.
+describe('LessonScreen — teacher-published learning path content', () => {
+  const teacherContent = {
+    whatYoullLearn: ['Add fractions with different denominators'],
+    contentType: 'mathematics',
+    blocks: [
+      { type: 'overview', text: 'This topic covers adding unlike fractions.' },
+      {
+        type: 'worked_example', problem: 'Add 5/6 and 2/9', concept: 'Adding unlike fractions',
+        steps: [{ step: 1, action: 'Find a common denominator', equation: '6x9=54', why: 'so both fractions share a denominator' }],
+        finalAnswer: '19/18',
+      },
+    ],
+  };
+
+  test('renders immediately on the Read tab with no fetch/loading state — content comes from route params', async () => {
+    const fetchSpy = jest.fn();
+    global.fetch = fetchSpy as any;
+
+    await render(<LessonScreen navigation={navProp()} route={routeProp({
+      topicId: undefined, chapterTitle: 'Numbers', topicName: 'Adding Fractions', teacherContent,
+    })} />);
+
+    await waitFor(() => expect(screen.getByTestId('read-tab')).toBeTruthy());
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('the AI Tutor (Listen) tab is reachable for a teacher-published math topic', async () => {
+    const user = userEvent.setup();
+    await render(<LessonScreen navigation={navProp()} route={routeProp({
+      subject: 'Mathematics', topicId: undefined, chapterTitle: 'Numbers', topicName: 'Adding Fractions', teacherContent,
+    })} />);
+    await waitFor(() => expect(screen.getByTestId('read-tab')).toBeTruthy());
+
+    await user.press(screen.getByText('AI Tutor'));
+
+    await waitFor(() => expect(screen.getByTestId('listen-tab')).toBeTruthy());
+  });
+
+  test('Practice redirects to Quiz carrying teacherContent in returnParams, so returning from the quiz can re-resolve the topic', async () => {
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<LessonScreen navigation={nav} route={routeProp({
+      topicId: undefined, chapterTitle: 'Numbers', topicName: 'Adding Fractions', teacherContent,
+    })} />);
+    await waitFor(() => expect(screen.getByTestId('read-tab')).toBeTruthy());
+
+    await user.press(screen.getByText('Practice'));
+
+    await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith('Quiz', expect.objectContaining({
+      returnParams: expect.objectContaining({ teacherContent, topicName: 'Adding Fractions' }),
+    })));
+  });
+});

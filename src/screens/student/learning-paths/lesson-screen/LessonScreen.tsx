@@ -21,6 +21,7 @@ import type { Mode, ListenStep } from './types';
 import { useDbTopic } from './hooks/useDbTopic';
 import { useNarration } from './hooks/useNarration';
 import { usePracticeRedirect } from './hooks/usePracticeRedirect';
+import { adaptTeacherContentToTopic, type TeacherTopicContent } from './utils/adaptTeacherContent';
 import ReadTab from './components/ReadTab';
 import AskTab from './components/AskTab';
 import ListenTab from './components/ListenTab';
@@ -45,8 +46,26 @@ export default function LessonScreen({ navigation, route }: any) {
   const byName = !topicId && byNameTopic
     ? { curriculum, grade, subject, topic: byNameTopic }
     : undefined;
+  // A teacher-published Curriculum Learning Path topic (Groq/Qdrant-grounded
+  // content from aivorah-learning-paths-service, see teacher-learning-paths/
+  // TeacherPublishedLearningPathScreen) carries its own {whatYoullLearn,
+  // blocks} content directly via route params instead of a topicId/byName
+  // lookup — no fetch needed, ReadTab already renders these exact block
+  // shapes (LearningBlocks.tsx), so this reuses the whole Read/Listen/Ask/
+  // Practice flow rather than building a parallel one.
+  const teacherContent = route?.params?.teacherContent as TeacherTopicContent | undefined;
+  const isTeacherContentBacked = !!teacherContent;
+  const teacherTopicName = route?.params?.topicName as string | undefined;
 
-  const { dbTopic, rawPayload, loadingDbTopic, contentReady } = useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName);
+  const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic, contentReady: fetchedContentReady } =
+    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName);
+  const teacherDbTopic = useMemo(
+    () => (isTeacherContentBacked ? adaptTeacherContentToTopic(teacherTopicName || '', teacherContent) : null),
+    [isTeacherContentBacked, teacherContent, teacherTopicName]
+  );
+  const dbTopic = isTeacherContentBacked ? teacherDbTopic : fetchedDbTopic;
+  const rawPayload = isTeacherContentBacked ? { whatYoullLearn: teacherContent?.whatYoullLearn, blocks: teacherContent?.blocks } : fetchedRawPayload;
+  const contentReady = isTeacherContentBacked ? true : fetchedContentReady;
 
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -69,16 +88,16 @@ export default function LessonScreen({ navigation, route }: any) {
   const [exampleOpen, setExampleOpen] = useState(false);
   const isMath = /math/i.test(subject);
 
-  const isDbBacked = !!topicId || !!byName;
+  const isDbBacked = !!topicId || !!byName || isTeacherContentBacked;
   const chapter = isDbBacked
-    ? { title: chapterTitleParam || byNameTopic || '', topics: dbTopic ? [dbTopic] : [] }
+    ? { title: chapterTitleParam || byNameTopic || teacherTopicName || '', topics: dbTopic ? [dbTopic] : [] }
     : getSubjectSyllabus(curriculum, grade, subject)[chapterIndex];
   const topic = isDbBacked ? dbTopic ?? undefined : chapter?.topics[topicIndex];
 
   const listenSteps: ListenStep[] = useMemo(() => {
     if (!topic) return [];
     if (topic.readText.listenParts && topic.readText.listenParts.length > 0) {
-      return topic.readText.listenParts.map(p => ({
+      return topic.readText.listenParts.map((p: any) => ({
         label: p.heading, heading: p.heading, text: p.text, keyIdea: p.keyIdea, pauseThink: p.pauseThink,
       }));
     }
@@ -98,7 +117,7 @@ export default function LessonScreen({ navigation, route }: any) {
     }
     return [
       { label: 'Introduction', heading: 'Introduction', text: topic.readText.intro },
-      ...topic.readText.body.map((p, i) => ({ label: `Part ${i + 1}`, heading: `Part ${i + 1}`, text: p })),
+      ...topic.readText.body.map((p: any, i: number) => ({ label: `Part ${i + 1}`, heading: `Part ${i + 1}`, text: p })),
       { label: 'Try this yourself', heading: 'Try this yourself', text: topic.readText.activity },
     ];
   }, [topic]);
@@ -113,7 +132,7 @@ export default function LessonScreen({ navigation, route }: any) {
 
   usePracticeRedirect(mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
-    byNameTopic, chapterTitle: chapter?.title,
+    byNameTopic, chapterTitle: chapter?.title, teacherContent,
   }, contentReady);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson

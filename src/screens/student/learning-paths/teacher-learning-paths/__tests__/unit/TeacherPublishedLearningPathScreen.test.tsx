@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import TeacherPublishedLearningPathScreen from '../../TeacherPublishedLearningPathScreen';
 
 jest.mock('../../../../../../config/firebase', () => ({
@@ -78,5 +78,73 @@ describe('TeacherPublishedLearningPathScreen', () => {
     })) as any;
     await render(<TeacherPublishedLearningPathScreen route={route} navigation={navigation} />);
     await waitFor(() => expect(screen.getByTestId('teacher-lp-detail-empty')).toBeTruthy());
+  });
+
+  test('a topic with real AI-generated content and full metadata gets an open action into LessonScreen', async () => {
+    const teacherContent = { whatYoullLearn: ['Add unlike fractions'], blocks: [{ type: 'overview', text: 'x' }], contentType: 'mathematics' };
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({
+      learningPath: {
+        id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
+        content: {
+          version: 1,
+          metadata: { grade: '6', subject: 'Mathematics', curriculum: 'NCERT' },
+          units: [{
+            title: 'Numbers', order: 0,
+            topics: [{
+              title: 'Adding Fractions', order: 0, objectives: [], lessons: [], subtopics: [],
+              content: teacherContent, groundingSource: 'ncert_vector',
+            }],
+          }],
+        },
+      },
+    })) as any;
+    const navigate = jest.fn();
+
+    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate }} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-lp-open-0-0')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('teacher-lp-open-0-0'));
+
+    expect(navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      grade: '6', subject: 'Mathematics', curriculum: 'NCERT',
+      chapterIndex: 0, topicIndex: 0, chapterTitle: 'Numbers', topicName: 'Adding Fractions',
+      teacherContent,
+    }));
+  });
+
+  test('a topic with no generated content yet gets no open action', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({
+      learningPath: {
+        id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
+        content: {
+          version: 1,
+          metadata: { grade: '6', subject: 'Mathematics', curriculum: 'NCERT' },
+          units: [{
+            title: 'Numbers', order: 0,
+            topics: [{ title: 'Not Ready Yet', order: 0, objectives: [], lessons: [], subtopics: [], content: null }],
+          }],
+        },
+      },
+    })) as any;
+    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate: jest.fn() }} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-lp-topic-0-0')).toBeTruthy());
+    expect(screen.queryByTestId('teacher-lp-open-0-0')).toBeNull();
+  });
+
+  test('a topic with content but missing curriculum metadata (grade/subject) gets no open action', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({
+      learningPath: {
+        id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
+        content: {
+          version: 1,
+          units: [{
+            title: 'Numbers', order: 0,
+            topics: [{ title: 'X', order: 0, objectives: [], lessons: [], subtopics: [], content: { whatYoullLearn: [], blocks: [] } }],
+          }],
+        },
+      },
+    })) as any;
+    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate: jest.fn() }} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-lp-topic-0-0')).toBeTruthy());
+    expect(screen.queryByTestId('teacher-lp-open-0-0')).toBeNull();
   });
 });

@@ -20,6 +20,11 @@ export function usePracticeRedirect(
     // instead of the real lesson. See BUGS_AND_FIXES.md.
     byNameTopic: string | undefined;
     chapterTitle: string | undefined;
+    // Teacher-published Curriculum Learning Path topic (see LessonScreen's
+    // teacherContent branch) — has neither topicId nor byNameTopic, so it
+    // must round-trip through the quiz the same way byNameTopic does, or
+    // returning from Quiz loses the content and shows "not available".
+    teacherContent?: unknown;
   },
   contentReady: boolean = true,
 ) {
@@ -41,7 +46,8 @@ export function usePracticeRedirect(
         subject: params.subject, curriculum: params.curriculum, grade: params.grade,
         chapterIndex: params.chapterIndex, topicIndex: params.topicIndex,
         topicId: params.topicId, byNameTopic: params.byNameTopic, chapterTitle: params.chapterTitle,
-        topicName: params.byNameTopic,
+        topicName: params.byNameTopic || (params.teacherContent ? topic.name : undefined),
+        teacherContent: params.teacherContent,
       },
     });
   }, [mode, topic, contentReady]);
