@@ -44,7 +44,7 @@ export async function linkCreatedChild(parentEmail: string, payload: Record<stri
 }
 
 export async function sendEmailOtp(email: string, name: string) {
-  return fetch(`${PARENT_SERVER_URL}/user/email-otp/send`, {
+  return fetch(`${PARENT_SERVER_URL}/parent/children/email-otp/send`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, name }),
@@ -52,7 +52,7 @@ export async function sendEmailOtp(email: string, name: string) {
 }
 
 export async function verifyEmailOtp(email: string, otp: string) {
-  return fetch(`${PARENT_SERVER_URL}/user/email-otp/verify`, {
+  return fetch(`${PARENT_SERVER_URL}/parent/children/email-otp/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, otp }),
