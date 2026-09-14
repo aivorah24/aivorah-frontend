@@ -1,6 +1,6 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import CHALLENGES_SERVER_URL from '../../../../config/challengesServerUrl';
+import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
 
 export interface Child { id: string; name: string; grade: string; curriculum?: string; }
 
@@ -23,30 +23,8 @@ export interface Challenge {
   status?: string;
 }
 
-// TODO(monolith removal blocked): still on the monolith, not
-// STUDENTS_SERVER_URL. Root-caused 2026-09-02 - this is a DATA migration
-// gap, not a code bug in aivorah-students-service:
-//   - aivorah-students-service's GET /parent/:email/children route and its
-//     Supabase query are correct - verified live by querying an account
-//     that DOES have a row in this project (seed.parent.a@example.invalid)
-//     and getting the right linked child back instantly.
-//   - The real production parent_children link (and the linked user's row)
-//     for actual parent accounts - e.g. e2e.parent.d@aivorah.test, which
-//     returns 200 with real data from the LIVE monolith at
-//     https://aivorah.ai/parent/.../children - simply does not exist yet in
-//     aivorah-students-service's Supabase project. Confirmed by querying
-//     parent_children directly there: 1 row total, for an unrelated seed
-//     account, not this one.
-//   - Repointing this call would silently break "child linked to your
-//     account" for every real parent, not fix an outage - do NOT re-point
-//     until parent_children (+ the linked users rows) has been migrated
-//     into the microservices' Supabase project. That's a data migration,
-//     not a code fix, and out of scope for a single scoped session - it
-//     needs a real migration pass (with integrity checks against the
-//     monolith's project) run deliberately, not silently from inside a
-//     feature PR.
 export async function fetchChildren(parentEmail: string): Promise<Child[]> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   return Array.isArray(data) && data.length > 0 ? data : [];
 }

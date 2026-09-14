@@ -3,6 +3,7 @@ import SERVER_URL from '../../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import STUDENTS_SERVER_URL from '../../../../../config/studentsServerUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
+import PARENT_SERVER_URL from '../../../../../config/parentServerUrl';
 
 global.fetch = jest.fn();
 
@@ -18,7 +19,7 @@ describe('parentAssignmentsService', () => {
         json: jest.fn().mockResolvedValueOnce([{ id: 'c1', name: 'Kid 1' }]),
       });
       const res = await parentAssignmentsService.fetchChildren('parent@test.com');
-      expect(fetch).toHaveBeenCalledWith(`${SERVER_URL}/parent/parent%40test.com/children`);
+      expect(fetch).toHaveBeenCalledWith(`${PARENT_SERVER_URL}/parent/parent%40test.com/children`);
       expect(res).toEqual([{ id: 'c1', name: 'Kid 1' }]);
     });
 

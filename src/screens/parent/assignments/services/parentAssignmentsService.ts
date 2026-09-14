@@ -2,6 +2,7 @@ import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
+import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
 
 // Fallback only - used before the child's curriculum/grade is known, or if
 // the /curriculum/subjects lookup below fails. The real subject list is
@@ -17,14 +18,7 @@ export const IB_PYP_SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Stu
 // other /parent/* route (credentials, init-auth, link-created, ...) is still
 // monolith-only, so only this one call moved.
 export async function fetchChildren(parentEmail: string): Promise<any[]> {
-  // TEMPORARY: reverted to the monolith - aivorah-students-service's
-  // GET /parent/:email/children was returning [] for every real parent
-  // account in production (confirmed 2026-09-01 - the monolith's identical
-  // query returns correct data, students-service's Supabase connection is
-  // likely pointed at the wrong project). Re-point to STUDENTS_SERVER_URL
-  // once that's root-caused and fixed - don't re-attempt without verifying
-  // against a real account first.
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   return Array.isArray(data) && data.length > 0 ? data : [];
 }

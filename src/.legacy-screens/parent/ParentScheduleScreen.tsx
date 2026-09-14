@@ -20,6 +20,7 @@ import ScreenLayout from '../../components/common/ScreenLayout';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
+import PARENT_SERVER_URL from '../../config/parentServerUrl';
 import TimePicker from '../../components/common/TimePicker';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -185,7 +186,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
 
   // Load children
   useEffect(() => {
-    fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
+    fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {

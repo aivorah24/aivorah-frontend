@@ -1,5 +1,5 @@
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
-import SERVER_URL from '../../../../config/serverUrl';
+import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
 
 export interface ChildOption {
   id: string;
@@ -7,14 +7,8 @@ export interface ChildOption {
   grade: string;
 }
 
-// aivorah-students-service owns GET /parent/:email/children (ported off the
-// monolith). fetchChildren here still goes through the monolith temporarily -
-// see the note in parentAssignmentsService.ts / parentProgressService.ts:
-// students-service's /parent/:email/children was returning [] for every real
-// account in production, confirmed 2026-09-01, so all three parent features
-// were reverted to SERVER_URL together. Re-point once that's fixed.
 export async function fetchChildren(parentEmail: string): Promise<ChildOption[]> {
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   return Array.isArray(data) ? data.map((c: any) => ({ id: c.id, name: c.name, grade: c.grade })) : [];
 }

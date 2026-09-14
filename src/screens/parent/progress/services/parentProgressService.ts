@@ -1,12 +1,9 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
+import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
 
 export async function fetchChildren(parentEmail: string): Promise<any[]> {
-  // TEMPORARY: reverted to the monolith - see the identical note in
-  // parentAssignmentsService.ts's fetchChildren. Don't re-point to
-  // STUDENTS_SERVER_URL until that's root-caused and fixed.
-  const res = await fetch(`${SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
+  const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
   const data = await res.json();
   return Array.isArray(data) && data.length > 0 ? data : [];
 }
