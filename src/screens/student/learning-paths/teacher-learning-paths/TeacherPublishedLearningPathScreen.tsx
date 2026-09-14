@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../../components/common/Header';
 import ScreenLayout from '../../../../components/common/ScreenLayout';
+import { useTheme } from '../../../../context/ThemeContext';
+import type { AppColors } from '../../../../theme';
 import { useTeacherLearningPath } from './hooks/useTeacherLearningPath';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
 }
 
 export default function TeacherPublishedLearningPathScreen({ route, navigation }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { curriculumId, title } = route.params;
   const { learningPath, status, errorMessage } = useTeacherLearningPath(curriculumId);
 
@@ -18,7 +22,7 @@ export default function TeacherPublishedLearningPathScreen({ route, navigation }
     <ScreenLayout>
       <Header title={title || 'Learning Path'} onMenuPress={() => navigation.openDrawer?.()} />
       <ScrollView contentContainerStyle={styles.container}>
-        {status === 'loading' && <ActivityIndicator testID="teacher-lp-detail-loading" />}
+        {status === 'loading' && <ActivityIndicator testID="teacher-lp-detail-loading" color={colors.primary} />}
 
         {status === 'not_found' && (
           <Text testID="teacher-lp-detail-not-found" style={styles.dimText}>
@@ -99,22 +103,22 @@ export default function TeacherPublishedLearningPathScreen({ route, navigation }
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { padding: 16 },
   unit: { marginBottom: 20 },
-  unitTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: '#ccc' },
-  topicTitle: { fontSize: 15, fontWeight: '600' },
+  unitTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: colors.textMain },
+  topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.borderColor },
+  topicTitle: { fontSize: 15, fontWeight: '600', color: colors.textMain },
   block: { marginTop: 4 },
-  blockLabel: { fontSize: 12, opacity: 0.7 },
-  item: { fontSize: 13, marginLeft: 4 },
-  lessonTitle: { fontSize: 14, fontWeight: '500', marginTop: 4 },
-  dimText: { opacity: 0.7, textAlign: 'center', marginTop: 40 },
-  errorText: { color: '#EF4444', textAlign: 'center', marginTop: 40 },
+  blockLabel: { fontSize: 12, color: colors.textMuted },
+  item: { fontSize: 13, marginLeft: 4, color: colors.textMain },
+  lessonTitle: { fontSize: 14, fontWeight: '500', marginTop: 4, color: colors.textMain },
+  dimText: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
+  errorText: { color: colors.accentRed, textAlign: 'center', marginTop: 40 },
   openBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     marginTop: 8, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 18,
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
   },
   openBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });

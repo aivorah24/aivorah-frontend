@@ -65,8 +65,8 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MANAGE' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MANAGE' },
+  { label: 'Curriculum & Syllabus', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'MANAGE' },
   { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'MANAGE' },
-  { label: 'Curriculum → Learning Path', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'MANAGE' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MANAGE' },
   // Student Progress restored 2026-08-29 — it's now a real, refactored
   // screen backed by a real extracted endpoint (see

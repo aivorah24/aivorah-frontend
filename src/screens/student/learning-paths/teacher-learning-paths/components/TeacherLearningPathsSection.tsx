@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useTheme } from '../../../../../context/ThemeContext';
+import type { AppColors } from '../../../../../theme';
 import { useTeacherLearningPaths } from '../hooks/useTeacherLearningPaths';
 
 interface Props {
@@ -19,6 +21,8 @@ interface Props {
 // useTeacherLearningPaths's own tests, and explicitly surfaced on the
 // dedicated TeacherPublishedLearningPathScreen once a student opens one.
 export default function TeacherLearningPathsSection({ onOpen }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { learningPaths, loading, error } = useTeacherLearningPaths();
 
   if (loading || error || learningPaths.length === 0) {
@@ -35,7 +39,7 @@ export default function TeacherLearningPathsSection({ onOpen }: Props) {
           style={styles.card}
           onPress={() => onOpen(lp.curriculumId, lp.title)}
         >
-          <Feather name="book-open" size={16} />
+          <Feather name="book-open" size={16} color={colors.primary} />
           <Text style={styles.cardTitle}>{lp.title}</Text>
         </TouchableOpacity>
       ))}
@@ -43,9 +47,9 @@ export default function TeacherLearningPathsSection({ onOpen }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 },
-  cardTitle: { fontSize: 14, fontWeight: '500' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8, color: colors.textMain },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.cardDark, marginBottom: 8 },
+  cardTitle: { fontSize: 14, fontWeight: '500', color: colors.textMain },
 });

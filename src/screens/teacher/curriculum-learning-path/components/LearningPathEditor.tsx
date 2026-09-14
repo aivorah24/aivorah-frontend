@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../context/ThemeContext';
+import type { AppColors } from '../../../../theme';
 import { LearningPathContent } from '../types';
 
 interface Props {
@@ -12,6 +14,9 @@ interface Props {
 // full content — same convention as InteractiveQuizPreviewModal.tsx's
 // question editing, so this saves through PUT /:id/learning-path the same way.
 export default function LearningPathEditor({ content, onChange, readOnly }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   function updateUnitTitle(ui: number, title: string) {
     const next = { ...content, units: content.units.map((u, i) => (i === ui ? { ...u, title } : u)) };
     onChange(next);
@@ -113,6 +118,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
             value={unit.title || ''}
             onChangeText={(v) => updateUnitTitle(ui, v)}
             placeholder="Unit title"
+            placeholderTextColor={colors.textMuted}
             editable={!readOnly}
             style={styles.unitTitleInput}
           />
@@ -123,6 +129,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 value={topic.title || ''}
                 onChangeText={(v) => updateTopicTitle(ui, ti, v)}
                 placeholder="Topic title"
+                placeholderTextColor={colors.textMuted}
                 editable={!readOnly}
                 style={styles.topicTitleInput}
               />
@@ -158,6 +165,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                     value={lesson.title}
                     onChangeText={(v) => updateLesson(ui, ti, li, 'title', v)}
                     placeholder="Lesson title"
+                    placeholderTextColor={colors.textMuted}
                     editable={!readOnly}
                     style={styles.flexInput}
                   />
@@ -166,6 +174,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                     value={lesson.summary}
                     onChangeText={(v) => updateLesson(ui, ti, li, 'summary', v)}
                     placeholder="Lesson summary"
+                    placeholderTextColor={colors.textMuted}
                     editable={!readOnly}
                     multiline
                     style={styles.flexInput}
@@ -201,16 +210,16 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   unit: { marginBottom: 16 },
-  unitTitleInput: { fontSize: 18, fontWeight: '600', paddingVertical: 6 },
-  topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: '#ccc' },
-  topicTitleInput: { fontSize: 15, fontWeight: '500', paddingVertical: 4 },
-  sectionLabel: { fontSize: 12, opacity: 0.7, marginTop: 6 },
+  unitTitleInput: { fontSize: 18, fontWeight: '600', paddingVertical: 6, color: colors.textMain },
+  topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.borderColor },
+  topicTitleInput: { fontSize: 15, fontWeight: '500', paddingVertical: 4, color: colors.textMain },
+  sectionLabel: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  flexInput: { flex: 1, paddingVertical: 4 },
+  flexInput: { flex: 1, paddingVertical: 4, color: colors.textMain },
   lessonBlock: { marginTop: 4 },
-  addText: { color: '#3B82F6', marginTop: 4 },
-  removeText: { color: '#EF4444', marginLeft: 8 },
-  subtopicText: { fontSize: 13, opacity: 0.8, marginLeft: 4 },
+  addText: { color: colors.primary, marginTop: 4 },
+  removeText: { color: colors.accentRed, marginLeft: 8 },
+  subtopicText: { fontSize: 13, color: colors.textMuted, marginLeft: 4 },
 });

@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import type { AppColors } from '../../../theme';
 import { useCurriculumUpload } from './hooks/useCurriculumUpload';
 import { useLearningPathDraft } from './hooks/useLearningPathDraft';
 import LearningPathEditor from './components/LearningPathEditor';
@@ -17,6 +19,8 @@ const STATUS_LABEL: Record<CurriculumStatus, string> = {
 };
 
 export default function TeacherCurriculumLearningPathScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { curriculum, error: uploadError, busy, pickAndUpload, reset } = useCurriculumUpload();
   const curriculumId = curriculum?.status === 'generated' ? curriculum.id : null;
   const draft = useLearningPathDraft(curriculumId);
@@ -31,7 +35,7 @@ export default function TeacherCurriculumLearningPathScreen() {
 
   return (
     <ScreenLayout>
-      <Header title="Curriculum → Learning Path" />
+      <Header title="Curriculum & Syllabus" subtitle="AI-generated learning paths from your uploaded curriculum" />
       <ScrollView contentContainerStyle={styles.container}>
         {!curriculum && (
           <TouchableOpacity testID="upload-curriculum-button" style={styles.uploadButton} onPress={pickAndUpload} disabled={busy}>
@@ -42,7 +46,7 @@ export default function TeacherCurriculumLearningPathScreen() {
         {curriculum && (
           <View testID="curriculum-status" style={styles.statusBlock}>
             <Text style={styles.statusText}>{STATUS_LABEL[curriculum.status]}</Text>
-            {busy && curriculum.status !== 'failed' && <ActivityIndicator />}
+            {busy && curriculum.status !== 'failed' && <ActivityIndicator color={colors.primary} />}
             {curriculum.status === 'failed' && (
               <>
                 <Text testID="upload-error" style={styles.errorText}>{curriculum.error || uploadError}</Text>
@@ -58,7 +62,7 @@ export default function TeacherCurriculumLearningPathScreen() {
           <Text testID="general-error" style={styles.errorText}>{uploadError}</Text>
         )}
 
-        {draft.loading && <ActivityIndicator testID="draft-loading" />}
+        {draft.loading && <ActivityIndicator testID="draft-loading" color={colors.primary} />}
         {draft.error && <Text testID="draft-error" style={styles.errorText}>{draft.error}</Text>}
 
         {draft.learningPath && (
@@ -99,17 +103,17 @@ export default function TeacherCurriculumLearningPathScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { padding: 16 },
-  uploadButton: { padding: 16, borderRadius: 8, backgroundColor: '#3B82F6', alignItems: 'center' },
+  uploadButton: { padding: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center' },
   uploadButtonText: { color: '#fff', fontWeight: '600' },
   statusBlock: { marginVertical: 12, alignItems: 'flex-start', gap: 6 },
-  statusText: { fontSize: 15, fontWeight: '500' },
-  errorText: { color: '#EF4444' },
-  retryText: { color: '#3B82F6' },
-  publishedBanner: { color: '#16A34A', fontWeight: '700', marginBottom: 8 },
+  statusText: { fontSize: 15, fontWeight: '500', color: colors.textMain },
+  errorText: { color: colors.accentRed },
+  retryText: { color: colors.primary },
+  publishedBanner: { color: colors.accentGreen, fontWeight: '700', marginBottom: 8 },
   metadataBlock: { marginBottom: 12, gap: 2 },
-  metadataText: { fontSize: 12, opacity: 0.7 },
+  metadataText: { fontSize: 12, color: colors.textMuted },
   actionsRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
-  actionText: { color: '#3B82F6', fontWeight: '600' },
+  actionText: { color: colors.primary, fontWeight: '600' },
 });
