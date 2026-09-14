@@ -153,6 +153,11 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 {conversionReport.overallStatus === 'FAILED' ? 'Conversion failed' : `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} need your review before publishing`}
               </Text>
             </View>
+            {conversionReport.taskCountWarning && (
+              <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6, marginLeft: 23, fontWeight: '700' }}>
+                ⚠ {conversionReport.taskCountWarning}
+              </Text>
+            )}
             {conversionReport.items
               .filter((i: any) => i.status !== 'PRESERVED')
               .map((i: any, idx: number) => (
