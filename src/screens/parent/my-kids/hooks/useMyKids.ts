@@ -482,6 +482,9 @@ export function useMyKids() {
       const res = await createParentTask({
         parentEmail,
         childId: taskModalChild?.id,
+        childName: taskModalChild?.name,
+        grade: taskModalChild?.grade,
+        curriculum: taskModalChild?.curriculum,
         label: taskLabel.trim(),
         icon: taskIcon,
         coins: parseInt(taskCoins) || 5,

@@ -1,10 +1,7 @@
 import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
-import SERVER_URL from '../../../../config/serverUrl';
+import DAILY_HABITS_SERVER_URL from '../../../../config/dailyHabitsServerUrl';
 
-// NOTE: Daily Tasks (`/habits/parent-tasks`) is owned by a parallel migration
-// to aivorah-daily-habits-service — kept on the legacy SERVER_URL here rather
-// than duplicating that work. Repoint once that service is confirmed wired in.
-const HABITS_SERVER_URL = SERVER_URL;
+const HABITS_SERVER_URL = DAILY_HABITS_SERVER_URL;
 
 export async function fetchChildren(parentEmail: string) {
   const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
@@ -83,7 +80,7 @@ export async function fetchParentTasks(childId: string) {
   return fetch(`${HABITS_SERVER_URL}/habits/parent-tasks?childId=${childId}`);
 }
 
-export async function createParentTask(payload: { parentEmail: string; childId: string; label: string; icon: string; coins: number }) {
+export async function createParentTask(payload: { parentEmail: string; childId: string; childName: string; grade?: string; curriculum?: string; label: string; icon: string; coins: number }) {
   return fetch(`${HABITS_SERVER_URL}/habits/parent-tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

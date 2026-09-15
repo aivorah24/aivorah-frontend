@@ -66,6 +66,9 @@ export function useDailyTasks(parentEmail: string) {
       const newTask = await dailyTasksService.createTask({
         parentEmail,
         childId: selectedChild.id,
+        childName: selectedChild.name,
+        grade: selectedChild.grade,
+        curriculum: selectedChild.curriculum,
         label: label.trim(),
         icon,
         coins: parseInt(coins, 10) || 5,

@@ -58,7 +58,7 @@ describe('dailyTasksService', () => {
 
   describe('createTask', () => {
     it('POSTs to the daily-habits-service and returns the new task', async () => {
-      const payload = { parentEmail: 'p@test.com', childId: 'c1', label: 'Read', icon: 'book-open', coins: 10 };
+      const payload = { parentEmail: 'p@test.com', childId: 'c1', childName: 'Kid One', label: 'Read', icon: 'book-open', coins: 10 };
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce({ id: 't1', ...payload }),
@@ -80,7 +80,7 @@ describe('dailyTasksService', () => {
       });
 
       await expect(
-        dailyTasksService.createTask({ parentEmail: 'p@test.com', childId: 'c1', label: '', icon: 'star', coins: 5 })
+        dailyTasksService.createTask({ parentEmail: 'p@test.com', childId: 'c1', childName: 'Kid', label: '', icon: 'star', coins: 5 })
       ).rejects.toThrow('label required');
     });
 
@@ -91,7 +91,7 @@ describe('dailyTasksService', () => {
       });
 
       await expect(
-        dailyTasksService.createTask({ parentEmail: 'p@test.com', childId: 'c1', label: 'x', icon: 'star', coins: 5 })
+        dailyTasksService.createTask({ parentEmail: 'p@test.com', childId: 'c1', childName: 'Kid', label: 'x', icon: 'star', coins: 5 })
       ).rejects.toThrow('Could not save task.');
     });
   });

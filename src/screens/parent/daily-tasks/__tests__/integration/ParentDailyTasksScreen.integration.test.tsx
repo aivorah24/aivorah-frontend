@@ -77,7 +77,8 @@ describe('ParentDailyTasksScreen Integration', () => {
 
     await waitFor(() => {
       expect(dailyTasksService.createTask).toHaveBeenCalledWith({
-        parentEmail: 'parent@example.com', childId: 'c1', label: 'Tidy up your room', icon: 'check-circle', coins: 5,
+        parentEmail: 'parent@example.com', childId: 'c1', childName: 'Kiddo', grade: undefined, curriculum: undefined,
+        label: 'Tidy up your room', icon: 'check-circle', coins: 5,
       });
     }, { timeout: 5000 });
     await waitFor(() => {

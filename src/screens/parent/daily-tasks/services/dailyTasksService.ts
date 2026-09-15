@@ -31,6 +31,9 @@ export async function fetchTasks(childId: string): Promise<any[]> {
 export interface CreateTaskPayload {
   parentEmail: string;
   childId: string;
+  childName: string;
+  grade?: string;
+  curriculum?: string;
   label: string;
   icon: string;
   coins: number;

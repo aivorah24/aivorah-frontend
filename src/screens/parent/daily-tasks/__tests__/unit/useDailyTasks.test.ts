@@ -84,7 +84,8 @@ describe('useDailyTasks', () => {
 
     expect(ok).toBe(true);
     expect(dailyTasksService.createTask).toHaveBeenCalledWith({
-      parentEmail: 'parent@test.com', childId: 'c1', label: 'Read', icon: 'book-open', coins: 5,
+      parentEmail: 'parent@test.com', childId: 'c1', childName: 'Kid', grade: undefined, curriculum: undefined,
+      label: 'Read', icon: 'book-open', coins: 5,
     });
     expect(result.current.tasks).toEqual([{ id: 't1', label: 'Read', coins: 5 }]);
   });
