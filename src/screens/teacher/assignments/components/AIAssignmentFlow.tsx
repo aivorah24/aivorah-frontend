@@ -31,6 +31,7 @@ export function AIAssignmentFlow(props: {
   effectiveCurriculum: string; curriculumOptions: string[]; teacherCurriculum: string;
   chapter: string; setChapter: (v: string) => void;
   topicsLoading: boolean; availableTopics: string[];
+  startDate?: string; setStartDate?: (v: string) => void;
   dueDate: string; setDueDate: (v: string) => void;
   quizType: 'mcq' | 'fill_blank' | 'mixed'; setQuizType: (v: 'mcq' | 'fill_blank' | 'mixed') => void;
   quizDifficulty: 'easy' | 'medium' | 'hard'; setQuizDifficulty: (v: 'easy' | 'medium' | 'hard') => void;
@@ -108,6 +109,7 @@ export function AIAssignmentFlow(props: {
         curriculum={curriculum} setCurriculum={setCurriculum} effectiveCurriculum={effectiveCurriculum}
         curriculumOptions={curriculumOptions} teacherCurriculum={teacherCurriculum}
         chapter={chapter} setChapter={setChapter} topicsLoading={topicsLoading} availableTopics={availableTopics}
+        startDate={props.startDate} setStartDate={props.setStartDate}
         dueDate={dueDate} setDueDate={setDueDate}
         colors={colors} gold={gold} styles={styles}
       />

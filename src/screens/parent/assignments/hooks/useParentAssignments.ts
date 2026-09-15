@@ -55,6 +55,7 @@ export function useParentAssignments() {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Mathematics');
   const [chapter, setChapter] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [type, setType] = useState<'assignment' | 'quiz'>('assignment');
   const [note, setNote] = useState('');
@@ -181,7 +182,7 @@ export function useParentAssignments() {
   const onTrackPct = childStats ? Math.round(((childStats.currentStreak ?? 0) / 7) * 100) : null;
 
   function resetForm() {
-    setTitle(''); setChapter(''); setDueDate(''); setNote('');
+    setTitle(''); setChapter(''); setStartDate(''); setDueDate(''); setNote('');
     setSubject('Mathematics'); setType('assignment');
     setQuestions(['']); setQuizQuestions([]); setFormError('');
     setAiPrompt(''); setAiGenerated(false); setQuizCount(5); setShowTopicPicker(false);
@@ -217,6 +218,7 @@ export function useParentAssignments() {
 
   async function createAssignment() {
     if (!title.trim()) { setFormError('Title is required'); return; }
+    if (!startDate.trim()) { setFormError('Start date is required'); return; }
     if (!dueDate.trim()) { setFormError('Due date is required (YYYY-MM-DD)'); return; }
     if (!child) { setFormError('No child selected'); return; }
     setFormError('');
@@ -226,6 +228,7 @@ export function useParentAssignments() {
         title: title.trim(),
         subject: effectiveSubject,
         chapter: chapter.trim(),
+        startDate,
         dueDate,
         type,
         note: note.trim(),
@@ -254,7 +257,7 @@ export function useParentAssignments() {
     showModal, setShowModal, reportAssignment, setReportAssignment,
     detailAssignment, setDetailAssignment,
     title, setTitle, subject: effectiveSubject, setSubject, subjectOptions: effectiveSubjectOptions,
-    chapter, setChapter, dueDate, setDueDate, type, setType, note, setNote,
+    chapter, setChapter, startDate, setStartDate, dueDate, setDueDate, type, setType, note, setNote,
     questions, setQuestions, quizQuestions, setQuizQuestions,
     creating, formError, setFormError,
     aiPrompt, setAiPrompt, aiGenerating, aiGenerated, quizCount, setQuizCount,

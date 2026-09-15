@@ -48,15 +48,9 @@ export async function fetchChallenges(child: Pick<Child, 'id' | 'grade' | 'curri
 }
 
 export async function assignChallenge({
-  challengeId,
-  studentId,
-  parentEmail,
-  dueDate,
+  challengeId, studentId, parentEmail, dueDate, startDate
 }: {
-  challengeId: string;
-  studentId: string;
-  parentEmail: string;
-  dueDate: string;
+  challengeId: string; studentId: string; parentEmail: string; dueDate: string; startDate?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await fetch(`${CHALLENGES_SERVER_URL}/challenges/assign`, {
     method: 'POST',
@@ -67,6 +61,7 @@ export async function assignChallenge({
       assignedById: parentEmail,
       assignedByRole: 'parent',
       dueDate,
+      startDate,
     }),
   });
   if (!res.ok) {

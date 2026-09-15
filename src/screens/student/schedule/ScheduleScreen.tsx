@@ -231,7 +231,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
         <EventDetailModal
           selectedEvent={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onNavigate={(screen) => { setSelectedEvent(null); navigation.navigate(screen); }}
+          onNavigate={(screen, params) => { setSelectedEvent(null); navigation.navigate(screen, params); }}
           styles={styles}
           colors={colors}
         />

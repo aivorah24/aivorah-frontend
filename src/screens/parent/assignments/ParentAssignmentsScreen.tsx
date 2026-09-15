@@ -37,7 +37,7 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
     showModal, setShowModal, reportAssignment, setReportAssignment,
     detailAssignment, setDetailAssignment,
     title, setTitle, subject, setSubject, subjectOptions,
-    chapter, setChapter, dueDate, setDueDate, type, setType, note, setNote,
+    chapter, setChapter, startDate, setStartDate, dueDate, setDueDate, type, setType, note, setNote,
     questions, setQuestions, quizQuestions,
     creating, formError, setFormError,
     aiPrompt, setAiPrompt, aiGenerating, aiGenerated, quizCount, setQuizCount,
@@ -287,14 +287,26 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
                     </View>
                   )}
 
-                  {/* Due Date — themed gold calendar (matches the app theme) */}
-                  <Text style={styles.fieldLabel}>Due Date *</Text>
-                  <DatePicker
-                    value={dueDate}
-                    onChange={t => { setDueDate(t); if (t.trim()) setFormError(''); }}
-                    placeholder="Select a due date"
-                    minDate={new Date().toISOString().split('T')[0]}
-                  />
+                  {/* Start & Due Date */}
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Start Date</Text>
+                      <DatePicker
+                        value={startDate || ''}
+                        onChange={t => { setStartDate(t); if (t.trim()) setFormError(''); }}
+                        placeholder="Select start date"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Due Date *</Text>
+                      <DatePicker
+                        value={dueDate}
+                        onChange={t => { setDueDate(t); if (t.trim()) setFormError(''); }}
+                        placeholder="Select a due date"
+                        minDate={startDate || new Date().toISOString().split('T')[0]}
+                      />
+                    </View>
+                  </View>
 
                   {/* Type */}
                   <Text style={styles.fieldLabel}>Type</Text>

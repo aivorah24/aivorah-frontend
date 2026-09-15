@@ -1,32 +1,42 @@
-// Regression test: "Manage Syllabus" and "Announcements" in the teacher
-// sidebar (DrawerContent.tsx/Sidebar.tsx point at screen names
-// 'TeacherSyllabusImport'/'TeacherAnnouncements') were dead links — both
-// names were declared in TeacherDrawerParamList (navigation/types.ts) and
-// their legacy screen files already existed under
-// src/.legacy-screens/teacher-legacy/, but neither was ever registered as
-// an actual <Drawer.Screen> in TeacherNavigator, so tapping either sidebar
-// item did nothing. A full navigator mount needs many unrelated screens/
-// contexts mocked (and transitively pulls in firebase/auth's ESM build,
-// which this project's Jest config can't transform outside a fully-mocked
-// render) just to catch "someone deleted the Drawer.Screen line again" or
-// "the import path is wrong" — a plain source-text check is simpler and
-// exercises exactly what regressed.
+// Regression test: ensures the Curriculum & Syllabus feature is wired to the
+// new canonical implementation (TeacherCurriculumLearningPathScreen) and that
+// the legacy TeacherSyllabusImport route has been removed.
+//
+// TeacherAnnouncements remains legacy, awaiting its own refactor pass.
 
-describe('TeacherNavigator — legacy screen wiring', () => {
-  test('TeacherNavigator.tsx registers both routes as Drawer.Screen, not just as dead sidebar links', () => {
+describe('TeacherNavigator — route wiring', () => {
+  let source: string;
+
+  beforeAll(() => {
     const fs = require('fs');
     const path = require('path');
-    const source = fs.readFileSync(path.join(__dirname, '../TeacherNavigator.tsx'), 'utf8');
-    expect(source).toMatch(/<Drawer\.Screen name="TeacherSyllabusImport"/);
+    source = fs.readFileSync(path.join(__dirname, '../TeacherNavigator.tsx'), 'utf8');
+  });
+
+  test('registers TeacherCurriculumLearningPath as the canonical Curriculum & Syllabus route', () => {
+    expect(source).toMatch(/<Drawer\.Screen name="TeacherCurriculumLearningPath"/);
+    expect(source).toMatch(/curriculum-learning-path\/TeacherCurriculumLearningPathScreen/);
+  });
+
+  test('does NOT register the legacy TeacherSyllabusImport route', () => {
+    expect(source).not.toMatch(/<Drawer\.Screen name="TeacherSyllabusImport"/);
+    expect(source).not.toMatch(/TeacherSyllabusImportScreen/);
+  });
+
+  test('still registers the legacy TeacherAnnouncements route (not yet refactored)', () => {
     expect(source).toMatch(/<Drawer\.Screen name="TeacherAnnouncements"/);
-    expect(source).toMatch(/@legacy\/teacher-legacy\/TeacherSyllabusImportScreen/);
     expect(source).toMatch(/@legacy\/teacher-legacy\/TeacherAnnouncementsScreen/);
   });
 
-  test('both legacy screen files this navigator imports actually exist on disk', () => {
+  test('legacy TeacherAnnouncementsScreen file still exists on disk', () => {
     const fs = require('fs');
     const path = require('path');
-    expect(fs.existsSync(path.join(__dirname, '../../.legacy-screens/teacher-legacy/TeacherSyllabusImportScreen.tsx'))).toBe(true);
     expect(fs.existsSync(path.join(__dirname, '../../.legacy-screens/teacher-legacy/TeacherAnnouncementsScreen.tsx'))).toBe(true);
+  });
+
+  test('the new canonical screen file exists on disk', () => {
+    const fs = require('fs');
+    const path = require('path');
+    expect(fs.existsSync(path.join(__dirname, '../../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen.tsx'))).toBe(true);
   });
 });

@@ -94,6 +94,7 @@ export interface CreateAssignmentPayload {
   title: string;
   subject: string;
   chapter: string;
+  startDate?: string;
   dueDate: string;
   type: 'assignment' | 'quiz';
   note: string;
@@ -114,6 +115,7 @@ export async function createAssignment(payload: CreateAssignmentPayload): Promis
       title: payload.title,
       subject: payload.subject,
       chapter: payload.chapter,
+      startDate: payload.startDate,
       dueDate: payload.dueDate,
       type: payload.type,
       note: payload.note,

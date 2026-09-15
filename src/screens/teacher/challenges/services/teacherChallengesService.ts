@@ -73,11 +73,13 @@ export async function assignChallenge({
   studentId,
   teacherEmail,
   dueDate,
+  startDate,
 }: {
   challengeId: string;
   studentId: string;
   teacherEmail: string;
   dueDate: string;
+  startDate?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await fetch(`${CHALLENGES_SERVER_URL}/challenges/assign`, {
     method: 'POST',
@@ -88,6 +90,7 @@ export async function assignChallenge({
       assignedById: teacherEmail,
       assignedByRole: 'teacher',
       dueDate,
+      startDate,
     }),
   });
   if (!res.ok) {

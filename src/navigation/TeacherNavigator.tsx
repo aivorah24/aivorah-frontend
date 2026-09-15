@@ -15,7 +15,6 @@ import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChalle
 // Replaced with the real screen, backed by the extracted heatmap route in
 // aivorah-teacher-dashboard-service.
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
-import TeacherSyllabusImportScreen from '@legacy/teacher-legacy/TeacherSyllabusImportScreen';
 import TeacherAnnouncementsScreen from '@legacy/teacher-legacy/TeacherAnnouncementsScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
@@ -58,14 +57,9 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
-      {/* Not yet refactored — served from src/.legacy-screens/teacher-legacy/
-          until their own dedicated refactor pass, same as TeacherChallenges/
-          TeacherMessages above. Were declared in TeacherDrawerParamList
-          (navigation/types.ts) and had sidebar menu items
-          (DrawerContent.tsx/Sidebar.tsx) pointing at them, but were never
-          actually registered as a Drawer.Screen — both "Manage Syllabus"
-          and "Announcements" were dead sidebar links until this. */}
-      <Drawer.Screen name="TeacherSyllabusImport" component={TeacherSyllabusImportScreen} />
+      {/* TeacherSyllabusImport removed — refactored to
+          TeacherCurriculumLearningPath (src/screens/teacher/curriculum-learning-path/).
+          TeacherAnnouncements still legacy, awaiting its own refactor pass. */}
       <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherCurriculumLearningPath" component={TeacherCurriculumLearningPathScreen} />

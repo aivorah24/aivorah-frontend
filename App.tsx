@@ -72,7 +72,7 @@ const LINKING_SCREENS = {
   TeacherMessages: 'teacher/messages',
   TeacherAnnouncements: 'teacher/announcements',
   TeacherAttendance: 'teacher/attendance',
-  TeacherSyllabusImport: 'teacher/syllabus-import',
+  TeacherCurriculumLearningPath: 'teacher/curriculum',
   ChallengeManager: 'super-admin/challenges',
   SuperAdminStudents: 'super-admin/students',
   StaffSubjectMapping: 'super-admin/staff-subject-mapping',

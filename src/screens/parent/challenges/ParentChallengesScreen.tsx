@@ -26,7 +26,7 @@ export default function ParentChallengesScreen({ navigation }: any) {
 
   const {
     assignModal, assignChallengeTarget, assigning, assignError, assignSuccess,
-    assignDueDate, setAssignDueDate, openAssign, closeAssign, doAssign, getDueDateLabel,
+    assignDueDate, setAssignDueDate, assignStartDate, setAssignStartDate, openAssign, closeAssign, doAssign, getDueDateLabel,
   } = useAssignChallenge(refresh);
 
   return (
@@ -153,6 +153,8 @@ export default function ParentChallengesScreen({ navigation }: any) {
         assigning={assigning}
         assignError={assignError}
         assignSuccess={assignSuccess}
+        assignStartDate={assignStartDate}
+        setAssignStartDate={setAssignStartDate}
         assignDueDate={assignDueDate}
         setAssignDueDate={setAssignDueDate}
         getDueDateLabel={getDueDateLabel}

@@ -15,6 +15,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
   const [assignError, setAssignError]         = useState('');
   const [assignSuccess, setAssignSuccess]     = useState('');
   const [assignDueDate, setAssignDueDate]     = useState('');
+  const [assignStartDate, setAssignStartDate] = useState('');
 
   function openAssign(ch: Challenge) {
     setAssignChallengeItem(ch);
@@ -22,6 +23,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
     setStudentSearch('');
     setAssignError('');
     setAssignSuccess('');
+    setAssignStartDate(getDueDateLabel(0));
     setAssignDueDate(getDueDateLabel(7));
     setAssignModal(true);
   }
@@ -33,6 +35,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
     setStudentSearch('');
     setAssignError('');
     setAssignSuccess('');
+    setAssignStartDate('');
     setAssignDueDate('');
   }
 
@@ -41,6 +44,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
       setAssignError('Please select a student.');
       return;
     }
+    if (!assignStartDate) { setAssignError('Please select a start date.'); return; }
     if (!assignDueDate) { setAssignError('Please select a due date.'); return; }
     setAssigning(true);
     setAssignError('');
@@ -50,6 +54,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
         studentId: selectedStudent.id,
         teacherEmail: teacherEmail ?? '',
         dueDate: assignDueDate,
+        startDate: assignStartDate,
       });
       if (!res.ok) {
         setAssignError(res.error);
@@ -66,6 +71,6 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
   return {
     assignModal, assignChallengeItem, studentSearch, setStudentSearch,
     selectedStudent, setSelectedStudent, assigning, assignError, assignSuccess,
-    assignDueDate, setAssignDueDate, openAssign, closeAssign, doAssign, getDueDateLabel,
+    assignStartDate, setAssignStartDate, assignDueDate, setAssignDueDate, openAssign, closeAssign, doAssign, getDueDateLabel,
   };
 }

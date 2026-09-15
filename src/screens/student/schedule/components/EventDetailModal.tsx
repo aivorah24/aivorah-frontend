@@ -9,7 +9,7 @@ import { toTitleCase } from '../utils/dateHelpers';
 interface Props {
   selectedEvent: SelectedEventDetail | null;
   onClose: () => void;
-  onNavigate: (screen: 'Challenges' | 'Assignments') => void;
+  onNavigate: (screen: 'Challenges' | 'Assignments', params?: any) => void;
   styles: any;
   colors: AppColors;
 }
@@ -62,7 +62,12 @@ export default function EventDetailModal({ selectedEvent, onClose, onNavigate, s
                 gap: 8,
                 marginTop: 14,
               }}
-              onPress={() => onNavigate(selectedEvent?.type === 'challenge' ? 'Challenges' : 'Assignments')}
+              onPress={() => onNavigate(
+                selectedEvent?.type === 'challenge' ? 'Challenges' : 'Assignments',
+                selectedEvent?.type === 'challenge'
+                  ? { challengeId: selectedEvent.assignmentId }
+                  : { assignmentId: selectedEvent.assignmentId }
+              )}
             >
               <Feather name="external-link" size={16} color={colors.bgDark} />
               <Text style={{ fontSize: 13, fontWeight: '700', color: colors.bgDark }}>
