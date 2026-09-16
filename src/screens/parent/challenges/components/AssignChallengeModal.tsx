@@ -10,6 +10,7 @@ export default function AssignChallengeModal({
   visible, onClose, colors, styles,
   challenge, child,
   assigning, assignError, assignSuccess,
+  assignStartDate, setAssignStartDate,
   assignDueDate, setAssignDueDate, getDueDateLabel,
   onConfirm,
 }: {

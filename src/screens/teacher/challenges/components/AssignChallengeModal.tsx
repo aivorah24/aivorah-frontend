@@ -35,6 +35,7 @@ export function filterStudentsForChallenge(students: StudentItem[], challenge: C
 export default function AssignChallengeModal({
   visible, challenge, students, studentSearch, setStudentSearch,
   selectedStudent, setSelectedStudent, assigning, assignError, assignSuccess,
+  assignStartDate, setAssignStartDate,
   assignDueDate, setAssignDueDate, onClose, onAssign, colors, styles,
 }: {
   visible: boolean;
