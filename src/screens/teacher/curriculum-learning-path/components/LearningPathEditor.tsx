@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
-import { LearningPathContent } from '../types';
+import { LearningPathContent, LearningPathTopic } from '../types';
+import StudentPreviewModal from './StudentPreviewModal';
 
 interface Props {
   content: LearningPathContent;
@@ -16,6 +17,7 @@ interface Props {
 export default function LearningPathEditor({ content, onChange, readOnly }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [previewTopic, setPreviewTopic] = useState<LearningPathTopic | null>(null);
 
   function updateUnitTitle(ui: number, title: string) {
     const next = { ...content, units: content.units.map((u, i) => (i === ui ? { ...u, title } : u)) };
@@ -134,6 +136,10 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 style={styles.topicTitleInput}
               />
 
+              <TouchableOpacity testID={`preview-as-student-${ui}-${ti}`} onPress={() => setPreviewTopic(topic)}>
+                <Text style={styles.previewText}>Preview as student</Text>
+              </TouchableOpacity>
+
               {topic.status === 'needs_teacher_input' && (
                 <View testID={`needs-input-banner-${ui}-${ti}`} style={styles.needsInputBanner}>
                   <Text style={styles.needsInputBadge}>Needs your input</Text>
@@ -215,6 +221,9 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
           ))}
         </View>
       ))}
+      {previewTopic && (
+        <StudentPreviewModal topic={previewTopic} colors={colors} onClose={() => setPreviewTopic(null)} />
+      )}
     </View>
   );
 }
@@ -224,6 +233,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   unitTitleInput: { fontSize: 18, fontWeight: '600', paddingVertical: 6, color: colors.textMain },
   topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.borderColor },
   topicTitleInput: { fontSize: 15, fontWeight: '500', paddingVertical: 4, color: colors.textMain },
+  previewText: { fontSize: 12, color: colors.primary, fontWeight: '600', marginBottom: 4 },
   needsInputBanner: {
     backgroundColor: colors.accentYellowGlow,
     borderWidth: 1,

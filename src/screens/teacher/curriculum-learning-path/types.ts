@@ -19,6 +19,17 @@ export interface LearningPathSubtopic {
   order: number;
 }
 
+export interface TeacherContentBlock {
+  type: string;
+  [key: string]: any;
+}
+
+export interface TeacherTopicContent {
+  whatYoullLearn: string[];
+  blocks: TeacherContentBlock[];
+  contentType?: string;
+}
+
 export interface LearningPathTopic {
   title: string | null;
   order: number;
@@ -27,6 +38,7 @@ export interface LearningPathTopic {
   subtopics: LearningPathSubtopic[];
   status?: 'ready' | 'needs_teacher_input';
   teacherHint?: string | null;
+  content?: TeacherTopicContent | null;
 }
 
 export interface LearningPathUnit {

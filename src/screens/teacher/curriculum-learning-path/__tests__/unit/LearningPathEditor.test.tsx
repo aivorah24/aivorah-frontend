@@ -100,4 +100,36 @@ describe('LearningPathEditor', () => {
     await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
     expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
   });
+
+  test('opens the student preview modal showing grounded content.blocks, and closes it', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].content = {
+      whatYoullLearn: ['Understand place value'],
+      blocks: [{ type: 'explanation', text: 'A number line shows relative size.' }],
+    };
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+
+    expect(screen.queryByTestId('student-preview-scroll')).toBeNull();
+    await user.press(screen.getByTestId('preview-as-student-0-0'));
+
+    expect(screen.getByTestId('student-preview-scroll')).toBeTruthy();
+    expect(screen.getByText('A number line shows relative size.')).toBeTruthy();
+    expect(screen.queryByTestId('student-preview-fallback')).toBeNull();
+
+    await user.press(screen.getByTestId('close-student-preview'));
+    expect(screen.queryByTestId('student-preview-scroll')).toBeNull();
+  });
+
+  test('student preview falls back to objectives/lessons when the topic has no grounded content', async () => {
+    const content = baseContent();
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+
+    await user.press(screen.getByTestId('preview-as-student-0-0'));
+
+    expect(screen.getByTestId('student-preview-fallback')).toBeTruthy();
+    expect(screen.getByText(/Add two numbers/)).toBeTruthy();
+    expect(screen.getByText('Intro')).toBeTruthy();
+  });
 });
