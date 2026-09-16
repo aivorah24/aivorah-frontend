@@ -73,4 +73,31 @@ describe('LearningPathEditor', () => {
     await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
     expect(screen.getByTestId('subtopic-0-0-0').props.children).toBe('Addition');
   });
+
+  test('renders the needs-your-input badge and hint when a topic needs teacher input', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].status = 'needs_teacher_input';
+    content.units[0].topics[0].teacherHint = 'Specify whether this covers area formulas, angle sums, or proofs.';
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+
+    expect(screen.getByTestId('needs-input-banner-0-0')).toBeTruthy();
+    expect(screen.getByText('Needs your input')).toBeTruthy();
+    expect(screen.getByTestId('teacher-hint-0-0').props.children).toBe(
+      'Specify whether this covers area formulas, angle sums, or proofs.'
+    );
+  });
+
+  test('does not render the banner when status is omitted', async () => {
+    const content = baseContent();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
+  });
+
+  test('does not render the banner when status is "ready"', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].status = 'ready';
+    content.units[0].topics[0].teacherHint = null;
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
+  });
 });

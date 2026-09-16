@@ -25,6 +25,8 @@ export interface LearningPathTopic {
   objectives: string[];
   lessons: LearningPathLesson[];
   subtopics: LearningPathSubtopic[];
+  status?: 'ready' | 'needs_teacher_input';
+  teacherHint?: string | null;
 }
 
 export interface LearningPathUnit {

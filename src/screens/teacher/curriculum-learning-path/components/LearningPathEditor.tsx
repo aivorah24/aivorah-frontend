@@ -134,6 +134,15 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 style={styles.topicTitleInput}
               />
 
+              {topic.status === 'needs_teacher_input' && (
+                <View testID={`needs-input-banner-${ui}-${ti}`} style={styles.needsInputBanner}>
+                  <Text style={styles.needsInputBadge}>Needs your input</Text>
+                  {!!topic.teacherHint && (
+                    <Text testID={`teacher-hint-${ui}-${ti}`} style={styles.needsInputHint}>{topic.teacherHint}</Text>
+                  )}
+                </View>
+              )}
+
               <Text style={styles.sectionLabel}>Objectives</Text>
               {topic.objectives.map((objective, oi) => (
                 <View key={oi} style={styles.row}>
@@ -215,6 +224,18 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   unitTitleInput: { fontSize: 18, fontWeight: '600', paddingVertical: 6, color: colors.textMain },
   topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.borderColor },
   topicTitleInput: { fontSize: 15, fontWeight: '500', paddingVertical: 4, color: colors.textMain },
+  needsInputBanner: {
+    backgroundColor: colors.accentYellowGlow,
+    borderWidth: 1,
+    borderColor: colors.accentOrange,
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 4,
+    marginBottom: 4,
+    gap: 4,
+  },
+  needsInputBadge: { fontSize: 11, fontWeight: '700', color: colors.accentOrange, textTransform: 'uppercase' },
+  needsInputHint: { fontSize: 13, color: colors.textMain },
   sectionLabel: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flexInput: { flex: 1, paddingVertical: 4, color: colors.textMain },
