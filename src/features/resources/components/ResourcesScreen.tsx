@@ -3,10 +3,10 @@
  * Parents browse read-only; teachers/admins get New folder + Upload. Students
  * are never routed here. Reuses the /messages/upload Cloudinary endpoint.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator,
-  TextInput, Modal, Platform, Linking, Alert,
+  TextInput, Modal, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,19 +16,10 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
-import SERVER_URL from '../../../config/serverUrl';
-import {
-  fetchResources, createFolder, addFile, deleteFolder, deleteFile,
-  ResourcesResponse, ResourceFolder, ResourceFile, fmtSize, fmtWhen,
-} from '../api/resourcesApi';
-import PdfViewerModal, { ViewerDoc } from './PdfViewerModal';
-
-function fileIcon(type: string | null): { name: any; color: string } {
-  const t = (type || '').toLowerCase();
-  if (t === 'pdf') return { name: 'file-text', color: '#C0392B' };
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t)) return { name: 'image', color: '#2E7D5B' };
-  return { name: 'file', color: '#6E6A60' };
-}
+import { fmtSize, fmtWhen } from '../api/resourcesApi';
+import { fileIcon, filterFolders, filterFiles } from '../utils/resourcesFilter';
+import { useResourcesState } from '../hooks/useResourcesState';
+import PdfViewerModal from './PdfViewerModal';
 
 export default function ResourcesScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -36,86 +27,18 @@ export default function ResourcesScreen({ navigation }: any) {
   const { user } = useAuth();
   const email = user?.email || '';
 
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [data, setData] = useState<ResourcesResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [view, setView] = useState<'list' | 'grid'>('list');
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [viewerDoc, setViewerDoc] = useState<ViewerDoc | null>(null);
-
-  const load = useCallback(async (fid: string | null) => {
-    if (!email) return;
-    setLoading(true); setError('');
-    try {
-      setData(await fetchResources(email, fid));
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load resources'); setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [email]);
+  const {
+    folderId, data, loading, error, search, setSearch, view, setView,
+    showNewFolder, setShowNewFolder, newFolderName, setNewFolderName, busy, viewerDoc, setViewerDoc,
+    load, openFolder, goCrumb, openFile, submitNewFolder, uploadFile, confirmDeleteFolder, confirmDeleteFile,
+  } = useResourcesState(email);
 
   useFocusEffect(useCallback(() => { load(folderId); }, [load, folderId]));
 
-  const openFolder = (id: string) => { setSearch(''); setFolderId(id); };
-  const goCrumb = (id: string | null) => { setSearch(''); setFolderId(id); };
-  // Open in the in-app viewer modal (PDF/image) instead of leaving the app.
-  const openFile = (f: ResourceFile) => { if (f.fileUrl) setViewerDoc({ title: f.title, fileUrl: f.fileUrl, fileType: f.fileType }); };
-
   const canManage = !!data?.canManage;
   const q = search.trim().toLowerCase();
-  const folders = (data?.folders || []).filter((f) => !q || f.name.toLowerCase().includes(q));
-  const files = (data?.files || []).filter((f) => !q || f.title.toLowerCase().includes(q));
-
-  const submitNewFolder = async () => {
-    if (!newFolderName.trim()) return;
-    setBusy(true);
-    try {
-      await createFolder({ email, name: newFolderName.trim(), parentFolderId: folderId, scope: 'school' });
-      setShowNewFolder(false); setNewFolderName('');
-      await load(folderId);
-    } catch (e: any) { setError(e?.message || 'Failed to create folder'); }
-    finally { setBusy(false); }
-  };
-
-  const uploadFile = () => {
-    if (Platform.OS !== 'web') { Alert.alert('Upload', 'Please upload files from the web app.'); return; }
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      if (file.size > 25 * 1024 * 1024) { setError('Files must be under 25 MB.'); return; }
-      setBusy(true); setError('');
-      try {
-        const form = new FormData();
-        form.append('file', file);
-        const res = await fetch(`${SERVER_URL}/messages/upload`, { method: 'POST', body: form });
-        const up = await res.json().catch(() => ({}));
-        if (!res.ok || !up.url) throw new Error(up?.error || 'Upload failed');
-        await addFile({ email, folderId, title: up.name || file.name, fileUrl: up.url, fileType: up.type, fileSize: up.size || file.size, scope: 'school' });
-        await load(folderId);
-      } catch (e: any) { setError(e?.message || 'Upload failed'); }
-      finally { setBusy(false); }
-    };
-    input.click();
-  };
-
-  const confirmDeleteFolder = (f: ResourceFolder) => {
-    const go = async () => { setBusy(true); try { await deleteFolder(email, f.id); await load(folderId); } catch (e: any) { setError(e?.message || 'Failed'); } finally { setBusy(false); } };
-    if (Platform.OS === 'web') { if (window.confirm(`Delete folder "${f.name}" and everything inside it?`)) go(); }
-    else Alert.alert('Delete folder', `Delete "${f.name}" and its contents?`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: go }]);
-  };
-  const confirmDeleteFile = (f: ResourceFile) => {
-    const go = async () => { setBusy(true); try { await deleteFile(email, f.id); await load(folderId); } catch (e: any) { setError(e?.message || 'Failed'); } finally { setBusy(false); } };
-    if (Platform.OS === 'web') { if (window.confirm(`Delete "${f.title}"?`)) go(); }
-    else Alert.alert('Delete file', `Delete "${f.title}"?`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: go }]);
-  };
+  const folders = filterFolders(data?.folders || [], search);
+  const files = filterFiles(data?.files || [], search);
 
   const subtitle = data?.scopeLabel ? `${data.scopeLabel} · handbooks, policies & documents` : 'Handbooks, policies & documents';
 
