@@ -53,7 +53,7 @@ describe('EventDetailModal', () => {
 
     await user.press(screen.getByText('Open Assignment Worksheet'));
 
-    expect(onNavigate).toHaveBeenCalledWith('Assignments');
+    expect(onNavigate).toHaveBeenCalledWith('Assignments', { assignmentId: 'a1' });
   });
 
   test('a challenge deadline shows "Open Challenge" and navigates to Challenges', async () => {
@@ -63,7 +63,7 @@ describe('EventDetailModal', () => {
 
     await user.press(screen.getByText('Open Challenge'));
 
-    expect(onNavigate).toHaveBeenCalledWith('Challenges');
+    expect(onNavigate).toHaveBeenCalledWith('Challenges', { challengeId: 'c1' });
   });
 
   test('a timetable class (isTimetableClass) never shows the open-worksheet button, even with an assignmentId', async () => {

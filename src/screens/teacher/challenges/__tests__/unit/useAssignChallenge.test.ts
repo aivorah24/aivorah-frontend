@@ -68,7 +68,8 @@ describe('useAssignChallenge', () => {
     await act(async () => result.current.setSelectedStudent(STUDENT));
     await act(async () => result.current.doAssign());
     expect(service.assignChallenge).toHaveBeenCalledWith({
-      challengeId: 'c1', studentId: 's1', teacherEmail: 't@x.com', dueDate: result.current.assignDueDate,
+      challengeId: 'c1', studentId: 's1', teacherEmail: 't@x.com',
+      dueDate: result.current.assignDueDate, startDate: result.current.assignStartDate,
     });
     expect(result.current.assignSuccess).toBe('"Quiz" assigned to Alice!');
   });

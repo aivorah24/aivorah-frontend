@@ -240,9 +240,11 @@ describe('ParentChallengesScreen', () => {
     await render(<ParentChallengesScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} />);
     await waitFor(() => expect(screen.getByText('Fractions Sprint')).toBeTruthy());
     fireEvent.press(screen.getByText('Assign to Child'));
-    await waitFor(() => expect(screen.getByText('3 Days')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('3 Days').length).toBeGreaterThan(0));
 
-    fireEvent.press(screen.getByText('3 Days'));
+    // "3 Days" now appears in both the Start Date and Due Date pickers —
+    // the second occurrence is the Due Date section's option.
+    fireEvent.press(screen.getAllByText('3 Days')[1]);
     await waitFor(() => expect(screen.getByText(/Due: 2026-/)).toBeTruthy());
     fireEvent.press(screen.getByText('Assign'));
 

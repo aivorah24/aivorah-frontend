@@ -152,7 +152,7 @@ describe('ScheduleScreen — event detail + navigation', () => {
     await user.press(await screen.findByText('Worksheet 1'));
     await user.press(await screen.findByText('Open Assignment Worksheet'));
 
-    expect(nav.navigate).toHaveBeenCalledWith('Assignments');
+    expect(nav.navigate).toHaveBeenCalledWith('Assignments', { assignmentId: 'a1' });
   });
 });
 
