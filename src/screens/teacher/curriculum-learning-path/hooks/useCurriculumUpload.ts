@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { uploadCurriculum, getCurriculum, startGeneration } from '../services/curriculumLearningPathService';
+import { uploadCurriculum, getCurriculum, startGeneration, CurriculumUploadConfig } from '../services/curriculumLearningPathService';
 import { TeacherCurriculum, CurriculumStatus } from '../types';
 
 export const ACCEPTED_MIME = [
@@ -30,12 +30,16 @@ interface RunUploadFlowCallbacks {
 // separated from the DOM file-picker so it's testable without a real File
 // input (see useUploadWorksheet's pickDoc precedent — the picker itself is
 // accepted as untestable glue).
-export async function runUploadFlow(file: { name: string; type: string; blob: Blob }, { setCurriculum, isCancelled }: RunUploadFlowCallbacks) {
+export async function runUploadFlow(
+  file: { name: string; type: string; blob: Blob },
+  { setCurriculum, isCancelled }: RunUploadFlowCallbacks,
+  config?: CurriculumUploadConfig
+) {
   if (!ACCEPTED_MIME.includes(file.type)) {
     throw new Error('Only PDF, DOCX and XLSX files are supported.');
   }
 
-  const uploadResult = await uploadCurriculum({ name: file.name, mime: file.type, blob: file.blob });
+  const uploadResult = await uploadCurriculum({ name: file.name, mime: file.type, blob: file.blob }, config);
   setCurriculum(uploadResult.curriculum);
 
   const extracted = await pollUntil(uploadResult.curriculum.id, (s) => TERMINAL_EXTRACT_STATUSES.includes(s));
@@ -63,14 +67,14 @@ export function useCurriculumUpload() {
   const [busy, setBusy] = useState(false);
   const cancelledRef = useRef(false);
 
-  const uploadFile = useCallback(async (file: { name: string; type: string; blob: Blob }) => {
+  const uploadFile = useCallback(async (file: { name: string; type: string; blob: Blob }, config?: CurriculumUploadConfig) => {
     cancelledRef.current = false;
     setError('');
     setBusy(true);
     setCurriculum(null);
 
     try {
-      await runUploadFlow(file, { setCurriculum, isCancelled: () => cancelledRef.current });
+      await runUploadFlow(file, { setCurriculum, isCancelled: () => cancelledRef.current }, config);
     } catch (err: any) {
       if (!cancelledRef.current) setError(err.message || 'Upload failed.');
     } finally {
@@ -78,7 +82,7 @@ export function useCurriculumUpload() {
     }
   }, []);
 
-  const pickAndUpload = useCallback(() => {
+  const pickAndUpload = useCallback((config?: CurriculumUploadConfig) => {
     if (typeof document === 'undefined') return;
     const input = document.createElement('input');
     input.type = 'file';
@@ -86,7 +90,7 @@ export function useCurriculumUpload() {
     input.onchange = (e: any) => {
       const file: File | undefined = e.target.files?.[0];
       if (!file) return;
-      uploadFile({ name: file.name, type: file.type, blob: file });
+      uploadFile({ name: file.name, type: file.type, blob: file }, config);
     };
     input.click();
   }, [uploadFile]);

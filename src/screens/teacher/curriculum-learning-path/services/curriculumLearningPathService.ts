@@ -14,10 +14,29 @@ async function parseOrThrow(res: Response) {
   return data;
 }
 
-export async function uploadCurriculum(file: { name: string; mime: string; blob: Blob }): Promise<{ curriculum: TeacherCurriculum; jobId: string }> {
+export interface CurriculumUploadConfig {
+  grade?: string;
+  subject?: string;
+  curriculum?: string;
+}
+
+export async function uploadCurriculum(
+  file: { name: string; mime: string; blob: Blob },
+  config?: CurriculumUploadConfig
+): Promise<{ curriculum: TeacherCurriculum; jobId: string }> {
   const headers = await authHeaders();
   const formData = new FormData();
+  // Field name must stay 'file' — the backend's multer config
+  // (upload.single('file')) only reads this exact field name.
   formData.append('file', file.blob, file.name);
+  // grade/subject/curriculum aren't consumed by the backend yet (it derives
+  // this metadata from the document's own text during extraction instead) —
+  // sent here so the pre-upload selector's choice travels with the request
+  // once a future backend change wires it in; harmless extra form fields
+  // until then, not a change to the existing upload contract.
+  if (config?.grade) formData.append('grade', config.grade);
+  if (config?.subject) formData.append('subject', config.subject);
+  if (config?.curriculum) formData.append('curriculum', config.curriculum);
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/upload`, {
     method: 'POST', headers, body: formData,
   });

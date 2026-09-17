@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
@@ -7,16 +7,7 @@ import type { AppColors } from '../../../theme';
 import { useCurriculumUpload } from './hooks/useCurriculumUpload';
 import { useLearningPathDraft } from './hooks/useLearningPathDraft';
 import LearningPathEditor from './components/LearningPathEditor';
-import { CurriculumStatus } from './types';
-
-const STATUS_LABEL: Record<CurriculumStatus, string> = {
-  uploaded: 'Uploaded',
-  processing: 'Processing document…',
-  processed: 'Document processed',
-  generating: 'Generating learning path…',
-  generated: 'Learning path ready',
-  failed: 'Failed',
-};
+import PreUploadConfigPanel, { CURRICULA, GRADES_BY_CURRICULUM, ACADEMIC_YEARS } from './components/PreUploadConfigPanel';
 
 export default function TeacherCurriculumLearningPathScreen() {
   const { colors } = useTheme();
@@ -25,6 +16,11 @@ export default function TeacherCurriculumLearningPathScreen() {
   const curriculumId = curriculum?.status === 'generated' ? curriculum.id : null;
   const draft = useLearningPathDraft(curriculumId);
 
+  const [configCurriculum, setConfigCurriculum] = useState(CURRICULA[3]); // CBSE
+  const [configGrade, setConfigGrade] = useState(GRADES_BY_CURRICULUM.CBSE[5]); // Grade 6
+  const [configSubject, setConfigSubject] = useState('Mathematics');
+  const [configAcademicYear, setConfigAcademicYear] = useState(ACADEMIC_YEARS[2]); // 2026-27
+
   useEffect(() => {
     if (curriculumId) draft.load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,31 +28,42 @@ export default function TeacherCurriculumLearningPathScreen() {
 
   const isPublished = draft.learningPath?.status === 'published';
   const canPublish = !!draft.learningPath && draft.learningPath.status === 'draft' && !draft.saving && !draft.publishing;
+  const canSaveDraft = !!draft.learningPath && !isPublished && !draft.saving && !draft.publishing;
+
+  const detected = draft.learningPath
+    ? {
+        unitCount: draft.learningPath.content.units.length,
+        topicCount: draft.learningPath.content.units.reduce((sum, u) => sum + u.topics.length, 0),
+      }
+    : null;
+
+  function handlePickFile() {
+    if (curriculum) reset();
+    pickAndUpload({ curriculum: configCurriculum, grade: configGrade, subject: configSubject });
+  }
 
   return (
     <ScreenLayout>
       <Header title="Curriculum & Syllabus" subtitle="AI-generated learning paths from your uploaded curriculum" />
       <ScrollView contentContainerStyle={styles.container}>
-        {!curriculum && (
-          <TouchableOpacity testID="upload-curriculum-button" style={styles.uploadButton} onPress={pickAndUpload} disabled={busy}>
-            <Text style={styles.uploadButtonText}>Upload Curriculum (PDF, DOCX, XLSX)</Text>
-          </TouchableOpacity>
-        )}
-
-        {curriculum && (
-          <View testID="curriculum-status" style={styles.statusBlock}>
-            <Text style={styles.statusText}>{STATUS_LABEL[curriculum.status]}</Text>
-            {busy && curriculum.status !== 'failed' && <ActivityIndicator color={colors.primary} />}
-            {curriculum.status === 'failed' && (
-              <>
-                <Text testID="upload-error" style={styles.errorText}>{curriculum.error || uploadError}</Text>
-                <TouchableOpacity testID="retry-upload-button" onPress={() => { reset(); pickAndUpload(); }}>
-                  <Text style={styles.retryText}>Try again</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        )}
+        <PreUploadConfigPanel
+          curriculum={configCurriculum} setCurriculum={setConfigCurriculum}
+          grade={configGrade} setGrade={setConfigGrade}
+          subject={configSubject} setSubject={setConfigSubject}
+          academicYear={configAcademicYear} setAcademicYear={setConfigAcademicYear}
+          fileName={curriculum?.file_name ?? null}
+          status={curriculum?.status ?? null}
+          statusError={curriculum?.status === 'failed' ? (curriculum.error || uploadError) : null}
+          busy={busy}
+          onPickFile={handlePickFile}
+          detected={detected}
+          onSaveDraft={draft.save}
+          onPublish={draft.publish}
+          canSaveDraft={canSaveDraft}
+          canPublish={canPublish}
+          saving={draft.saving}
+          publishing={draft.publishing}
+        />
 
         {uploadError && curriculum?.status !== 'failed' && (
           <Text testID="general-error" style={styles.errorText}>{uploadError}</Text>
@@ -86,16 +93,6 @@ export default function TeacherCurriculumLearningPathScreen() {
               onChange={draft.updateContent}
               readOnly={isPublished}
             />
-            {!isPublished && (
-              <View style={styles.actionsRow}>
-                <TouchableOpacity testID="save-draft-button" onPress={draft.save} disabled={draft.saving}>
-                  <Text style={styles.actionText}>{draft.saving ? 'Saving…' : 'Save changes'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity testID="publish-button" onPress={draft.publish} disabled={!canPublish}>
-                  <Text style={styles.actionText}>{draft.publishing ? 'Publishing…' : 'Publish'}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         )}
       </ScrollView>
@@ -104,16 +101,9 @@ export default function TeacherCurriculumLearningPathScreen() {
 }
 
 const makeStyles = (colors: AppColors) => StyleSheet.create({
-  container: { padding: 16 },
-  uploadButton: { padding: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center' },
-  uploadButtonText: { color: '#fff', fontWeight: '600' },
-  statusBlock: { marginVertical: 12, alignItems: 'flex-start', gap: 6 },
-  statusText: { fontSize: 15, fontWeight: '500', color: colors.textMain },
+  container: { padding: 16, gap: 16 },
   errorText: { color: colors.accentRed },
-  retryText: { color: colors.primary },
   publishedBanner: { color: colors.accentGreen, fontWeight: '700', marginBottom: 8 },
   metadataBlock: { marginBottom: 12, gap: 2 },
   metadataText: { fontSize: 12, color: colors.textMuted },
-  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
-  actionText: { color: colors.primary, fontWeight: '600' },
 });

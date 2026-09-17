@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import TeacherCurriculumLearningPathScreen from '../../TeacherCurriculumLearningPathScreen';
 
 jest.mock('../../../../../components/common/Header', () => {
@@ -66,5 +66,40 @@ describe('TeacherCurriculumLearningPathScreen metadata display', () => {
     expect(screen.queryByText(/Grade:/)).toBeNull();
     expect(screen.queryByText(/Subject:/)).toBeNull();
     expect(screen.getByText('Learning Path ID: lp1')).toBeTruthy();
+  });
+});
+
+describe('TeacherCurriculumLearningPathScreen pre-upload config wiring', () => {
+  test('picking a file passes the selected curriculum/grade/subject to pickAndUpload', async () => {
+    const pickAndUpload = jest.fn();
+    mockUseCurriculumUpload.mockReturnValue({
+      curriculum: null, error: '', busy: false, pickAndUpload, reset: jest.fn(),
+    });
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn());
+
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+
+    await user.press(screen.getByTestId('pre-upload-dropzone'));
+
+    expect(pickAndUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ curriculum: expect.any(String), grade: expect.any(String), subject: expect.any(String) })
+    );
+  });
+
+  test('resets the previous upload before starting a new one', async () => {
+    const reset = jest.fn();
+    mockUseCurriculumUpload.mockReturnValue({
+      curriculum: { id: 'c1', file_name: 'old.pdf', status: 'generated' },
+      error: '', busy: false, pickAndUpload: jest.fn(), reset,
+    });
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn());
+
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+
+    await user.press(screen.getByTestId('pre-upload-dropzone'));
+
+    expect(reset).toHaveBeenCalled();
   });
 });

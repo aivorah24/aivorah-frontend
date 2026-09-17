@@ -22,6 +22,32 @@ describe('curriculumLearningPathService', () => {
     expect(options.body).toBeInstanceOf(FormData);
   });
 
+  test('uploadCurriculum keeps the "file" field name (required by the backend\'s multer config) and appends grade/subject/curriculum', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ curriculum: { id: 'c1' }, jobId: 'j1' }) }) as any;
+    await uploadCurriculum(
+      { name: 'a.pdf', mime: 'application/pdf', blob: new Blob(['x']) },
+      { grade: 'Grade 6', subject: 'Mathematics', curriculum: 'CBSE' }
+    );
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    const body: FormData = options.body;
+    expect(body.get('file')).toBeTruthy();
+    expect(body.get('grade')).toBe('Grade 6');
+    expect(body.get('subject')).toBe('Mathematics');
+    expect(body.get('curriculum')).toBe('CBSE');
+  });
+
+  test('uploadCurriculum omits grade/subject/curriculum fields entirely when no config is given', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ curriculum: { id: 'c1' }, jobId: 'j1' }) }) as any;
+    await uploadCurriculum({ name: 'a.pdf', mime: 'application/pdf', blob: new Blob(['x']) });
+
+    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    const body: FormData = options.body;
+    expect(body.get('grade')).toBeNull();
+    expect(body.get('subject')).toBeNull();
+    expect(body.get('curriculum')).toBeNull();
+  });
+
   test('getCurriculum requests the given curriculum id with auth', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ curriculum: { id: 'c1', status: 'processed' } }) }) as any;
     const result = await getCurriculum('c1');
