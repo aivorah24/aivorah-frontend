@@ -11,7 +11,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import SchoolAdminDashboardScreen from '@legacy/school-admin/SchoolAdminDashboardScreen';
+import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
 import SchoolAdminPeopleScreen from '@legacy/school-admin/SchoolAdminPeopleScreen';
 import SchoolAdminStudentsScreen from '@legacy/school-admin/SchoolAdminStudentsScreen';
 import SchoolAdminTeachersScreen from '@legacy/school-admin/SchoolAdminTeachersScreen';
@@ -22,8 +22,8 @@ import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingS
 import SchoolAdminImportHistoryScreen from '@legacy/school-admin/SchoolAdminImportHistoryScreen';
 import SchoolAdminBulkImportScreen from '@legacy/school-admin/SchoolAdminBulkImportScreen';
 import SchoolAdminAddStudentScreen from '@legacy/school-admin/SchoolAdminAddStudentScreen';
-import SchoolAdminGradesSectionsScreen from '@legacy/school-admin/SchoolAdminGradesSectionsScreen';
-import SchoolAdminClassesScreen from '@legacy/school-admin/SchoolAdminClassesScreen';
+import SchoolAdminGradesSectionsScreen from '../screens/school-admin/grades-sections/SchoolAdminGradesSectionsScreen';
+import SchoolAdminClassesScreen from '../screens/school-admin/classes/SchoolAdminClassesScreen';
 import SchoolAdminAddTeacherScreen from '@legacy/school-admin/SchoolAdminAddTeacherScreen';
 import SchoolAdminEditTeacherScreen from '@legacy/school-admin/SchoolAdminEditTeacherScreen';
 import SchoolAdminTeacherBulkImportScreen from '@legacy/school-admin/SchoolAdminTeacherBulkImportScreen';
