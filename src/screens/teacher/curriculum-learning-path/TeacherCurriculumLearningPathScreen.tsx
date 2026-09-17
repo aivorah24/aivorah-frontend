@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
@@ -42,6 +42,26 @@ export default function TeacherCurriculumLearningPathScreen() {
     pickAndUpload({ curriculum: configCurriculum, grade: configGrade, subject: configSubject });
   }
 
+  // Guards against publishing a learning path that still has topics an AI
+  // couldn't ground in real content (see aiGeneration.js's gap-resolution
+  // protocol) — those need a teacher's input, not a silent publish of
+  // generic/incomplete material to students.
+  function handlePublish() {
+    const units = draft.learningPath?.content.units || [];
+    const unresolvedCount = units.reduce(
+      (count, u) => count + u.topics.filter((t) => t.status === 'needs_teacher_input').length,
+      0
+    );
+    if (unresolvedCount > 0) {
+      Alert.alert(
+        'Cannot publish yet',
+        `Please review and provide input for ${unresolvedCount} topic${unresolvedCount === 1 ? '' : 's'} marked "Needs Your Input".`
+      );
+      return;
+    }
+    draft.publish();
+  }
+
   return (
     <ScreenLayout>
       <Header title="Curriculum & Syllabus" subtitle="AI-generated learning paths from your uploaded curriculum" />
@@ -58,7 +78,7 @@ export default function TeacherCurriculumLearningPathScreen() {
           onPickFile={handlePickFile}
           detected={detected}
           onSaveDraft={draft.save}
-          onPublish={draft.publish}
+          onPublish={handlePublish}
           canSaveDraft={canSaveDraft}
           canPublish={canPublish}
           saving={draft.saving}

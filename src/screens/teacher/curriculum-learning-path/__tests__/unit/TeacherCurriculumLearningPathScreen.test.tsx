@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import TeacherCurriculumLearningPathScreen from '../../TeacherCurriculumLearningPathScreen';
 
@@ -101,5 +102,79 @@ describe('TeacherCurriculumLearningPathScreen pre-upload config wiring', () => {
     await user.press(screen.getByTestId('pre-upload-dropzone'));
 
     expect(reset).toHaveBeenCalled();
+  });
+});
+
+describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {
+  function learningPathWithTopics(topics: { status?: 'ready' | 'needs_teacher_input' }[]) {
+    return {
+      id: 'lp1', curriculum_id: 'c1', status: 'draft' as const,
+      content: {
+        version: 1,
+        units: [{
+          title: 'Unit 1', order: 0,
+          topics: topics.map((t, i) => ({
+            title: `Topic ${i}`, order: i, objectives: [], lessons: [], subtopics: [], ...t,
+          })),
+        }],
+      },
+    };
+  }
+
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockUseCurriculumUpload.mockReturnValue({
+      curriculum: { id: 'c1', file_name: 'doc.pdf', status: 'generated' },
+      error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test('Case A: blocks publish and shows an alert when at least one topic needs teacher input', async () => {
+    const publish = jest.fn();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
+      learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'needs_teacher_input' }, { status: 'needs_teacher_input' }]),
+      publish,
+    }));
+
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await user.press(screen.getByTestId('pre-upload-publish'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Cannot publish yet',
+      'Please review and provide input for 2 topics marked "Needs Your Input".'
+    );
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  test('Case B: proceeds with the normal publish flow when all topics are ready', async () => {
+    const publish = jest.fn();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
+      learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'ready' }]),
+      publish,
+    }));
+
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await user.press(screen.getByTestId('pre-upload-publish'));
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalled();
+  });
+
+  test('treats topics with no status field (predating this feature) as valid, not blocking', async () => {
+    const publish = jest.fn();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
+      learningPath: learningPathWithTopics([{}, {}]),
+      publish,
+    }));
+
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await user.press(screen.getByTestId('pre-upload-publish'));
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalled();
   });
 });
