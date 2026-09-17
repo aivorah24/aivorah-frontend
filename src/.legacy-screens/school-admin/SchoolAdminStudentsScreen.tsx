@@ -1,6 +1,4 @@
-
-
-1/**
+/**
  * School Admin — Student Administration (V1 write access).
  *
  * Ported from the approved Claude Design prototype ("Aivorah Student
@@ -38,37 +36,17 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { spacing, radius, fonts } from '../../theme';
 import type { AppColors } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
-
-interface StudentRow {
-  id: string;
-  name: string;
-  email: string;
-  admissionNumber: string | null;
-  grade: string | null;
-  section: string | null;
-  curriculum?: string | null;
-  status: 'invited' | 'active' | 'inactive' | 'archived';
-  joinedAt: string;
-  lastActiveAt: string | null;
-}
-
-interface StudentDetail extends StudentRow {
-  parent: { name: string; email: string; phone?: string } | null;
-}
-
-interface StudentEditPatch {
-  name?: string;
-  grade?: string;
-  section?: string;
-  admissionNumber?: string;
-  parentName?: string;
-  parentPhone?: string;
-}
+import { schoolAdminStudentsService, type StudentRow, type StudentDetail, type StudentEditPatch, type StudentsFacets } from '../../screens/school-admin/students/services/schoolAdminStudentsService';
+import { statusTint, formatLastActive } from '../../screens/school-admin/students/utils/studentFormatters';
+import { FilterDropdown } from '../../screens/school-admin/students/components/FilterDropdown';
+import { StatusPill } from '../../screens/school-admin/students/components/StatusPill';
+import { StudentDetailDrawer } from '../../screens/school-admin/students/components/StudentDetailDrawer';
+import { StudentsToolbar } from '../../screens/school-admin/students/components/StudentsToolbar';
+import { StudentsBulkActionBar } from '../../screens/school-admin/students/components/StudentsBulkActionBar';
+import { STATUS_LABEL } from '../../screens/school-admin/students/constants';
 
 type StatusFilter = 'all' | 'invited' | 'active' | 'inactive' | 'archived';
 type SortKey = 'name' | 'grade' | 'admissionNumber';
-
-const STATUS_LABEL: Record<string, string> = { invited: 'Invited', active: 'Active', inactive: 'Inactive', archived: 'Archived' };
 
 // Same list/ranges as the student/parent onboarding flow (getGradesForCurriculum
 // in OnboardingScreen.tsx) and SchoolAdminAddStudentScreen.tsx's own copy —
@@ -82,77 +60,6 @@ function getGradesForCurriculum(curr: string): string[] | null {
   if (curr === 'IB MYP') return ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
   if (curr === 'IB DP') return ['Grade 11', 'Grade 12'];
   return null; // non-IB curricula don't partition grades — use the school's real facet data instead
-}
-
-// Dedicated semantic status colors — NOT the theme's brand accent tokens.
-// colors.accentGreen is actually the muted sage brand color (~#9FB2A4), which
-// reads as near-invisible pale grey for a status pill on a white/cream card.
-// A status chip needs immediate at-a-glance legibility, so these are fixed,
-// theme-independent true green/grey/red hues instead.
-function statusTint(colors: AppColors, status: string): string {
-  if (status === 'active') return '#2F9E44';
-  if (status === 'invited') return colors.accentYellow;
-  if (status === 'inactive') return '#6B7280';
-  return '#DC2626'; // archived
-}
-
-function formatJoined(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
-    if (diffDays < 1) return 'Today';
-    if (diffDays < 30) return `${diffDays}d ago`;
-    return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch { return '—'; }
-}
-
-function formatLastActive(iso: string | null): string {
-  if (!iso) return 'Never signed in';
-  try {
-    const d = new Date(iso);
-    const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
-    if (diffDays < 1) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 30) return `${diffDays} days ago`;
-    return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch { return 'Never signed in'; }
-}
-
-// ── Lightweight dropdown filter (web + native) ─────────────────────────────
-function FilterDropdown({ label, value, options, onChange, colors }: {
-  label: string; value: string; options: { value: string; label: string }[];
-  onChange: (v: string) => void; colors: AppColors;
-}) {
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [open, setOpen] = useState(false);
-  const current = options.find((o) => o.value === value)?.label || label;
-  return (
-    <View style={{ position: 'relative', zIndex: open ? 20 : 1 }}>
-      <Pressable style={styles.ddTrigger} onPress={() => setOpen((o) => !o)} accessibilityRole="button">
-        <Text style={styles.ddTriggerText} numberOfLines={1}>{current}</Text>
-        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textDim} />
-      </Pressable>
-      {open && (
-        <>
-          <Pressable style={styles.ddBackdrop} onPress={() => setOpen(false)} />
-          <View style={styles.ddMenu}>
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-              {options.map((o) => (
-                <Pressable
-                  key={o.value}
-                  style={({ hovered }: any) => [styles.ddItem, Platform.OS === 'web' && hovered && styles.ddItemHovered, o.value === value && styles.ddItemActive]}
-                  onPress={() => { onChange(o.value); setOpen(false); }}
-                >
-                  <Text style={[styles.ddItemText, o.value === value && styles.ddItemTextActive]}>{o.label}</Text>
-                  {o.value === value && <Feather name="check" size={13} color={colors.accentYellow} />}
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </>
-      )}
-    </View>
-  );
 }
 
 export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
@@ -203,13 +110,10 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
   const loadFacets = useCallback(async () => {
     if (!user?.email) return;
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/students/facets?adminEmail=${encodeURIComponent(user.email)}`);
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setFacetGrades(Array.isArray(data.grades) ? data.grades : []);
-        setFacetSections(Array.isArray(data.sections) ? data.sections : []);
-        setFacetCurriculums(Array.isArray(data.curriculums) ? data.curriculums : []);
-      }
+      const data = await schoolAdminStudentsService.getFacets(user.email);
+      setFacetGrades(data.grades);
+      setFacetSections(data.sections);
+      setFacetCurriculums(data.curriculums);
     } catch { /* filter dropdowns just stay at their previous values */ }
   }, [user?.email]);
 
@@ -221,18 +125,23 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
       // local statusFilter state — the URL is what decides this, not a
       // dropdown value that could drift from it.
       const effectiveStatus = isArchivedRoute ? 'archived' : statusFilter;
-      const params = new URLSearchParams({ adminEmail: user.email, sort: sortKey, dir: sortAsc ? 'asc' : 'desc', status: effectiveStatus, limit: '100' });
-      if (query.trim()) params.set('search', query.trim());
-      if (curriculumFilter !== 'all') params.set('curriculum', curriculumFilter);
-      if (gradeFilter !== 'all') params.set('grade', gradeFilter);
-      if (sectionFilter !== 'all') params.set('section', sectionFilter);
-      const res = await fetch(`${SERVER_URL}/school-admin/students?${params.toString()}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(data?.error || 'Failed to load students'); return; }
-      setItems(Array.isArray(data.items) ? data.items : []);
-      setTotal(data.total || 0);
-    } catch {
-      setError('Failed to load students. Check your connection.');
+
+      const data = await schoolAdminStudentsService.getStudents({
+        adminEmail: user.email,
+        status: effectiveStatus,
+        sort: sortKey,
+        dir: sortAsc ? 'asc' : 'desc',
+        search: query,
+        curriculum: curriculumFilter,
+        grade: gradeFilter,
+        section: sectionFilter,
+        limit: 100
+      });
+
+      setItems(data.items);
+      setTotal(data.total);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load students. Check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -304,10 +213,7 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
   async function applyBulkStatus(status: 'active' | 'inactive' | 'archived') {
     if (!user?.email || selected.size === 0) return;
     try {
-      await fetch(`${SERVER_URL}/school-admin/students/bulk-status?adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentIds: Array.from(selected), status }),
-      });
+      await schoolAdminStudentsService.bulkUpdateStatus(Array.from(selected), status, user.email);
       setSelected(new Set());
       load();
     } catch { setError('Failed to update selected students.'); }
@@ -324,21 +230,14 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
     const ids = studentIds && studentIds.length > 0 ? studentIds : Array.from(selected);
     if (!user?.email || ids.length === 0) return 'Select at least one student.';
     try {
-      const body: any = { studentIds: ids, grade: targetGrade };
-      if (targetSection.trim()) body.section = targetSection.trim();
-      const res = await fetch(`${SERVER_URL}/school-admin/students/bulk-grade?adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return data?.error || 'Failed to promote selected students.';
+      await schoolAdminStudentsService.bulkPromote(ids, targetGrade, targetSection, user.email);
       setSelected(new Set());
       setPromoteOpen(false);
       load();
       loadFacets(); // the target grade may be new, or a grade may have emptied out
       return null;
-    } catch {
-      return 'Failed to promote. Check your connection.';
+    } catch (err: any) {
+      return err.message || 'Failed to promote. Check your connection.';
     }
   }
 
@@ -347,21 +246,20 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
     setDetail(null);
     setDetailLoading(true);
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/students/${id}?adminEmail=${encodeURIComponent(user!.email)}`);
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) setDetail(data);
-    } finally { setDetailLoading(false); }
+      const data = await schoolAdminStudentsService.getStudentDetail(id, user!.email);
+      setDetail(data);
+    } catch { /* Error handling could go here */ }
+    finally { setDetailLoading(false); }
   }
 
   async function changeDetailStatus(status: 'active' | 'inactive' | 'archived') {
     if (!detail || !user?.email) return;
-    await fetch(`${SERVER_URL}/school-admin/students/${detail.id}/status?adminEmail=${encodeURIComponent(user.email)}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    setDetailId(null);
-    setDetail(null);
-    load();
+    try {
+      await schoolAdminStudentsService.updateStudentStatus(detail.id, status, user.email);
+      setDetailId(null);
+      setDetail(null);
+      load();
+    } catch { /* Error handling could go here */ }
   }
 
   // Returns an error string on failure, or null on success — lets the drawer
@@ -369,34 +267,25 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
   async function saveDetailEdits(patch: StudentEditPatch): Promise<string | null> {
     if (!detail || !user?.email) return 'Not ready';
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/students/${detail.id}?adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return data?.error || 'Failed to save changes.';
+      await schoolAdminStudentsService.updateStudent(detail.id, patch, user.email);
       await openDetail(detail.id); // refetch so the drawer shows the saved values
       load();                       // refresh the list row too
       return null;
-    } catch {
-      return 'Failed to save. Check your connection.';
+    } catch (err: any) {
+      return err.message || 'Failed to save. Check your connection.';
     }
   }
 
   async function deleteDetailStudent(): Promise<string | null> {
     if (!detail || !user?.email) return 'Not ready';
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/students/${detail.id}?adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return data?.error || 'Failed to delete student.';
+      await schoolAdminStudentsService.deleteStudent(detail.id, user.email);
       setDetailId(null);
       setDetail(null);
       load();
       return null;
-    } catch {
-      return 'Failed to delete. Check your connection.';
+    } catch (err: any) {
+      return err.message || 'Failed to delete. Check your connection.';
     }
   }
 
@@ -432,31 +321,13 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.accentYellow} />}
         >
-          <View style={styles.toolbar}>
-            <View style={styles.searchBox}>
-              <Feather name="search" size={14} color={colors.textDim} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search by name or admission no"
-                placeholderTextColor={colors.textDim}
-                style={styles.searchInput}
-                accessibilityLabel="Search students"
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.importBtn}
-              onPress={() => navigation?.navigate?.('SchoolAdminBulkImport')}
-              accessibilityRole="button"
-            >
-              <Feather name="upload" size={14} color={colors.textHeading} />
-              <Text style={styles.importBtnText}>Import Students</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('SchoolAdminAddStudent')} accessibilityRole="button">
-              <Feather name="user-plus" size={14} color="#0B0B0B" />
-              <Text style={styles.addBtnText}>Add Student</Text>
-            </TouchableOpacity>
-          </View>
+          <StudentsToolbar
+            query={query}
+            onQueryChange={setQuery}
+            onImport={() => navigation?.navigate?.('SchoolAdminBulkImport')}
+            onAddStudent={() => navigation.navigate('SchoolAdminAddStudent')}
+            colors={colors}
+          />
 
           <View style={styles.filterRow}>
             {curriculumOptions.length > 1 && (
@@ -480,27 +351,15 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
           )}
 
           {selected.size > 0 && (
-            <View style={styles.bulkBar}>
-              <Text style={styles.bulkBarText}>{selected.size} selected</Text>
-              <View style={styles.bulkBarActions}>
-                <TouchableOpacity style={styles.bulkBtnPrimary} onPress={() => setPromoteOpen(true)}>
-                  <Feather name="arrow-up-circle" size={12.5} color="#0B0B0B" />
-                  <Text style={styles.bulkBtnPrimaryText}>Promote Students</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bulkBtn} onPress={() => applyBulkStatus('active')}>
-                  <Text style={styles.bulkBtnText}>Mark Active</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bulkBtn} onPress={() => applyBulkStatus('inactive')}>
-                  <Text style={styles.bulkBtnText}>Mark Inactive</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bulkBtnDanger} onPress={() => applyBulkStatus('archived')}>
-                  <Text style={styles.bulkBtnDangerText}>Archive</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bulkBtnGhost} onPress={() => setSelected(new Set())}>
-                  <Text style={styles.bulkBtnGhostText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <StudentsBulkActionBar
+              count={selected.size}
+              colors={colors}
+              onPromote={() => setPromoteOpen(true)}
+              onMarkActive={() => applyBulkStatus('active')}
+              onMarkInactive={() => applyBulkStatus('inactive')}
+              onArchive={() => applyBulkStatus('archived')}
+              onClear={() => setSelected(new Set())}
+            />
           )}
 
           {loading ? (
@@ -534,9 +393,7 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
                       {[s.grade, s.section, s.admissionNumber].filter(Boolean).join('  ·  ') || '—'}
                     </Text>
                   </View>
-                  <View style={[styles.statusPill, { borderColor: `${tint}55`, backgroundColor: `${tint}18` }]}>
-                    <Text style={[styles.statusPillText, { color: tint }]}>{STATUS_LABEL[s.status]}</Text>
-                  </View>
+                  <StatusPill label={STATUS_LABEL[s.status]} tint={tint} />
                 </TouchableOpacity>
               );
             })
@@ -593,9 +450,7 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
                       <Text style={styles.td} numberOfLines={1}>{[s.grade, s.section].filter(Boolean).join(' · ') || '—'}</Text>
                     </View>
                     <View style={styles.thStatusCol}>
-                      <View style={[styles.statusPill, { borderColor: `${tint}55`, backgroundColor: `${tint}18`, alignSelf: 'flex-start' }]}>
-                        <Text style={[styles.statusPillText, { color: tint }]}>{STATUS_LABEL[s.status]}</Text>
-                      </View>
+                      <StatusPill label={STATUS_LABEL[s.status]} tint={tint} style={{ alignSelf: 'flex-start' }} />
                     </View>
                     <View style={styles.thJoinedCol}>
                       <Text style={styles.td} numberOfLines={1}>{formatLastActive(s.lastActiveAt)}</Text>
@@ -630,220 +485,6 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
         onConfirm={applyPromote}
       />
     </ScreenLayout>
-  );
-}
-
-// ── Quick-inspect drawer (view · edit · delete) ─────────────────────────────
-function StudentDetailDrawer({ visible, loading, detail, colors, onClose, onChangeStatus, onSave, onDelete }: {
-  visible: boolean; loading: boolean; detail: StudentDetail | null; colors: AppColors;
-  onClose: () => void; onChangeStatus: (s: 'active' | 'inactive' | 'archived') => void;
-  onSave: (patch: StudentEditPatch) => Promise<string | null>;
-  onDelete: () => Promise<string | null>;
-}) {
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [mode, setMode] = useState<'view' | 'edit' | 'confirmDelete'>('view');
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [err, setErr] = useState('');
-
-  // Editable field buffers.
-  const [fName, setFName] = useState('');
-  const [fGrade, setFGrade] = useState('');
-  const [fSection, setFSection] = useState('');
-  const [fAdm, setFAdm] = useState('');
-  const [fParentName, setFParentName] = useState('');
-  const [fParentPhone, setFParentPhone] = useState('');
-
-  // Reset to view mode + reseed buffers whenever a different student opens.
-  React.useEffect(() => {
-    setMode('view');
-    setErr('');
-    if (detail) {
-      setFName(detail.name || '');
-      setFGrade(detail.grade || '');
-      setFSection(detail.section || '');
-      setFAdm(detail.admissionNumber || '');
-      setFParentName(detail.parent?.name || '');
-      setFParentPhone(detail.parent?.phone || '');
-    }
-  }, [detail?.id]);
-
-  async function handleSave() {
-    if (!detail) return;
-    setErr('');
-    setSaving(true);
-    const patch: StudentEditPatch = {
-      name: fName.trim(),
-      grade: fGrade.trim(),
-      section: fSection.trim(),
-      admissionNumber: fAdm.trim(),
-    };
-    // Only send parent fields when a parent is actually linked (the server
-    // applies them to that account; with no parent there's nothing to update).
-    if (detail.parent) {
-      patch.parentName = fParentName.trim();
-      patch.parentPhone = fParentPhone.trim();
-    }
-    const error = await onSave(patch);
-    setSaving(false);
-    if (error) { setErr(error); return; }
-    setMode('view');
-  }
-
-  async function handleDelete() {
-    setErr('');
-    setDeleting(true);
-    const error = await onDelete();
-    setDeleting(false);
-    if (error) { setErr(error); setMode('view'); return; }
-    // On success the parent closes the drawer; nothing else to do here.
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.drawerCard}>
-          {loading || !detail ? (
-            <ActivityIndicator color={colors.accentYellow} style={{ marginVertical: 40 }} />
-          ) : (
-            <>
-              <View style={styles.formHeader}>
-                <Text style={styles.formTitle} numberOfLines={1}>
-                  {mode === 'edit' ? 'Edit Student' : mode === 'confirmDelete' ? 'Delete Student' : detail.name}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                  {mode === 'view' && (
-                    <TouchableOpacity onPress={() => { setErr(''); setMode('edit'); }} accessibilityRole="button" accessibilityLabel="Edit student">
-                      <Feather name="edit-2" size={16} color={colors.textHeading} />
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
-                    <Feather name="x" size={18} color={colors.textDim} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {mode === 'confirmDelete' ? (
-                // ── Delete confirmation ──────────────────────────────────
-                <View>
-                  <Text style={styles.formHint}>
-                    This permanently deletes <Text style={{ fontWeight: '700', color: colors.textHeading }}>{detail.name}</Text>'s
-                    account and all of their data (progress, assignments, login). This cannot be undone.
-                    {'\n\n'}The linked parent account is not deleted. If you only want to hide this student, use Archive instead.
-                  </Text>
-                  {!!err && <Text style={styles.formError}>{err}</Text>}
-                  <View style={styles.formFooter}>
-                    <TouchableOpacity style={styles.formCancelBtn} onPress={() => setMode('view')} disabled={deleting}>
-                      <Text style={styles.formCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteConfirmBtn} onPress={handleDelete} disabled={deleting}>
-                      {deleting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.deleteConfirmText}>Delete permanently</Text>}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : mode === 'edit' ? (
-                // ── Edit form ────────────────────────────────────────────
-                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
-                  <Text style={styles.formSection}>Account</Text>
-                  <DetailRow label="Login email" value={detail.email} colors={colors} />
-                  <Text style={styles.formHint}>Login email can't be changed here.</Text>
-
-                  <Text style={styles.formLabel}>Student name</Text>
-                  <TextInput style={styles.formInput} value={fName} onChangeText={setFName} placeholder="Full name" placeholderTextColor={colors.textDim} />
-
-                  <Text style={styles.formSection}>Academic</Text>
-                  <View style={styles.formRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.formLabel}>Grade</Text>
-                      <TextInput style={styles.formInput} value={fGrade} onChangeText={setFGrade} placeholder="Grade 3" placeholderTextColor={colors.textDim} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.formLabel}>Section</Text>
-                      <TextInput style={styles.formInput} value={fSection} onChangeText={setFSection} placeholder="A" placeholderTextColor={colors.textDim} />
-                    </View>
-                  </View>
-                  <Text style={styles.formLabel}>Admission #</Text>
-                  <TextInput style={styles.formInput} value={fAdm} onChangeText={setFAdm} placeholder="TSRA-1001" placeholderTextColor={colors.textDim} autoCapitalize="characters" />
-
-                  <Text style={styles.formSection}>Parent / Guardian</Text>
-                  {detail.parent ? (
-                    <>
-                      <DetailRow label="Email" value={detail.parent.email} colors={colors} />
-                      <Text style={styles.formLabel}>Parent name</Text>
-                      <TextInput style={styles.formInput} value={fParentName} onChangeText={setFParentName} placeholder="Parent name" placeholderTextColor={colors.textDim} />
-                      <Text style={styles.formLabel}>Parent phone</Text>
-                      <TextInput style={styles.formInput} value={fParentPhone} onChangeText={setFParentPhone} placeholder="+91 90000 00000" placeholderTextColor={colors.textDim} keyboardType="phone-pad" />
-                    </>
-                  ) : (
-                    <Text style={styles.formHint}>No parent account linked yet.</Text>
-                  )}
-
-                  {!!err && <Text style={styles.formError}>{err}</Text>}
-                  <View style={styles.formFooter}>
-                    <TouchableOpacity style={styles.formCancelBtn} onPress={() => { setErr(''); setMode('view'); }} disabled={saving}>
-                      <Text style={styles.formCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.formSubmitBtn} onPress={handleSave} disabled={saving}>
-                      {saving ? <ActivityIndicator color="#0B0B0B" size="small" /> : <Text style={styles.formSubmitText}>Save changes</Text>}
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
-              ) : (
-                // ── View mode ────────────────────────────────────────────
-                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
-                  <Text style={styles.formSection}>Account</Text>
-                  <DetailRow label="Login email" value={detail.email} colors={colors} />
-                  <DetailRow label="Status" value={STATUS_LABEL[detail.status]} colors={colors} />
-                  <DetailRow label="Last active" value={formatLastActive(detail.lastActiveAt)} colors={colors} />
-
-                  <Text style={styles.formSection}>Academic</Text>
-                  <DetailRow label="Grade" value={detail.grade || '—'} colors={colors} />
-                  <DetailRow label="Section" value={detail.section || '—'} colors={colors} />
-                  <DetailRow label="Admission #" value={detail.admissionNumber || '—'} colors={colors} />
-                  <DetailRow label="Joined" value={formatJoined(detail.joinedAt)} colors={colors} />
-
-                  <Text style={styles.formSection}>Parent / Guardian</Text>
-                  {detail.parent ? (
-                    <>
-                      <DetailRow label="Name" value={detail.parent.name} colors={colors} />
-                      <DetailRow label="Email" value={detail.parent.email} colors={colors} />
-                      {!!detail.parent.phone && <DetailRow label="Phone" value={detail.parent.phone} colors={colors} />}
-                    </>
-                  ) : (
-                    <Text style={styles.formHint}>No parent account linked yet.</Text>
-                  )}
-
-                  <Text style={styles.formSection}>Quick Actions</Text>
-                  <View style={styles.drawerActions}>
-                    {detail.status !== 'active' && (
-                      <TouchableOpacity style={styles.bulkBtn} onPress={() => onChangeStatus('active')}>
-                        <Text style={styles.bulkBtnText}>Mark Active</Text>
-                      </TouchableOpacity>
-                    )}
-                    {detail.status !== 'inactive' && (
-                      <TouchableOpacity style={styles.bulkBtn} onPress={() => onChangeStatus('inactive')}>
-                        <Text style={styles.bulkBtnText}>Mark Inactive</Text>
-                      </TouchableOpacity>
-                    )}
-                    {detail.status !== 'archived' && (
-                      <TouchableOpacity style={styles.bulkBtnDanger} onPress={() => onChangeStatus('archived')}>
-                        <Text style={styles.bulkBtnDangerText}>Archive</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <Text style={[styles.formSection, { color: colors.accentRed }]}>Danger Zone</Text>
-                  <TouchableOpacity style={styles.deleteRowBtn} onPress={() => { setErr(''); setMode('confirmDelete'); }} accessibilityRole="button">
-                    <Feather name="trash-2" size={14} color={colors.accentRed} />
-                    <Text style={styles.deleteRowText}>Delete this student permanently</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              )}
-            </>
-          )}
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -1019,83 +660,14 @@ function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, face
   );
 }
 
-function DetailRow({ label, value, colors }: { label: string; value: string; colors: AppColors }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 }}>
-      <Text style={{ fontFamily: fonts.serif, fontSize: 12.5, color: colors.textDim }}>{label}</Text>
-      <Text style={{ fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '600', color: colors.textHeading }} selectable>{value}</Text>
-    </View>
-  );
-}
-
 function makeStyles(colors: AppColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bgDark },
     content: { padding: spacing.xl, paddingBottom: 60, width: '100%' },
-    toolbar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-    searchBox: {
-      flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, maxWidth: 360,
-      backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor,
-      borderRadius: radius.sm, paddingHorizontal: 10, height: 36,
-    },
-    searchInput: { flex: 1, fontFamily: fonts.serif, fontSize: 13, color: colors.textMain, height: '100%' },
-    addBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: colors.accentYellow, borderRadius: radius.sm,
-      paddingHorizontal: 14, height: 36,
-    },
-    addBtnText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700', color: '#0B0B0B' },
-    importBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor,
-      borderRadius: radius.sm, paddingHorizontal: 14, height: 36,
-    },
-    importBtnText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700', color: colors.textHeading },
-
     filterRow: { flexDirection: 'row', gap: 10, marginBottom: spacing.lg, flexWrap: 'wrap', alignItems: 'center', zIndex: 10, position: 'relative' },
     resultsCount: { fontFamily: fonts.serif, fontSize: 12.5, color: colors.textDim, marginLeft: 'auto' },
     promoteHint: { fontFamily: fonts.serif, fontSize: 12, color: colors.textDim, marginBottom: spacing.sm, fontStyle: 'italic' },
 
-    ddTrigger: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-      minWidth: 140, borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.cardDark,
-      borderRadius: radius.sm, paddingHorizontal: 12, height: 36,
-    },
-    ddTriggerText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '600', color: colors.textHeading, flexShrink: 1 },
-    ddBackdrop: Platform.select({
-      web: { position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 19 },
-      default: { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 19 },
-    }) as any,
-    ddMenu: {
-      position: 'absolute', top: 40, left: 0, minWidth: 180, backgroundColor: colors.cardDark,
-      borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, paddingVertical: 4,
-      zIndex: 21, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
-      // maxHeight must live here, not just on the inner ScrollView — an
-      // absolutely-positioned, auto-sized container won't clip a long list
-      // on web based on a child's maxHeight alone.
-      maxHeight: 260, overflow: 'hidden',
-    },
-    ddItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 9 },
-    ddItemHovered: { backgroundColor: colors.cardHover },
-    ddItemActive: { backgroundColor: `${colors.accentYellow}14` },
-    ddItemText: { fontFamily: fonts.serif, fontSize: 12.5, color: colors.textMuted },
-    ddItemTextActive: { color: colors.textHeading, fontWeight: '700' },
-
-    bulkBar: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: `${colors.accentYellow}14`, borderWidth: 1, borderColor: `${colors.accentYellow}40`,
-      borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 10, marginBottom: spacing.md,
-    },
-    bulkBarText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700', color: colors.textHeading },
-    bulkBarActions: { flexDirection: 'row', gap: 8 },
-    bulkBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.cardDark },
-    bulkBtnText: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '700', color: colors.textMuted },
-    bulkBtnDanger: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.sm, borderWidth: 1, borderColor: `${colors.accentRed}55`, backgroundColor: `${colors.accentRed}14` },
-    bulkBtnDangerText: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '700', color: colors.accentRed },
-    bulkBtnGhost: { paddingHorizontal: 10, paddingVertical: 7 },
-    bulkBtnGhostText: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '600', color: colors.textDim },
-    bulkBtnPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.sm, backgroundColor: colors.accentYellow },
-    bulkBtnPrimaryText: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '700', color: '#0B0B0B' },
 
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
     chip: { borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.bgDark, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
@@ -1138,8 +710,6 @@ function makeStyles(colors: AppColors) {
 
     avatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: `${colors.primary}22` },
     avatarText: { fontFamily: fonts.serif, fontSize: 10, fontWeight: '700', color: colors.primary },
-    statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1, flexShrink: 0 },
-    statusPillText: { fontFamily: fonts.serif, fontSize: 10.5, fontWeight: '700' },
 
     emptyBox: { alignItems: 'center', paddingTop: 56, gap: 10, paddingHorizontal: 24 },
     emptyText: { fontFamily: fonts.serif, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
@@ -1152,8 +722,6 @@ function makeStyles(colors: AppColors) {
     drawerCard: { backgroundColor: colors.cardDark, borderRadius: 20, borderWidth: 1, borderColor: colors.borderColor, padding: 24, width: '100%', maxWidth: 420 },
     formHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     formTitle: { fontFamily: fonts.serif, fontSize: 18, fontWeight: '700', color: colors.textHeading, flexShrink: 1 },
-    formSection: { fontFamily: fonts.serif, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textDim, marginTop: 16, marginBottom: 8 },
-    formRow: { flexDirection: 'row', gap: 12 },
     formLabel: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '600', color: colors.textMuted, marginBottom: 5, marginTop: 8 },
     formInput: {
       fontFamily: fonts.serif, fontSize: 13, color: colors.textMain,
@@ -1167,17 +735,6 @@ function makeStyles(colors: AppColors) {
     formCancelText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '600', color: colors.textMuted },
     formSubmitBtn: { flex: 1, backgroundColor: colors.accentYellow, borderRadius: radius.sm, paddingVertical: 11, alignItems: 'center' },
     formSubmitText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: '#0B0B0B' },
-
-    drawerActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 },
-
-    deleteRowBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
-      borderWidth: 1, borderColor: `${colors.accentRed}55`, backgroundColor: `${colors.accentRed}0F`,
-      borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 9, marginTop: 2,
-    },
-    deleteRowText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700', color: colors.accentRed },
-    deleteConfirmBtn: { flex: 1, backgroundColor: colors.accentRed, borderRadius: radius.sm, paddingVertical: 11, alignItems: 'center' },
-    deleteConfirmText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: '#fff' },
 
     credCard: { backgroundColor: colors.cardDark, borderRadius: 20, borderWidth: 1, borderColor: colors.borderColor, padding: 26, width: '100%', maxWidth: 380, alignItems: 'center', gap: 4 },
     credIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentGreen, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
