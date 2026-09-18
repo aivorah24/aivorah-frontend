@@ -412,7 +412,11 @@ const [editingName, setEditingName] = useState(false);
                         onPress={() => {
                           setBellVisible(false);
                           void clearUnread();
-                          navigation.navigate(screenNames.messages);
+                          // Deep-link straight into the sender's conversation —
+                          // previously just opened the Messages screen's default
+                          // (New/conversation-list) view, so tapping a "message
+                          // from X" notification never actually landed on X's chat.
+                          navigation.navigate(screenNames.messages, latestNotif?.senderEmail ? { openWith: latestNotif.senderEmail } : undefined);
                         }}
                       >
                         <View style={[styles.notifIconWrap, { backgroundColor: colors.accentYellow + '22' }]}>
