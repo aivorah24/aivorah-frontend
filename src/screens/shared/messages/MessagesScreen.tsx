@@ -5,7 +5,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
-import { useIsFocused, useRoute } from '@react-navigation/native';
+import { useIsFocused, useRoute, useNavigation } from '@react-navigation/native';
 import CreateChannelModal from '../../../features/channels/components/CreateChannelModal';
 import type { Channel } from '../../../features/channels/api/channelsApi';
 
@@ -31,6 +31,7 @@ export default function MessagesScreen(_props: any) {
   const { refresh } = useNotification();
   const isFocused = useIsFocused();
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
   const openWith: string | undefined = route.params?.openWith;
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -78,6 +79,10 @@ export default function MessagesScreen(_props: any) {
     if (match) {
       openedFromNotifRef.current = true;
       thread.openConversation(match);
+      // Consume the param so a later refresh/re-navigation to this screen (which
+      // on web keeps `openWith` in the URL) doesn't keep forcing this same
+      // conversation open over whatever the user does next.
+      navigation.setParams({ openWith: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openWith, loadingConvos, conversations]);
