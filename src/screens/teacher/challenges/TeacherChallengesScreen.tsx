@@ -279,8 +279,6 @@ export default function TeacherChallengesScreen({ navigation }: any) {
         assigning={assign.assigning}
         assignError={assign.assignError}
         assignSuccess={assign.assignSuccess}
-        assignStartDate={assign.assignStartDate}
-        setAssignStartDate={assign.setAssignStartDate}
         assignDueDate={assign.assignDueDate}
         setAssignDueDate={assign.setAssignDueDate}
         onClose={assign.closeAssign}

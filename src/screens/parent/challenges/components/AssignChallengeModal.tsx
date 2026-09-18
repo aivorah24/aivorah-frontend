@@ -10,7 +10,6 @@ export default function AssignChallengeModal({
   visible, onClose, colors, styles,
   challenge, child,
   assigning, assignError, assignSuccess,
-  assignStartDate, setAssignStartDate,
   assignDueDate, setAssignDueDate, getDueDateLabel,
   onConfirm,
 }: {
@@ -23,8 +22,6 @@ export default function AssignChallengeModal({
   assigning: boolean;
   assignError: string;
   assignSuccess: string;
-  assignStartDate: string;
-  setAssignStartDate: (d: string) => void;
   assignDueDate: string;
   setAssignDueDate: (d: string) => void;
   getDueDateLabel: (offset: number) => string;
@@ -60,38 +57,6 @@ export default function AssignChallengeModal({
                 <Text style={styles.confirmMetaText}>{challenge?.questionCount} questions</Text>
                 <View style={styles.dot} />
                 <Text style={styles.confirmMetaText}>{challenge?.timeLimitMinutes} min</Text>
-              </View>
-
-              <View style={{ marginTop: 14 }}>
-                <Text style={[styles.confirmMetaText, { marginBottom: 8, fontWeight: '600', color: colors.textMain }]}>
-                  <Feather name="calendar" size={13} color={colors.accentYellow} /> Start Date
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {[
-                    { label: 'Today',    date: getDueDateLabel(0) },
-                    { label: 'Tomorrow', date: getDueDateLabel(1) },
-                    { label: '3 Days',   date: getDueDateLabel(3) },
-                  ].map(opt => (
-                    <TouchableOpacity
-                      key={opt.label}
-                      onPress={() => setAssignStartDate(opt.date)}
-                      style={{
-                        paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.md,
-                        borderWidth: 1,
-                        borderColor: assignStartDate === opt.date ? colors.accentYellow : colors.borderColor,
-                        backgroundColor: assignStartDate === opt.date ? colors.accentYellow + '22' : 'transparent',
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: assignStartDate === opt.date ? colors.accentYellow : colors.textMuted }}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={{ fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, marginTop: 6 }}>
-                  Start: {assignStartDate || 'Not set'}
-                </Text>
               </View>
 
               <View style={{ marginTop: 14 }}>
