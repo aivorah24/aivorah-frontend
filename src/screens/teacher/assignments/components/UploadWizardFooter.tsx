@@ -13,7 +13,7 @@ import type { ScrollView } from 'react-native';
 export function UploadWizardFooter({
   uploadStep, setUploadStep, setFormError, uploadScrollRef,
   docFiles, uploadingDoc, extractingQuestions, interactiveQuiz,
-  title, startDate, dueDate, creating, createAssignment,
+  title, dueDate, creating, createAssignment,
   colors, styles,
 }: {
   uploadStep: 1 | 2 | 3;
@@ -25,7 +25,6 @@ export function UploadWizardFooter({
   extractingQuestions: boolean;
   interactiveQuiz: any;
   title: string;
-  startDate?: string;
   dueDate: string;
   creating: boolean;
   createAssignment: () => void;
@@ -69,7 +68,6 @@ export function UploadWizardFooter({
           style={[styles.submitBtn, { flex: 2, marginTop: 0, backgroundColor: creating ? colors.borderColor : colors.accentGreen }]}
           onPress={() => {
             if (!title.trim()) { setFormError('Title is required'); return; }
-            if (!startDate?.trim()) { setFormError('Start date is required'); return; }
             if (!dueDate.trim()) { setFormError('Due date is required'); return; }
             setFormError('');
             createAssignment();

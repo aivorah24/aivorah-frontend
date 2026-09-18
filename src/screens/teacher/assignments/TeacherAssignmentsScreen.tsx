@@ -68,7 +68,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
   } = useTeacherCurriculumGrade(user, subject);
   const [chapter, setChapter] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [startDate, setStartDate] = useState('');
   const [type, setType] = useState<'assignment' | 'quiz'>('assignment');
   const [note, setNote] = useState('');
   const [questions, setQuestions] = useState<string[]>(['']);
@@ -278,7 +277,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
 
   async function createAssignment() {
     if (!title.trim()) { setFormError('Title is required'); return; }
-    if (!startDate.trim()) { setFormError('Start date is required'); return; }
     if (!dueDate.trim()) { setFormError('Due date is required'); return; }
     if (type === 'quiz' && quizQuestions.length === 0) { setFormError('Generate quiz questions first before assigning this quiz.'); return; }
     // ── Pre-publish validation gate (issue #6) — never publish a wrong/incomplete
@@ -294,7 +292,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
       const uploadedExtracted = buildUploadedExtractedQuestions(extractedQuestions);
 
       const payload = buildAssignmentPayload({
-        title, subject, chapter, startDate, dueDate, type, assignTo, selectedStudentId: selectedStudent?.id ?? null,
+        title, subject, chapter, dueDate, type, assignTo, selectedStudentId: selectedStudent?.id ?? null,
         teacherEmail, grade, curriculum, questions, uploadedExtracted, extractedQuestions,
         ibLearningOutcomes, successCriteria, taskSteps, ibWordBank, quizQuestions, interactiveQuiz, docFiles,
         ibPurpose, note, unitOfInquiry, selectedLanguage, ibCentralIdea, ibLinesOfInquiry,
@@ -835,7 +833,6 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                       setCurriculum={setCurriculum} effectiveCurriculum={effectiveCurriculum}
                       curriculumOptions={curriculumOptions} teacherCurriculum={teacherCurriculum}
                       chapter={chapter} setChapter={setChapter} topicsLoading={topicsLoading} availableTopics={availableTopics}
-                      startDate={startDate} setStartDate={setStartDate}
                       dueDate={dueDate} setDueDate={setDueDate}
                       quizType={quizType} setQuizType={setQuizType}
                       quizDifficulty={quizDifficulty} setQuizDifficulty={setQuizDifficulty}
@@ -874,7 +871,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                     uploadScrollRef={uploadScrollRef}
                     docFiles={docFiles} uploadingDoc={uploadingDoc} extractingQuestions={extractingQuestions}
                     interactiveQuiz={interactiveQuiz}
-                    title={title} startDate={startDate} dueDate={dueDate} creating={creating} createAssignment={createAssignment}
+                    title={title} dueDate={dueDate} creating={creating} createAssignment={createAssignment}
                     colors={colors} styles={styles}
                   />
                 )}
