@@ -37,7 +37,8 @@ export function useRealtimeMessages(userEmail: string, onMessage: () => void) {
         reconnectTimer = setTimeout(connect, 3000);
       };
 
-      ws.onerror = () => { ws?.close(); };
+      // No explicit close() here — an error is always followed by a close
+      // event (per the WebSocket spec), which already triggers the reconnect.
     };
 
     connect();
