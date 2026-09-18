@@ -1,4 +1,5 @@
 jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
+jest.mock('../../../../../config/schoolAdminServerUrl', () => 'https://school-admin.test');
 import { schoolAdminTeachersService } from '../../services/schoolAdminTeachersService';
 
 const realFetch = global.fetch;
@@ -27,7 +28,7 @@ describe('schoolAdminTeachersService.createTeacher', () => {
     const result = await schoolAdminTeachersService.createTeacher('admin@x.com', payload);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://server.test/school-admin/teachers?adminEmail=admin%40x.com',
+      'https://school-admin.test/school-admin/teachers?adminEmail=admin%40x.com',
       expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) })
     );
     expect(result).toEqual(created);

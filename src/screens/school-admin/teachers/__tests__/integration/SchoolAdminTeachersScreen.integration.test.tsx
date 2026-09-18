@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import SchoolAdminTeachersScreen from '../../SchoolAdminTeachersScreen';
-import SERVER_URL from '../../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../../config/schoolAdminServerUrl';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -46,7 +46,7 @@ describe('SchoolAdminTeachersScreen — integration', () => {
     expect(screen.getByText('IB PYP · Grade 7')).toBeTruthy();
     expect(screen.getByText('Not assigned')).toBeTruthy();
 
-    expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/school-admin/teachers?adminEmail=admin%40school.test`);
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers?adminEmail=admin%40school.test`);
   });
 
   test('shows the empty state when there are no teachers', async () => {

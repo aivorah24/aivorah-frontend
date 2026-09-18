@@ -1,4 +1,5 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { TeacherRow } from '../utils/teachersFormatters';
 
 export type { TeacherRow };
@@ -23,7 +24,7 @@ export class SchoolAdminTeachersService {
   async getTeachers(adminEmail: string): Promise<TeacherRow[]> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`);
+      res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`);
     } catch {
       throw new Error('Failed to load teachers. Check your connection.');
     }
@@ -44,7 +45,7 @@ export class SchoolAdminTeachersService {
   async createTeacher(adminEmail: string, payload: CreateTeacherPayload): Promise<CreateTeacherResult> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`, {
+      res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
     } catch {

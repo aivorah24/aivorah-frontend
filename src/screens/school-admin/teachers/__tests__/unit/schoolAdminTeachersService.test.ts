@@ -1,4 +1,5 @@
 jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
+jest.mock('../../../../../config/schoolAdminServerUrl', () => 'https://school-admin.test');
 import { schoolAdminTeachersService } from '../../services/schoolAdminTeachersService';
 
 const realFetch = global.fetch;
@@ -10,7 +11,7 @@ describe('schoolAdminTeachersService.getTeachers', () => {
 
     const result = await schoolAdminTeachersService.getTeachers('admin@x.com');
 
-    expect(global.fetch).toHaveBeenCalledWith('https://server.test/school-admin/teachers?adminEmail=admin%40x.com');
+    expect(global.fetch).toHaveBeenCalledWith('https://school-admin.test/school-admin/teachers?adminEmail=admin%40x.com');
     expect(result).toHaveLength(1);
   });
 
