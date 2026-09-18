@@ -218,29 +218,12 @@ describe('useParentAssignments', () => {
     expect(mockedService.createAssignment).not.toHaveBeenCalled();
   });
 
-  it('createAssignment validates startDate is required', async () => {
-    const { result } = await renderAndSettle();
-
-    await act(async () => {
-      result.current.setTitle('Test Title');
-    });
-
-    await act(async () => {
-      await result.current.createAssignment();
-    });
-
-    expect(result.current.formError).toBe('Start date is required');
-    expect(mockedService.createAssignment).not.toHaveBeenCalled();
-  });
-
   it('createAssignment validates dueDate is required', async () => {
     const { result } = await renderAndSettle();
 
     await act(async () => {
       result.current.setTitle('Test Title');
-      result.current.setStartDate('2099-01-01');
     });
-
 
     await act(async () => {
       await result.current.createAssignment();
@@ -262,7 +245,6 @@ describe('useParentAssignments', () => {
 
     await act(async () => {
       result.current.setTitle('New Assignment');
-      result.current.setStartDate('2099-01-01');
       result.current.setDueDate('2099-12-31');
     });
     await waitFor(() => expect(result.current.dueDate).toBe('2099-12-31'));
@@ -274,7 +256,6 @@ describe('useParentAssignments', () => {
     expect(mockedService.createAssignment).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'New Assignment',
-        startDate: '2099-01-01',
         dueDate: '2099-12-31',
         studentId: 'c1',
         parentEmail: 'parent@test.com',
@@ -291,7 +272,6 @@ describe('useParentAssignments', () => {
 
     await act(async () => {
       result.current.setTitle('New Assignment');
-      result.current.setStartDate('2099-01-01');
       result.current.setDueDate('2099-12-31');
     });
 
