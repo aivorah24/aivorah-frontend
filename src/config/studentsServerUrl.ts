@@ -8,7 +8,11 @@ declare const __DEV__: boolean;
 
 // Deployed on Render (confirmed 2026-08-26) — verified live via a real
 // available-to-link request that hit Supabase and returned real roster data.
-const LIVE_SERVICE = 'https://aivorah-students-service.onrender.com';
+//
+// 2026-09-18: migrated to a new Render account (old account suspended for
+// billing). Temporary URL — Render appended a random suffix since the
+// original name is still claimed by the suspended account.
+const LIVE_SERVICE = 'https://aivorah-students-service-h3se.onrender.com';
 
 const STUDENTS_SERVER_URL =
   Platform.OS === 'web' && __DEV__ ? 'http://localhost:3017' : LIVE_SERVICE;
