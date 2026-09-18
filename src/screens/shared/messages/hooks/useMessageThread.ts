@@ -9,6 +9,7 @@ import {
   sendMessageApi, triggerAivorahReply, uploadAttachment,
 } from '../services/messagesService';
 import { isAivorah, parseContent } from '../utils/messageFormat';
+import { useRealtimeMessages } from './useRealtimeMessages';
 
 interface Args {
   userEmail: string;
@@ -101,6 +102,17 @@ export function useMessageThread({
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [activeConvo, isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live delivery: on any incoming message, immediately refresh the open
+  // thread (if any) and the conversation list, instead of waiting up to 5s
+  // for the next poll tick. The 5s poll above stays as a fallback for when
+  // the socket is reconnecting.
+  const activeConvoRef = useRef(activeConvo);
+  useEffect(() => { activeConvoRef.current = activeConvo; }, [activeConvo]);
+  useRealtimeMessages(userEmail, () => {
+    if (activeConvoRef.current && isFocused) loadThread(activeConvoRef.current.otherEmail);
+    loadConversations();
+  });
 
   const openConversation = (convo: Conversation) => {
     setActiveChannel(null); // parallel-path mutual exclusion
