@@ -5,7 +5,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useRoute } from '@react-navigation/native';
 import CreateChannelModal from '../../../features/channels/components/CreateChannelModal';
 import type { Channel } from '../../../features/channels/api/channelsApi';
 
@@ -30,6 +30,8 @@ export default function MessagesScreen(_props: any) {
   const { user } = useAuth();
   const { refresh } = useNotification();
   const isFocused = useIsFocused();
+  const route = useRoute<any>();
+  const openWith: string | undefined = route.params?.openWith;
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const userEmail = (user?.email || '').toLowerCase();
@@ -60,6 +62,25 @@ export default function MessagesScreen(_props: any) {
     refreshNotifications: refresh,
     loadConversations, setConversations, setChannels, loadChannels,
   });
+
+  // Deep-link from a "message from X" notification tap (see Header.tsx) —
+  // opens X's conversation directly instead of leaving the screen on its
+  // default conversation-list/New view. Waits for conversations to actually
+  // load (a fresh notification implies one already exists for this sender).
+  // Fires at most once per mount (openedFromNotifRef) — openConversation()
+  // itself doesn't touch `conversations`, but re-running this on every list
+  // refresh would re-force the user back into this chat even after they'd
+  // navigated elsewhere.
+  const openedFromNotifRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!openWith || loadingConvos || openedFromNotifRef.current) return;
+    const match = conversations.find(c => c.otherEmail?.toLowerCase() === openWith.toLowerCase());
+    if (match) {
+      openedFromNotifRef.current = true;
+      thread.openConversation(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openWith, loadingConvos, conversations]);
 
   // Keep the conversations hook's "active email" ref in sync with the real active convo.
   React.useEffect(() => {
