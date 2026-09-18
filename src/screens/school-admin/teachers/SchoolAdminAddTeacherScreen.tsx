@@ -1,95 +1,24 @@
-/**
- * School Admin — Add Teacher (dedicated screen, mirrors Add Student).
- *
- * A teacher can teach different subjects in different grades (e.g. Social
- * Studies in Grade 3, Science in Grade 4) — TeachingEntriesEditor captures
- * that as a repeatable list of {curriculum, grade, subjects} entries.
- *
- * Contract:
- *   POST /school-admin/teachers?adminEmail=<email>
- *        body { firstName, lastName, email?, teaches: [{curriculum, grade, subjects: string[]}] }
- *        -> 201 { id, name, email, password, teaches, subjects, status }
- */
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
-import TeachingEntriesEditor, { type TeachingEntry, emptyEntry, defaultCurriculumForBase } from './TeachingEntriesEditor';
-
-interface CreateResult {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  subjects: string[];
-  status: string;
-}
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import { useAddTeacherState } from './hooks/useAddTeacherState';
+import TeachingEntriesEditor from './components/TeachingEntriesEditor';
 
 export default function SchoolAdminAddTeacherScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
-
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [entries, setEntries] = useState<TeachingEntry[]>([emptyEntry()]);
-  const [emailOverride, setEmailOverride] = useState('');
-  const [schoolCurriculumBase, setSchoolCurriculumBase] = useState<string | null>(null);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [result, setResult] = useState<CreateResult | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user?.email) return;
-      try {
-        const res = await fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
-        const data = await res.json().catch(() => ({}));
-        if (cancelled || !res.ok) return;
-        const base = data?.school?.curriculum || null;
-        setSchoolCurriculumBase(base);
-        const preset = defaultCurriculumForBase(base);
-        if (preset) setEntries((prev) => (prev.length === 1 && !prev[0].curriculum ? [{ ...prev[0], curriculum: preset }] : prev));
-      } catch { /* non-fatal */ }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.email]);
-
-  const canSubmit = firstName.trim().length > 0 && lastName.trim().length > 0;
-
-  const submit = useCallback(async () => {
-    if (!user?.email || !canSubmit || submitting) return;
-    setSubmitting(true);
-    setFormError('');
-    try {
-      const teaches = entries
-        .filter((e) => e.curriculum && e.grade)
-        .map((e) => ({
-          curriculum: e.curriculum, grade: e.grade,
-          subjects: e.subjectsInput.split(/[;,]/).map((s) => s.trim()).filter(Boolean),
-        }));
-      const body: Record<string, any> = { firstName: firstName.trim(), lastName: lastName.trim(), teaches };
-      if (emailOverride.trim()) body.email = emailOverride.trim();
-      const res = await fetch(`${SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setFormError(data?.error || 'Failed to add teacher'); return; }
-      setResult(data as CreateResult);
-    } catch {
-      setFormError('Failed to add teacher. Check your connection.');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [user?.email, canSubmit, submitting, firstName, lastName, entries, emailOverride]);
+  const {
+    firstName, setFirstName, lastName, setLastName, entries, setEntries,
+    emailOverride, setEmailOverride, schoolCurriculumBase, openDropdown, setOpenDropdown,
+    submitting, formError, result, canSubmit, submit, reset,
+  } = useAddTeacherState(user?.email);
 
   function goToTeachers() { navigation?.navigate?.('SchoolAdminTeachers'); }
 
@@ -119,10 +48,10 @@ export default function SchoolAdminAddTeacherScreen({ navigation }: any) {
                 )}
               </View>
               <View style={styles.footerRow}>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setResult(null); setFirstName(''); setLastName(''); setEmailOverride(''); setEntries([emptyEntry(defaultCurriculumForBase(schoolCurriculumBase))]); }}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={reset} accessibilityRole="button">
                   <Text style={styles.secondaryBtnText}>Add another</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.primaryBtn} onPress={goToTeachers}><Text style={styles.primaryBtnText}>Done</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.primaryBtn} onPress={goToTeachers} accessibilityRole="button"><Text style={styles.primaryBtnText}>Done</Text></TouchableOpacity>
               </View>
             </>
           ) : (
@@ -166,8 +95,8 @@ export default function SchoolAdminAddTeacherScreen({ navigation }: any) {
               )}
 
               <View style={styles.footerRow}>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={goToTeachers} disabled={submitting}><Text style={styles.secondaryBtnText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.primaryBtn, (!canSubmit || submitting) && styles.primaryBtnDisabled]} onPress={submit} disabled={!canSubmit || submitting}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={goToTeachers} disabled={submitting} accessibilityRole="button"><Text style={styles.secondaryBtnText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.primaryBtn, (!canSubmit || submitting) && styles.primaryBtnDisabled]} onPress={submit} disabled={!canSubmit || submitting} accessibilityRole="button">
                   {submitting ? <ActivityIndicator color="#0B0B0B" size="small" /> : <Text style={styles.primaryBtnText}>Create Teacher</Text>}
                 </TouchableOpacity>
               </View>
