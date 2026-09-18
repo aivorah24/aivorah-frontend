@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import SchoolAdminAddParentScreen from '../../SchoolAdminAddParentScreen';
-import SERVER_URL from '../../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../../config/schoolAdminServerUrl';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -54,7 +54,7 @@ describe('SchoolAdminAddParentScreen — integration', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        `${SERVER_URL}/school-admin/parents?adminEmail=admin%40school.test`,
+        `${SCHOOL_ADMIN_SERVER_URL}/school-admin/parents?adminEmail=admin%40school.test`,
         expect.objectContaining({ method: 'POST', body: JSON.stringify({ firstName: 'Priya', lastName: 'Sharma' }) })
       );
     });

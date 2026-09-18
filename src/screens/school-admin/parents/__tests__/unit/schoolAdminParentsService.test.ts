@@ -1,4 +1,5 @@
 jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
+jest.mock('../../../../../config/schoolAdminServerUrl', () => 'https://school-admin.test');
 import { schoolAdminParentsService, CreateParentError } from '../../services/schoolAdminParentsService';
 
 const realFetch = global.fetch;
@@ -8,7 +9,7 @@ describe('schoolAdminParentsService.getParents', () => {
   test('requests the parent list scoped to the admin, and returns the array', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([{ id: 'p1', name: 'A', email: 'a@x.com', linkedStudents: [] }]) }) as any;
     const result = await schoolAdminParentsService.getParents('admin@x.com');
-    expect(global.fetch).toHaveBeenCalledWith('https://server.test/school-admin/parents?adminEmail=admin%40x.com');
+    expect(global.fetch).toHaveBeenCalledWith('https://school-admin.test/school-admin/parents?adminEmail=admin%40x.com');
     expect(result).toHaveLength(1);
   });
 
@@ -36,7 +37,7 @@ describe('schoolAdminParentsService.createParent', () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(created) }) as any;
     const result = await schoolAdminParentsService.createParent('admin@x.com', payload);
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://server.test/school-admin/parents?adminEmail=admin%40x.com',
+      'https://school-admin.test/school-admin/parents?adminEmail=admin%40x.com',
       expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) })
     );
     expect(result).toEqual(created);

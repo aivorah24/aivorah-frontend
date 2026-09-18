@@ -1,4 +1,5 @@
 import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { ParentRow } from '../utils/parentsFormatters';
 import { ChildPayloadEntry } from '../utils/childEntry';
 
@@ -39,7 +40,7 @@ export class SchoolAdminParentsService {
   async getParents(adminEmail: string): Promise<ParentRow[]> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/school-admin/parents?adminEmail=${encodeURIComponent(adminEmail)}`);
+      res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/parents?adminEmail=${encodeURIComponent(adminEmail)}`);
     } catch {
       throw new Error('Failed to load parents. Check your connection.');
     }
@@ -53,7 +54,7 @@ export class SchoolAdminParentsService {
   async createParent(adminEmail: string, payload: CreateParentPayload): Promise<CreateParentResult> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/school-admin/parents?adminEmail=${encodeURIComponent(adminEmail)}`, {
+      res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/parents?adminEmail=${encodeURIComponent(adminEmail)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
     } catch {
@@ -68,7 +69,7 @@ export class SchoolAdminParentsService {
 
   async getGradeSectionOptions(adminEmail: string): Promise<GradeSectionOptions> {
     const [gsRes, overviewRes] = await Promise.all([
-      fetch(`${SERVER_URL}/school-admin/grades-sections?adminEmail=${encodeURIComponent(adminEmail)}`),
+      fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades-sections?adminEmail=${encodeURIComponent(adminEmail)}`),
       fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(adminEmail)}`),
     ]);
     const gsData = await gsRes.json().catch(() => ({}));

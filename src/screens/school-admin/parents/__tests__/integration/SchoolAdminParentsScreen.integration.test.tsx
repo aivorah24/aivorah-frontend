@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import SchoolAdminParentsScreen from '../../SchoolAdminParentsScreen';
-import SERVER_URL from '../../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../../config/schoolAdminServerUrl';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -45,7 +45,7 @@ describe('SchoolAdminParentsScreen — integration', () => {
     expect(screen.getByText('Vihaan Kapoor')).toBeTruthy();
     expect(screen.getByText('None linked')).toBeTruthy();
 
-    expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/school-admin/parents?adminEmail=admin%40school.test`);
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/parents?adminEmail=admin%40school.test`);
   });
 
   test('shows the empty state when there are no parents', async () => {
