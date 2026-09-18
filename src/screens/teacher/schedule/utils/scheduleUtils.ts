@@ -59,8 +59,15 @@ export function tagColors(tag: string | null | undefined, type: string): [string
   return typeColors(type);
 }
 
+// LOCAL date, not UTC — toISOString() rolls the date back a day for any
+// local time before UTC's midnight in a timezone ahead of UTC (e.g. IST),
+// which was the "scheduled on the 23rd, saved as the 22nd" bug. See the
+// identical fix + rationale in student/schedule/utils/dateHelpers.ts.
 export function dateISO(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // Bug #19: was Monday-first (`monday.setDate(base.getDate() - ((dow + 6) % 7))`)
