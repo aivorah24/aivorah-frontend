@@ -34,7 +34,6 @@ export interface BuildAssignmentPayloadArgs {
   title: string;
   subject: string;
   chapter: string;
-  startDate?: string;
   dueDate: string;
   type: 'assignment' | 'quiz';
   assignTo: 'all' | 'specific';
@@ -70,7 +69,7 @@ export interface BuildAssignmentPayloadArgs {
 // unit-testable without mounting the screen.
 export function buildAssignmentPayload(args: BuildAssignmentPayloadArgs) {
   const {
-    title, subject, chapter, startDate, dueDate, type, assignTo, selectedStudentId, teacherEmail, grade, curriculum,
+    title, subject, chapter, dueDate, type, assignTo, selectedStudentId, teacherEmail, grade, curriculum,
     questions, uploadedExtracted, extractedQuestions, ibLearningOutcomes, successCriteria, taskSteps, ibWordBank,
     quizQuestions, interactiveQuiz, docFiles, ibPurpose, note, unitOfInquiry, selectedLanguage,
     ibCentralIdea, ibLinesOfInquiry, ibLearnerProfile, ibAtlSkill, ibKeyConcept,
@@ -80,7 +79,6 @@ export function buildAssignmentPayload(args: BuildAssignmentPayloadArgs) {
     title: title.trim(),
     subject,
     chapter: chapter.trim(),
-    startDate,
     dueDate,
     type,
     studentId: assignTo === 'specific' ? (selectedStudentId ?? null) : null,

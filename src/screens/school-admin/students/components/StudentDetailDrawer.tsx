@@ -33,6 +33,7 @@ export function StudentDetailDrawer({ visible, loading, detail, colors, onClose,
 
   // Reset to view mode + reseed buffers whenever a different student opens.
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets edit form on the selected student changing, external sync
     setMode('view');
     setErr('');
     if (detail) {
@@ -107,7 +108,7 @@ export function StudentDetailDrawer({ visible, loading, detail, colors, onClose,
                 // ── Delete confirmation ──────────────────────────────────
                 <View>
                   <Text style={styles.formHint}>
-                    This permanently deletes <Text style={{ fontWeight: '700', color: colors.textHeading }}>{detail.name}</Text>'s
+                    This permanently deletes <Text style={{ fontWeight: '700', color: colors.textHeading }}>{detail.name}</Text>&apos;s
                     account and all of their data (progress, assignments, login). This cannot be undone.
                     {'\n\n'}The linked parent account is not deleted. If you only want to hide this student, use Archive instead.
                   </Text>
@@ -126,7 +127,7 @@ export function StudentDetailDrawer({ visible, loading, detail, colors, onClose,
                 <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
                   <Text style={styles.formSection}>Account</Text>
                   <DetailRow label="Login email" value={detail.email} colors={colors} />
-                  <Text style={styles.formHint}>Login email can't be changed here.</Text>
+                  <Text style={styles.formHint}>Login email can&apos;t be changed here.</Text>
 
                   <Text style={styles.formLabel}>Student name</Text>
                   <TextInput style={styles.formInput} value={fName} onChangeText={setFName} placeholder="Full name" placeholderTextColor={colors.textDim} />

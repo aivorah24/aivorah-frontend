@@ -15,13 +15,11 @@ export function useAssignChallenge(onAssigned: () => void) {
   const [assignError, setAssignError] = useState('');
   const [assignSuccess, setAssignSuccess] = useState('');
   const [assignDueDate, setAssignDueDate] = useState('');
-  const [assignStartDate, setAssignStartDate] = useState('');
 
   function openAssign(ch: Challenge) {
     setAssignChallengeTarget(ch);
     setAssignError('');
     setAssignSuccess('');
-    setAssignStartDate(getDueDateLabel(0));
     setAssignDueDate(getDueDateLabel(7));
     setAssignModal(true);
   }
@@ -31,13 +29,11 @@ export function useAssignChallenge(onAssigned: () => void) {
     setAssignChallengeTarget(null);
     setAssignError('');
     setAssignSuccess('');
-    setAssignStartDate('');
     setAssignDueDate('');
   }
 
   async function doAssign(child: Child | null) {
     if (!assignChallengeTarget || !child) return;
-    if (!assignStartDate) { setAssignError('Please select a start date'); return; }
     if (!assignDueDate) { setAssignError('Please select a due date'); return; }
     setAssigning(true);
     setAssignError('');
@@ -47,7 +43,6 @@ export function useAssignChallenge(onAssigned: () => void) {
         studentId: child.id,
         parentEmail: user?.email ?? '',
         dueDate: assignDueDate,
-        startDate: assignStartDate,
       });
       if (!result.ok) { setAssignError(result.error); return; }
       setAssignSuccess(`"${assignChallengeTarget.title}" assigned to ${child.name}!`);
@@ -61,6 +56,6 @@ export function useAssignChallenge(onAssigned: () => void) {
 
   return {
     assignModal, assignChallengeTarget, assigning, assignError, assignSuccess, assignDueDate,
-    setAssignDueDate, assignStartDate, setAssignStartDate, openAssign, closeAssign, doAssign, getDueDateLabel,
+    setAssignDueDate, openAssign, closeAssign, doAssign, getDueDateLabel,
   };
 }

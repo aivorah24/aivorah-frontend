@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { useBrowserNotifications } from '../useBrowserNotifications';
+import { dateISO } from '../../utils/dateHelpers';
 import type { ScheduleEvent } from '../../types';
 
 function ev(overrides: Partial<ScheduleEvent> = {}): ScheduleEvent {
@@ -45,7 +46,7 @@ describe('useBrowserNotifications', () => {
 
   test('fires a real browser notification for a today event whose startTime matches the current clock', async () => {
     const now = new Date();
-    const todayIso = now.toISOString().split('T')[0];
+    const todayIso = dateISO(now);
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     await render(<Harness eventsMap={{ [todayIso]: [ev({ startTime: currentTime, title: 'Live Maths' })] }} />);
@@ -55,7 +56,7 @@ describe('useBrowserNotifications', () => {
 
   test('does not notify for an event whose startTime does not match the current clock', async () => {
     const now = new Date();
-    const todayIso = now.toISOString().split('T')[0];
+    const todayIso = dateISO(now);
 
     await render(<Harness eventsMap={{ [todayIso]: [ev({ startTime: '23:58' })] }} />);
 
@@ -64,7 +65,7 @@ describe('useBrowserNotifications', () => {
 
   test('the same event is never notified twice, even across the 60s recheck interval', async () => {
     const now = new Date();
-    const todayIso = now.toISOString().split('T')[0];
+    const todayIso = dateISO(now);
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     await render(<Harness eventsMap={{ [todayIso]: [ev({ startTime: currentTime })] }} />);

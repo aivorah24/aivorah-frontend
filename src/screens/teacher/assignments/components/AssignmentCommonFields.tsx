@@ -18,7 +18,7 @@ export function AssignmentCommonFields({
   grade, setGrade, effectiveGrade, gradeOptions, isIBPYP,
   curriculum, setCurriculum, effectiveCurriculum, curriculumOptions, teacherCurriculum,
   chapter, setChapter, topicsLoading, availableTopics,
-  startDate, setStartDate, dueDate, setDueDate,
+  dueDate, setDueDate,
   colors, gold, styles,
 }: {
   showTitleDate: boolean;
@@ -45,8 +45,6 @@ export function AssignmentCommonFields({
   setChapter: (v: string) => void;
   topicsLoading: boolean;
   availableTopics: string[];
-  startDate?: string;
-  setStartDate?: (v: string) => void;
   dueDate: string;
   setDueDate: (v: string) => void;
   colors: AppColors;
@@ -171,25 +169,13 @@ export function AssignmentCommonFields({
       </>)}
 
       {showTitleDate && (<>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.fieldLabel}>Start Date</Text>
-          <DatePicker
-            value={startDate || ''}
-            onChange={setStartDate || (() => {})}
-            placeholder="Select start date"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.fieldLabel}>Due Date *</Text>
-          <DatePicker
-            value={dueDate}
-            onChange={setDueDate}
-            placeholder="Select due date"
-            minDate={startDate || new Date().toISOString().slice(0, 10)}
-          />
-        </View>
-      </View>
+      <Text style={styles.fieldLabel}>Due Date *</Text>
+      <DatePicker
+        value={dueDate}
+        onChange={setDueDate}
+        placeholder="Select a due date"
+        minDate={new Date().toISOString().slice(0, 10)}
+      />
       </>)}
     </>
   );

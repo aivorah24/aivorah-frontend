@@ -61,8 +61,17 @@ export function fmtHour12(hhmm: string): string {
   return `${h12} ${ampm}`;
 }
 
+// LOCAL date, not UTC — toISOString() converts to UTC first, which rolls the
+// date back a day for any local time before UTC's midnight in a timezone
+// ahead of UTC (e.g. IST, UTC+5:30: any local time before 5:30am becomes the
+// previous day once converted). This was the "scheduled on the 23rd, saved
+// as the 22nd" bug — every caller here wants the calendar day the user is
+// actually looking at, not a UTC-shifted one.
 export function dateISO(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function buildWeek(baseDate: Date): { iso: string; day: string; date: number }[] {

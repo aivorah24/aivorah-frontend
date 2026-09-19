@@ -35,7 +35,6 @@ export function filterStudentsForChallenge(students: StudentItem[], challenge: C
 export default function AssignChallengeModal({
   visible, challenge, students, studentSearch, setStudentSearch,
   selectedStudent, setSelectedStudent, assigning, assignError, assignSuccess,
-  assignStartDate, setAssignStartDate,
   assignDueDate, setAssignDueDate, onClose, onAssign, colors, styles,
 }: {
   visible: boolean;
@@ -48,8 +47,6 @@ export default function AssignChallengeModal({
   assigning: boolean;
   assignError: string;
   assignSuccess: string;
-  assignStartDate: string;
-  setAssignStartDate: (v: string) => void;
   assignDueDate: string;
   setAssignDueDate: (v: string) => void;
   onClose: () => void;
@@ -140,38 +137,6 @@ export default function AssignChallengeModal({
                   </ScrollView>
                 </>
               )}
-
-              <View style={{ marginTop: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMain, marginBottom: 8 }}>
-                  <Feather name="calendar" size={13} color={gold} /> Start Date
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {[
-                    { label: 'Today',    date: getDueDateLabel(0) },
-                    { label: 'Tomorrow', date: getDueDateLabel(1) },
-                    { label: '3 Days',   date: getDueDateLabel(3) },
-                  ].map(opt => (
-                    <TouchableOpacity
-                      key={opt.label}
-                      onPress={() => setAssignStartDate(opt.date)}
-                      style={{
-                        paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.md,
-                        borderWidth: 1,
-                        borderColor: assignStartDate === opt.date ? gold : colors.borderColor,
-                        backgroundColor: assignStartDate === opt.date ? gold + '18' : 'transparent',
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={{ fontSize: 12, color: assignStartDate === opt.date ? gold : colors.textMuted }}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={{ fontSize: 11, color: colors.textDim, marginTop: 6 }}>
-                  Start: {assignStartDate || 'Not set'}
-                </Text>
-              </View>
 
               <View style={{ marginTop: 14 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMain, marginBottom: 8 }}>
