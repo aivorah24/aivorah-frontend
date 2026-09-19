@@ -51,7 +51,7 @@ export async function assignChallenge({
   challengeId, studentId, parentEmail, dueDate
 }: {
   challengeId: string; studentId: string; parentEmail: string; dueDate: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; alreadyAssigned?: boolean } | { ok: false; error: string }> {
   const res = await fetch(`${CHALLENGES_SERVER_URL}/challenges/assign`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,5 +67,6 @@ export async function assignChallenge({
     const err = await res.json().catch(() => ({}));
     return { ok: false, error: err.error ?? 'Failed to assign. Try again.' };
   }
-  return { ok: true };
+  const data = await res.json().catch(() => ({}));
+  return { ok: true, alreadyAssigned: !!data.alreadyAssigned };
 }

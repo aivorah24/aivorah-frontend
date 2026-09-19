@@ -45,7 +45,11 @@ export function useAssignChallenge(onAssigned: () => void) {
         dueDate: assignDueDate,
       });
       if (!result.ok) { setAssignError(result.error); return; }
-      setAssignSuccess(`"${assignChallengeTarget.title}" assigned to ${child.name}!`);
+      setAssignSuccess(
+        result.alreadyAssigned
+          ? `"${assignChallengeTarget.title}" is already assigned to ${child.name} — no new notification was sent.`
+          : `"${assignChallengeTarget.title}" assigned to ${child.name}!`
+      );
       onAssigned();
     } catch {
       setAssignError('Network error. Please try again.');

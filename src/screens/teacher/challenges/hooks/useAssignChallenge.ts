@@ -55,7 +55,11 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
         setAssignError(res.error);
         return;
       }
-      setAssignSuccess(`"${assignChallengeItem.title}" assigned to ${selectedStudent.name}!`);
+      setAssignSuccess(
+        res.alreadyAssigned
+          ? `"${assignChallengeItem.title}" is already assigned to ${selectedStudent.name} — no new notification was sent.`
+          : `"${assignChallengeItem.title}" assigned to ${selectedStudent.name}!`
+      );
     } catch {
       setAssignError('Network error. Please try again.');
     } finally {

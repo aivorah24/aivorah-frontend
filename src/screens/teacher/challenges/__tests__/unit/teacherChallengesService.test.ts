@@ -87,7 +87,7 @@ describe('teacherChallengesService', () => {
 
   describe('assignChallenge', () => {
     it('posts to aivorah-challenges-service with assignedByRole teacher', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true });
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({}) });
       const res = await svc.assignChallenge({ challengeId: 'c1', studentId: 's1', teacherEmail: 't@x.com', dueDate: '2026-09-10' });
       expect(fetch).toHaveBeenCalledWith(`${CHALLENGES_SERVER_URL}/challenges/assign`, expect.objectContaining({
         method: 'POST',
@@ -95,7 +95,15 @@ describe('teacherChallengesService', () => {
           challengeId: 'c1', studentId: 's1', assignedById: 't@x.com', assignedByRole: 'teacher', dueDate: '2026-09-10',
         }),
       }));
-      expect(res).toEqual({ ok: true });
+      expect(res).toEqual({ ok: true, alreadyAssigned: false });
+    });
+
+    // Regression: re-assigning an already-pending challenge used to look
+    // identical to a fresh assign — the server now flags it explicitly.
+    it('surfaces alreadyAssigned when the server reports a no-op re-assign', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({ alreadyAssigned: true }) });
+      const res = await svc.assignChallenge({ challengeId: 'c1', studentId: 's1', teacherEmail: 't@x.com', dueDate: '2026-09-10' });
+      expect(res).toEqual({ ok: true, alreadyAssigned: true });
     });
 
     it('returns the server error message on failure', async () => {

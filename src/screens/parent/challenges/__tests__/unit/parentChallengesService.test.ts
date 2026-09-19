@@ -97,7 +97,17 @@ describe('parentChallengesService', () => {
           assignedById: 'p@test.com', assignedByRole: 'parent', dueDate: '2026-09-09',
         }),
       });
-      expect(res).toEqual({ ok: true });
+      expect(res).toEqual({ ok: true, alreadyAssigned: false });
+    });
+
+    // Regression: re-assigning an already-pending challenge used to look
+    // identical to a fresh assign — the server now flags it explicitly.
+    it('surfaces alreadyAssigned when the server reports a no-op re-assign', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({ alreadyAssigned: true }) });
+      const res = await parentChallengesService.assignChallenge({
+        challengeId: 'ch1', studentId: 'c1', parentEmail: 'p@test.com', dueDate: '2026-09-09',
+      });
+      expect(res).toEqual({ ok: true, alreadyAssigned: true });
     });
 
     it('returns the server error message on failure', async () => {
