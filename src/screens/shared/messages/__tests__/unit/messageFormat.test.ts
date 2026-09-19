@@ -1,7 +1,7 @@
 // Unit tests for messageFormat.ts — pure functions, no mocking needed.
 import {
   formatTime, sameDay, formatDateDivider, parseContent, formatFileSize,
-  fileIcon, isAivorah, roleLabel, convoRoleLabel,
+  fileIcon, isAivorah, roleLabel, convoRoleLabel, formatPreview,
 } from '../../utils/messageFormat';
 import { AIVORAH_EMAIL } from '../../constants';
 
@@ -129,5 +129,28 @@ describe('isAivorah / roleLabel / convoRoleLabel', () => {
   });
   test('convoRoleLabel defers to roleLabel for a normal contact', () => {
     expect(convoRoleLabel({ otherEmail: 'p@x.com', otherName: 'Jane', otherRole: 'parent' })).toBe('Parent');
+  });
+});
+
+describe('formatPreview', () => {
+  // Regression: the conversation list showed the raw internal payload
+  // ("SCHEDULE_CARD|Sai|Study|...") instead of a friendly summary.
+  test('formats a SCHEDULE_CARD payload as a friendly summary, not the raw delimited string', () => {
+    expect(formatPreview('SCHEDULE_CARD|Sai|Study Session|2026-09-20|16:00|study')).toBe('📅 Scheduled: Study Session');
+  });
+  test('formats an Auto-Logout system message', () => {
+    expect(formatPreview('[Auto-Logout] Session ended')).toBe('Session ended automatically');
+  });
+  test('formats an assignment notification', () => {
+    expect(formatPreview('New Assignment assigned: Fractions')).toBe('New assignment: Fractions');
+  });
+  test('formats an attachment payload with a paperclip + filename', () => {
+    expect(formatPreview(JSON.stringify({ attachment: { url: 'x', name: 'worksheet.pdf', size: 1, type: 'application/pdf' } }))).toBe('📎 worksheet.pdf');
+  });
+  test('passes plain text through unchanged', () => {
+    expect(formatPreview('Hi there')).toBe('Hi there');
+  });
+  test('handles empty content', () => {
+    expect(formatPreview('')).toBe('');
   });
 });
