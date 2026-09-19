@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { AppColors } from '../../../../theme';
 import type { Conversation } from '../types';
-import { convoRoleLabel, formatTime, isAivorah, sameDay } from '../utils/messageFormat';
+import { convoRoleLabel, formatPreview, formatTime, isAivorah, sameDay } from '../utils/messageFormat';
 import { renderPersonAvatar } from './PersonAvatar';
 
 interface Props {
@@ -30,7 +30,7 @@ export default function ConversationItem({ item, isActive, colors, styles, onPre
           <Text style={styles.convoTime}>{isToday ? formatTime(item.lastMessageAt) : new Date(item.lastMessageAt).toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
         </View>
         <View style={styles.convoFooter}>
-          <Text style={styles.convoPreview} numberOfLines={1}>{item.lastMessage}</Text>
+          <Text style={styles.convoPreview} numberOfLines={1}>{formatPreview(item.lastMessage)}</Text>
           {item.unreadCount > 0 ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{item.unreadCount}</Text>

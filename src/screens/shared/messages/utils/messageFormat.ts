@@ -62,3 +62,21 @@ export function roleLabel(role: string) {
 export function convoRoleLabel(c: { otherEmail?: string; otherName?: string; otherRole: string }) {
   return isAivorah(c) ? 'Learning Buddy' : roleLabel(c.otherRole);
 }
+
+// Conversation-list preview text — raw system-card payloads (see MessageBubble's
+// special-cased renders) must never surface their delimited internal format
+// (e.g. "SCHEDULE_CARD|Sai|Study|...") to the user; show the same friendly
+// summary the chat thread itself renders as a card.
+export function formatPreview(content: string): string {
+  if (!content) return '';
+  if (content.startsWith('SCHEDULE_CARD|')) {
+    const parts = content.split('|');
+    const title = parts[2] || 'Event';
+    return `📅 Scheduled: ${title}`;
+  }
+  if (content.includes('[Auto-Logout]')) return 'Session ended automatically';
+  if (/New Assignment assigned:/i.test(content)) return content.replace(/^.*New Assignment assigned:/i, 'New assignment:').trim();
+  const { text, attachment } = parseContent(content);
+  if (attachment) return `📎 ${attachment.name}`;
+  return text;
+}
