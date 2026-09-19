@@ -8,9 +8,10 @@ import MessagesScreen from '../../MessagesScreen';
 // param; this pins the screen actually opening that conversation on mount.
 
 let mockRouteParams: any = undefined;
+const mockSetParams = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => true,
-  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
+  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), setParams: mockSetParams }),
   useRoute: () => ({ key: 'Messages', name: 'Messages', params: mockRouteParams }),
 }));
 
@@ -82,6 +83,9 @@ describe('MessagesScreen — openWith route param', () => {
     await render(<MessagesScreen />);
 
     expect(await screen.findByPlaceholderText('Message Teacher A...')).toBeTruthy();
+    // Regression (bug 4): the param must be consumed so a page refresh (which
+    // on web keeps it in the URL) doesn't keep re-forcing this conversation open.
+    expect(mockSetParams).toHaveBeenCalledWith({ openWith: undefined });
   });
 
   test('no openWith param -> screen stays on its default view', async () => {
