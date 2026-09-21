@@ -17,7 +17,7 @@ import SchoolAdminStudentsScreen from '@legacy/school-admin/SchoolAdminStudentsS
 import SchoolAdminTeachersScreen from '../screens/school-admin/teachers/SchoolAdminTeachersScreen';
 import SchoolAdminParentsScreen from '../screens/school-admin/parents/SchoolAdminParentsScreen';
 import SchoolAdminAddParentScreen from '../screens/school-admin/parents/SchoolAdminAddParentScreen';
-import SchoolAdminSettingsScreen from '@legacy/school-admin/SchoolAdminSettingsScreen';
+import SchoolAdminSettingsScreen from '../screens/school-admin/workspace-settings/SchoolAdminSettingsScreen';
 import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingSoonScreen';
 import SchoolAdminImportHistoryScreen from '../screens/school-admin/import-history/SchoolAdminImportHistoryScreen';
 import SchoolAdminBulkImportScreen from '@legacy/school-admin/SchoolAdminBulkImportScreen';
