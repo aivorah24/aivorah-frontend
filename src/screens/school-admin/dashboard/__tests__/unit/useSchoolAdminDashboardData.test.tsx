@@ -2,7 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { useSchoolAdminDashboardData } from '../../hooks/useSchoolAdminDashboardData';
-import SERVER_URL from '../../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../../config/schoolAdminServerUrl';
 
 function Harness({ email }: { email: string }) {
   const h = useSchoolAdminDashboardData(email);
@@ -42,7 +42,7 @@ describe('useSchoolAdminDashboardData', () => {
     await render(<Harness email="admin@test.com" />);
 
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
-    expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/school-admin/overview?adminEmail=admin%40test.com`);
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=admin%40test.com`);
     expect(screen.getByTestId('schoolName').props.children).toBe('Test School');
     expect(screen.getByTestId('error').props.children).toBe('');
   });

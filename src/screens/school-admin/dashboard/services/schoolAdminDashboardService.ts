@@ -1,8 +1,8 @@
-import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { Overview, AccessRequest } from '../types';
 
 export const fetchOverview = async (userEmail: string): Promise<Overview> => {
-  const url = `${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(userEmail)}`;
+  const url = `${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(userEmail)}`;
   const res = await fetch(url);
   
   if (!res.ok) {
@@ -20,7 +20,7 @@ export const fetchOverview = async (userEmail: string): Promise<Overview> => {
 };
 
 export const fetchAccessRequests = async (userEmail: string): Promise<AccessRequest[]> => {
-  const url = `${SERVER_URL}/school-admin/access-requests?adminEmail=${encodeURIComponent(userEmail)}`;
+  const url = `${SCHOOL_ADMIN_SERVER_URL}/school-admin/access-requests?adminEmail=${encodeURIComponent(userEmail)}`;
   const res = await fetch(url);
   
   if (!res.ok) {
@@ -38,7 +38,7 @@ export const fetchAccessRequests = async (userEmail: string): Promise<AccessRequ
 };
 
 export const actionAccessRequest = async (id: string, action: 'approve' | 'reject', userEmail: string): Promise<void> => {
-  const res = await fetch(`${SERVER_URL}/school-admin/access-requests/${id}/${action}`, {
+  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/access-requests/${id}/${action}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ adminEmail: userEmail }),

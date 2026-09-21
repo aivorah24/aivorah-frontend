@@ -36,7 +36,7 @@ export class SchoolAdminTeachersService {
   }
 
   async getSchoolCurriculumBase(adminEmail: string): Promise<string | null> {
-    const res = await fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(adminEmail)}`);
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(adminEmail)}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return null;
     return (data as any)?.school?.curriculum || null;

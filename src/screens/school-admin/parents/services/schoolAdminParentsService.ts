@@ -70,7 +70,7 @@ export class SchoolAdminParentsService {
   async getGradeSectionOptions(adminEmail: string): Promise<GradeSectionOptions> {
     const [gsRes, overviewRes] = await Promise.all([
       fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades-sections?adminEmail=${encodeURIComponent(adminEmail)}`),
-      fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(adminEmail)}`),
+      fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(adminEmail)}`),
     ]);
     const gsData = await gsRes.json().catch(() => ({}));
     const overviewData = await overviewRes.json().catch(() => ({}));

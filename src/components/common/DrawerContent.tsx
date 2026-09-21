@@ -22,7 +22,7 @@ import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 import { SwitchProfile } from './SwitchProfile';
 import { useFocusEffect } from '@react-navigation/native';
-import SERVER_URL from '../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../config/schoolAdminServerUrl';
 
 function schoolInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -144,7 +144,7 @@ export default function DrawerContent(props: any) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
         const data = await res.json().catch(() => ({}));
         if (!cancelled && res.ok) {
           setSchoolName(data?.school?.name || null);

@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import SERVER_URL from '../config/serverUrl';
 import PROFILE_SERVER_URL from '../config/profileServerUrl';
 import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../config/schoolAdminServerUrl';
 
 declare const __DEV__: boolean;
 
@@ -345,7 +346,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let cancelled = false;
     const fetchCount = async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/school-admin/access-requests?adminEmail=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/access-requests?adminEmail=${encodeURIComponent(user.email)}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) setUnreadJoinRequests(data.length);

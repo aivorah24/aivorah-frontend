@@ -9,7 +9,7 @@ describe('schoolAdminTeachersService.getSchoolCurriculumBase', () => {
   test('returns the school curriculum from the overview endpoint', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ school: { curriculum: 'CBSE' } }) }) as any;
     expect(await schoolAdminTeachersService.getSchoolCurriculumBase('admin@x.com')).toBe('CBSE');
-    expect(global.fetch).toHaveBeenCalledWith('https://server.test/school-admin/overview?adminEmail=admin%40x.com');
+    expect(global.fetch).toHaveBeenCalledWith('https://school-admin.test/school-admin/overview?adminEmail=admin%40x.com');
   });
 
   test('returns null on a non-ok response instead of throwing', async () => {

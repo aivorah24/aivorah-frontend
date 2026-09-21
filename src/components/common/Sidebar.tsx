@@ -21,7 +21,7 @@ import { useAnnouncements } from '../../features/announcements/context/Announcem
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 import { useFocusEffect } from '@react-navigation/native';
-import SERVER_URL from '../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../config/schoolAdminServerUrl';
 import { SwitchProfile } from './SwitchProfile';
 
 const STUDENT_NAV_ITEMS = [
@@ -203,7 +203,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
         const data = await res.json().catch(() => ({}));
         if (!cancelled && res.ok) {
           setSchoolName(data?.school?.name || null);
