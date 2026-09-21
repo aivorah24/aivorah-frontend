@@ -13,7 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/common/DrawerContent';
 import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
 import SchoolAdminPeopleScreen from '@legacy/school-admin/SchoolAdminPeopleScreen';
-import SchoolAdminStudentsScreen from '@legacy/school-admin/SchoolAdminStudentsScreen';
+import SchoolAdminStudentsScreen from '../screens/school-admin/students/SchoolAdminStudentsScreen';
 import SchoolAdminTeachersScreen from '../screens/school-admin/teachers/SchoolAdminTeachersScreen';
 import SchoolAdminParentsScreen from '../screens/school-admin/parents/SchoolAdminParentsScreen';
 import SchoolAdminAddParentScreen from '../screens/school-admin/parents/SchoolAdminAddParentScreen';

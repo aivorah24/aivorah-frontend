@@ -10,13 +10,8 @@
  * school_admin is an operational manager (confirmed 2026-07-12), so this
  * screen is real write access, not a read-only oversight view: add a
  * student, change status, bulk status change — all scoped server-side to
- * the admin's own school (GET/POST/PATCH /school-admin/students*).
- *
- * Deliberately NOT built: bulk file import (no upload/validation backend
- * yet — shown as a disabled "Coming soon" affordance, not a dead button),
- * and "Grades & Sections" as an editable entity (no backend model — grade/
- * section stay free-text filters here, matching how they're stored on
- * `users`).
+ * the admin's own school (GET/POST/PATCH aivorah-school-admin-service
+ * /school-admin/students*).
  *
  * Also mounted as SchoolAdminArchivedStudents (school-admin/students/archived)
  * — its own route/URL, not a params-only shortcut into this one, so the
@@ -28,23 +23,22 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, TextInput, Pressable, Platform, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useResponsive } from '../../hooks/useResponsive';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
-import { schoolAdminStudentsService, type StudentRow, type StudentDetail, type StudentEditPatch, type StudentsFacets } from '../../screens/school-admin/students/services/schoolAdminStudentsService';
-import { statusTint, formatLastActive } from '../../screens/school-admin/students/utils/studentFormatters';
-import { FilterDropdown } from '../../screens/school-admin/students/components/FilterDropdown';
-import { StatusPill } from '../../screens/school-admin/students/components/StatusPill';
-import { StudentDetailDrawer } from '../../screens/school-admin/students/components/StudentDetailDrawer';
-import { StudentsToolbar } from '../../screens/school-admin/students/components/StudentsToolbar';
-import { StudentsBulkActionBar } from '../../screens/school-admin/students/components/StudentsBulkActionBar';
-import { STATUS_LABEL } from '../../screens/school-admin/students/constants';
-import { useStudentsListState, getGradesForCurriculum, type StatusFilter, type SortKey } from '../../screens/school-admin/students/hooks/useStudentsListState';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useResponsive } from '../../../hooks/useResponsive';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import { schoolAdminStudentsService, type StudentRow, type StudentDetail, type StudentEditPatch } from './services/schoolAdminStudentsService';
+import { statusTint, formatLastActive } from './utils/studentFormatters';
+import { FilterDropdown } from './components/FilterDropdown';
+import { StatusPill } from './components/StatusPill';
+import { StudentDetailDrawer } from './components/StudentDetailDrawer';
+import { StudentsToolbar } from './components/StudentsToolbar';
+import { StudentsBulkActionBar } from './components/StudentsBulkActionBar';
+import { STATUS_LABEL } from './constants';
+import { useStudentsListState, getGradesForCurriculum, type StatusFilter, type SortKey } from './hooks/useStudentsListState';
 
 export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -376,15 +370,6 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
 }
 
 // ── Promote Students (bulk grade/section move) ──────────────────────────────
-// Grade labels are curriculum-specific free text (Grade N, Stage N, PYP/MYP/
-// DP N, IGCSE, ...) — never a hardcoded list. Target Grade/Section are typed
-// (matching how grade/section are stored everywhere else on `users`), with
-// the school's existing values offered as one-tap chips for the common case
-// of promoting into a grade/section that already exists.
-// Pulls the first number out of a grade label ("Grade 4" -> 4). Promotion
-// targets are always a MOVE FORWARD, so this is used to drop any grade at or
-// below what the selected students are already in from the picker — a Grade 4
-// student has no business being offered "Grade 3" as a promotion target.
 function gradeNum(g: string | null | undefined): number | null {
   if (!g) return null;
   const m = String(g).match(/\d+/);
@@ -392,10 +377,6 @@ function gradeNum(g: string | null | undefined): number | null {
 }
 
 const IB_PROGRAMS = ['IB PYP', 'IB MYP', 'IB DP'];
-
-// Every grade the school could plausibly promote into — used as the default
-// pool of chips before any programme filter narrows it, so the picker never
-// falls back to a blank "type it yourself" box.
 const ALL_GRADE_CHIPS = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
 function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, facetSections, colors, onClose, onConfirm }: {
@@ -422,19 +403,11 @@ function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, face
     : currentGrades.length === 1 ? currentGrades[0]
     : `multiple grades (${currentGrades.join(', ')})`;
 
-  // Highest grade among the selected students — nobody in the batch should be
-  // offered a target at or below this, since that's a demotion, not a promotion.
   const maxCurrentGradeNum = useMemo(() => {
     const nums = currentGrades.map(gradeNum).filter((n): n is number => n !== null);
     return nums.length ? Math.max(...nums) : null;
   }, [currentGrades]);
 
-  // Selected students are on an IB curriculum -> the programme chips (IB PYP /
-  // IB MYP / IB DP) narrow the grade chips further, since crossing PYP -> MYP
-  // at Grade 5 -> 6 is a curriculum change, not just a grade bump. Left
-  // unpicked, grade chips default to the union of every IB programme's grades
-  // (still filtered to only what's ahead of the student's current grade) so
-  // there's always something tappable — never an empty box needing typing.
   const isIBSelection = useMemo(
     () => selectedStudents.some((s) => (s.curriculum || '').toUpperCase().startsWith('IB')),
     [selectedStudents]
@@ -555,14 +528,12 @@ function makeStyles(colors: AppColors) {
     resultsCount: { fontFamily: fonts.serif, fontSize: 12.5, color: colors.textDim, marginLeft: 'auto' },
     promoteHint: { fontFamily: fonts.serif, fontSize: 12, color: colors.textDim, marginBottom: spacing.sm, fontStyle: 'italic' },
 
-
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
     chip: { borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.bgDark, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
     chipActive: { backgroundColor: colors.accentYellow, borderColor: colors.accentYellow },
     chipText: { fontFamily: fonts.serif, fontSize: 11.5, fontWeight: '600', color: colors.textMuted },
     chipTextActive: { color: '#0B0B0B', fontWeight: '700' },
 
-    // ── Table ───────────────────────────────────────────────────────────
     table: { backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.md, overflow: 'hidden', zIndex: 1, position: 'relative' },
     theadRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.borderColor, backgroundColor: colors.cardHover, paddingVertical: 4 },
     th: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.sm },
@@ -571,12 +542,6 @@ function makeStyles(colors: AppColors) {
     thTextActive: { color: colors.textHeading },
     thStatic: { paddingVertical: 10, paddingHorizontal: 12 },
     thCheckCol: { width: 40, alignItems: 'center' },
-    // Proportional flex on every column mirrors the Claude design's HTML
-    // <table width:100%> auto-layout: all columns scale together and the row
-    // always fills its container edge-to-edge, so collapsing/expanding the
-    // sidebar just rescales the columns instead of leaving a trailing gap or
-    // ballooning one column. Student is the widest (flex 3); minWidths keep
-    // things readable when the viewport is narrow.
     thNameCol: { flex: 3, minWidth: 200 },
     thAdmCol: { flex: 1.2, minWidth: 90 },
     thGradeCol: { flex: 1.3, minWidth: 110 },
@@ -590,7 +555,6 @@ function makeStyles(colors: AppColors) {
     tdName: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: colors.textHeading, flexShrink: 1 },
     tdEmail: { fontFamily: fonts.serif, fontSize: 11.5, color: colors.textDim, marginTop: 1 },
 
-    // ── Mobile cards ────────────────────────────────────────────────────
     card: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, paddingVertical: 9, paddingHorizontal: 12, marginBottom: 6 },
     cardName: { fontFamily: fonts.serif, fontSize: 13.5, fontWeight: '700', color: colors.textHeading },
     cardMeta: { fontFamily: fonts.serif, fontSize: 11.5, color: colors.textMuted, marginTop: 1 },
@@ -603,7 +567,6 @@ function makeStyles(colors: AppColors) {
     retryBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderColor },
     retryText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700', color: colors.accentYellow },
 
-    // ── Modals ──────────────────────────────────────────────────────────
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 },
     formCard: { backgroundColor: colors.cardDark, borderRadius: 20, borderWidth: 1, borderColor: colors.borderColor, padding: 24, width: '100%', maxWidth: 460 },
     drawerCard: { backgroundColor: colors.cardDark, borderRadius: 20, borderWidth: 1, borderColor: colors.borderColor, padding: 24, width: '100%', maxWidth: 420 },

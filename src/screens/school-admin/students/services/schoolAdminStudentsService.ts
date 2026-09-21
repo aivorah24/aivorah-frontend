@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 
 export interface StudentRow {
   id: string;
@@ -54,7 +54,7 @@ export class SchoolAdminStudentsService {
    * Fetch the full set of Grade/Section/Curriculum values that exist anywhere in the school.
    */
   async getFacets(adminEmail: string): Promise<StudentsFacets> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/facets?adminEmail=${encodeURIComponent(adminEmail)}`);
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/facets?adminEmail=${encodeURIComponent(adminEmail)}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data?.error || 'Failed to fetch facets');
@@ -83,7 +83,7 @@ export class SchoolAdminStudentsService {
     if (options.grade && options.grade !== 'all') params.set('grade', options.grade);
     if (options.section && options.section !== 'all') params.set('section', options.section);
 
-    const res = await fetch(`${SERVER_URL}/school-admin/students?${params.toString()}`);
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students?${params.toString()}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data?.error || 'Failed to load students');
@@ -98,7 +98,7 @@ export class SchoolAdminStudentsService {
    * Fetch details for a specific student.
    */
   async getStudentDetail(id: string, adminEmail: string): Promise<StudentDetail> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`);
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data?.error || 'Failed to load student details');
@@ -110,7 +110,7 @@ export class SchoolAdminStudentsService {
    * Apply a status change to a single student.
    */
   async updateStudentStatus(id: string, status: 'active' | 'inactive' | 'archived', adminEmail: string): Promise<void> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/${encodeURIComponent(id)}/status?adminEmail=${encodeURIComponent(adminEmail)}`, {
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/${encodeURIComponent(id)}/status?adminEmail=${encodeURIComponent(adminEmail)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -125,7 +125,7 @@ export class SchoolAdminStudentsService {
    * Save edits to a student's profile.
    */
   async updateStudent(id: string, patch: StudentEditPatch, adminEmail: string): Promise<void> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`, {
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -140,7 +140,7 @@ export class SchoolAdminStudentsService {
    * Delete a student.
    */
   async deleteStudent(id: string, adminEmail: string): Promise<void> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`, {
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/${encodeURIComponent(id)}?adminEmail=${encodeURIComponent(adminEmail)}`, {
       method: 'DELETE',
     });
     const data = await res.json().catch(() => ({}));
@@ -153,7 +153,7 @@ export class SchoolAdminStudentsService {
    * Apply a status change to multiple students in bulk.
    */
   async bulkUpdateStatus(studentIds: string[], status: 'active' | 'inactive' | 'archived', adminEmail: string): Promise<void> {
-    const res = await fetch(`${SERVER_URL}/school-admin/students/bulk-status?adminEmail=${encodeURIComponent(adminEmail)}`, {
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/bulk-status?adminEmail=${encodeURIComponent(adminEmail)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentIds, status }),
@@ -171,7 +171,7 @@ export class SchoolAdminStudentsService {
     const body: any = { studentIds, grade };
     if (section.trim()) body.section = section.trim();
     
-    const res = await fetch(`${SERVER_URL}/school-admin/students/bulk-grade?adminEmail=${encodeURIComponent(adminEmail)}`, {
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/bulk-grade?adminEmail=${encodeURIComponent(adminEmail)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
