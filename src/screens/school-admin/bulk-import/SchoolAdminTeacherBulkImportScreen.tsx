@@ -20,13 +20,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 
 type FieldKey = 'teacherName' | 'email' | 'curriculum' | 'grade' | 'subjects' | 'phone';
 interface ParsedRow { teacherName: string; email: string; curriculum: string; grade: string; subjects: string; phone: string; }
@@ -187,7 +187,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
   // intercepted, so this reliably saves to Downloads without navigating.
   async function downloadTeacherTemplate(ext: 'csv' | 'xlsx') {
     if (!user?.email || Platform.OS !== 'web') return;
-    const url = `${SERVER_URL}/school-admin/teachers/template.${ext}?adminEmail=${encodeURIComponent(user.email)}`;
+    const url = `${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers/template.${ext}?adminEmail=${encodeURIComponent(user.email)}`;
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -290,7 +290,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
     if (!user?.email || validRows.length === 0) return;
     setSubmitting(true); setSubmitError('');
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/teachers/bulk?adminEmail=${encodeURIComponent(user.email)}`, {
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers/bulk?adminEmail=${encodeURIComponent(user.email)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: validRows, fileName }),
       });
       const data = await res.json().catch(() => ({}));

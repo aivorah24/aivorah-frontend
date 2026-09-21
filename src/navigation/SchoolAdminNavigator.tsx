@@ -26,7 +26,7 @@ import SchoolAdminGradesSectionsScreen from '../screens/school-admin/grades-sect
 import SchoolAdminClassesScreen from '../screens/school-admin/classes/SchoolAdminClassesScreen';
 import SchoolAdminAddTeacherScreen from '../screens/school-admin/teachers/SchoolAdminAddTeacherScreen';
 import SchoolAdminEditTeacherScreen from '../screens/school-admin/teachers/SchoolAdminEditTeacherScreen';
-import SchoolAdminTeacherBulkImportScreen from '@legacy/school-admin/SchoolAdminTeacherBulkImportScreen';
+import SchoolAdminTeacherBulkImportScreen from '../screens/school-admin/bulk-import/SchoolAdminTeacherBulkImportScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
