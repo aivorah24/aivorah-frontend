@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../config/serverUrl';
+import MESSAGES_SERVER_URL from '../../../config/messagesServerUrl';
 
 export interface Channel {
   id: string; name: string; category: 'class' | 'public' | 'staff';
@@ -16,32 +16,32 @@ export interface ChannelMember {
 }
 
 export async function fetchChannels(email: string): Promise<Channel[]> {
-  const res = await fetch(`${SERVER_URL}/channels?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error('Failed to load channels');
   return res.json();
 }
 
 export async function fetchChannelMessages(email: string, id: string): Promise<{ channel: any; canPost: boolean; messages: ChannelMessage[] }> {
-  const res = await fetch(`${SERVER_URL}/channels/${id}/messages?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/${id}/messages?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to load messages');
   return res.json();
 }
 
 export async function sendChannelMessage(email: string, id: string, body: string): Promise<void> {
-  const res = await fetch(`${SERVER_URL}/channels/${id}/messages`, {
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/${id}/messages`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, body }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to send');
 }
 
 export async function fetchChannelMembers(email: string, id: string): Promise<ChannelMember[]> {
-  const res = await fetch(`${SERVER_URL}/channels/${id}/members?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/${id}/members?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error('Failed to load members');
   return res.json();
 }
 
 export async function markChannelRead(email: string, id: string): Promise<void> {
-  await fetch(`${SERVER_URL}/channels/${id}/read`, {
+  await fetch(`${MESSAGES_SERVER_URL}/channels/${id}/read`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
   }).catch(() => {});
 }
@@ -53,7 +53,7 @@ export async function createChannel(body: {
   autoAddParentsOfGrade?: string; autoAddParentsOfSection?: string; studentIds?: string[];
   autoAddAllStaff?: boolean;
 }): Promise<{ id: string; memberCount: number }> {
-  const res = await fetch(`${SERVER_URL}/channels`, {
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to create channel');
@@ -64,7 +64,7 @@ export interface GradeSections { name: string; sections: string[]; }
 export interface Homeroom { grade: string; section: string; }
 
 export async function fetchGradesSections(email: string): Promise<{ grades: GradeSections[]; myHomerooms: Homeroom[] }> {
-  const res = await fetch(`${SERVER_URL}/channels/grades-sections?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/grades-sections?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error('Failed to load grades');
   const data = await res.json();
   return { grades: data.grades, myHomerooms: data.myHomerooms || [] };
@@ -73,7 +73,7 @@ export async function fetchGradesSections(email: string): Promise<{ grades: Grad
 export interface MyStudent { id: string; name: string; grade: string | null; section: string | null; }
 
 export async function fetchMyStudents(email: string): Promise<MyStudent[]> {
-  const res = await fetch(`${SERVER_URL}/channels/my-students?email=${encodeURIComponent(email)}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/my-students?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error('Failed to load students');
   return res.json();
 }
@@ -87,13 +87,13 @@ export async function searchPeople(email: string, opts: { grade?: string; sectio
   if (opts.grade) params.set('grade', opts.grade);
   if (opts.section) params.set('section', opts.section);
   if (opts.q) params.set('q', opts.q);
-  const res = await fetch(`${SERVER_URL}/channels/people?${params.toString()}`);
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/people?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to search people');
   return res.json();
 }
 
 export async function createFamilyChannel(email: string, studentId: string): Promise<{ id: string; memberCount: number; reused?: boolean }> {
-  const res = await fetch(`${SERVER_URL}/channels/family`, {
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/family`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, studentId }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to create family room');
@@ -101,7 +101,7 @@ export async function createFamilyChannel(email: string, studentId: string): Pro
 }
 
 export async function addChannelMembers(email: string, id: string, addEmails: string[], roleLabel?: string): Promise<{ added: number }> {
-  const res = await fetch(`${SERVER_URL}/channels/${id}/members`, {
+  const res = await fetch(`${MESSAGES_SERVER_URL}/channels/${id}/members`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, addEmails, roleLabel }),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to add members');
