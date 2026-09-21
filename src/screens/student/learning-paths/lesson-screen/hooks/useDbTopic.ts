@@ -20,13 +20,17 @@ export interface TopicByName {
 // this is what makes an uploaded book actually reach students. A topic
 // identified by name instead (`byName`) resolves the same way, straight
 // from Qdrant — see TopicByName above.
-export function useDbTopic(topicId: string | undefined, topicNameParam: string | undefined, byName?: TopicByName) {
+export function useDbTopic(topicId: string | undefined, topicNameParam: string | undefined, byName?: TopicByName, opts?: { enabled?: boolean }) {
   const [dbTopic, setDbTopic] = useState<typeof CBSE_G6_ENGLISH_SYLLABUS[0]['topics'][0] | null>(null);
   // Raw AI_EXPLANATION payload — fed to the type-driven LessonRenderer so the
   // Learn view is composed from canonical components (poem/story/math layouts),
   // not a hardcoded flat template.
   const [rawPayload, setRawPayload] = useState<any>(null);
-  const active = !!topicId || !!byName;
+  // enabled:false skips the fetch entirely — used when the caller already has
+  // teacher-published content (route params) and would otherwise fire a
+  // pointless/failing lookup for a topic with no syllabus_topics row.
+  const enabled = opts?.enabled !== false;
+  const active = enabled && (!!topicId || !!byName);
   const [loadingDbTopic, setLoadingDbTopic] = useState(active);
   // Whether the Learn (AI_EXPLANATION) resource is actually READY — as
   // opposed to COMING_SOON/UNDER_REVIEW/NOT_AVAILABLE, or neither a topicId
@@ -105,7 +109,7 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
       })
       .catch(() => { if (!cancelled) { setContentReady(false); setLoadingDbTopic(false); } });
     return () => { cancelled = true; };
-  }, [topicId, byNameKey]);
+  }, [topicId, byNameKey, enabled]);
 
   return { dbTopic, rawPayload, loadingDbTopic, contentReady };
 }

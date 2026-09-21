@@ -9,8 +9,8 @@ function jsonRes(data: any, ok = true) {
   return Promise.resolve({ ok, json: async () => data });
 }
 
-function Harness({ topicId, topicName, byName }: { topicId?: string; topicName?: string; byName?: TopicByName }) {
-  const h = useDbTopic(topicId, topicName, byName);
+function Harness({ topicId, topicName, byName, enabled }: { topicId?: string; topicName?: string; byName?: TopicByName; enabled?: boolean }) {
+  const h = useDbTopic(topicId, topicName, byName, enabled === undefined ? undefined : { enabled });
   return (
     <>
       <Text testID="loading">{String(h.loadingDbTopic)}</Text>
@@ -26,6 +26,18 @@ describe('useDbTopic', () => {
   test('with no real topicId, does not fetch and is never in a loading state', async () => {
     global.fetch = jest.fn() as any;
     await render(<Harness />);
+
+    expect(screen.getByTestId('loading').props.children).toBe('false');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  // Phantom-hook fix: LessonScreen.tsx passes enabled:false when the topic
+  // is teacher-content-backed (route params already carry the content), so
+  // this hook must not fire a fetch for a topicId/byName that has no
+  // syllabus_topics row at all.
+  test('with a real topicId but enabled:false, does not fetch even though it would otherwise be active', async () => {
+    global.fetch = jest.fn() as any;
+    await render(<Harness topicId="topic-123" enabled={false} />);
 
     expect(screen.getByTestId('loading').props.children).toBe('false');
     expect(global.fetch).not.toHaveBeenCalled();

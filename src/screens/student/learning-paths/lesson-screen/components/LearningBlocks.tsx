@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
 import { spacing } from '../../../../../theme';
@@ -85,12 +85,19 @@ function renderBlock(block: Block, i: number, colors: AppColors): React.ReactNod
       return (
         <Card key={i} colors={colors} accent={colors.primary}>
           <Heading colors={colors}>Worked example</Heading>
+          {!!block.synthetic && (
+            <Text style={{ fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, color: colors.textMuted }}>
+              {block.exampleType === 'GROUNDED_SYNTHETIC'
+                ? 'AI-GENERATED PRACTICE PROBLEM (VERIFIED) — NOT FROM THE TEXTBOOK'
+                : 'AI-GENERATED PRACTICE PROBLEM — NOT FROM THE TEXTBOOK'}
+            </Text>
+          )}
           <Text style={{ fontSize: 13.5, color: colors.textMain, fontWeight: '600' }}>{block.problem}</Text>
           {!!block.concept && <Text style={{ fontSize: 12.5, color: colors.textMuted, fontStyle: 'italic' }}>Using: {block.concept}</Text>}
           {(block.steps || []).map((s: any, j: number) => (
             <View key={j} style={{ marginTop: 6 }}>
-              <Text style={{ fontSize: 13, color: colors.textMain, fontWeight: '600' }}>Step {s.step ?? j + 1}: {s.action}</Text>
-              {!!s.equation && <Text style={{ fontSize: 13, color: colors.primary, fontFamily: 'monospace' as any, marginTop: 2 }}>{s.equation}</Text>}
+              <Text style={{ fontSize: 13, color: colors.textMain, fontWeight: '600' }}>Step {s.step ?? s.step_number ?? j + 1}: {s.action || s.explanation}</Text>
+              {!!(s.equation || s.calculation) && <Text style={{ fontSize: 13, color: colors.primary, fontFamily: 'monospace' as any, marginTop: 2 }}>{s.equation || s.calculation}</Text>}
               {!!s.why && <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>Why: {s.why}</Text>}
             </View>
           ))}
@@ -194,6 +201,75 @@ function renderBlock(block: Block, i: number, colors: AppColors): React.ReactNod
           <Feather name="alert-triangle" size={13} color="#C97A4E" style={{ marginTop: 2 }} />
           <BodyText colors={colors}>{block.text}</BodyText>
         </View>
+      );
+
+    // Real Qdrant-retrieved image (rag.js buildImages()) — url/caption are
+    // never LLM-invented.
+    case 'image':
+    case 'visual_representation':
+      return !block.url ? null : (
+        <Card key={i} colors={colors}>
+          <Image
+            source={{ uri: block.url }}
+            style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.cardDark }}
+            resizeMode="contain"
+            accessibilityLabel={block.alt_text || block.caption}
+          />
+          {!!block.caption && <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{block.caption}</Text>}
+        </Card>
+      );
+
+    case 'timeline':
+      return (
+        <Card key={i} colors={colors}>
+          <Heading colors={colors}>{block.title || 'Timeline'}</Heading>
+          {(block.events || []).map((e: any, j: number) => (
+            <Text key={j} style={{ fontSize: 13, color: colors.textMain, marginTop: 4 }}>
+              <Text style={{ fontWeight: '700' }}>{e.date}</Text>{' — '}{e.description}
+            </Text>
+          ))}
+        </Card>
+      );
+
+    case 'cause_and_effect':
+      return (
+        <Card key={i} colors={colors}>
+          <Heading colors={colors}>{block.title || 'Cause and effect'}</Heading>
+          {(block.items || []).map((it: any, j: number) => (
+            <Text key={j} style={{ fontSize: 13, color: colors.textMain, marginTop: 4 }}>
+              <Text style={{ fontWeight: '700' }}>{it.cause}</Text>{' → '}{it.effect}
+            </Text>
+          ))}
+        </Card>
+      );
+
+    case 'case_study':
+      return (
+        <Card key={i} colors={colors} accent={colors.accentGreen}>
+          <Heading colors={colors}>{block.title || 'Case study'}</Heading>
+          <BodyText colors={colors}>{block.text}</BodyText>
+        </Card>
+      );
+
+    // Structured tabular data (e.g. a Place Value Chart) used when no
+    // grounded image is available for the topic.
+    case 'table':
+      return !block.headers?.length ? null : (
+        <Card key={i} colors={colors}>
+          {!!block.caption && <Heading colors={colors}>{block.caption}</Heading>}
+          <View style={{ flexDirection: 'row' }}>
+            {block.headers.map((h: string, j: number) => (
+              <Text key={j} style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain, padding: 4 }}>{h}</Text>
+            ))}
+          </View>
+          {(block.rows || []).map((row: string[], ri: number) => (
+            <View key={ri} style={{ flexDirection: 'row' }}>
+              {row.map((cell: string, ci: number) => (
+                <Text key={ci} style={{ flex: 1, fontSize: 13, color: colors.textMain, padding: 4 }}>{cell}</Text>
+              ))}
+            </View>
+          ))}
+        </Card>
       );
 
     default:

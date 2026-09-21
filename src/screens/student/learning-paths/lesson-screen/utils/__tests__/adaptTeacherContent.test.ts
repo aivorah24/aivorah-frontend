@@ -27,7 +27,7 @@ describe('adaptTeacherContentToTopic', () => {
     expect(topic.readText.vocab).toEqual([{ word: 'Common denominator', definition: 'A shared multiple of the denominators.' }]);
     expect(topic.readText.activity).toBe('Try adding 1/3 and 1/4 on your own.');
     expect(topic.readText.workedExamples).toEqual([
-      { problem: 'Add 5/6 and 2/9', steps: ['Find a common denominator: 6x9=54'], answer: '19/18' },
+      { problem: 'Add 5/6 and 2/9', steps: ['Find a common denominator: 6x9=54'], answer: '19/18', synthetic: false },
     ]);
   });
 
@@ -48,6 +48,37 @@ describe('adaptTeacherContentToTopic', () => {
     const topic = adaptTeacherContentToTopic('X', { whatYoullLearn: [], blocks: [{ type: 'explanation', text: 'Plain theory text.' }] });
     expect(topic.readText.workedExamples).toBeUndefined();
     expect(topic.readText.intro).toBe('Plain theory text.');
+  });
+
+  test('maps an image block to figureUrl/figureCaption', () => {
+    const topic = adaptTeacherContentToTopic('X', {
+      whatYoullLearn: [],
+      blocks: [{ type: 'image', url: 'https://cdn/x.png', caption: 'A number line', alt_text: 'A number line' }],
+    });
+    expect(topic.readText.figureUrl).toBe('https://cdn/x.png');
+    expect(topic.readText.figureCaption).toBe('A number line');
+  });
+
+  test('maps the new step_number/explanation/calculation worked_example step shape and carries exampleType through', () => {
+    const topic = adaptTeacherContentToTopic('X', {
+      whatYoullLearn: [],
+      blocks: [{
+        type: 'worked_example',
+        problem: '12 + 8 = ?',
+        steps: [{ step_number: 1, explanation: 'Add the numbers', calculation: '12 + 8 = 20' }],
+        finalAnswer: '20',
+        synthetic: true,
+        exampleType: 'GROUNDED_SYNTHETIC',
+      }],
+    });
+    expect(topic.readText.workedExamples).toEqual([
+      { problem: '12 + 8 = ?', steps: ['Add the numbers: 12 + 8 = 20'], answer: '20', synthetic: true, exampleType: 'GROUNDED_SYNTHETIC' },
+    ]);
+  });
+
+  test('no image block means figureUrl stays undefined, never invented', () => {
+    const topic = adaptTeacherContentToTopic('X', { whatYoullLearn: [], blocks: [] });
+    expect(topic.readText.figureUrl).toBeUndefined();
   });
 
   test('never throws on null/undefined content', () => {

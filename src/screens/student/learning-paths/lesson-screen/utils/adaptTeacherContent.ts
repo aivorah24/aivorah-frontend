@@ -8,10 +8,19 @@
 export interface TeacherBlock {
   type: string;
   text?: string;
-  items?: { term?: string; definition?: string; meaning?: string; name?: string; description?: string }[];
-  steps?: { step?: number; action: string; equation?: string; why: string }[] | string[];
+  items?: { term?: string; definition?: string; meaning?: string; name?: string; description?: string; cause?: string; effect?: string }[];
+  steps?: { step?: number; step_number?: number; action?: string; explanation?: string; equation?: string; calculation?: string; why?: string }[] | string[];
   problem?: string;
   finalAnswer?: string;
+  synthetic?: boolean;
+  exampleType?: 'SOURCE_DERIVED' | 'GROUNDED_SYNTHETIC' | 'UNSUPPORTED';
+  url?: string;
+  caption?: string;
+  alt_text?: string;
+  title?: string;
+  events?: { date?: string; description?: string }[];
+  headers?: string[];
+  rows?: string[][];
 }
 
 export interface TeacherTopicContent {
@@ -42,15 +51,26 @@ export function adaptTeacherContentToTopic(topicTitle: string, content: TeacherT
   const activityBlock = blocks.find((b) => b.type === 'activity');
   const vocabBlock = blocks.find((b) => b.type === 'key_terms' || b.type === 'vocabulary');
   const vocab = (vocabBlock?.items || []).map((i) => ({ word: i.term || '', definition: i.definition || i.meaning || '' }));
+  const imageBlock = blocks.find((b) => b.type === 'image' || b.type === 'visual_representation');
+  // Structured fallback when no grounded image exists for the topic (e.g. a
+  // Place Value Chart) — see blockSchema.js's `table` type.
+  const tableBlock = blocks.find((b) => b.type === 'table');
 
   const workedExamples = blocks
     .filter((b) => b.type === 'worked_example')
     .map((b) => ({
       problem: b.problem || '',
-      steps: (b.steps as { action: string; equation?: string }[] || []).map((s) =>
-        s.equation ? `${s.action}: ${s.equation}` : s.action
-      ),
+      // Steps carry either the legacy {action, equation} shape or the newer
+      // {explanation, calculation} shape (see blockSchema.js) — normalize
+      // both to a flat display string.
+      steps: (b.steps as { action?: string; explanation?: string; equation?: string; calculation?: string }[] || []).map((s) => {
+        const label = s.explanation || s.action || '';
+        const detail = s.calculation || s.equation;
+        return detail ? `${label}: ${detail}` : label;
+      }),
       answer: b.finalAnswer || '',
+      synthetic: b.synthetic === true,
+      exampleType: b.exampleType,
     }));
 
   return {
@@ -64,6 +84,9 @@ export function adaptTeacherContentToTopic(topicTitle: string, content: TeacherT
       activity: activityBlock?.text || '',
       vocab,
       workedExamples: workedExamples.length > 0 ? workedExamples : undefined,
+      figureUrl: imageBlock?.url || undefined,
+      figureCaption: imageBlock?.caption || '',
+      table: tableBlock ? { caption: tableBlock.caption, headers: tableBlock.headers || [], rows: tableBlock.rows || [] } : undefined,
     },
   } as any;
 }
