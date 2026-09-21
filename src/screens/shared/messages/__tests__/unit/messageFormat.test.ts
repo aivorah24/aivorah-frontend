@@ -1,7 +1,7 @@
 // Unit tests for messageFormat.ts — pure functions, no mocking needed.
 import {
   formatTime, sameDay, formatDateDivider, parseContent, formatFileSize,
-  fileIcon, isAivorah, roleLabel, convoRoleLabel,
+  fileIcon, isAivorah, roleLabel, convoRoleLabel, formatPreview,
 } from '../../utils/messageFormat';
 import { AIVORAH_EMAIL } from '../../constants';
 
@@ -129,5 +129,30 @@ describe('isAivorah / roleLabel / convoRoleLabel', () => {
   });
   test('convoRoleLabel defers to roleLabel for a normal contact', () => {
     expect(convoRoleLabel({ otherEmail: 'p@x.com', otherName: 'Jane', otherRole: 'parent' })).toBe('Parent');
+  });
+});
+
+describe('formatPreview', () => {
+  test('empty content returns empty string', () => {
+    expect(formatPreview('')).toBe('');
+  });
+  test('SCHEDULE_CARD payload becomes a friendly summary, not the raw delimited string', () => {
+    expect(formatPreview('SCHEDULE_CARD|Sai|Study Session|2026-09-25|10:00')).toBe('📅 Scheduled: Study Session');
+  });
+  test('SCHEDULE_CARD with no title falls back to "Event"', () => {
+    expect(formatPreview('SCHEDULE_CARD||')).toBe('📅 Scheduled: Event');
+  });
+  test('auto-logout marker becomes a friendly message', () => {
+    expect(formatPreview('[Auto-Logout] session expired')).toBe('Session ended automatically');
+  });
+  test('new-assignment notices are shortened', () => {
+    expect(formatPreview('Teacher X New Assignment assigned: Chapter 5 Quiz')).toBe('New assignment: Chapter 5 Quiz');
+  });
+  test('an attachment-only message shows a paperclip + file name', () => {
+    const content = JSON.stringify({ text: '', attachment: { url: 'https://x/doc.pdf', name: 'doc.pdf', size: 2048, type: 'application/pdf' } });
+    expect(formatPreview(content)).toBe('📎 doc.pdf');
+  });
+  test('plain text passes through unchanged', () => {
+    expect(formatPreview('Hey, are we still on for tomorrow?')).toBe('Hey, are we still on for tomorrow?');
   });
 });
