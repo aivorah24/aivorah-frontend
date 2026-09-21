@@ -53,7 +53,7 @@ export default function SchoolAdminImportHistoryScreen({ navigation }: any) {
           ) : runs.length === 0 ? (
             <View style={styles.emptyBox}>
               <Feather name="clock" size={26} color={colors.textDim} />
-              <Text style={styles.emptyText}>No imports yet. Bulk-import a CSV of students or teachers and it'll show up here.</Text>
+              <Text style={styles.emptyText}>No imports yet. Bulk-import a CSV of students or teachers and it&apos;ll show up here.</Text>
               <TouchableOpacity onPress={() => navigation?.navigate?.('SchoolAdminBulkImport')} style={styles.retryBtn} accessibilityRole="button">
                 <Text style={styles.retryText}>Go to Bulk Import</Text>
               </TouchableOpacity>
