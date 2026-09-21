@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../config/serverUrl';
+import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
 
 export interface PeriodDef {
   code: string;      // 'P0', 'P1', 'BRK', 'LUNCH', ...
@@ -32,7 +32,7 @@ export interface Timetable {
 
 export async function fetchTimetable(email: string, schoolId: string, grade: string, section: string): Promise<Timetable> {
   const q = new URLSearchParams({ email, schoolId, grade, section: section || '' });
-  const res = await fetch(`${SERVER_URL}/timetable?${q}`);
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable?${q}`);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data?.error || 'Failed to load timetable');
@@ -43,7 +43,7 @@ export async function fetchTimetable(email: string, schoolId: string, grade: str
 export async function saveTemplate(body: {
   email: string; schoolId: string; grade: string; section: string; title?: string; periodDefs: PeriodDef[];
 }): Promise<void> {
-  const res = await fetch(`${SERVER_URL}/timetable/template`, {
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable/template`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -60,7 +60,7 @@ export async function saveSlot(body: {
   subject?: string; room?: string; teacherId?: string | null;
   materialUrl?: string | null; materialName?: string | null; color?: string | null;
 }): Promise<void> {
-  const res = await fetch(`${SERVER_URL}/timetable/slot`, {
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable/slot`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

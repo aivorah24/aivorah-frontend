@@ -1,4 +1,4 @@
-import SERVER_URL from '../config/aiCoachServerUrl';
+import AI_COACH_SERVER_URL from '../config/aiCoachServerUrl';
 
 export interface AskImage {
   url: string;
@@ -33,7 +33,7 @@ export async function askAIMentor(
     const payload: any = { question, curriculum, grade, subject, topic, userEmail, role };
     if (history && history.length > 0) payload.history = history;
 
-    const response = await fetch(`${SERVER_URL}/ask`, {
+    const response = await fetch(`${AI_COACH_SERVER_URL}/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -86,11 +86,12 @@ export async function askAIMentorStream(
     };
     if (history && history.length > 0) payload.history = history;
 
-    const response = await fetch(`${SERVER_URL}/ask/stream`, {
+    const response = await fetch(`${AI_COACH_SERVER_URL}/ask/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
 
     if (!response.ok) {
       try {

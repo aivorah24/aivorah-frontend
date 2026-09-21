@@ -1,6 +1,7 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
+import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
 // Each function throws/rejects on failure; callers (useDashboardData) decide
@@ -32,7 +33,7 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
 }
 
 export async function fetchUpcomingDeadlines(studentId: string) {
-  const res = await fetch(`${SERVER_URL}/schedule/upcoming?studentId=${studentId}`);
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}`);
   return res.json();
 }
 
