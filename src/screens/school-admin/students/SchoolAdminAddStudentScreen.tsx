@@ -8,29 +8,28 @@
  * credentials once).
  *
  * Contract:
- *   POST /school-admin/students?adminEmail=<email>
+ *   POST /school-admin/students?adminEmail=<email>  (aivorah-school-admin-service)
  *        body { firstName, lastName, grade, section?, email?, initialStatus?,
  *               parentName?, parentEmail?, notes? }
  *        -> 201 { id, name, email, password, admissionNumber, grade, section,
  *                 status, parent?: { name, email, password } }
  *
- * Grade/Section are dropdowns sourced from the school's existing students
- * (GET /school-admin/students?adminEmail=&limit=100, same endpoint the
- * Students list already uses) — deduped + sorted distinct values. If the
- * school has zero students yet, that dropdown falls back to a plain text
- * input so admins aren't stuck with zero options.
+ * Grade/Section are dropdowns sourced from the school's Grades & Sections
+ * config. If the school has zero sections configured yet for a grade, that
+ * dropdown falls back to a plain text input so admins aren't stuck with zero
+ * options.
  */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, TextInput, Pressable, Platform, Share, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 
 interface Credentials {
   name: string;
@@ -149,7 +148,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
     async function loadOptions() {
       if (!user?.email) { setOptionsLoading(false); return; }
       try {
-        const res = await fetch(`${SERVER_URL}/school-admin/grades-sections?adminEmail=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades-sections?adminEmail=${encodeURIComponent(user.email)}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         const gs: { name: string; sections?: { name: string; archived?: boolean }[] }[] = Array.isArray(data.grades) ? data.grades : [];
@@ -194,7 +193,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
     async function loadSchoolCurriculum() {
       if (!user?.email) return;
       try {
-        const res = await fetch(`${SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/overview?adminEmail=${encodeURIComponent(user.email)}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled || !res.ok) return;
         const base = data?.school?.curriculum || null;
@@ -262,7 +261,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
       if (parentEmail.trim()) body.parentEmail = parentEmail.trim();
       if (notes.trim()) body.notes = notes.trim();
 
-      const res = await fetch(`${SERVER_URL}/school-admin/students?adminEmail=${encodeURIComponent(user.email)}`, {
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students?adminEmail=${encodeURIComponent(user.email)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -544,11 +543,6 @@ function makeStyles(colors: AppColors) {
       position: 'absolute', top: 44, left: 0, right: 0, backgroundColor: colors.cardDark,
       borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, paddingVertical: 4,
       zIndex: 21, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
-      // maxHeight must live on THIS absolutely-positioned, auto-sized
-      // container, not just the inner ScrollView — react-native-web won't
-      // clip an unbounded absolute box based on a child's maxHeight alone,
-      // so a long options list (e.g. 12 grades) rendered full-height and
-      // overlapped every card below it instead of scrolling in place.
       maxHeight: 240, overflow: 'hidden',
     },
     ddItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 9 },
