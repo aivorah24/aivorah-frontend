@@ -11,27 +11,28 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import SchoolAdminDashboardScreen from '@legacy/school-admin/SchoolAdminDashboardScreen';
+import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
 import SchoolAdminPeopleScreen from '@legacy/school-admin/SchoolAdminPeopleScreen';
 import SchoolAdminStudentsScreen from '@legacy/school-admin/SchoolAdminStudentsScreen';
-import SchoolAdminTeachersScreen from '@legacy/school-admin/SchoolAdminTeachersScreen';
-import SchoolAdminParentsScreen from '@legacy/school-admin/SchoolAdminParentsScreen';
-import SchoolAdminAddParentScreen from '@legacy/school-admin/SchoolAdminAddParentScreen';
-import SchoolAdminSettingsScreen from '@legacy/school-admin/SchoolAdminSettingsScreen';
+import SchoolAdminTeachersScreen from '../screens/school-admin/teachers/SchoolAdminTeachersScreen';
+import SchoolAdminParentsScreen from '../screens/school-admin/parents/SchoolAdminParentsScreen';
+import SchoolAdminAddParentScreen from '../screens/school-admin/parents/SchoolAdminAddParentScreen';
+import SchoolAdminSettingsScreen from '../screens/school-admin/workspace-settings/SchoolAdminSettingsScreen';
 import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingSoonScreen';
-import SchoolAdminImportHistoryScreen from '@legacy/school-admin/SchoolAdminImportHistoryScreen';
+import SchoolAdminImportHistoryScreen from '../screens/school-admin/import-history/SchoolAdminImportHistoryScreen';
 import SchoolAdminBulkImportScreen from '@legacy/school-admin/SchoolAdminBulkImportScreen';
 import SchoolAdminAddStudentScreen from '@legacy/school-admin/SchoolAdminAddStudentScreen';
-import SchoolAdminGradesSectionsScreen from '@legacy/school-admin/SchoolAdminGradesSectionsScreen';
-import SchoolAdminClassesScreen from '@legacy/school-admin/SchoolAdminClassesScreen';
-import SchoolAdminAddTeacherScreen from '@legacy/school-admin/SchoolAdminAddTeacherScreen';
-import SchoolAdminEditTeacherScreen from '@legacy/school-admin/SchoolAdminEditTeacherScreen';
+import SchoolAdminGradesSectionsScreen from '../screens/school-admin/grades-sections/SchoolAdminGradesSectionsScreen';
+import SchoolAdminClassesScreen from '../screens/school-admin/classes/SchoolAdminClassesScreen';
+import SchoolAdminAddTeacherScreen from '../screens/school-admin/teachers/SchoolAdminAddTeacherScreen';
+import SchoolAdminEditTeacherScreen from '../screens/school-admin/teachers/SchoolAdminEditTeacherScreen';
 import SchoolAdminTeacherBulkImportScreen from '@legacy/school-admin/SchoolAdminTeacherBulkImportScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
 import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
+import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
@@ -54,6 +55,7 @@ export type SchoolAdminDrawerParamList = {
   SchoolAdminAnnouncements: { openId?: string } | undefined;
   SchoolAdminSettings: undefined;
   TeacherSettings: undefined;
+  TeacherHelp: undefined;
   Messages: undefined;
   Channels: undefined;
 };
@@ -115,6 +117,7 @@ export default function SchoolAdminNavigator() {
       <Drawer.Screen name="SchoolAdminAnnouncements" component={AnnouncementsScreen} />
       <Drawer.Screen name="SchoolAdminSettings" component={SchoolAdminSettingsScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
+      <Drawer.Screen name="TeacherHelp" component={HelpSupportScreen} />
       <Drawer.Screen name="Channels" component={ChannelsScreen} />
       <Drawer.Screen name="Messages" component={SchoolAdminMessagesScreen} />
     </Drawer.Navigator>

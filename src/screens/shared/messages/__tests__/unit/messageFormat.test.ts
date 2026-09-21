@@ -133,24 +133,26 @@ describe('isAivorah / roleLabel / convoRoleLabel', () => {
 });
 
 describe('formatPreview', () => {
-  // Regression: the conversation list showed the raw internal payload
-  // ("SCHEDULE_CARD|Sai|Study|...") instead of a friendly summary.
-  test('formats a SCHEDULE_CARD payload as a friendly summary, not the raw delimited string', () => {
-    expect(formatPreview('SCHEDULE_CARD|Sai|Study Session|2026-09-20|16:00|study')).toBe('📅 Scheduled: Study Session');
-  });
-  test('formats an Auto-Logout system message', () => {
-    expect(formatPreview('[Auto-Logout] Session ended')).toBe('Session ended automatically');
-  });
-  test('formats an assignment notification', () => {
-    expect(formatPreview('New Assignment assigned: Fractions')).toBe('New assignment: Fractions');
-  });
-  test('formats an attachment payload with a paperclip + filename', () => {
-    expect(formatPreview(JSON.stringify({ attachment: { url: 'x', name: 'worksheet.pdf', size: 1, type: 'application/pdf' } }))).toBe('📎 worksheet.pdf');
-  });
-  test('passes plain text through unchanged', () => {
-    expect(formatPreview('Hi there')).toBe('Hi there');
-  });
-  test('handles empty content', () => {
+  test('empty content returns empty string', () => {
     expect(formatPreview('')).toBe('');
+  });
+  test('SCHEDULE_CARD payload becomes a friendly summary, not the raw delimited string', () => {
+    expect(formatPreview('SCHEDULE_CARD|Sai|Study Session|2026-09-25|10:00')).toBe('📅 Scheduled: Study Session');
+  });
+  test('SCHEDULE_CARD with no title falls back to "Event"', () => {
+    expect(formatPreview('SCHEDULE_CARD||')).toBe('📅 Scheduled: Event');
+  });
+  test('auto-logout marker becomes a friendly message', () => {
+    expect(formatPreview('[Auto-Logout] session expired')).toBe('Session ended automatically');
+  });
+  test('new-assignment notices are shortened', () => {
+    expect(formatPreview('Teacher X New Assignment assigned: Chapter 5 Quiz')).toBe('New assignment: Chapter 5 Quiz');
+  });
+  test('an attachment-only message shows a paperclip + file name', () => {
+    const content = JSON.stringify({ text: '', attachment: { url: 'https://x/doc.pdf', name: 'doc.pdf', size: 2048, type: 'application/pdf' } });
+    expect(formatPreview(content)).toBe('📎 doc.pdf');
+  });
+  test('plain text passes through unchanged', () => {
+    expect(formatPreview('Hey, are we still on for tomorrow?')).toBe('Hey, are we still on for tomorrow?');
   });
 });

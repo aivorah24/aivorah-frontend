@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 import { Announcement } from '../types/announcement.types';
 
 export interface InboxPage {
@@ -10,7 +10,7 @@ export interface InboxPage {
 
 export async function fetchActiveAnnouncements(userEmail: string, surface: 'banner' | 'inbox'): Promise<Announcement[]> {
   const res = await fetch(
-    `${SERVER_URL}/announcements/active?userEmail=${encodeURIComponent(userEmail)}&surface=${surface}`
+    `${SCHOOL_ADMIN_SERVER_URL}/announcements/active?userEmail=${encodeURIComponent(userEmail)}&surface=${surface}`
   );
   if (!res.ok) throw new Error(`active fetch failed: ${res.status}`);
   const data = await res.json();
@@ -21,14 +21,14 @@ export async function fetchInbox(userEmail: string, opts?: { page?: number; limi
   const page = opts?.page ?? 1;
   const limit = opts?.limit ?? 50;
   const res = await fetch(
-    `${SERVER_URL}/announcements?userEmail=${encodeURIComponent(userEmail)}&page=${page}&limit=${limit}`
+    `${SCHOOL_ADMIN_SERVER_URL}/announcements?userEmail=${encodeURIComponent(userEmail)}&page=${page}&limit=${limit}`
   );
   if (!res.ok) throw new Error(`inbox fetch failed: ${res.status}`);
   return res.json();
 }
 
 export async function markSeen(id: string, userEmail: string): Promise<void> {
-  await fetch(`${SERVER_URL}/announcements/${id}/seen`, {
+  await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/${id}/seen`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userEmail }),
@@ -36,7 +36,7 @@ export async function markSeen(id: string, userEmail: string): Promise<void> {
 }
 
 export async function dismissAnnouncement(id: string, userEmail: string): Promise<void> {
-  await fetch(`${SERVER_URL}/announcements/${id}/dismiss`, {
+  await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/${id}/dismiss`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userEmail }),
@@ -58,7 +58,7 @@ export interface AnnouncementDraft {
 }
 
 async function adminRequest(pathname: string, method: string, adminEmail: string, payload?: object) {
-  const res = await fetch(`${SERVER_URL}/announcements/admin${pathname}`, {
+  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/admin${pathname}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ adminEmail, ...(payload || {}) }),
@@ -69,14 +69,14 @@ async function adminRequest(pathname: string, method: string, adminEmail: string
 }
 
 export async function adminListAnnouncements(adminEmail: string): Promise<Announcement[]> {
-  const res = await fetch(`${SERVER_URL}/announcements/admin/all?adminEmail=${encodeURIComponent(adminEmail)}`);
+  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/admin/all?adminEmail=${encodeURIComponent(adminEmail)}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
   return Array.isArray(data) ? data : [];
 }
 
 export async function adminListSchools(adminEmail: string): Promise<{ id: string; name: string }[]> {
-  const res = await fetch(`${SERVER_URL}/announcements/admin/schools?adminEmail=${encodeURIComponent(adminEmail)}`);
+  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/admin/schools?adminEmail=${encodeURIComponent(adminEmail)}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
   return Array.isArray(data) ? data : [];
@@ -105,7 +105,7 @@ export function adminArchiveAnnouncement(adminEmail: string, id: string): Promis
 export async function adminUploadAttachment(adminEmail: string, file: File): Promise<{ url: string; name: string; type: string; size: number }> {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${SERVER_URL}/announcements/admin/upload?adminEmail=${encodeURIComponent(adminEmail)}`, {
+  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/announcements/admin/upload?adminEmail=${encodeURIComponent(adminEmail)}`, {
     method: 'POST',
     body: form,
   });

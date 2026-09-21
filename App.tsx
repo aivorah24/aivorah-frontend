@@ -78,6 +78,12 @@ const LINKING_SCREENS = {
   StaffSubjectMapping: 'super-admin/staff-subject-mapping',
   ProjectDetails: 'teacher/project-details',
   Channels: 'channels',
+  // Shared across Teacher/Parent/SuperAdmin navigators (each registers its
+  // own "Timetable"/"Resources" Drawer.Screen under the same name) — added
+  // as test-accessible deep links only, per E2E audit request; no sidebar
+  // entry point exists for either screen in any navigator today.
+  Timetable: 'timetable',
+  Resources: 'resources',
   // School Admin screens
   SchoolAdminDashboard: 'school-admin/dashboard',
   SchoolAdminPeople: 'school-admin/people',
