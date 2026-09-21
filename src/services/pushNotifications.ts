@@ -4,7 +4,7 @@
 // Everything here is a no-op on web — the web app never touches it.
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import SERVER_URL from '../config/serverUrl';
+import PROFILE_SERVER_URL from '../config/profileServerUrl';
 
 let _registered = false;
 
@@ -66,7 +66,7 @@ export async function registerPushToken(email?: string): Promise<string | null> 
     const token = tokenResp?.data;
     if (!token) return null;
 
-    await fetch(`${SERVER_URL}/user/push-token`, {
+    await fetch(`${PROFILE_SERVER_URL}/user/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, token, platform: Platform.OS }),
