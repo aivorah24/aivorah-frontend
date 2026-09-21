@@ -24,13 +24,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 
 type FieldKey = 'studentName' | 'studentEmail' | 'admissionNo' | 'curriculum' | 'grade' | 'section' | 'parentName' | 'parentEmail' | 'parentPhone';
 
@@ -329,7 +329,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
   // intercepted, so this reliably saves to Downloads without navigating.
   async function downloadServerTemplate(ext: 'csv' | 'xlsx') {
     if (!user?.email || Platform.OS !== 'web') return;
-    const url = `${SERVER_URL}/school-admin/students/template.${ext}?adminEmail=${encodeURIComponent(user.email)}`;
+    const url = `${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/template.${ext}?adminEmail=${encodeURIComponent(user.email)}`;
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -516,7 +516,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/students/bulk?adminEmail=${encodeURIComponent(user.email)}`, {
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students/bulk?adminEmail=${encodeURIComponent(user.email)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: validRows, fileName }),
