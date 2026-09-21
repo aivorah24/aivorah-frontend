@@ -32,6 +32,7 @@ import AnnouncementsScreen from '../features/announcements/components/Announceme
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
+import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
@@ -54,6 +55,7 @@ export type SchoolAdminDrawerParamList = {
   SchoolAdminAnnouncements: { openId?: string } | undefined;
   SchoolAdminSettings: undefined;
   TeacherSettings: undefined;
+  TeacherHelp: undefined;
   Messages: undefined;
   Channels: undefined;
 };
@@ -115,6 +117,7 @@ export default function SchoolAdminNavigator() {
       <Drawer.Screen name="SchoolAdminAnnouncements" component={AnnouncementsScreen} />
       <Drawer.Screen name="SchoolAdminSettings" component={SchoolAdminSettingsScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
+      <Drawer.Screen name="TeacherHelp" component={HelpSupportScreen} />
       <Drawer.Screen name="Channels" component={ChannelsScreen} />
       <Drawer.Screen name="Messages" component={SchoolAdminMessagesScreen} />
     </Drawer.Navigator>

@@ -26,6 +26,7 @@ import ClassDetailScreen from '../features/classes/components/ClassDetailScreen'
 import TimetableScreen from '../features/timetable/components/TimetableScreen';
 import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
+import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
 
 const Drawer = createDrawerNavigator<TeacherDrawerParamList>();
 
@@ -64,6 +65,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherCurriculumLearningPath" component={TeacherCurriculumLearningPathScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
+      <Drawer.Screen name="TeacherHelp" component={HelpSupportScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />
       <Drawer.Screen name="AnnouncementManager" component={AnnouncementManagerScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
