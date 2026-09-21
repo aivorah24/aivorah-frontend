@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import ResourcesScreen from '../ResourcesScreen';
-import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -58,7 +58,7 @@ describe('ResourcesScreen — integration', () => {
       expect(screen.getByText('Attendance Policy.pdf')).toBeTruthy();
       expect(screen.getByText('Name', { exact: true })).toBeTruthy();
 
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`${SERVER_URL}/resources?`));
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`${SCHOOL_ADMIN_SERVER_URL}/resources?`));
     });
 
     test('shows New folder and Upload management actions', async () => {
@@ -86,7 +86,7 @@ describe('ResourcesScreen — integration', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining(`${SERVER_URL}/resources/folder`),
+          expect.stringContaining(`${SCHOOL_ADMIN_SERVER_URL}/resources/folder`),
           expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'teacher@school.test', name: 'Policies', parentFolderId: null, scope: 'school' }) })
         );
       });
