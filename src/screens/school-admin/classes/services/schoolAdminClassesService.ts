@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { ClassRow, TeacherOption } from '../utils/classesSorting';
 
 export type { ClassRow, TeacherOption };
@@ -23,7 +23,7 @@ export class SchoolAdminClassesService {
   async getClasses(adminEmail: string): Promise<ClassRow[]> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/school-admin/classes?adminEmail=${encodeURIComponent(adminEmail)}`);
+      res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/classes?adminEmail=${encodeURIComponent(adminEmail)}`);
     } catch {
       // A network-level failure (fetch itself rejecting) gets the same
       // friendly message the legacy screen's outer catch showed — distinct
@@ -42,7 +42,7 @@ export class SchoolAdminClassesService {
    * Fetch teachers available for the class-teacher assign picker.
    */
   async getTeachers(adminEmail: string): Promise<TeacherOption[]> {
-    const res = await fetch(`${SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`);
+    const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/teachers?adminEmail=${encodeURIComponent(adminEmail)}`);
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
       throw new Error((data as any)?.error || 'Failed to load teachers');
@@ -55,7 +55,7 @@ export class SchoolAdminClassesService {
    * grade/section.
    */
   async assignClassTeacher(grade: string, section: string, adminEmail: string, teacherEmail: string | null): Promise<void> {
-    const url = `${SERVER_URL}/school-admin/grades/${encodeURIComponent(grade)}/sections/${encodeURIComponent(section)}/class-teacher?adminEmail=${encodeURIComponent(adminEmail)}`;
+    const url = `${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades/${encodeURIComponent(grade)}/sections/${encodeURIComponent(section)}/class-teacher?adminEmail=${encodeURIComponent(adminEmail)}`;
     let res: Response;
     try {
       res = await fetch(url, {

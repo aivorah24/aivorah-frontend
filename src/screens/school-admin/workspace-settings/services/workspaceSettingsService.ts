@@ -1,5 +1,5 @@
 import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import type { WorkspaceSchool } from '../types';
 
 export async function fetchWorkspaceOverview(adminEmail: string): Promise<WorkspaceSchool> {
@@ -20,17 +20,18 @@ export async function saveWorkspaceSettings(adminEmail: string, settings: Worksp
   return data.school;
 }
 
-// Branding stays on the monolith — shared cross-cutting infra used by several
-// features (worksheets, portfolios, announcements), not owned by this service.
+// Branding lives on aivorah-profile-service — shared cross-cutting infra used
+// by several features (worksheets, portfolios, announcements), not owned by
+// this service, but no longer on the monolith either (ported 2026-08-27).
 export async function fetchSchoolLogo(schoolName: string): Promise<string | null> {
-  const res = await fetch(`${SERVER_URL}/branding/logos?school=${encodeURIComponent(schoolName)}`);
+  const res = await fetch(`${PROFILE_SERVER_URL}/branding/logos?school=${encodeURIComponent(schoolName)}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return null;
   return data?.schoolLogoUrl || null;
 }
 
 export async function uploadSchoolLogo(schoolName: string, base64: string, mimeType: string): Promise<string> {
-  const res = await fetch(`${SERVER_URL}/branding/logo`, {
+  const res = await fetch(`${PROFILE_SERVER_URL}/branding/logo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind: 'school', name: schoolName, base64, mimeType }),

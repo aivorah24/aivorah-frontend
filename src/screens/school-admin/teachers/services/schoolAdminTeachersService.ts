@@ -1,4 +1,4 @@
-import SERVER_URL from '../../../../config/serverUrl';
+import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { TeacherRow } from '../utils/teachersFormatters';
 
@@ -61,7 +61,7 @@ export class SchoolAdminTeachersService {
   async updateTeacherTeaches(email: string, teaches: { curriculum: string; grade: string; subjects: string[] }[]): Promise<void> {
     let res: Response;
     try {
-      res = await fetch(`${SERVER_URL}/user/profile`, {
+      res = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, teaches }),
       });
     } catch {

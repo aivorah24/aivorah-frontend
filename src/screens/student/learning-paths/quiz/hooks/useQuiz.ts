@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, BackHandler, Platform } from 'react-native';
-import SERVER_URL from '../../../../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
 import { computeCappedQuizMinutes } from '../../../../../services/studyTime';
@@ -292,7 +292,7 @@ export function useQuiz(params: {
     if (!fillInput.trim() || fillValidating) return;
     setFillValidating(true);
     try {
-      const resp = await fetch(`${SERVER_URL}/assignments/validate-fill-blank`, {
+      const resp = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/validate-fill-blank`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentAnswer: fillInput.trim(), correctAnswer: questions[currentQ].correct }),
       });

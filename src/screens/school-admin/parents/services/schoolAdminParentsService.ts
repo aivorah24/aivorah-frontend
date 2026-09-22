@@ -1,4 +1,3 @@
-import SERVER_URL from '../../../../config/serverUrl';
 import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 import { ParentRow } from '../utils/parentsFormatters';
 import { ChildPayloadEntry } from '../utils/childEntry';

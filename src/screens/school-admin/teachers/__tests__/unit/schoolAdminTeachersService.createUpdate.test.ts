@@ -1,4 +1,4 @@
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
+jest.mock('../../../../../config/profileServerUrl', () => 'https://profile.test');
 jest.mock('../../../../../config/schoolAdminServerUrl', () => 'https://school-admin.test');
 import { schoolAdminTeachersService } from '../../services/schoolAdminTeachersService';
 
@@ -53,7 +53,7 @@ describe('schoolAdminTeachersService.updateTeacherTeaches', () => {
     await schoolAdminTeachersService.updateTeacherTeaches('teacher@x.com', teaches);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://server.test/user/profile',
+      'https://profile.test/user/profile',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ email: 'teacher@x.com', teaches }) })
     );
   });

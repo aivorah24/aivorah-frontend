@@ -5,8 +5,8 @@ import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useStudentData } from '../../../../context/StudentDataContext';
-import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
+import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR } from '../constants';
 import { getStamp } from '../utils';
@@ -134,7 +134,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
 
   async function explainWrong(idx: number, q: QuizQuestion, studentAns: string) {
     try {
-      const res = await fetch(`${SERVER_URL}/ibpyp/explain-wrong`, {
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/explain-wrong`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: assignment.chapter,

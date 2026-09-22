@@ -16,14 +16,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, TextInput, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import Header from '../../components/common/Header';
-import ScreenLayout from '../../components/common/ScreenLayout';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useResponsive } from '../../hooks/useResponsive';
-import { spacing, radius, fonts } from '../../theme';
-import type { AppColors } from '../../theme';
-import SERVER_URL from '../../config/serverUrl';
+import Header from '../../../components/common/Header';
+import ScreenLayout from '../../../components/common/ScreenLayout';
+import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useResponsive } from '../../../hooks/useResponsive';
+import { spacing, radius, fonts } from '../../../theme';
+import type { AppColors } from '../../../theme';
+import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 
 interface Person {
   id: string;
@@ -78,7 +78,7 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
     if (!user?.email) return;
     setError('');
     try {
-      const res = await fetch(`${SERVER_URL}/school-admin/people?adminEmail=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/people?adminEmail=${encodeURIComponent(user.email)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data?.error || 'Failed to load people'); return; }
       setPeople(Array.isArray(data) ? data : []);

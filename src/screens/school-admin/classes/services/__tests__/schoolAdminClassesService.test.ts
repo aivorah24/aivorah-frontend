@@ -1,4 +1,4 @@
-jest.mock('../../../../../config/serverUrl', () => 'https://server.test');
+jest.mock('../../../../../config/schoolAdminServerUrl', () => 'https://server.test');
 import { schoolAdminClassesService } from '../schoolAdminClassesService';
 
 const realFetch = global.fetch;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import SchoolAdminClassesScreen from '../SchoolAdminClassesScreen';
-import SERVER_URL from '../../../../config/serverUrl';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -56,7 +56,7 @@ describe('SchoolAdminClassesScreen — integration', () => {
     expect(screen.getByText('Bob Smith')).toBeTruthy();
     expect(screen.getByText('3 students')).toBeTruthy();
 
-    expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/school-admin/classes?adminEmail=admin%40school.test`);
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/classes?adminEmail=admin%40school.test`);
   });
 
   test('shows the empty state when there are no classes', async () => {
@@ -109,7 +109,7 @@ describe('SchoolAdminClassesScreen — integration', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        `${SERVER_URL}/school-admin/grades/Grade%206/sections/A/class-teacher?adminEmail=admin%40school.test`,
+        `${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades/Grade%206/sections/A/class-teacher?adminEmail=admin%40school.test`,
         expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ teacherEmail: 'alice@x.com' }) })
       );
     });
@@ -128,7 +128,7 @@ describe('SchoolAdminClassesScreen — integration', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        `${SERVER_URL}/school-admin/grades/Grade%206/sections/B/class-teacher?adminEmail=admin%40school.test`,
+        `${SCHOOL_ADMIN_SERVER_URL}/school-admin/grades/Grade%206/sections/B/class-teacher?adminEmail=admin%40school.test`,
         expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ teacherEmail: null }) })
       );
     });
