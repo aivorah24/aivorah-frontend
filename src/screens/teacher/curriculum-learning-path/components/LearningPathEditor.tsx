@@ -140,6 +140,12 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 <Text style={styles.previewText}>Preview as student</Text>
               </TouchableOpacity>
 
+              {topic.groundingSource === 'model_knowledge' && (
+                <Text testID={`model-knowledge-note-${ui}-${ti}`} style={styles.modelKnowledgeNote}>
+                  Generated from AI knowledge — please review
+                </Text>
+              )}
+
               {topic.status === 'needs_teacher_input' && (
                 <View testID={`needs-input-banner-${ui}-${ti}`} style={styles.needsInputBanner}>
                   <Text style={styles.needsInputBadge}>Needs your input</Text>
@@ -234,6 +240,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   topic: { marginLeft: 12, marginTop: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.borderColor },
   topicTitleInput: { fontSize: 15, fontWeight: '500', paddingVertical: 4, color: colors.textMain },
   previewText: { fontSize: 12, color: colors.primary, fontWeight: '600', marginBottom: 4 },
+  modelKnowledgeNote: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, color: colors.textMuted, marginBottom: 4 },
   needsInputBanner: {
     backgroundColor: colors.accentYellowGlow,
     borderWidth: 1,

@@ -101,6 +101,20 @@ describe('LearningPathEditor', () => {
     expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
   });
 
+  test('renders the AI-knowledge note when groundingSource is model_knowledge', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].groundingSource = 'model_knowledge';
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    expect(screen.getByTestId('model-knowledge-note-0-0')).toBeTruthy();
+  });
+
+  test('does not render the AI-knowledge note for other grounding sources', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].groundingSource = 'ncert_vector';
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    expect(screen.queryByTestId('model-knowledge-note-0-0')).toBeNull();
+  });
+
   test('opens the student preview modal showing grounded content.blocks, and closes it', async () => {
     const content = baseContent();
     content.units[0].topics[0].content = {

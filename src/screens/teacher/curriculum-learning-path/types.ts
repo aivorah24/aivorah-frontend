@@ -39,6 +39,7 @@ export interface LearningPathTopic {
   status?: 'ready' | 'needs_teacher_input';
   teacherHint?: string | null;
   content?: TeacherTopicContent | null;
+  groundingSource?: string;
 }
 
 export interface LearningPathUnit {
