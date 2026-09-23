@@ -146,4 +146,41 @@ describe('LearningPathEditor', () => {
     expect(screen.getByText(/Add two numbers/)).toBeTruthy();
     expect(screen.getByText('Intro')).toBeTruthy();
   });
+
+  test('shows the visuals count for a topic with image blocks', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].content = {
+      whatYoullLearn: [],
+      blocks: [
+        { type: 'explanation', text: 'x' },
+        { type: 'image', url: 'https://cdn/a.png', caption: 'A' },
+        { type: 'image', url: 'https://cdn/b.png', caption: 'B' },
+      ],
+    };
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+
+    expect(screen.getByText('Visuals: 2')).toBeTruthy();
+  });
+
+  test('removing an image drops only that image block via updateContent', async () => {
+    const content = baseContent();
+    content.units[0].topics[0].content = {
+      whatYoullLearn: [],
+      blocks: [
+        { type: 'explanation', text: 'x' },
+        { type: 'image', url: 'https://cdn/a.png', caption: 'A' },
+        { type: 'image', url: 'https://cdn/b.png', caption: 'B' },
+      ],
+    };
+    const onChange = jest.fn();
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={onChange} />);
+
+    await user.press(screen.getByTestId('remove-image-0-0-0'));
+
+    const updated = onChange.mock.calls[0][0];
+    const blocks = updated.units[0].topics[0].content.blocks;
+    expect(blocks.filter((b: any) => b.type === 'image')).toHaveLength(1);
+    expect(blocks.find((b: any) => b.type === 'image').url).toBe('https://cdn/b.png');
+  });
 });

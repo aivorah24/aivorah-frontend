@@ -99,6 +99,21 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
     onChange(next);
   }
 
+  function removeImageBlock(ui: number, ti: number, blockIndex: number) {
+    const next = { ...content };
+    next.units = content.units.map((u, i) => {
+      if (i !== ui) return u;
+      return {
+        ...u,
+        topics: u.topics.map((t, j) => {
+          if (j !== ti || !t.content) return t;
+          return { ...t, content: { ...t.content, blocks: t.content.blocks.filter((_, k) => k !== blockIndex) } };
+        }),
+      };
+    });
+    onChange(next);
+  }
+
   function removeLesson(ui: number, ti: number, li: number) {
     const next = { ...content };
     next.units = content.units.map((u, i) => {
@@ -154,6 +169,26 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                   )}
                 </View>
               )}
+
+              {!!topic.content?.blocks?.length && (() => {
+                const imageBlocks = topic.content!.blocks
+                  .map((b, blockIndex) => ({ b, blockIndex }))
+                  .filter(({ b }) => b.type === 'image');
+                return (
+                  <View testID={`visuals-${ui}-${ti}`} style={styles.visualsRow}>
+                    <Text style={styles.sectionLabel}>Visuals: {imageBlocks.length}</Text>
+                    {!readOnly && imageBlocks.map(({ blockIndex }, idx) => (
+                      <TouchableOpacity
+                        key={blockIndex}
+                        testID={`remove-image-${ui}-${ti}-${idx}`}
+                        onPress={() => removeImageBlock(ui, ti, blockIndex)}
+                      >
+                        <Text style={styles.removeText}>Remove image {idx + 1}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                );
+              })()}
 
               <Text style={styles.sectionLabel}>Objectives</Text>
               {topic.objectives.map((objective, oi) => (
@@ -254,6 +289,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   needsInputBadge: { fontSize: 11, fontWeight: '700', color: colors.accentOrange, textTransform: 'uppercase' },
   needsInputHint: { fontSize: 13, color: colors.textMain },
   sectionLabel: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
+  visualsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flexInput: { flex: 1, paddingVertical: 4, color: colors.textMain },
   lessonBlock: { marginTop: 4 },
