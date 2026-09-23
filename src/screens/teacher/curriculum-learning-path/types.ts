@@ -24,10 +24,27 @@ export interface TeacherContentBlock {
   [key: string]: any;
 }
 
+export interface TeacherTopicBook {
+  pdfFile: string;
+  bookPath: string | null;
+  bookTitle: string | null;
+  chapterTitle: string;
+  pdfPage: number;
+  confidence: number;
+}
+
 export interface TeacherTopicContent {
   whatYoullLearn: string[];
   blocks: TeacherContentBlock[];
   contentType?: string;
+  book?: TeacherTopicBook;
+}
+
+export interface TopicQuality {
+  readingGrade: number;
+  sentenceLength: number;
+  judgeScores: Record<string, { ageAppropriate: number; matchesChapter: number; factuallySound: number; clearExamples: number }> | null;
+  issues: string[];
 }
 
 export interface LearningPathTopic {
@@ -40,6 +57,7 @@ export interface LearningPathTopic {
   teacherHint?: string | null;
   content?: TeacherTopicContent | null;
   groundingSource?: string;
+  quality?: TopicQuality | null;
 }
 
 export interface LearningPathUnit {

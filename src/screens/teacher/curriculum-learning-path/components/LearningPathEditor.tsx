@@ -18,6 +18,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [previewTopic, setPreviewTopic] = useState<LearningPathTopic | null>(null);
+  const [expandedQuality, setExpandedQuality] = useState<string | null>(null);
 
   function updateUnitTitle(ui: number, title: string) {
     const next = { ...content, units: content.units.map((u, i) => (i === ui ? { ...u, title } : u)) };
@@ -190,6 +191,28 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 );
               })()}
 
+              {!!topic.quality && (() => {
+                const key = `${ui}-${ti}`;
+                const issueCount = topic.quality!.issues.length;
+                const expanded = expandedQuality === key;
+                return (
+                  <View testID={`grade-fit-${ui}-${ti}`}>
+                    <TouchableOpacity onPress={() => setExpandedQuality(expanded ? null : key)}>
+                      <Text style={issueCount === 0 ? styles.gradeFitOk : styles.gradeFitWarn}>
+                        {issueCount === 0 ? 'Grade fit ✓' : `⚠ ${issueCount} issue${issueCount === 1 ? '' : 's'}`}
+                      </Text>
+                    </TouchableOpacity>
+                    {expanded && issueCount > 0 && (
+                      <View testID={`grade-fit-issues-${ui}-${ti}`}>
+                        {topic.quality!.issues.map((issue, ii) => (
+                          <Text key={ii} style={styles.gradeFitIssue}>{`• ${issue}`}</Text>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
               <Text style={styles.sectionLabel}>Objectives</Text>
               {topic.objectives.map((objective, oi) => (
                 <View key={oi} style={styles.row}>
@@ -289,6 +312,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   needsInputBadge: { fontSize: 11, fontWeight: '700', color: colors.accentOrange, textTransform: 'uppercase' },
   needsInputHint: { fontSize: 13, color: colors.textMain },
   sectionLabel: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
+  gradeFitOk: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  gradeFitWarn: { fontSize: 12, color: colors.accentOrange, fontWeight: '600', marginTop: 4 },
+  gradeFitIssue: { fontSize: 12, color: colors.textMuted, marginLeft: 4, marginTop: 2 },
   visualsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flexInput: { flex: 1, paddingVertical: 4, color: colors.textMain },
