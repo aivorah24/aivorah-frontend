@@ -10,13 +10,16 @@ import type { Question, QuizPhase } from '../types';
 export function useQuiz(params: {
   topic: string; grade: string; subject: string; curriculum: string;
   passageText?: string; topicId?: string;
+  // Teacher-authored practice questions (Phase 2/4) — when present, skip
+  // /ibpyp/quiz generation and use these directly.
+  practiceQuiz?: any[];
   userEmail?: string; userRole?: string; userId?: string;
   navigation: any;
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
   recordStudyTime: (mins: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
 }) {
-  const { topic, grade, subject, curriculum, passageText, topicId, userEmail, userRole, userId, navigation, completeLesson, addXP, recordStudyTime } = params;
+  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, userId, navigation, completeLesson, addXP, recordStudyTime } = params;
 
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -102,6 +105,11 @@ export function useQuiz(params: {
     quizStartTimeRef.current = Date.now();
     questionStartTimeRef.current = Date.now();
     if (isRetake) setAttemptNumber(n => n + 1);
+    if (practiceQuiz?.length) {
+      setQuestions(normalizeQuizQuestions(practiceQuiz));
+      setPhase('quiz');
+      return;
+    }
     try {
       const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/quiz`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -115,7 +123,7 @@ export function useQuiz(params: {
       Alert.alert('Error', 'Could not generate quiz. Please try again.');
       navigation.goBack();
     }
-  }, [topic, grade, subject, curriculum, passageText, userEmail]);
+  }, [topic, grade, subject, curriculum, passageText, userEmail, practiceQuiz]);
 
   useEffect(() => {
     // data fetching effect — setState happens inside fetchQuiz, not synchronously here

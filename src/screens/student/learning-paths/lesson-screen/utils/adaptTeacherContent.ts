@@ -23,10 +23,38 @@ export interface TeacherBlock {
   rows?: string[][];
 }
 
+export interface TeacherListenPart {
+  heading: string;
+  text: string;
+  keyIdea?: string;
+  pauseThink?: { question: string; options: string[]; correctIndex: number };
+}
+
+export interface TeacherPracticeQuestion {
+  type: 'mcq' | 'fill_blank';
+  question: string;
+  options: string[];
+  correct: number | string;
+  hint?: string;
+  explanation?: string;
+}
+
+export interface TeacherTopicBook {
+  pdfFile: string;
+  bookPath: string | null;
+  bookTitle: string | null;
+  chapterTitle: string;
+  pdfPage: number;
+  confidence: number;
+}
+
 export interface TeacherTopicContent {
   whatYoullLearn: string[];
   blocks: TeacherBlock[];
   contentType?: string;
+  listenParts?: TeacherListenPart[];
+  practiceQuiz?: TeacherPracticeQuestion[];
+  book?: TeacherTopicBook;
 }
 
 function paragraphFor(block: TeacherBlock): string {
@@ -73,10 +101,17 @@ export function adaptTeacherContentToTopic(topicTitle: string, content: TeacherT
       exampleType: b.exampleType,
     }));
 
+  const book = content?.book;
+
   return {
     name: topicTitle || 'This topic',
     kind: 'Topic',
     page: '',
+    // Real NCERT chapter match (Phase 3, backend) — falls through to
+    // undefined for older paths, which keeps today's no-book-pane behavior.
+    pdfFile: book?.pdfFile,
+    bookPath: book?.bookPath || undefined,
+    pdfPage: book?.pdfPage,
     readText: {
       intro,
       keyLearnings: content?.whatYoullLearn || [],
@@ -87,6 +122,9 @@ export function adaptTeacherContentToTopic(topicTitle: string, content: TeacherT
       figureUrl: imageBlock?.url || undefined,
       figureCaption: imageBlock?.caption || '',
       table: tableBlock ? { caption: tableBlock.caption, headers: tableBlock.headers || [], rows: tableBlock.rows || [] } : undefined,
+      // Teacher-authored audio/AI-Tutor script — LessonScreen.tsx already
+      // prefers readText.listenParts over the rough LearningBlocks narration.
+      listenParts: content?.listenParts,
     },
   } as any;
 }

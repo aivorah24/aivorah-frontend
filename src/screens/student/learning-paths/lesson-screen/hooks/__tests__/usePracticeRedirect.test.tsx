@@ -85,6 +85,27 @@ describe('usePracticeRedirect', () => {
     expect((globalThis as any).__navigate).not.toHaveBeenCalled();
   });
 
+  test('teacherContent.practiceQuiz is forwarded as the Quiz screen\'s practiceQuiz param', async () => {
+    function TeacherHarness() {
+      const [m, setM] = React.useState<Mode>('practice');
+      const navigate = React.useMemo(() => jest.fn(), []);
+      React.useEffect(() => { (globalThis as any).__navigate = navigate; }, [navigate]);
+      const topic = { name: 'Whole Numbers', readText: { intro: 'x', body: [] } };
+      const practiceQuiz = [{ type: 'mcq', question: 'Q1', options: ['A', 'B'], correct: 0 }];
+      usePracticeRedirect(m, setM, topic, { navigate }, {
+        grade: 'Grade 6', subject: 'Mathematics', curriculum: 'CBSE', topicId: undefined,
+        chapterIndex: 0, topicIndex: 0, byNameTopic: undefined, chapterTitle: undefined,
+        teacherContent: { practiceQuiz },
+      });
+      return <Text testID="mode">{m}</Text>;
+    }
+    await render(<TeacherHarness />);
+
+    await waitFor(() => expect((globalThis as any).__navigate).toHaveBeenCalled());
+    const call = (globalThis as any).__navigate.mock.calls[0][1];
+    expect(call.practiceQuiz).toEqual([{ type: 'mcq', question: 'Q1', options: ['A', 'B'], correct: 0 }]);
+  });
+
   test('a real topic with no readText omits passageText instead of crashing', async () => {
     const topic = { name: 'Math Basics' };
     await render(<Harness mode="practice" topic={topic} />);

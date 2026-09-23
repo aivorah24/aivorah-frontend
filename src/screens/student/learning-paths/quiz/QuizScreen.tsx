@@ -18,7 +18,7 @@ import QuizResult from './components/QuizResult';
 import QuizQuestion from './components/QuizQuestion';
 
 export default function QuizScreen({ navigation, route }: any) {
-  const { topic, grade = 'Grade 3', subject = 'Mathematics', curriculum = 'IB PYP', returnTo, returnParams, passageText, topicId } = route?.params ?? {};
+  const { topic, grade = 'Grade 3', subject = 'Mathematics', curriculum = 'IB PYP', returnTo, returnParams, passageText, topicId, practiceQuiz } = route?.params ?? {};
   // Whoever launched this quiz — SubjectTopics by default, but LessonScreen's
   // Practice tab passes its own returnTo/returnParams so back lands there
   // instead of always dumping the student back on the topic list.
@@ -33,7 +33,7 @@ export default function QuizScreen({ navigation, route }: any) {
   const accent = colors.accentYellow;
 
   const quiz = useQuiz({
-    topic, grade, subject, curriculum, passageText, topicId,
+    topic, grade, subject, curriculum, passageText, topicId, practiceQuiz,
     userEmail: user?.email, userRole: user?.role, userId: user?.id,
     navigation, completeLesson, addXP, recordStudyTime,
   });

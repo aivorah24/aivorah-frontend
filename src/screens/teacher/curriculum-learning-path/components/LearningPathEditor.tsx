@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
-import { LearningPathContent, LearningPathTopic } from '../types';
+import { LearningPathContent, TeacherTopicContent } from '../types';
 import StudentPreviewModal from './StudentPreviewModal';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 export default function LearningPathEditor({ content, onChange, readOnly }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [previewTopic, setPreviewTopic] = useState<LearningPathTopic | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<{ ui: number; ti: number } | null>(null);
   const [expandedQuality, setExpandedQuality] = useState<string | null>(null);
 
   function updateUnitTitle(ui: number, title: string) {
@@ -115,6 +115,15 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
     onChange(next);
   }
 
+  function updateTopicContent(ui: number, ti: number, nextContent: TeacherTopicContent) {
+    const next = { ...content };
+    next.units = content.units.map((u, i) => {
+      if (i !== ui) return u;
+      return { ...u, topics: u.topics.map((t, j) => (j === ti ? { ...t, content: nextContent } : t)) };
+    });
+    onChange(next);
+  }
+
   function removeLesson(ui: number, ti: number, li: number) {
     const next = { ...content };
     next.units = content.units.map((u, i) => {
@@ -152,7 +161,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                 style={styles.topicTitleInput}
               />
 
-              <TouchableOpacity testID={`preview-as-student-${ui}-${ti}`} onPress={() => setPreviewTopic(topic)}>
+              <TouchableOpacity testID={`preview-as-student-${ui}-${ti}`} onPress={() => setPreviewIndex({ ui, ti })}>
                 <Text style={styles.previewText}>Preview as student</Text>
               </TouchableOpacity>
 
@@ -285,8 +294,13 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
           ))}
         </View>
       ))}
-      {previewTopic && (
-        <StudentPreviewModal topic={previewTopic} colors={colors} onClose={() => setPreviewTopic(null)} />
+      {previewIndex && (
+        <StudentPreviewModal
+          topic={content.units[previewIndex.ui].topics[previewIndex.ti]}
+          colors={colors}
+          onClose={() => setPreviewIndex(null)}
+          onChangeContent={readOnly ? undefined : (next) => updateTopicContent(previewIndex.ui, previewIndex.ti, next)}
+        />
       )}
     </View>
   );

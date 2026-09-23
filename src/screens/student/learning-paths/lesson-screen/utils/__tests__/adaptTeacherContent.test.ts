@@ -81,6 +81,25 @@ describe('adaptTeacherContentToTopic', () => {
     expect(topic.readText.figureUrl).toBeUndefined();
   });
 
+  test('maps content.listenParts to readText.listenParts (LessonScreen prefers these over prose narration)', () => {
+    const listenParts = [{ heading: 'Intro', text: 'Numbers are everywhere.', keyIdea: 'Numbers describe quantity.', pauseThink: { question: 'What is a number?', options: ['A', 'B', 'C', 'D'], correctIndex: 0 } }];
+    const topic = adaptTeacherContentToTopic('X', { whatYoullLearn: [], blocks: [], listenParts });
+    expect(topic.readText.listenParts).toEqual(listenParts);
+  });
+
+  test('maps content.book to pdfFile/bookPath/pdfPage so the existing BookPane/"View in Book" appears', () => {
+    const book = { pdfFile: 'fecu105.pdf', bookPath: 'grade6/science/fecu105.pdf', bookTitle: 'Curiosity', chapterTitle: 'Nutrition', pdfPage: 8, confidence: 0.9 };
+    const topic = adaptTeacherContentToTopic('X', { whatYoullLearn: [], blocks: [], book });
+    expect(topic.pdfFile).toBe('fecu105.pdf');
+    expect(topic.bookPath).toBe('grade6/science/fecu105.pdf');
+    expect(topic.pdfPage).toBe(8);
+  });
+
+  test('older topics with no content.book leave pdfFile undefined, so no book pane/View in Book shows', () => {
+    const topic = adaptTeacherContentToTopic('X', { whatYoullLearn: [], blocks: [] });
+    expect(topic.pdfFile).toBeUndefined();
+  });
+
   test('never throws on null/undefined content', () => {
     expect(() => adaptTeacherContentToTopic('X', null)).not.toThrow();
     expect(() => adaptTeacherContentToTopic('X', undefined)).not.toThrow();

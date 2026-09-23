@@ -33,7 +33,7 @@ function mockFetchRoutes(overrides: Record<string, any> = {}) {
   }) as any;
 }
 
-function Harness({ questions, userId }: { questions?: any; userId?: string } = {}) {
+function Harness({ questions, userId, practiceQuiz }: { questions?: any; userId?: string; practiceQuiz?: any[] } = {}) {
   const completeLesson = React.useMemo(() => jest.fn(), []);
   const addXP = React.useMemo(() => jest.fn(), []);
   const recordStudyTime = React.useMemo(() => jest.fn(), []);
@@ -44,7 +44,7 @@ function Harness({ questions, userId }: { questions?: any; userId?: string } = {
 
   const h = useQuiz({
     topic: 'Topic', grade: 'Grade 6', subject: 'English', curriculum: 'CBSE',
-    userEmail: 'a@a.com', userRole: 'student', userId,
+    userEmail: 'a@a.com', userRole: 'student', userId, practiceQuiz,
     navigation,
     completeLesson,
     addXP,
@@ -94,6 +94,16 @@ describe('useQuiz — fetching', () => {
     mockFetchRoutes({ quiz: { questions: [] } });
     await render(<Harness />);
     await waitFor(() => expect((globalThis as any).__lastMocks.navigation.goBack).toHaveBeenCalled());
+  });
+});
+
+describe('useQuiz — teacher-authored practiceQuiz (preset path)', () => {
+  test('when practiceQuiz is provided, it is used directly and /ibpyp/quiz is never called', async () => {
+    const preset = [{ type: 'mcq', question: 'Preset Q', options: ['A', 'B', 'C', 'D'], correct: 2, hint: 'h', explanation: 'e' }];
+    await render(<Harness practiceQuiz={preset} />);
+
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/ibpyp/quiz'), expect.anything());
   });
 });
 

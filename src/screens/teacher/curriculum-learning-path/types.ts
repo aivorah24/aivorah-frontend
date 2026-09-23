@@ -33,11 +33,35 @@ export interface TeacherTopicBook {
   confidence: number;
 }
 
+export interface TeacherPauseThink {
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+export interface TeacherListenPart {
+  heading: string;
+  text: string;
+  keyIdea?: string;
+  pauseThink?: TeacherPauseThink;
+}
+
+export interface TeacherPracticeQuestion {
+  type: 'mcq' | 'fill_blank';
+  question: string;
+  options: string[];
+  correct: number | string;
+  hint?: string;
+  explanation?: string;
+}
+
 export interface TeacherTopicContent {
   whatYoullLearn: string[];
   blocks: TeacherContentBlock[];
   contentType?: string;
   book?: TeacherTopicBook;
+  listenParts?: TeacherListenPart[];
+  practiceQuiz?: TeacherPracticeQuestion[];
 }
 
 export interface TopicQuality {

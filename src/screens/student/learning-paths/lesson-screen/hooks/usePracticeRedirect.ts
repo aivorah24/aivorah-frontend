@@ -36,11 +36,15 @@ export function usePracticeRedirect(
     // questions from nothing.
     if (!contentReady) return;
     setMode('read');
+    // Teacher-authored practice questions (Phase 2) — when present, Quiz
+    // uses these directly and skips the /ibpyp/quiz generation call.
+    const practiceQuiz = (params.teacherContent as any)?.practiceQuiz;
     navigation.navigate('Quiz', {
       topic: topic.name, grade: params.grade, subject: params.subject, curriculum: params.curriculum, topicId: params.topicId,
       passageText: (topic as any).readText
         ? `${(topic as any).readText.intro} ${(topic as any).readText.body?.join(' ') ?? ''}`.trim()
         : undefined,
+      practiceQuiz,
       returnTo: 'LessonScreen',
       returnParams: {
         subject: params.subject, curriculum: params.curriculum, grade: params.grade,
