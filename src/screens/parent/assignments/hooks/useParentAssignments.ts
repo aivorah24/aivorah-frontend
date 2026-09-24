@@ -45,6 +45,8 @@ export function useParentAssignments() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  // Which child the loaded list belongs to (deep links must not open a sibling's copy).
+  const [assignmentsChildId, setAssignmentsChildId] = useState<string | null>(null);
   const [childStats, setChildStats] = useState<any>(null);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
 
@@ -100,9 +102,11 @@ export function useParentAssignments() {
 
   const fetchAssignments = useCallback(() => {
     if (!child) return;
+    const forChild = child.id;
     parentAssignmentsService.fetchAssignmentsAndStats(child.id)
       .then(({ assignments: a, stats }) => {
         setAssignments(a);
+        setAssignmentsChildId(forChild);
         if (stats) setChildStats(stats);
         setAssignmentsLoading(false);
       })
@@ -249,7 +253,7 @@ export function useParentAssignments() {
 
   return {
     parentEmail, children, selectedIdx, setSelectedIdx, child,
-    activeFilter, setActiveFilter, filtered, assignments,
+    activeFilter, setActiveFilter, filtered, assignments, assignmentsChildId,
     loading, completed, pending, overdue, totalStudyMins, completionPct, onTrackPct,
     showModal, setShowModal, reportAssignment, setReportAssignment,
     detailAssignment, setDetailAssignment,

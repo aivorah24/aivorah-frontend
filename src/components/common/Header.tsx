@@ -20,6 +20,7 @@ import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
 import { useTheme } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
+import { openNotification } from '../../navigation/openNotification';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
@@ -98,6 +99,13 @@ export default function Header({
     clearUnreadChallenges,
     clearUnreadEvents,
     unreadJoinRequests,
+    notificationsV2Active,
+    feedStatus,
+    hasMore,
+    loadingMore,
+    loadMore,
+    markNotificationRead,
+    markAllRead,
   } = useNotification();
 
   // Resolve screen names based on user role
@@ -281,10 +289,11 @@ const [editingName, setEditingName] = useState(false);
             onNotificationPress?.();
           }}
           activeOpacity={0.7}
+          testID="header-bell-button"
         >
           <Feather name="bell" size={18} color={count > 0 ? colors.accentYellow : colors.accentYellow + 'AA'} />
           {count > 0 && (
-            <View style={styles.notifBadge}>
+            <View style={styles.notifBadge} testID="header-bell-badge">
               <Text style={styles.notifCount}>{count > 9 ? '9+' : count}</Text>
             </View>
           )}
@@ -302,9 +311,7 @@ const [editingName, setEditingName] = useState(false);
                     <TouchableOpacity
                       onPress={() => {
                         setBellVisible(false);
-                        void clearUnread();
-                        void clearUnreadAssignments();
-                        void clearUnreadChallenges();
+                        void markAllRead();
                       }}
                       activeOpacity={0.7}
                       style={styles.markAllBtn}
@@ -317,7 +324,16 @@ const [editingName, setEditingName] = useState(false);
                   </TouchableOpacity>
                 </View>
 
-                {(count > 0 || notificationItems.length > 0) ? (
+                {feedStatus === 'error' && (
+                  <Text style={[styles.notifPreview, { paddingHorizontal: 16, paddingVertical: 6 }]} testID="notif-feed-error">
+                    Couldn&apos;t refresh notifications. Showing the latest we have.
+                  </Text>
+                )}
+                {feedStatus === 'loading' && count === 0 && notificationItems.length === 0 ? (
+                  <View style={styles.noNotifState} testID="notif-loading">
+                    <ActivityIndicator size="small" color={colors.accentYellow} />
+                  </View>
+                ) : (count > 0 || notificationItems.length > 0) ? (
                   <View style={{ overflowY: 'auto', maxHeight: 400 } as any}>
 
                     {/* School join requests (school admin) — jump to the review panel */}
@@ -355,40 +371,16 @@ const [editingName, setEditingName] = useState(false);
                       return (
                       <TouchableOpacity
                         key={item.id}
-                        style={styles.notifItem}
+                        style={[styles.notifItem, item.readAt ? { opacity: 0.6 } : null]}
                         activeOpacity={0.75}
+                        testID={`notif-item-${item.id}`}
                         onPress={() => {
                           setBellVisible(false);
-                          // Deep-link straight into the tapped item — the target screen
-                          // auto-opens the entry matching highlightId.
-                          if (isMessage) {
-                            void clearUnread();
-                            navigation.navigate(screenNames.messages, item.senderEmail ? { openWith: item.senderEmail } : undefined);
-                          } else if (isChallenge) {
-                            void clearUnreadChallenges();
-                            navigation.navigate(screenNames.challenges, { highlightId: item.id, tab: 'assigned' });
-                          } else if (isEvent) {
-                            void clearUnreadEvents();
-                            // Event notification items are prefixed 'evt_' + the real
-                            // schedule_events.id (see notifications-summary) — strip it
-                            // so the Schedule screen can look the event up directly.
-                            navigation.navigate(screenNames.schedule, { highlightId: String(item.id).replace(/^evt_/, '') });
-                          } else if (isPortfolio) {
-                            void clearUnreadEvents();
-                            navigation.navigate('ClassDetail', {
-                              grade: (item as any).grade,
-                              section: (item as any).section,
-                              postId: (item as any).postId,
-                              label: `${(item as any).grade || 'Class'} Portfolio`
-                            });
-                          } else if (isTask) {
-                            void clearUnreadEvents();
-                            // Daily tasks live on the student's Daily Habits screen.
-                            navigation.navigate('DailyHabits');
-                          } else {
-                            void clearUnreadAssignments();
-                            navigation.navigate(screenNames.assignments, { highlightId: item.id });
-                          }
+                          openNotification(item, {
+                            role,
+                            navigate: (screen, params) => navigation.navigate(screen, params),
+                            actions: { markNotificationRead, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents },
+                          });
                         }}
                       >
                         <View style={[styles.notifIconWrap, { backgroundColor: accent + '22' }]}>
@@ -403,10 +395,24 @@ const [editingName, setEditingName] = useState(false);
                           <Text style={styles.notifPreview} numberOfLines={1}>{item.subtitle}</Text>
                           <Text style={styles.notifTime}>{formatNotifTime(item.createdAt)}</Text>
                         </View>
-                        <View style={styles.notifUnreadDot} />
+                        {!item.readAt && <View style={styles.notifUnreadDot} testID="notif-unread-dot" />}
                       </TouchableOpacity>
                       );
                     })}
+
+                    {hasMore && (
+                      <TouchableOpacity
+                        style={[styles.notifItem, { justifyContent: 'center' }]}
+                        activeOpacity={0.75}
+                        onPress={() => { void loadMore(); }}
+                        disabled={loadingMore}
+                        testID="notif-load-more"
+                      >
+                        {loadingMore
+                          ? <ActivityIndicator size="small" color={colors.accentYellow} />
+                          : <Text style={[styles.notifPreview, { color: colors.accentYellow }]}>Load older notifications</Text>}
+                      </TouchableOpacity>
+                    )}
 
                     {/* Fallback when unread messages exist but no preview is available */}
                     {unreadCount > 0 && !notificationItems.some(i => i.type === 'message') && (
@@ -448,8 +454,8 @@ const [editingName, setEditingName] = useState(false);
                       </TouchableOpacity>
                     )}
 
-                    {/* Challenges summary — only when no per-challenge items are shown above */}
-                    {unreadChallenges > 0 && !notificationItems.some(i => i.type === 'challenge') && (
+                    {/* Challenges summary — legacy only, when no per-challenge items are shown above */}
+                    {!notificationsV2Active && unreadChallenges > 0 && !notificationItems.some(i => i.type === 'challenge') && (
                       <TouchableOpacity
                         style={styles.notifItem}
                         activeOpacity={0.75}
@@ -473,7 +479,7 @@ const [editingName, setEditingName] = useState(false);
                     )}
 
                     {/* Assignments count summary (if no individual items) */}
-                    {unreadAssignments > 0 && !notificationItems.some(i => i.type === 'assignment' || i.type === 'quiz') && (
+                    {!notificationsV2Active && unreadAssignments > 0 && !notificationItems.some(i => i.type === 'assignment' || i.type === 'quiz') && (
                       <TouchableOpacity
                         style={styles.notifItem}
                         activeOpacity={0.75}

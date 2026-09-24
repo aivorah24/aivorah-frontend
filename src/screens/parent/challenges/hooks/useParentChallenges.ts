@@ -15,6 +15,8 @@ export function useParentChallenges() {
   const [loadingStats, setLoadingStats] = useState(false);
 
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  // Which child the loaded list belongs to (deep links must not open a sibling's copy).
+  const [challengesChildId, setChallengesChildId] = useState<string | null>(null);
   const [loadingCh, setLoadingCh] = useState(false);
 
   // Fetch children on every focus so a newly added child appears instantly.
@@ -42,8 +44,9 @@ export function useParentChallenges() {
   const loadChallenges = useCallback((showSpinner = false) => {
     if (!child?.grade || !user?.email) return;
     if (showSpinner) setLoadingCh(true);
+    const forChild = child.id;
     fetchChallengesApi(child, user.email)
-      .then(data => setChallenges(data))
+      .then(data => { setChallenges(data); setChallengesChildId(forChild); })
       .catch(() => {})
       .finally(() => { if (showSpinner) setLoadingCh(false); });
   }, [child?.id, child?.grade, user?.email]);
@@ -84,7 +87,7 @@ export function useParentChallenges() {
   return {
     children, selectedIdx, setSelectedIdx, child,
     childStats, loadingStats,
-    challenges, loadingCh,
+    challenges, loadingCh, challengesChildId,
     challengeGroups,
     refresh: () => { loadChallenges(); loadStats(); },
   };
