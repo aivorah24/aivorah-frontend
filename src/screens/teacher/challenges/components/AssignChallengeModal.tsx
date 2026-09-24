@@ -35,7 +35,7 @@ export function filterStudentsForChallenge(students: StudentItem[], challenge: C
 export default function AssignChallengeModal({
   visible, challenge, students, studentSearch, setStudentSearch,
   selectedStudent, setSelectedStudent, assigning, assignError, assignSuccess,
-  assignDueDate, setAssignDueDate, onClose, onAssign, colors, styles,
+  assignDueDate, setAssignDueDate, onClose, onAssign, colors, styles, assignedStudentIds = [],
 }: {
   visible: boolean;
   challenge: Challenge | null;
@@ -53,6 +53,7 @@ export default function AssignChallengeModal({
   onAssign: () => void;
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
+  assignedStudentIds?: string[];
 }) {
   const gold = colors.accentYellow;
 
@@ -117,11 +118,14 @@ export default function AssignChallengeModal({
                             ? 'No matching students.'
                             : `No ${challenge?.grade || 'matching'} students linked to your account.`}
                       </Text>
-                    ) : filteredStudents.map(s => (
+                    ) : filteredStudents.map(s => {
+                      const already = assignedStudentIds.includes(s.id);
+                      return (
                       <TouchableOpacity
                         key={s.id}
-                        style={styles.studentRow}
+                        style={[styles.studentRow, already && { opacity: 0.5 }]}
                         onPress={() => { setSelectedStudent(s); setStudentSearch(''); }}
+                        disabled={already}
                         activeOpacity={0.7}
                       >
                         <View style={styles.studentAvatar}>
@@ -131,9 +135,14 @@ export default function AssignChallengeModal({
                           <Text style={styles.studentName}>{s.name}</Text>
                           <Text style={styles.studentGrade}>{s.grade}</Text>
                         </View>
-                        <Feather name="chevron-right" size={14} color={colors.textDim} />
+                        {already ? (
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: colors.accentGreen }}>Assigned</Text>
+                        ) : (
+                          <Feather name="chevron-right" size={14} color={colors.textDim} />
+                        )}
                       </TouchableOpacity>
-                    ))}
+                      );
+                    })}
                   </ScrollView>
                 </>
               )}

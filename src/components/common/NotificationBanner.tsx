@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function NotificationBanner({ onNavigate }: Props) {
-  const { toastVisible, latestNotif, unreadAssignments, unreadChallenges, notificationItems, dismissToast } = useNotification();
+  const { toastVisible, toastItem, latestNotif, unreadAssignments, unreadChallenges, notificationItems, dismissToast } = useNotification();
   const { colors } = useTheme();
   const { user } = useAuth();
 
@@ -68,10 +68,29 @@ export default function NotificationBanner({ onNavigate }: Props) {
   let targetParams: Record<string, any> | undefined;
   const isAivorahMsg = hasMsg && (latestNotif!.senderName === 'Aivorah' || latestNotif!.senderEmail === 'system@aivorah.com');
 
-  if (hasAssign) {
+  // Show what actually just arrived; the category fallbacks below only apply
+  // when the new thing isn't in the feed (e.g. beyond the server's item cap).
+  if (toastItem) {
+    const it = toastItem;
+    const byType: Record<string, { icon: string; title: string; screen: string; params?: Record<string, any> }> = {
+      message:    { icon: 'message-square', title: it.title, screen: msgScreen, params: it.senderEmail ? { openWith: it.senderEmail } : undefined },
+      challenge:  { icon: 'award', title: `New challenge: ${it.title}`, screen: challengeScreen, params: { highlightId: it.id, tab: 'assigned' } },
+      assignment: { icon: 'clipboard', title: `New assignment: ${it.title}`, screen: assignScreen, params: { highlightId: it.id } },
+      quiz:       { icon: 'clipboard', title: `New quiz: ${it.title}`, screen: assignScreen, params: { highlightId: it.id } },
+      task:       { icon: 'check-circle', title: 'New daily task', screen: 'DailyHabits' },
+      portfolio:  { icon: 'image', title: it.title, screen: 'ClassDetail', params: { grade: (it as any).grade, section: (it as any).section, postId: (it as any).postId, label: `${(it as any).grade || 'Class'} Portfolio` } },
+      event:      { icon: 'calendar', title: it.title, screen: role === 'parent' ? 'ParentSchedule' : role === 'teacher' ? 'TeacherSchedule' : 'Schedule', params: { highlightId: String(it.id).replace(/^evt_/, '') } },
+    };
+    const cfg = byType[it.type] ?? { icon: 'bell', title: it.title, screen: msgScreen };
+    icon = cfg.icon;
+    title = cfg.title;
+    subtitle = it.subtitle || 'Tap to view';
+    targetScreen = cfg.screen;
+    targetParams = cfg.params;
+  } else if (hasAssign) {
     icon = 'clipboard';
     iconColor = colors.accentYellow;
-    const latestItem = notificationItems[0];
+    const latestItem = notificationItems.find(i => i.type === 'assignment' || i.type === 'quiz');
     title = latestItem
       ? (latestItem.type === 'quiz' ? `New quiz: ${latestItem.title}` : `New assignment: ${latestItem.title}`)
       : (unreadAssignments === 1 ? 'New assignment added' : `${unreadAssignments} new assignments`);
