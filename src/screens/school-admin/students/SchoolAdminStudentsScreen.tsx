@@ -38,6 +38,7 @@ import { StudentDetailDrawer } from './components/StudentDetailDrawer';
 import { StudentsToolbar } from './components/StudentsToolbar';
 import { StudentsBulkActionBar } from './components/StudentsBulkActionBar';
 import { STATUS_LABEL } from './constants';
+import { promoteGradeChoices, gradeNum, ALL_GRADE_CHIPS } from './utils/promoteGradeChoices';
 import { useStudentsListState, getGradesForCurriculum, type StatusFilter, type SortKey } from './hooks/useStudentsListState';
 
 export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
@@ -370,15 +371,7 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
 }
 
 // ── Promote Students (bulk grade/section move) ──────────────────────────────
-function gradeNum(g: string | null | undefined): number | null {
-  if (!g) return null;
-  const m = String(g).match(/\d+/);
-  return m ? parseInt(m[0], 10) : null;
-}
-
 const IB_PROGRAMS = ['IB PYP', 'IB MYP', 'IB DP'];
-const ALL_GRADE_CHIPS = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-
 function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, facetSections, colors, onClose, onConfirm }: {
   visible: boolean; allStudents: StudentRow[]; preselectedIds: string[];
   facetGrades: string[]; facetSections: string[]; colors: AppColors;
@@ -413,16 +406,11 @@ function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, face
     [selectedStudents]
   );
 
-  const gradeChoices = useMemo(() => {
-    const pool = isIBSelection
-      ? (targetProgram ? getGradesForCurriculum(targetProgram) || [] : ALL_GRADE_CHIPS)
-      : (facetGrades.length > 0 ? facetGrades : ALL_GRADE_CHIPS);
-    if (maxCurrentGradeNum === null) return pool;
-    return pool.filter((g) => {
-      const n = gradeNum(g);
-      return n === null || n > maxCurrentGradeNum;
-    });
-  }, [isIBSelection, targetProgram, facetGrades, maxCurrentGradeNum]);
+  const gradeChoices = useMemo(() => promoteGradeChoices(
+    facetGrades,
+    maxCurrentGradeNum,
+    isIBSelection ? (targetProgram ? getGradesForCurriculum(targetProgram) || [] : ALL_GRADE_CHIPS) : undefined,
+  ), [isIBSelection, targetProgram, facetGrades, maxCurrentGradeNum]);
 
   async function handleConfirm() {
     if (!targetGrade.trim()) { setErr('Pick a target grade.'); return; }
