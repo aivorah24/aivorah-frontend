@@ -110,6 +110,7 @@ export default function OnboardingStudentBoxes() {
           country: country || undefined,
           dob: dob || undefined,
           gender: gender || undefined,
+          avatarStyle, learningStyle: learningStyle || undefined,
         }),
       });
       if (!profileRes.ok) {
@@ -166,6 +167,8 @@ export default function OnboardingStudentBoxes() {
         // primary, awaited profile save otherwise succeeded.
         dob: dob || undefined,
         gender: gender || undefined,
+        avatarStyle,
+        learningStyle: learningStyle || undefined,
       };
 
       const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
