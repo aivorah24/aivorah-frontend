@@ -68,7 +68,7 @@ export default function TeachingEntriesEditor({
   }
 
   return (
-    <View>
+    <View testID="teaching-entries-editor" style={{ position: 'relative', zIndex: openDropdown ? 50 : 1 }}>
       {entries.map((entry, idx) => {
         const gradeOptions = entry.curriculum ? getGradesForCurriculum(entry.curriculum).map((g) => ({ value: g, label: g })) : [];
         const curriculumKey = `${idx}-curriculum`;
