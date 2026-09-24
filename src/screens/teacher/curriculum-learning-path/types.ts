@@ -1,12 +1,24 @@
 export type CurriculumStatus =
   | 'uploaded' | 'processing' | 'processed' | 'generating' | 'generated' | 'failed';
 
+export type CurriculumStage = 'queued' | 'extracting' | 'analysing' | 'generating' | 'saving' | 'done' | 'failed';
+
+export interface CurriculumProgress {
+  stage: CurriculumStage;
+  topicsDone: number | null;
+  topicsTotal: number | null;
+  updatedAt: string;
+}
+
+export type UploadPhase = 'idle' | 'uploading' | 'upload_failed' | 'tracking';
+
 export interface TeacherCurriculum {
   id: string;
   file_name: string;
   mime_type: string;
   status: CurriculumStatus;
   error?: string | null;
+  progress?: CurriculumProgress | null;
 }
 
 export interface LearningPathLesson {

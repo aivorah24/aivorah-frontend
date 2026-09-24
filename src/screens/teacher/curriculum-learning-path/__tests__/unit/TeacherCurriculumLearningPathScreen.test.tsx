@@ -87,22 +87,6 @@ describe('TeacherCurriculumLearningPathScreen pre-upload config wiring', () => {
       expect.objectContaining({ curriculum: expect.any(String), grade: expect.any(String), subject: expect.any(String) })
     );
   });
-
-  test('resets the previous upload before starting a new one', async () => {
-    const reset = jest.fn();
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: { id: 'c1', file_name: 'old.pdf', status: 'generated' },
-      error: '', busy: false, pickAndUpload: jest.fn(), reset,
-    });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn());
-
-    const user = userEvent.setup();
-    await render(<TeacherCurriculumLearningPathScreen />);
-
-    await user.press(screen.getByTestId('pre-upload-dropzone'));
-
-    expect(reset).toHaveBeenCalled();
-  });
 });
 
 describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {

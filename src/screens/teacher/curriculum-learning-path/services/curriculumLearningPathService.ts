@@ -1,6 +1,6 @@
 import { auth } from '../../../../config/firebase';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
-import { TeacherCurriculum, TeacherLearningPath, LearningPathContent } from '../types';
+import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent } from '../types';
 
 async function authHeaders(): Promise<Record<string, string>> {
   const idToken = await auth.currentUser?.getIdToken();
@@ -43,12 +43,27 @@ export async function uploadCurriculum(
   return parseOrThrow(res);
 }
 
-export async function getCurriculum(curriculumId: string): Promise<{ curriculum: TeacherCurriculum }> {
+export async function getCurriculum(curriculumId: string): Promise<{ curriculum: TeacherCurriculum; progress: CurriculumProgress | null }> {
   const headers = await authHeaders();
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}`, { headers });
   return parseOrThrow(res);
 }
 
+export async function listCurricula(limit = 1): Promise<{ curricula: TeacherCurriculum[] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum?limit=${limit}`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function retryCurriculum(curriculumId: string): Promise<{ curriculum: TeacherCurriculum; jobId: string }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}/retry`, {
+    method: 'POST', headers,
+  });
+  return parseOrThrow(res);
+}
+
+// Unused by the client: the backend auto-starts generation after extraction.
 export async function startGeneration(curriculumId: string): Promise<{ curriculum: TeacherCurriculum; jobId: string }> {
   const headers = await authHeaders();
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}/generate`, {

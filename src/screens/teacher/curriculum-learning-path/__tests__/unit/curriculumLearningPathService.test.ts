@@ -5,7 +5,7 @@ jest.mock('../../../../../config/learningPathsServerUrl', () => 'https://server.
 
 import { auth } from '../../../../../config/firebase';
 import {
-  uploadCurriculum, getCurriculum, startGeneration, getLearningPath, saveLearningPathDraft, publishLearningPath,
+  uploadCurriculum, getCurriculum, startGeneration, listCurricula, retryCurriculum, getLearningPath, saveLearningPathDraft, publishLearningPath,
 } from '../../services/curriculumLearningPathService';
 
 const realFetch = global.fetch;
@@ -61,6 +61,14 @@ describe('curriculumLearningPathService', () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ curriculum: { id: 'c1' }, jobId: 'j2' }) }) as any;
     await startGeneration('c1');
     expect(global.fetch).toHaveBeenCalledWith('https://server.test/teacher-curriculum/c1/generate', expect.objectContaining({ method: 'POST' }));
+  });
+
+  test('listCurricula requests the newest N and retryCurriculum posts to /retry', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ curricula: [] }) }) as any;
+    await listCurricula(1);
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe('https://server.test/teacher-curriculum?limit=1');
+    await retryCurriculum('c1');
+    expect((global.fetch as jest.Mock).mock.calls[1]).toEqual(['https://server.test/teacher-curriculum/c1/retry', expect.objectContaining({ method: 'POST' })]);
   });
 
   test('getLearningPath fetches the draft', async () => {

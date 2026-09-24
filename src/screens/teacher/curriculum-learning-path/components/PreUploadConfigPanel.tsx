@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import { spacing, radius } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
-import { CurriculumStatus } from '../types';
+import { CurriculumStatus, CurriculumProgress, UploadPhase } from '../types';
 
 export const CURRICULA = ['IB PYP', 'IB MYP', 'IB DP', 'CBSE', 'ICSE', 'Cambridge'];
 
@@ -31,20 +31,16 @@ export function getSubjectsForEntry(_curriculum: string, _grade: string): string
   return DEFAULT_SUBJECTS;
 }
 
-export const ANALYSIS_STEPS = ['Uploading document', 'Reading & extracting content', 'Generating learning path', 'Ready for review'];
+export const ANALYSIS_STEPS = ['File uploaded', 'Extracting content', 'Analysing curriculum', 'Generating learning path', 'Saving results'];
 
-// Maps our real backend status enum to a step index — no fake timers, no
-// simulated progress. 'processed' briefly sits at step 1 (extraction done,
-// about to auto-trigger generation) rather than jumping ahead of itself.
-function stepIndexForStatus(status: CurriculumStatus | null): number {
-  switch (status) {
-    case 'uploaded': return 0;
-    case 'processing': return 1;
-    case 'processed': return 1;
-    case 'generating': return 2;
-    case 'generated': return 3;
-    default: return -1;
-  }
+const STAGE_STEP: Record<string, number> = { queued: 2, extracting: 1, analysing: 2, generating: 3, saving: 4, done: 5 };
+const STATUS_STEP: Record<string, number> = { uploaded: 1, processing: 1, processed: 2, generating: 3, generated: 5 };
+
+// Real backend stage (or status when there is no progress row) -> active step; 5 = all done.
+function stepIndex(phase: UploadPhase, status: CurriculumStatus | null, progress: CurriculumProgress | null): number {
+  if (phase === 'uploading') return 0;
+  if (progress && STAGE_STEP[progress.stage] !== undefined) return STAGE_STEP[progress.stage];
+  return status ? (STATUS_STEP[status] ?? -1) : -1;
 }
 
 interface DetectedStructure {
@@ -60,6 +56,10 @@ interface Props {
   fileName: string | null;
   status: CurriculumStatus | null;
   statusError: string | null;
+  phase?: UploadPhase;
+  progress?: CurriculumProgress | null;
+  connectionIssue?: boolean;
+  onRetry?: () => void;
   busy: boolean;
   onPickFile: () => void;
   detected: DetectedStructure | null;
@@ -73,7 +73,7 @@ interface Props {
 
 export default function PreUploadConfigPanel({
   curriculum, setCurriculum, grade, setGrade, subject, setSubject, academicYear, setAcademicYear,
-  fileName, status, statusError, busy, onPickFile, detected,
+  fileName, status, statusError, phase = 'idle', progress = null, connectionIssue = false, onRetry, busy, onPickFile, detected,
   onSaveDraft, onPublish, canSaveDraft, canPublish, saving, publishing,
 }: Props) {
   const { colors } = useTheme();
@@ -88,8 +88,9 @@ export default function PreUploadConfigPanel({
     if (!validGrades.includes(grade)) setGrade(validGrades[0]);
   }
 
-  const stepIdx = stepIndexForStatus(status);
-  const failed = status === 'failed';
+  const failed = status === 'failed' || phase === 'upload_failed';
+  const stepIdx = failed ? -1 : stepIndex(phase, status, progress);
+  const uploading = phase === 'uploading';
 
   return (
     <View style={{ gap: spacing.lg }}>
@@ -149,6 +150,7 @@ export default function PreUploadConfigPanel({
             <View testID="pre-upload-file-chip" style={[s.fileChip, { borderColor: colors.borderColor }]}>
               <Feather name="file-text" size={16} color={colors.accentOrange} />
               <Text style={{ color: colors.textMain, fontSize: 12, fontWeight: '600', flex: 1 }} numberOfLines={1}>{fileName}</Text>
+              {uploading && <Text testID="upload-state" style={{ color: colors.textMuted, fontSize: 11 }}>Uploading…</Text>}
               {status === 'generated' && <Feather name="check-circle" size={16} color={colors.primary} />}
             </View>
           )}
@@ -157,7 +159,7 @@ export default function PreUploadConfigPanel({
 
         {/* Panel 2: Analysis progress — driven by real status transitions */}
         <View style={[s.panel, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
-          <PanelHeader n={2} title={stepIdx < 0 ? 'Aivorah will analyse your curriculum' : 'Processing your curriculum'} colors={colors} />
+          <PanelHeader n={2} title={stepIdx < 0 && !failed ? 'Aivorah will analyse your curriculum' : 'Processing your curriculum'} colors={colors} />
           {stepIdx < 0 && !failed ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
               <Feather name="cpu" size={22} color={colors.textMuted} />
@@ -166,12 +168,21 @@ export default function PreUploadConfigPanel({
           ) : failed ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
               <Feather name="alert-triangle" size={22} color={colors.accentRed} />
-              <Text style={{ color: colors.accentRed, fontSize: 12, marginTop: 8, textAlign: 'center' }}>Processing failed</Text>
+              <Text style={{ color: colors.accentRed, fontSize: 12, marginTop: 8, textAlign: 'center' }}>{phase === 'upload_failed' ? 'Upload failed' : 'Processing failed'}</Text>
+              {!!statusError && <Text testID="panel-error" style={{ color: colors.accentRed, fontSize: 12, marginTop: 4, textAlign: 'center' }}>{statusError}</Text>}
+              {!!onRetry && (
+                <TouchableOpacity testID="retry-button" onPress={onRetry} style={[s.chooseBtn, { backgroundColor: colors.accentYellow, marginTop: 10 }]}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12.5 }}>Retry</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
-            ANALYSIS_STEPS.map((step, i) => {
-              const done = i < stepIdx || status === 'generated';
-              const active = i === stepIdx && status !== 'generated';
+            ANALYSIS_STEPS.map((baseStep, i) => {
+              const done = i < stepIdx;
+              const active = i === stepIdx;
+              const step = i === 0 && uploading ? 'Uploading file…'
+                : i === 3 && active && progress?.topicsDone != null && progress?.topicsTotal != null
+                  ? `${baseStep} — topic ${progress.topicsDone} of ${progress.topicsTotal}` : baseStep;
               return (
                 <View key={step} testID={`analysis-step-${i}`} style={s.stepRow}>
                   {done ? <Feather name="check-circle" size={14} color={colors.primary} />
@@ -181,6 +192,9 @@ export default function PreUploadConfigPanel({
                 </View>
               );
             })
+          )}
+          {connectionIssue && !failed && (
+            <Text testID="connection-issue" style={{ color: colors.accentOrange, fontSize: 11.5, marginTop: 6 }}>Connection issue, retrying…</Text>
           )}
         </View>
 

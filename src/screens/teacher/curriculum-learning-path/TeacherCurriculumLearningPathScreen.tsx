@@ -12,7 +12,7 @@ import PreUploadConfigPanel, { CURRICULA, GRADES_BY_CURRICULUM, ACADEMIC_YEARS }
 export default function TeacherCurriculumLearningPathScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { curriculum, error: uploadError, busy, pickAndUpload, reset } = useCurriculumUpload();
+  const { curriculum, progress, fileName, phase, error: uploadError, busy, connectionIssue, pickAndUpload, retry } = useCurriculumUpload();
   const curriculumId = curriculum?.status === 'generated' ? curriculum.id : null;
   const draft = useLearningPathDraft(curriculumId);
 
@@ -38,7 +38,6 @@ export default function TeacherCurriculumLearningPathScreen() {
     : null;
 
   function handlePickFile() {
-    if (curriculum) reset();
     pickAndUpload({ curriculum: configCurriculum, grade: configGrade, subject: configSubject });
   }
 
@@ -71,9 +70,13 @@ export default function TeacherCurriculumLearningPathScreen() {
           grade={configGrade} setGrade={setConfigGrade}
           subject={configSubject} setSubject={setConfigSubject}
           academicYear={configAcademicYear} setAcademicYear={setConfigAcademicYear}
-          fileName={curriculum?.file_name ?? null}
+          fileName={fileName ?? curriculum?.file_name ?? null}
           status={curriculum?.status ?? null}
-          statusError={curriculum?.status === 'failed' ? (curriculum.error || uploadError) : null}
+          phase={phase}
+          progress={progress}
+          connectionIssue={connectionIssue}
+          onRetry={retry}
+          statusError={curriculum?.status === 'failed' ? (curriculum.error || uploadError) : phase === 'upload_failed' ? uploadError : null}
           busy={busy}
           onPickFile={handlePickFile}
           detected={detected}
@@ -85,7 +88,7 @@ export default function TeacherCurriculumLearningPathScreen() {
           publishing={draft.publishing}
         />
 
-        {uploadError && curriculum?.status !== 'failed' && (
+        {uploadError && curriculum?.status !== 'failed' && phase !== 'upload_failed' && (
           <Text testID="general-error" style={styles.errorText}>{uploadError}</Text>
         )}
 

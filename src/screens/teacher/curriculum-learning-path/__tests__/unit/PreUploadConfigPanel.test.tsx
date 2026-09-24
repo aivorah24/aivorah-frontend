@@ -46,25 +46,64 @@ describe('PreUploadConfigPanel', () => {
     expect(screen.getByText('Upload a file to begin')).toBeTruthy();
   });
 
-  test.each([
-    ['uploaded', 0],
-    ['processing', 1],
-    ['processed', 1],
-    ['generating', 2],
-    ['generated', 3],
-  ])('status "%s" marks step %i as active/complete', async (status, expectedIdx) => {
-    await render(<PreUploadConfigPanel {...baseProps({ status: status as any, fileName: 'doc.pdf' })} />);
-    // Every step up to expectedIdx should exist and render (no crash on any
-    // real backend status); step 0 always renders once a status exists.
-    expect(screen.getByTestId('analysis-step-0')).toBeTruthy();
-    expect(screen.getByTestId(`analysis-step-${expectedIdx}`)).toBeTruthy();
+  const stepCount = () => [0, 1, 2, 3, 4].filter((i) => screen.queryByTestId(`analysis-step-${i}`)).length;
+
+  test('uploading phase shows the file chip with "Uploading…" and step 1 active', async () => {
+    await render(<PreUploadConfigPanel {...baseProps({ phase: 'uploading', fileName: 'doc.pdf' })} />);
+    expect(screen.getByTestId('pre-upload-file-chip')).toBeTruthy();
+    expect(screen.getByTestId('upload-state')).toBeTruthy();
+    expect(screen.getByText('Uploading file…')).toBeTruthy();
+    expect(screen.queryByText('Upload a file to begin')).toBeNull();
   });
 
-  test('a failed status shows an error state instead of the step list', async () => {
-    await render(<PreUploadConfigPanel {...baseProps({ status: 'failed', statusError: 'Could not process the uploaded file.' })} />);
+  test.each([
+    ['extracting', 'Extracting content'],
+    ['analysing', 'Analysing curriculum'],
+    ['generating', 'Generating learning path'],
+    ['saving', 'Saving results'],
+  ])('progress stage "%s" renders all steps from real data', async (stage, label) => {
+    await render(<PreUploadConfigPanel {...baseProps({
+      phase: 'tracking', status: 'processing', fileName: 'doc.pdf',
+      progress: { stage, topicsDone: null, topicsTotal: null, updatedAt: 'x' },
+    })} />);
+    expect(stepCount()).toBe(5);
+    expect(screen.getByText(label)).toBeTruthy();
+    expect(screen.getByText('File uploaded')).toBeTruthy();
+  });
+
+  test('falls back to curriculum status when progress is null', async () => {
+    await render(<PreUploadConfigPanel {...baseProps({ phase: 'tracking', status: 'generating', fileName: 'doc.pdf' })} />);
+    expect(stepCount()).toBe(5);
+  });
+
+  test('generating stage shows real "topic X of Y"', async () => {
+    await render(<PreUploadConfigPanel {...baseProps({
+      phase: 'tracking', status: 'generating', fileName: 'doc.pdf',
+      progress: { stage: 'generating', topicsDone: 3, topicsTotal: 12, updatedAt: 'x' },
+    })} />);
+    expect(screen.getByText('Generating learning path — topic 3 of 12')).toBeTruthy();
+  });
+
+  test('shows the connection-issue note', async () => {
+    await render(<PreUploadConfigPanel {...baseProps({ phase: 'tracking', status: 'processing', fileName: 'd.pdf', connectionIssue: true })} />);
+    expect(screen.getByTestId('connection-issue')).toBeTruthy();
+  });
+
+  test('a failed status shows the error and a Retry button instead of the step list', async () => {
+    const onRetry = jest.fn();
+    const user = userEvent.setup();
+    await render(<PreUploadConfigPanel {...baseProps({ status: 'failed', phase: 'tracking', statusError: 'Could not process the uploaded file.', onRetry })} />);
     expect(screen.getByText('Processing failed')).toBeTruthy();
-    expect(screen.getByText('Could not process the uploaded file.')).toBeTruthy();
+    expect(screen.getAllByText('Could not process the uploaded file.').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('analysis-step-0')).toBeNull();
+    await user.press(screen.getByTestId('retry-button'));
+    expect(onRetry).toHaveBeenCalled();
+  });
+
+  test('a failed upload POST shows the error and Retry', async () => {
+    await render(<PreUploadConfigPanel {...baseProps({ phase: 'upload_failed', fileName: 'd.pdf', statusError: 'boom', onRetry: jest.fn() })} />);
+    expect(screen.getByText('Upload failed')).toBeTruthy();
+    expect(screen.getByTestId('retry-button')).toBeTruthy();
   });
 
   test('Detected Structure shows real counts once a draft exists, not a fabricated diff', async () => {
