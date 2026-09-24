@@ -114,9 +114,8 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
     try {
       await schoolAdminStudentsService.bulkPromote(ids, targetGrade, targetSection, user.email);
       setSelected(new Set());
+      await Promise.all([load(), loadFacets()]); // list + filter options must reflect the new grade/curriculum
       setPromoteOpen(false);
-      load();
-      loadFacets(); // the target grade may be new, or a grade may have emptied out
       return null;
     } catch (err: any) {
       return err.message || 'Failed to promote. Check your connection.';

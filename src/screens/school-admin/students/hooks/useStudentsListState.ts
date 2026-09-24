@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import React from 'react';
 import { schoolAdminStudentsService, type StudentRow } from '../services/schoolAdminStudentsService';
 
@@ -63,8 +63,10 @@ export function useStudentsListState(
     } catch { /* filter dropdowns just stay at their previous values */ }
   }, [userEmail]);
 
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!userEmail) return;
+    const seq = ++loadSeq.current;
     setError('');
     try {
       // The archived route always queries status=archived regardless of
@@ -84,9 +86,11 @@ export function useStudentsListState(
         limit: 100
       });
 
+      if (seq !== loadSeq.current) return;
       setItems(data.items);
       setTotal(data.total);
     } catch (err: any) {
+      if (seq !== loadSeq.current) return;
       setError(err.message || 'Failed to load students. Check your connection.');
     } finally {
       setLoading(false);
