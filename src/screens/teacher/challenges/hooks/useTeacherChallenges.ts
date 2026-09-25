@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Challenge, StudentItem,
-  fetchStudentsByTeacher, fetchTeacherPreferences, fetchChallenges,
+  fetchStudentsByTeacher, fetchTeacherPreferences, fetchChallenges, fetchTeacherAssignments,
 } from '../services/teacherChallengesService';
 
 export function useTeacherChallenges(teacherEmail: string | undefined, defaultCurriculum: string) {
@@ -11,6 +11,7 @@ export function useTeacherChallenges(teacherEmail: string | undefined, defaultCu
   const [challenges, setChallenges]       = useState<Challenge[]>([]);
   const [loading, setLoading]             = useState(false);
   const [students, setStudents]           = useState<StudentItem[]>([]);
+  const [assignedByChallenge, setAssignedByChallenge] = useState<Record<string, string[]>>({});
 
   useFocusEffect(useCallback(() => {
     if (!teacherEmail) return;
@@ -56,5 +57,16 @@ export function useTeacherChallenges(teacherEmail: string | undefined, defaultCu
     loadChallenges();
   }, [loadChallenges]);
 
-  return { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students };
+  const loadAssignments = useCallback(() => {
+    if (!teacherEmail) return;
+    fetchTeacherAssignments(teacherEmail).then(list => {
+      const map: Record<string, string[]> = {};
+      list.forEach(a => { (map[a.challengeId] ??= []).push(a.studentId); });
+      setAssignedByChallenge(prev => JSON.stringify(prev) === JSON.stringify(map) ? prev : map);
+    });
+  }, [teacherEmail]);
+
+  useFocusEffect(loadAssignments);
+
+  return { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students, assignedByChallenge, refreshAssignments: loadAssignments };
 }

@@ -20,6 +20,7 @@ interface LatestNotif {
 export interface NotifItem {
   id: string;
   type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio';
+  senderEmail?: string;
   // For 'event' items, the source schedule type ('challenge' | 'deadline' | 'study' …).
   // A challenge's due-date event has srcType 'challenge' so it can be gated under the
   // Challenge Updates toggle rather than Assignment Alerts.
@@ -37,7 +38,8 @@ interface NotificationState {
   unreadEvents: number;
   unreadJoinRequests: number; // pending B2C→B2B school-join requests (school-admin only)
   latestNotif: LatestNotif | null;
-  notificationItems: NotifItem[];
+  notificationItems: NotifItem[]; // newest first, includes the latest unread chat message
+  toastItem: NotifItem | null;    // the item that triggered the current toast
   toastVisible: boolean;
   dismissToast: () => void;
   clearUnread: () => Promise<void>;
@@ -57,6 +59,7 @@ const NotificationContext = createContext<NotificationState>({
   unreadJoinRequests: 0,
   latestNotif: null,
   notificationItems: [],
+  toastItem: null,
   toastVisible: false,
   dismissToast: () => {},
   clearUnread: async () => {},
@@ -141,6 +144,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [latestNotif,       setLatestNotif]       = useState<LatestNotif | null>(null);
   const [notificationItems, setNotificationItems] = useState<NotifItem[]>([]);
   const [toastVisible,      setToastVisible]      = useState(false);
+  const [toastItem,         setToastItem]         = useState<NotifItem | null>(null);
 
   const prevMsgRef       = useRef(0);
   const prevAssignRef    = useRef(0);
@@ -150,6 +154,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // records the current counts as a baseline — it must NOT chime/toast, otherwise
   // every page refresh re-alerts for notifications that already existed.
   const hasBaselineRef   = useRef(false);
+  // Newest createdAt seen so far — anything newer is what "just arrived".
+  const watermarkRef     = useRef(0);
   const pollRef          = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollIdRef        = useRef(0);
@@ -253,9 +259,35 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const newChallenge = baseline && allowChallenge && !markReadInFlight.current && effChallengeCount > prevChallengeRef.current;
       const newEvent     = baseline && allowAssign    && !markReadInFlight.current && effEventCount     > prevEventRef.current;
 
-      if (!silent && (newMsg || newAssign || newChallenge || newEvent)) {
+      // Respect the user's notification preferences for the bell dropdown items too —
+      // when Assignment Alerts / Challenge Updates are OFF, those items must NOT appear
+      // in the bell at all (not just have a zeroed badge count).
+      const filteredItems = items.filter(it => {
+        // A challenge's due-date event follows the Challenge Updates toggle.
+        const isChallengeEvent = it.type === 'event' && it.srcType === 'challenge';
+        if (isChallengeEvent) return allowChallenge;
+        if ((it.type === 'assignment' || it.type === 'quiz' || it.type === 'event' || it.type === 'task') && !allowAssign) return false;
+        if (it.type === 'challenge' && !allowChallenge) return false;
+        return true;
+      });
+      const feed: NotifItem[] = [...filteredItems];
+      if (allowMsg && msgCount > 0 && latest) {
+        feed.push({
+          id: 'msg_' + latest.id, type: 'message',
+          title: `Message from ${latest.senderName}`, subtitle: latest.preview,
+          senderName: latest.senderName, senderEmail: latest.senderEmail, createdAt: latest.createdAt,
+        });
+      }
+      const ts = (i: NotifItem) => Date.parse(i.createdAt) || 0;
+      feed.sort((a, b) => ts(b) - ts(a));
+
+      const fresh = baseline && !markReadInFlight.current ? feed.filter(i => ts(i) > watermarkRef.current) : [];
+      watermarkRef.current = Math.max(watermarkRef.current, ...feed.map(ts));
+
+      if (!silent && (fresh.length > 0 || newMsg || newAssign || newChallenge || newEvent)) {
         playNotificationSound();
         if (newMsg && latest) setLatestNotif(latest);
+        setToastItem(fresh[0] ?? null);
         setToastVisible(true);
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         toastTimerRef.current = setTimeout(() => setToastVisible(false), TOAST_AUTO_HIDE_MS);
@@ -272,18 +304,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setUnreadChallenges(allowChallenge ? effChallengeCount : 0);
       setUnreadEvents(allowAssign ? effEventCount : 0);
       setLatestNotif(msgCount > 0 ? latest : null);
-      // Respect the user's notification preferences for the bell dropdown items too —
-      // when Assignment Alerts / Challenge Updates are OFF, those items must NOT appear
-      // in the bell at all (not just have a zeroed badge count).
-      const filteredItems = items.filter(it => {
-        // A challenge's due-date event follows the Challenge Updates toggle.
-        const isChallengeEvent = it.type === 'event' && it.srcType === 'challenge';
-        if (isChallengeEvent) return allowChallenge;
-        if ((it.type === 'assignment' || it.type === 'quiz' || it.type === 'event' || it.type === 'task') && !allowAssign) return false;
-        if (it.type === 'challenge' && !allowChallenge) return false;
-        return true;
-      });
-      setNotificationItems(filteredItems);
+      setNotificationItems(feed);
       if (msgCount === 0 && assignCount === 0 && challengeCount === 0) setToastVisible(false);
 
       if (__DEV__) console.debug(`[NotifCtx] poll(${reason}) → msg:${msgCount} assign:${assignCount} challenge:${challengeCount}`);
@@ -300,6 +321,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       prevMsgRef.current = 0; prevAssignRef.current = 0; prevChallengeRef.current = 0; prevEventRef.current = 0;
       staleGuardUntil.current = 0; markReadCutoff.current = null;
       hasBaselineRef.current = false;
+      watermarkRef.current = 0;
+      setNotificationItems([]); setToastItem(null);
       return;
     }
 
@@ -366,6 +389,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     staleGuardUntil.current  = now + STALE_GUARD_MS;
     markReadCutoff.current   = now;
     setUnreadCount(0); setLatestNotif(null); setToastVisible(false);
+    setNotificationItems(items => items.filter(i => i.type !== 'message'));
     prevMsgRef.current = 0;
 
     let ok = false;
@@ -480,7 +504,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   return (
     <NotificationContext.Provider value={{
       unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadJoinRequests,
-      latestNotif, notificationItems, toastVisible,
+      latestNotif, notificationItems, toastItem, toastVisible,
       dismissToast, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents, refresh, triggerPoll, muteCategory,
     }}>
       {children}

@@ -343,14 +343,15 @@ const [editingName, setEditingName] = useState(false);
                       </TouchableOpacity>
                     )}
 
-                    {/* Individual assignment notification items (Google Classroom style) */}
+                    {/* Single newest-first feed: assignments, challenges, events, messages… */}
                     {notificationItems.map(item => {
                       const isChallenge = item.type === 'challenge';
                       const isEvent = item.type === 'event';
                       const isPortfolio = item.type === 'portfolio';
                       const isTask = item.type === 'task';
+                      const isMessage = item.type === 'message';
                       const accent = colors.accentYellow;
-                      const iconName = isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
+                      const iconName = isMessage ? 'message-square' : isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
                       return (
                       <TouchableOpacity
                         key={item.id}
@@ -360,7 +361,10 @@ const [editingName, setEditingName] = useState(false);
                           setBellVisible(false);
                           // Deep-link straight into the tapped item — the target screen
                           // auto-opens the entry matching highlightId.
-                          if (isChallenge) {
+                          if (isMessage) {
+                            void clearUnread();
+                            navigation.navigate(screenNames.messages, item.senderEmail ? { openWith: item.senderEmail } : undefined);
+                          } else if (isChallenge) {
                             void clearUnreadChallenges();
                             navigation.navigate(screenNames.challenges, { highlightId: item.id, tab: 'assigned' });
                           } else if (isEvent) {
@@ -404,8 +408,8 @@ const [editingName, setEditingName] = useState(false);
                       );
                     })}
 
-                    {/* Real unread messages */}
-                    {unreadCount > 0 && (
+                    {/* Fallback when unread messages exist but no preview is available */}
+                    {unreadCount > 0 && !notificationItems.some(i => i.type === 'message') && (
                       <TouchableOpacity
                         style={styles.notifItem}
                         activeOpacity={0.75}
@@ -469,7 +473,7 @@ const [editingName, setEditingName] = useState(false);
                     )}
 
                     {/* Assignments count summary (if no individual items) */}
-                    {unreadAssignments > 0 && notificationItems.length === 0 && (
+                    {unreadAssignments > 0 && !notificationItems.some(i => i.type === 'assignment' || i.type === 'quiz') && (
                       <TouchableOpacity
                         style={styles.notifItem}
                         activeOpacity={0.75}

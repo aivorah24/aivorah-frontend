@@ -6,7 +6,7 @@ function getDueDateLabel(offset: number) {
   return d.toISOString().split('T')[0];
 }
 
-export function useAssignChallenge(teacherEmail: string | undefined) {
+export function useAssignChallenge(teacherEmail: string | undefined, onAssigned?: () => void) {
   const [assignModal, setAssignModal]         = useState(false);
   const [assignChallengeItem, setAssignChallengeItem] = useState<Challenge | null>(null);
   const [studentSearch, setStudentSearch]     = useState('');
@@ -60,6 +60,7 @@ export function useAssignChallenge(teacherEmail: string | undefined) {
           ? `"${assignChallengeItem.title}" is already assigned to ${selectedStudent.name} — no new notification was sent.`
           : `"${assignChallengeItem.title}" assigned to ${selectedStudent.name}!`
       );
+      onAssigned?.();
     } catch {
       setAssignError('Network error. Please try again.');
     } finally {

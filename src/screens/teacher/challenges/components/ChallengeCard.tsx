@@ -24,10 +24,12 @@ function categoryColor(category: string): string {
   return known[category] ?? GOLD;
 }
 
-export default function ChallengeCard({ ch, colors, isDark, styles, onAssign }: {
+export default function ChallengeCard({ ch, colors, isDark, styles, onAssign, assignedCount = 0, eligibleCount = 0 }: {
   ch: Challenge; colors: AppColors; isDark: boolean;
   styles: ReturnType<typeof makeStyles>;
   onAssign: () => void;
+  assignedCount?: number;
+  eligibleCount?: number;
 }) {
   const diffColor = DIFF_COLOR(ch.difficulty, colors);
   const catColor  = categoryColor(ch.category);
@@ -40,6 +42,7 @@ export default function ChallengeCard({ ch, colors, isDark, styles, onAssign }: 
   const dimColor   = isDark ? colors.textDim   : '#7C8A82';
   const xpColor    = isDark ? colors.accentYellow : '#9A7B2E';
   const assignBg   = isDark ? 'transparent' : '#FFFFFF';
+  const allAssigned = eligibleCount > 0 && assignedCount >= eligibleCount;
 
   return (
     <LinearGradient colors={cardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
@@ -72,13 +75,31 @@ export default function ChallengeCard({ ch, colors, isDark, styles, onAssign }: 
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.assignRowBtn, { backgroundColor: assignBg, borderColor: catColor + '66' }]}
-          onPress={onAssign} activeOpacity={0.8}
-        >
-          <Feather name="user-plus" size={13} color={catColor} />
-          <Text style={[styles.assignRowBtnText, { color: catColor }]}>Assign to Student</Text>
-        </TouchableOpacity>
+        {assignedCount > 0 && (
+          <View style={styles.statItem}>
+            <Feather name="check-circle" size={11} color={colors.accentGreen} />
+            <Text style={[styles.statText, { color: colors.accentGreen }]}>
+              Assigned to {assignedCount} student{assignedCount > 1 ? 's' : ''}
+            </Text>
+          </View>
+        )}
+
+        {allAssigned ? (
+          <View style={[styles.assignRowBtn, { backgroundColor: assignBg, borderColor: colors.accentGreen + '66' }]}>
+            <Feather name="check" size={13} color={colors.accentGreen} />
+            <Text style={[styles.assignRowBtnText, { color: colors.accentGreen }]}>Assigned to all students</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.assignRowBtn, { backgroundColor: assignBg, borderColor: catColor + '66' }]}
+            onPress={onAssign} activeOpacity={0.8}
+          >
+            <Feather name="user-plus" size={13} color={catColor} />
+            <Text style={[styles.assignRowBtnText, { color: catColor }]}>
+              {assignedCount > 0 ? 'Assign to more students' : 'Assign to Student'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </LinearGradient>
   );

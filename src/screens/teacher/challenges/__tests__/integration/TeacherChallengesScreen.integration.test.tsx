@@ -11,6 +11,7 @@ jest.mock('../../services/teacherChallengesService', () => ({
   fetchClassLeaderboard: jest.fn(),
   fetchStudentWeekly: jest.fn(),
   assignChallenge: jest.fn(),
+  fetchTeacherAssignments: jest.fn(),
 }));
 
 const mockUseFocusEffect = jest.fn();
@@ -70,6 +71,7 @@ describe('TeacherChallengesScreen (integration)', () => {
     mockedService.fetchChallenges.mockResolvedValue(CHALLENGES);
     mockedService.fetchClassLeaderboard.mockResolvedValue([]);
     mockedService.fetchStudentWeekly.mockResolvedValue(null);
+    mockedService.fetchTeacherAssignments.mockResolvedValue([]);
   });
 
   it('renders challenges grouped by real category, not a hardcoded type list (regression for the type-taxonomy bug)', async () => {
@@ -100,6 +102,9 @@ describe('TeacherChallengesScreen (integration)', () => {
     // while no student is selected) can be pressed.
     await waitFor(() => expect(screen.queryByPlaceholderText('Search student by name...')).toBeNull());
 
+    mockedService.fetchTeacherAssignments.mockResolvedValue([
+      { challengeId: 'c1', studentId: 's1', status: 'assigned', dueDate: null },
+    ]);
     const assignButtons = screen.getAllByText('Assign Challenge');
     fireEvent.press(assignButtons[assignButtons.length - 1]);
 
@@ -107,5 +112,19 @@ describe('TeacherChallengesScreen (integration)', () => {
       challengeId: 'c1', studentId: 's1', teacherEmail: 'teacher@x.com',
     })));
     await waitFor(() => expect(screen.getByText(/assigned to Alice/)).toBeTruthy());
+    fireEvent.press(screen.getByText('Done'));
+    // Card no longer offers a plain "Assign" for a challenge the student already has
+    await waitFor(() => expect(screen.getByText('Assigned to all students')).toBeTruthy());
+  });
+
+  it('shows assigned state instead of a fresh Assign button once every student has the challenge', async () => {
+    mockedService.fetchTeacherAssignments.mockResolvedValue([
+      { challengeId: 'c1', studentId: 's1', status: 'assigned', dueDate: null },
+    ]);
+    await render(<TeacherChallengesScreen navigation={{ openDrawer: jest.fn() }} />);
+    await waitFor(() => expect(screen.getByText('Assigned to all students')).toBeTruthy());
+    expect(screen.getByText('Assigned to 1 student')).toBeTruthy();
+    // c2 is still unassigned
+    expect(screen.getAllByText('Assign to Student')).toHaveLength(1);
   });
 });
