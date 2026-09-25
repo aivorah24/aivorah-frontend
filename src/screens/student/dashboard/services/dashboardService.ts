@@ -27,8 +27,18 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
   const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && parseInt(grade.replace(/\D/g, ''), 10) >= 6;
+  // CBSE/NCERT chapter names come from the verified seed data in the same service;
+  // the monolith still serves its own old copy of the titles.
+  const isCbseNcert = /^(cbse|ncert)$/i.test(curriculum.trim());
+  const path = `/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`;
+  if (isCbseNcert) {
+    try {
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}${path}`);
+      if (res.ok) return await res.json();
+    } catch { /* fall back to the monolith below */ }
+  }
   const base = (isIBDP || isIBMYP || isCambridgeQdrant) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
-  const res = await fetch(`${base}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`);
+  const res = await fetch(`${base}${path}`);
   return res.json();
 }
 
