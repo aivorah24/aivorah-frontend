@@ -25,6 +25,7 @@ export interface SubjectData {
   chapterCount?: number; // authoritative chapter count (CBSE); 0 for IB PYP
   unitCount?: number;    // chapters if present, else distinct units from topics
   units?: string[];      // chapter/unit names
+  books?: string[];      // textbook names for this subject (e.g. "Poorvi")
 }
 
 export type CurriculumTopic = {
