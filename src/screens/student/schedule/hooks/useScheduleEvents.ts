@@ -45,7 +45,8 @@ export function useScheduleEvents({
           .catch(() => ({ date: d, events: [] }))
       );
       const [dlRes, monthRes, ttRes, ...dayResults] = await Promise.all([
-        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=${hideCompleted}`),
+        // Upcoming deadlines never list completed work, regardless of the calendar's toggle.
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=true`),
         fetch(`${SCHEDULE_SERVER_URL}/schedule/month?studentId=${studentId}&year=${calYear}&month=${calMonth}&hideCompleted=${hideCompleted}`),
         fetch(`${SERVER_URL}/timetable?studentId=${studentId}`),
         ...dayFetches,

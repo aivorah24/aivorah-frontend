@@ -42,14 +42,24 @@ describe('AddEventModal', () => {
     const user = userEvent.setup();
     await render(<AddEventModal {...baseProps({ setNewTag })} />);
 
-    await user.press(screen.getByTestId('schedule-modal-tag-Worksheet / Assignment'));
+    await user.press(screen.getByTestId('schedule-modal-tag-Homework'));
 
-    expect(setNewTag).toHaveBeenCalledWith('Worksheet / Assignment');
+    expect(setNewTag).toHaveBeenCalledWith('Homework');
   });
 
   test('the currently selected tag is marked selected', async () => {
-    await render(<AddEventModal {...baseProps({ newTag: 'AI Tutor' })} />);
-    expect(screen.getByTestId('schedule-modal-tag-AI Tutor').props.accessibilityState.selected).toBe(true);
+    await render(<AddEventModal {...baseProps({ newTag: 'Challenge' })} />);
+    expect(screen.getByTestId('schedule-modal-tag-Challenge').props.accessibilityState.selected).toBe(true);
+  });
+
+  test('offers exactly the student event options, with no emoji', async () => {
+    await render(<AddEventModal {...baseProps()} />);
+    const labels = screen.getAllByLabelText(/^Category: /).map(n => n.props.accessibilityLabel.replace('Category: ', ''));
+    expect(labels).toEqual([
+      'Study Session', 'Class / Lesson', 'Homework', 'Assignment', 'Challenge',
+      'Quick Task', 'Learning Activity', 'Break', 'Other',
+    ]);
+    labels.forEach(l => expect(l).not.toMatch(/\p{Extended_Pictographic}/u));
   });
 
   test('toggling the all-day checkbox calls onToggleAllDay', async () => {

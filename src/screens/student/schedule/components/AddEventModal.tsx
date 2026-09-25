@@ -3,7 +3,7 @@ import { View, Text, Modal, ScrollView, TouchableOpacity, TextInput } from 'reac
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import TimePicker from '../../../../components/common/TimePicker';
-import { ASSIGNMENT_TAGS, EVENT_TAGS } from '../constants';
+import { STUDENT_EVENT_TAGS } from '../constants';
 
 interface Props {
   visible: boolean;
@@ -66,7 +66,7 @@ export default function AddEventModal({
             />
             <Text style={styles.modalLabel}>Category / Tagline * (Links directly to Tag Filters):</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipRowContent}>
-              {ASSIGNMENT_TAGS.concat(EVENT_TAGS).map(t => (
+              {STUDENT_EVENT_TAGS.map(t => (
                 <TouchableOpacity
                   key={t.key}
                   style={[

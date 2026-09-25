@@ -43,7 +43,7 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
 }
 
 export async function fetchUpcomingDeadlines(studentId: string) {
-  const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}`);
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=true`);
   return res.json();
 }
 
