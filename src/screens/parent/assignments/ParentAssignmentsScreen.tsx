@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput,
   KeyboardAvoidingView, Platform, useWindowDimensions,
@@ -10,6 +10,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import DatePicker from '../../../components/common/DatePicker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useParentAssignments, FILTERS, TYPES } from './hooks/useParentAssignments';
+import { useChildDeepLink } from '../../../hooks/useChildDeepLink';
 import { makeStyles } from './styles';
 import AssignmentDetailModal from './components/AssignmentDetailModal';
 import ParentAIReportModal from './components/ParentAIReportModal';
@@ -24,7 +25,7 @@ function formatDue(iso: string): { label: string; isOverdue: boolean } {
   return { label: `Due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`, isOverdue: false };
 }
 
-export default function ParentAssignmentsScreen({ navigation }: any) {
+export default function ParentAssignmentsScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const { width: winWidth } = useWindowDimensions();
   const twoCol = winWidth >= 768; // 2-up grid on desktop/tablet, single column on phones
@@ -32,7 +33,7 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
 
   const {
     children, selectedIdx, setSelectedIdx, child,
-    activeFilter, setActiveFilter, filtered, assignments,
+    activeFilter, setActiveFilter, filtered, assignments, assignmentsChildId,
     loading, completed, pending, totalStudyMins, completionPct, onTrackPct,
     showModal, setShowModal, reportAssignment, setReportAssignment,
     detailAssignment, setDetailAssignment,
@@ -45,6 +46,18 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
     resetForm, generateWithAI, createAssignment,
   } = useParentAssignments();
 
+  const [missingNotice, setMissingNotice] = useState(false);
+  useChildDeepLink({
+    route, navigation, children, selectedIdx, setSelectedIdx,
+    items: assignments, itemsChildId: assignmentsChildId,
+    onOpen: (a) => {
+      if (!a) { setMissingNotice(true); return; }
+      setMissingNotice(false);
+      setActiveFilter('All');
+      setDetailAssignment(a);
+    },
+  });
+
   return (
     <ScreenLayout>
       <View style={styles.screen}>
@@ -55,6 +68,15 @@ export default function ParentAssignmentsScreen({ navigation }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+          {missingNotice && (
+            <TouchableOpacity onPress={() => setMissingNotice(false)} activeOpacity={0.8} testID="deeplink-missing-notice"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.accentYellow + '40', backgroundColor: colors.accentYellow + '10', marginBottom: 12 }}>
+              <Feather name="info" size={14} color={colors.accentYellow} />
+              <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>That assignment is no longer available.</Text>
+              <Feather name="x" size={14} color={colors.textDim} />
+            </TouchableOpacity>
+          )}
 
           {/* Child Selector */}
           {children.length > 1 && (

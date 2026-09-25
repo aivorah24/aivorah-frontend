@@ -3,10 +3,8 @@ import { useWindowDimensions, View } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerParamList } from './types';
 import { useTheme } from '../context/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
 
 import DrawerContent from '../components/common/DrawerContent';
-import NotificationBanner from '../components/common/NotificationBanner';
 import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import LearningPathsScreen from '../screens/student/learning-paths/LearningPathsScreen';
@@ -51,9 +49,6 @@ export default function AppNavigator() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();
-  // useNavigation here is scoped to the Drawer navigator since AppNavigator
-  // is rendered as a child of NavigationContainer → gives us drawer nav.
-  const navigation = useNavigation<any>();
 
   return (
     <View style={{ flex: 1 }}>
@@ -112,9 +107,6 @@ export default function AppNavigator() {
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
     </Drawer.Navigator>
-    <NotificationBanner
-      onNavigate={(screen, params) => navigation.navigate(screen, params)}
-    />
     </View>
   );
 }

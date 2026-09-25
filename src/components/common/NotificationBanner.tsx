@@ -15,13 +15,17 @@ import { Feather } from '@expo/vector-icons';
 import { useNotification } from '../../context/NotificationContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { openNotification } from '../../navigation/openNotification';
 
 interface Props {
   onNavigate: (screen: string, params?: Record<string, any>) => void;
 }
 
 export default function NotificationBanner({ onNavigate }: Props) {
-  const { toastVisible, toastItem, latestNotif, unreadAssignments, unreadChallenges, notificationItems, dismissToast } = useNotification();
+  const {
+    toastVisible, toastItem, latestNotif, unreadAssignments, unreadChallenges, notificationItems, dismissToast,
+    markNotificationRead, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents,
+  } = useNotification();
   const { colors } = useTheme();
   const { user } = useAuth();
 
@@ -83,7 +87,7 @@ export default function NotificationBanner({ onNavigate }: Props) {
     };
     const cfg = byType[it.type] ?? { icon: 'bell', title: it.title, screen: msgScreen };
     icon = cfg.icon;
-    title = cfg.title;
+    title = it.v2 ? it.title : cfg.title; // V2 titles are already complete ("New challenge: …")
     subtitle = it.subtitle || 'Tap to view';
     targetScreen = cfg.screen;
     targetParams = cfg.params;
@@ -125,6 +129,14 @@ export default function NotificationBanner({ onNavigate }: Props) {
 
   function handleTap() {
     dismissToast();
+    if (toastItem) {
+      openNotification(toastItem, {
+        role,
+        navigate: onNavigate,
+        actions: { markNotificationRead, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents },
+      });
+      return;
+    }
     onNavigate(targetScreen, targetParams);
   }
 
@@ -141,7 +153,7 @@ export default function NotificationBanner({ onNavigate }: Props) {
       ]}
       pointerEvents="box-none"
     >
-      <TouchableOpacity style={styles.inner} onPress={handleTap} activeOpacity={0.88}>
+      <TouchableOpacity style={styles.inner} onPress={handleTap} activeOpacity={0.88} testID="notification-toast">
         {/* App icon area */}
         <View style={[styles.iconWrap, { backgroundColor: colors.accentYellow + '20', borderWidth: 1, borderColor: colors.accentYellow + '50' }]}>
           <Feather name={icon as any} size={20} color={colors.accentYellow} />

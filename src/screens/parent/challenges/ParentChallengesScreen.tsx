@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { spacing } from '../../../theme';
@@ -11,18 +11,30 @@ import { useAssignChallenge } from './hooks/useAssignChallenge';
 import ChallengeCard from './components/ChallengeCard';
 import AssignChallengeModal from './components/AssignChallengeModal';
 import { makeStyles } from './styles';
+import { useChildDeepLink } from '../../../hooks/useChildDeepLink';
+import type { Challenge } from './services/parentChallengesService';
 
-export default function ParentChallengesScreen({ navigation }: any) {
+export default function ParentChallengesScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const {
     children, selectedIdx, setSelectedIdx, child,
     childStats, loadingStats,
-    challenges, loadingCh,
+    challenges, loadingCh, challengesChildId,
     challengeGroups,
     refresh,
   } = useParentChallenges();
+
+  // Notification deep link: the exact challenge is pinned at the top, highlighted.
+  const [pinned, setPinned] = useState<Challenge | null>(null);
+  const [missingNotice, setMissingNotice] = useState(false);
+  useChildDeepLink({
+    route, navigation, children, selectedIdx, setSelectedIdx,
+    items: challenges, itemsChildId: challengesChildId,
+    onOpen: (ch) => { setPinned(ch); setMissingNotice(!ch); },
+  });
+  const pinnedLive = pinned && challengesChildId === child?.id ? (challenges.find(c => c.id === pinned.id) ?? pinned) : null;
 
   const {
     assignModal, assignChallengeTarget, assigning, assignError, assignSuccess,
@@ -80,6 +92,29 @@ export default function ParentChallengesScreen({ navigation }: any) {
                   </View>
                 </>
               )}
+            </View>
+          )}
+
+          {missingNotice && (
+            <TouchableOpacity onPress={() => setMissingNotice(false)} activeOpacity={0.8} testID="deeplink-missing-notice"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.accentYellow + '40', backgroundColor: colors.accentYellow + '10' }}>
+              <Feather name="info" size={14} color={colors.accentYellow} />
+              <Text style={{ flex: 1, color: colors.textMuted, fontSize: 13 }}>That challenge is no longer available.</Text>
+              <Feather name="x" size={14} color={colors.textDim} />
+            </TouchableOpacity>
+          )}
+
+          {pinnedLive && (
+            <View testID={`deeplink-challenge-${pinnedLive.id}`}
+              style={{ borderWidth: 2, borderColor: colors.accentYellow, borderRadius: 16, padding: 10, gap: 8, backgroundColor: colors.accentYellow + '0C' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="bell" size={13} color={colors.accentYellow} />
+                <Text style={{ flex: 1, color: colors.accentYellow, fontSize: 12, fontWeight: '700' }}>From your notification · {child?.name}</Text>
+                <TouchableOpacity onPress={() => setPinned(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="deeplink-dismiss">
+                  <Feather name="x" size={14} color={colors.textDim} />
+                </TouchableOpacity>
+              </View>
+              <ChallengeCard ch={pinnedLive} colors={colors} styles={styles} onAssign={() => openAssign(pinnedLive)} />
             </View>
           )}
 
