@@ -136,7 +136,6 @@ export default function ParentDashboardScreen({ navigation, route }: any) {
           subtitle="Track your children's learning journey"
           onMenuPress={() => navigation.openDrawer()}
           notificationCount={totalNotifs}
-          onNotificationPress={() => navigation.navigate('ParentMessages')}
         />
 
         <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>

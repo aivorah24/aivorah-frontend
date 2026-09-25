@@ -2,7 +2,7 @@
 // its real hooks/components wired together, mocking only the network layer.
 // Same pattern as teacher/dashboard/__tests__/integration/TeacherDashboardScreen.integration.test.tsx.
 import React from 'react';
-import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent, userEvent } from '@testing-library/react-native';
 import ParentDashboardScreen from '../../ParentDashboardScreen';
 
 jest.mock('@react-navigation/native', () => ({
@@ -89,6 +89,19 @@ beforeEach(() => {
 });
 
 describe('ParentDashboardScreen', () => {
+  // Regression: the bell used to also navigate to Messages, so the tray opened over
+  // the wrong screen and the parent lost their place on the dashboard.
+  test('tapping the bell opens the notification tray in place — it does not navigate away', async () => {
+    global.fetch = jest.fn((url: string) => jsonRes(url, [rawChild()])) as any;
+    await render(<ParentDashboardScreen navigation={navigation} route={{ params: {} }} />);
+    await waitFor(() => expect(screen.getByText('Welcome, Meera')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('header-bell-button'));
+
+    expect(screen.getByText('Notifications')).toBeTruthy();
+    expect(navigation.navigate).not.toHaveBeenCalledWith('ParentMessages');
+  });
+
   test('renders the real welcome header with the parent\'s real first name', async () => {
     global.fetch = jest.fn((url: string) => jsonRes(url, [rawChild()])) as any;
 
