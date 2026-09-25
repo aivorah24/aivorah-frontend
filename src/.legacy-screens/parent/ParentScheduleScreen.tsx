@@ -33,6 +33,16 @@ const DURATION_MINS: Record<string, number> = {
   '30 min': 30, '45 min': 45, '1 hr': 60,
   '1.5 hrs': 90, '2 hrs': 120, '2.5 hrs': 150, '3 hrs': 180,
 };
+const PARENT_EVENT_TYPES = [
+  { label: 'Study',      type: 'study' },
+  { label: 'Class',      type: 'lesson' },
+  { label: 'Homework',   type: 'assignment' },
+  { label: 'Assignment', type: 'assignment' },
+  { label: 'Challenge',  type: 'practice' },
+  { label: 'Activity',   type: 'study' },
+  { label: 'Break',      type: 'break' },
+  { label: 'Other',      type: 'study' },
+];
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const HOUR_HEIGHT = 56;
 const DAY_COL_WIDTH = 140;
@@ -101,6 +111,7 @@ function typeColors(type: string): [string, string, string] {
     lesson:     ['#9C844A', '#F5EDDA', '#6B5A30'],
     study:      ['#C9A24E', '#FBF3DA', '#7A5C1E'],  // amber-gold, matches Aivorah theme
     challenge:  ['#6B5BA8', '#E8E4F5', '#3F3270'],
+    practice:   ['#6B5BA8', '#E8E4F5', '#3F3270'],
     deadline:   ['#B84A3A', '#F5DDD9', '#7A2A1E'],
     assignment: ['#3A8A6A', '#D9F0E8', '#1E5A40'],
     break:      ['#7A7A7A', '#EBEBEB', '#4A4A4A'],
@@ -182,8 +193,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   const [newNote, setNewNote] = useState('');
   const [newStartTime, setNewStartTime] = useState('09:00');
   const [newEndTime, setNewEndTime] = useState('10:00');
-  const [newType, setNewType] = useState('study');
+  const [newTag, setNewTag] = useState(PARENT_EVENT_TYPES[0].label);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   // Load children
   useEffect(() => {
@@ -260,6 +272,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   useFocusEffect(useCallback(() => { fetchEvents(); }, [fetchEvents]));
 
   function openSlotModal(dayISO: string, timeLabel: string) {
+    if (!child) return;
     setModalDate(dayISO);
     const sh = timeLabel.split(':')[0].padStart(2, '0');
     const eh = String(Math.min(23, parseInt(sh) + 1)).padStart(2, '0');
@@ -280,23 +293,27 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
           date:      modalDate,
           startTime: newStartTime,
           endTime:   newEndTime,
-          type:      newType,
+          type:      PARENT_EVENT_TYPES.find(t => t.label === newTag)?.type ?? 'study',
+          tag:       newTag,
           note:      newNote,
           studentId: child.id,
           createdBy:    'parent',
           creatorEmail: user?.email || '',
         }),
       });
-      if (res.ok) {
-        const ev = await res.json();
-        setEventsMap(prev => ({
-          ...prev,
-          [modalDate]: [...(prev[modalDate] ?? []), ev],
-        }));
-        setEventDates(prev => new Set([...prev, modalDate]));
-      }
-    } catch {}
-    setNewTitle(''); setNewNote(''); setSaving(false); setModalVisible(false);
+      if (!res.ok) throw new Error(`save failed (${res.status})`);
+      const ev = await res.json();
+      setEventsMap(prev => ({
+        ...prev,
+        [modalDate]: [...(prev[modalDate] ?? []), ev],
+      }));
+      setEventDates(prev => new Set([...prev, modalDate]));
+    } catch {
+      setSaveError('Could not save the event. Please try again.');
+      setSaving(false);
+      return;
+    }
+    setNewTitle(''); setNewNote(''); setSaveError(''); setSaving(false); setModalVisible(false);
   }
 
   async function removeEvent(id: string, dateStr: string) {
@@ -503,6 +520,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                                 const [eh, em] = endT.split(':').map(Number);
                                 const dur = (eh * 60 + em) - (sh * 60 + sm);
                                 const closest = DURATIONS.reduce((best, lbl) => Math.abs((DURATION_MINS[lbl]??60)-dur) < Math.abs((DURATION_MINS[best]??60)-dur) ? lbl : best, '1 hr');
+                                if (!child) return;
                                 setModalDate(d.iso);
                                 setNewStartTime(startT);
                                 setNewEndTime(endT);
@@ -584,10 +602,17 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
 
 
               {/* Add event button */}
-              <TouchableOpacity style={styles.addEventBtn} onPress={() => { setModalDate(todayISO); setNewStartTime('09:00'); setNewEndTime('10:00'); setModalVisible(true); }} activeOpacity={0.8}>
-                <Feather name="plus" size={16} color={colors.accentYellow} />
-                <Text style={styles.addEventText}>Add Event for {child?.name ?? 'Child'}</Text>
-              </TouchableOpacity>
+              {child ? (
+                <TouchableOpacity style={styles.addEventBtn} onPress={() => { setModalDate(todayISO); setNewStartTime('09:00'); setNewEndTime('10:00'); setModalVisible(true); }} activeOpacity={0.8}>
+                  <Feather name="plus" size={16} color={colors.accentYellow} />
+                  <Text style={styles.addEventText}>Add Event for {child.name}</Text>
+                </TouchableOpacity>
+              ) : childrenLoaded ? (
+                <TouchableOpacity style={styles.addEventBtn} onPress={() => navigation.navigate('ParentMyKids')} activeOpacity={0.8} testID="schedule-link-child">
+                  <Feather name="user-plus" size={16} color={colors.accentYellow} />
+                  <Text style={styles.addEventText}>Link your child in My Kids to plan their schedule</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             {/* ── Right Sidebar ── */}
@@ -682,13 +707,16 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
               />
               <Text style={styles.modalLabel}>Type:</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {['study','lesson','deadline','break'].map(t => (
+                {PARENT_EVENT_TYPES.map(({ label, type }) => (
                   <TouchableOpacity
-                    key={t}
-                    style={[styles.timeChip, newType === t && { borderColor: typeColors(t)[0], backgroundColor: typeColors(t)[1] }]}
-                    onPress={() => setNewType(t)}
+                    key={label}
+                    style={[styles.timeChip, newTag === label && { borderColor: typeColors(type)[0], backgroundColor: typeColors(type)[1] }]}
+                    onPress={() => setNewTag(label)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Type: ${label}`}
+                    accessibilityState={{ selected: newTag === label }}
                   >
-                    <Text style={[styles.timeChipText, newType === t && { color: typeColors(t)[2], fontWeight: '700' }]}>{t.charAt(0).toUpperCase() + t.slice(1)}</Text>
+                    <Text style={[styles.timeChipText, newTag === label && { color: typeColors(type)[2], fontWeight: '700' }]}>{label}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -703,8 +731,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                 }} />
                 <TimePicker label="End time" value={newEndTime} onChange={setNewEndTime} minTime={newStartTime} />
               </View>
+              {!!saveError && <Text style={styles.saveErrorText} testID="schedule-save-error">{saveError}</Text>}
               <View style={styles.modalBtns}>
-                <TouchableOpacity style={styles.modalCancel} onPress={() => setModalVisible(false)}>
+                <TouchableOpacity style={styles.modalCancel} onPress={() => { setSaveError(''); setModalVisible(false); }}>
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalConfirm} onPress={addEvent} disabled={saving}>
@@ -875,6 +904,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   modalCancelText:  { fontFamily: fonts.serif, fontSize: 13, fontWeight: '600', color: c.textMuted },
   modalConfirm:     { flex: 1, paddingVertical: 12, borderRadius: radius.md, backgroundColor: c.accentYellow, alignItems: 'center' },
   modalConfirmText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: '#0B0B0B' },
+  saveErrorText:    { fontFamily: fonts.serif, fontSize: 12, color: '#B84A3A', marginTop: 8 },
 });
 
 

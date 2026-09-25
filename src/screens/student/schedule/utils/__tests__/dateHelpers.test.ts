@@ -21,6 +21,23 @@ describe('deriveTypeFromTag', () => {
     expect(deriveTypeFromTag(tag)).toBe(expected);
   });
 
+  test.each([
+    ['Study Session', 'study'],
+    ['Class / Lesson', 'lesson'],
+    ['Homework', 'assignment'],
+    ['Challenge', 'practice'], // timed session, not an all-day challenge deadline
+    ['Quick Task', 'study'],
+    ['Learning Activity', 'study'],
+    ['Break', 'break'],
+    ['Other', 'study'],
+  ])('student option %s -> %s', (tag, expected) => {
+    expect(deriveTypeFromTag(tag)).toBe(expected);
+  });
+
+  test('a student-scheduled challenge gets the challenge colour', () => {
+    expect(typeColors('practice')).toEqual(typeColors('challenge'));
+  });
+
   test('matching is case-insensitive', () => {
     expect(deriveTypeFromTag('LIVE CLASS')).toBe('lesson');
   });
