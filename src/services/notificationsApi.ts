@@ -43,17 +43,21 @@ export class NotificationsUnavailableError extends Error {
 const UNAVAILABLE_STATUSES = [401, 403, 404, 503];
 
 // Firebase is loaded lazily so screens/tests that never reach V2 don't pull it in.
-function currentFirebaseUser(): { getIdToken: () => Promise<string> } | null {
+// Waits for Firebase to finish restoring the session: on web the app shows the
+// cached profile first, and currentUser is still null for a moment after load.
+async function currentFirebaseUser(): Promise<{ getIdToken: () => Promise<string> } | null> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy on purpose (see above)
-    return require('../config/firebase').auth?.currentUser ?? null;
+    const auth = require('../config/firebase').auth;
+    await auth?.authStateReady?.();
+    return auth?.currentUser ?? null;
   } catch {
     return null;
   }
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const token = await currentFirebaseUser()?.getIdToken().catch(() => null);
+  const token = await (await currentFirebaseUser())?.getIdToken().catch(() => null);
   if (!token) throw new NotificationsUnavailableError(null, 'No signed-in Firebase user');
   return { Authorization: `Bearer ${token}` };
 }
