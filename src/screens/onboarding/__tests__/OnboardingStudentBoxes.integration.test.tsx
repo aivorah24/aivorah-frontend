@@ -130,6 +130,25 @@ describe('OnboardingStudentBoxes', () => {
     expect(body.gender).toBe('Female');
   });
 
+  test('"Save & go to home page" sends the picked avatar and learning style on the awaited /user/profile PATCH', async () => {
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    await user.type(screen.getByPlaceholderText('Your name'), 'Progress Saver');
+    await user.press(screen.getByText('Gamer'));
+    await user.press(screen.getByText('Visual'));
+
+    await user.press(screen.getByLabelText('Back to home page'));
+    await user.press(await screen.findByText('Save & go to home page'));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    const profileCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    const body = JSON.parse(profileCall![1].body);
+    expect(body.avatarStyle).toBe('gamer');
+    expect(body.learningStyle).toBe('visual');
+  });
+
   test('under-14 date of birth blocks the About You card from completing', async () => {
     const user = userEvent.setup();
     await render(<OnboardingStudentBoxes />);
