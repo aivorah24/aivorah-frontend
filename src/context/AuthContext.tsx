@@ -901,6 +901,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         gender:             profile.gender  || undefined,
         state:              profile.state   || undefined,
         country:            profile.country || undefined,
+        avatarStyle:        profile.avatarStyle,
+        learningStyle:      profile.learningStyle,
+        interests:          profile.interests,
+        bio:                profile.bio,
+        photoUrl:           profile.photoUrl,
       };
       setUser(newUser);
       prefetchStudentDashboard(newUser);
@@ -1167,6 +1172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           gender:             profile.gender  || undefined,
           state:              profile.state   || undefined,
           country:            profile.country || undefined,
+          avatarStyle:        profile.avatarStyle,
+          learningStyle:      profile.learningStyle,
+          interests:          profile.interests,
+          bio:                profile.bio,
+          photoUrl:           profile.photoUrl,
         };
         setUser(newUser);
         prefetchStudentDashboard(newUser);
