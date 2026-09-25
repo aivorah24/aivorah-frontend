@@ -1,6 +1,10 @@
 const mockGetIdToken = jest.fn();
 let mockCurrentUser: any = { getIdToken: mockGetIdToken };
-jest.mock('../../config/firebase', () => ({ get auth() { return { currentUser: mockCurrentUser }; } }));
+let mockAuthReady: () => Promise<void> = async () => {};
+// Like real Firebase: one auth object whose currentUser is read live.
+jest.mock('../../config/firebase', () => ({
+  auth: { get currentUser() { return mockCurrentUser; }, authStateReady: () => mockAuthReady() },
+}));
 
 import {
   fetchNotifications, fetchUnreadCount, markNotificationRead, markAllNotificationsRead, NotificationsUnavailableError,
@@ -11,6 +15,7 @@ const respond = (status: number, body: any = {}) =>
   (global.fetch = jest.fn().mockResolvedValue({ ok: status < 400, status, json: async () => body }) as any);
 
 beforeEach(() => {
+  mockAuthReady = async () => {};
   mockCurrentUser = { getIdToken: mockGetIdToken };
   mockGetIdToken.mockResolvedValue('tok-123');
 });
@@ -57,4 +62,20 @@ test('mark read posts to that id only; read-all can be scoped by type', async ()
 test('unread count returns the number', async () => {
   respond(200, { count: 7 });
   await expect(fetchUnreadCount()).resolves.toBe(7);
+});
+
+test('waits for Firebase to restore the session instead of treating the user as signed out', async () => {
+  // Web restores the cached profile before Firebase: currentUser is null until authStateReady resolves.
+  mockCurrentUser = null;
+  mockAuthReady = async () => { mockCurrentUser = { getIdToken: mockGetIdToken }; };
+  respond(200, { count: 3 });
+  await expect(fetchUnreadCount()).resolves.toBe(3);
+  expect((global.fetch as jest.Mock).mock.calls[0][1].headers.Authorization).toBe('Bearer tok-123');
+});
+
+test('still unavailable when Firebase has finished and nobody is signed in (e.g. demo login)', async () => {
+  mockCurrentUser = null;
+  global.fetch = jest.fn() as any;
+  await expect(fetchNotifications()).rejects.toBeInstanceOf(NotificationsUnavailableError);
+  expect(global.fetch).not.toHaveBeenCalled();
 });
