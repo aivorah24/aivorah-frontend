@@ -81,6 +81,8 @@ const NotificationContext = createContext<NotificationState>({
 });
 
 const NOTIFICATIONS_V2_ENABLED = process.env.EXPO_PUBLIC_NOTIFICATIONS_V2 !== 'false';
+// The bell is an active tray: it lists only unread V2 rows, so opening one (or the
+// services clearing it on completion) removes it.
 const V2_PAGE_SIZE = 20;
 const V2_UNREAD_SCAN = 50;
 // Legacy types that V2 replaces; the rest (message/event/task/portfolio) still come from the legacy summary.
@@ -99,7 +101,7 @@ type V2Poll =
 async function pollV2(): Promise<V2Poll> {
   try {
     const [page, unreadPage, unreadTotal] = await Promise.all([
-      fetchNotifications({ limit: V2_PAGE_SIZE }),
+      fetchNotifications({ limit: V2_PAGE_SIZE, unreadOnly: true }),
       fetchNotifications({ limit: V2_UNREAD_SCAN, unreadOnly: true }),
       fetchUnreadCount(),
     ]);
@@ -207,7 +209,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!v2Active) return legacyItems;
     const withLocalReads = (n: V2Notification) =>
       !n.readAt && localReads.has(n.id) ? { ...n, readAt: localReads.get(n.id)! } : n;
-    const v2 = mergeById(v2FirstPage, v2Older).map(withLocalReads).map(toNotifItem);
+    const v2 = mergeById(v2FirstPage, v2Older).map(withLocalReads).filter(n => !n.readAt).map(toNotifItem);
     const others = legacyItems.filter(i => !V2_OWNED_TYPES.includes(i.type));
     const ts = (i: NotifItem) => Date.parse(i.createdAt) || 0;
     return [...v2, ...others].sort((a, b) => ts(b) - ts(a) || (b.id < a.id ? -1 : 1));
@@ -377,7 +379,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const arrived = v2!.unread.filter(n => !v2SeenIdsRef.current.has(n.id) && !locallyReadRef.current.has(n.id));
         v2!.page.forEach(n => v2SeenIdsRef.current.add(n.id));
         v2!.unread.forEach(n => v2SeenIdsRef.current.add(n.id));
-        v2!.page.forEach(n => { if (n.readAt) locallyReadRef.current.delete(n.id); });
+        // Local reads the server no longer lists as unread are confirmed; forget them.
+        const stillListed = new Set([...v2!.page, ...v2!.unread].map(n => n.id));
+        [...locallyReadRef.current.keys()].forEach(id => { if (!stillListed.has(id)) locallyReadRef.current.delete(id); });
         // The first successful V2 poll only records what already exists.
         if (v2BaselineRef.current && !markReadInFlight.current && arrived.length) {
           fresh = [...arrived.map(toNotifItem), ...fresh].sort((a, b) => ts(b) - ts(a));
@@ -657,7 +661,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!v2Active || !v2Cursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await fetchNotifications({ cursor: v2Cursor, limit: V2_PAGE_SIZE });
+      const page = await fetchNotifications({ cursor: v2Cursor, limit: V2_PAGE_SIZE, unreadOnly: true });
       v2OlderLoadedRef.current = true;
       page.items.forEach(n => v2SeenIdsRef.current.add(n.id));
       setV2Older(prev => mergeById(prev, page.items));

@@ -74,8 +74,8 @@ beforeEach(() => {
     ok: true, json: async () => (String(url).includes('notifications-summary') ? legacySummary : {}),
   })) as any;
   mockApi.fetchNotifications.mockImplementation(async (opts: any = {}) => {
-    if (opts.unreadOnly) return { items: unread, nextCursor: null };
-    if (opts.cursor === 'cur-1') return { items: [v2('old1', '2026-09-20T10:00:00Z', { readAt: '2026-09-21T00:00:00Z' })], nextCursor: null };
+    if (opts.cursor === 'cur-1') return { items: [v2('old1', '2026-09-20T10:00:00Z')], nextCursor: null };
+    if (opts.limit === 50) return { items: unread, nextCursor: null };
     return { items: page, nextCursor: 'cur-1' };
   });
   mockApi.fetchUnreadCount.mockImplementation(async () => unread.length);
@@ -101,10 +101,16 @@ test('badge counts come from V2 unread rows (not the legacy counts)', async () =
   expect(screen.getByTestId('counts')).toHaveTextContent(/a:1\ c:1\ m:1/);
 });
 
-test('opening one notification marks only that one read (optimistically) and calls the API with its id', async () => {
+test('the bell only asks the server for unread rows (active tray)', async () => {
+  await mount();
+  const listCalls = mockApi.fetchNotifications.mock.calls.map(c => c[0]);
+  expect(listCalls.every((o: any) => o.unreadOnly === true)).toBe(true);
+});
+
+test('opening one notification removes only that one from the tray and calls the API with its id', async () => {
   await mount();
   await fireEvent.press(screen.getByTestId('read-c1'));
-  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1(r),msg_m1,a1'));
+  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('msg_m1,a1'));
   expect(screen.getByTestId('counts')).toHaveTextContent(/a:1\ c:0/);
   expect(mockApi.markNotificationRead).toHaveBeenCalledTimes(1);
   expect(mockApi.markNotificationRead).toHaveBeenCalledWith('c1');
@@ -114,7 +120,7 @@ test('a poll that raced the read does not resurrect it as unread', async () => {
   await mount();
   await fireEvent.press(screen.getByTestId('read-c1'));
   await poll(); // server still reports c1 unread
-  expect(screen.getByTestId('order')).toHaveTextContent(/c1\(r\)/);
+  expect(screen.getByTestId('order')).toHaveTextContent('msg_m1,a1');
   expect(screen.getByTestId('counts')).toHaveTextContent(/c:0/);
 });
 
@@ -132,15 +138,16 @@ test('a newly arrived V2 notification toasts (existing ones at mount do not)', a
 test('load more appends older pages after the first page', async () => {
   await mount();
   await fireEvent.press(screen.getByTestId('more'));
-  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1,old1(r)'));
+  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1,old1'));
   expect(screen.getByTestId('mode')).toHaveTextContent(/more:false/);
-  expect(mockApi.fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ cursor: 'cur-1' }));
+  expect(mockApi.fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ cursor: 'cur-1', unreadOnly: true }));
 });
 
-test('mark all read marks every V2 row and calls read-all', async () => {
+test('mark all read empties the V2 tray and calls read-all', async () => {
   await mount();
   await fireEvent.press(screen.getByTestId('read-all'));
-  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1(r),msg_m1,a1(r)'));
+  // Also clears chat unread, so the tray is empty.
+  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent(''));
   expect(mockApi.markAllNotificationsRead).toHaveBeenCalled();
 });
 
@@ -163,4 +170,13 @@ test('V2 unavailable (e.g. 401 / no Firebase user) → full legacy feed, unchang
   const calls = mockApi.fetchNotifications.mock.calls.length;
   await poll();
   expect(mockApi.fetchNotifications.mock.calls.length).toBe(calls);
+});
+
+test('a notification cleared by the server (e.g. task completed) disappears on the next poll', async () => {
+  await mount();
+  page = [A1];
+  unread = [A1];
+  await poll();
+  await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('msg_m1,a1'));
+  expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:0/);
 });
