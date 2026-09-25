@@ -738,11 +738,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           curriculum: updated.curriculum,
           school: updated.school,
           location: updated.location,
-          avatarStyle: updated.avatarStyle,
           learningStyle: updated.learningStyle,
           interests: updated.interests,
           bio: updated.bio,
-          photoUrl: updated.photoUrl,
+          // Only when explicitly changed — re-sending a stale snapshot overwrote a newer avatar/photo pick.
+          ...('avatarStyle' in fields ? { avatarStyle: updated.avatarStyle } : {}),
+          ...('photoUrl' in fields ? { photoUrl: updated.photoUrl } : {}),
         }),
       }).catch(() => {});
       return updated;
