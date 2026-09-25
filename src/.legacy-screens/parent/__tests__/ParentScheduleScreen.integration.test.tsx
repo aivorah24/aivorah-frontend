@@ -54,6 +54,17 @@ test('a parent with no linked child is pointed to My Kids instead of a dead Add 
   expect(navigation.navigate).toHaveBeenCalledWith('ParentMyKids');
 });
 
+test("the child's upcoming deadlines exclude completed work", async () => {
+  mockApi({ children: [CHILD] });
+  await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
+  await screen.findByText('Add Event for Aanya');
+
+  await waitFor(() => {
+    const urls = (global.fetch as jest.Mock).mock.calls.map(([u]) => String(u));
+    expect(urls.find(u => u.includes('/schedule/upcoming'))).toContain('hideCompleted=true');
+  });
+});
+
 test('offers the parent event types, including Challenge, with no emoji', async () => {
   mockApi({ children: [CHILD] });
   const user = userEvent.setup();

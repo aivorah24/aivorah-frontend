@@ -240,7 +240,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
           .catch(() => ({ date: d, events: [] }))
       );
       const [dlRes, monthRes, ...dayResults] = await Promise.all([
-        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${child.id}`),
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${child.id}&hideCompleted=true`),
         fetch(`${SCHEDULE_SERVER_URL}/schedule/month?studentId=${child.id}&year=${calYear}&month=${calMonth}`),
         ...dayFetches,
       ]);
