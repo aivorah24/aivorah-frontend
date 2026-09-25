@@ -71,6 +71,16 @@ export default function OnboardingStudentBoxes() {
   const [avatarStyle, setAvatarStyle] = useState((user as any)?.avatarStyle || 'default');
   const [learningStyle, setLearningStyle] = useState((user as any)?.learningStyle || '');
 
+  // Saved picks can land after mount (profile loads async); adopt them unless the student already chose.
+  const savedAvatar: string | undefined = (user as any)?.avatarStyle;
+  const savedLearningStyle: string | undefined = (user as any)?.learningStyle;
+  const [seenSaved, setSeenSaved] = useState({ avatar: savedAvatar, learning: savedLearningStyle });
+  if (seenSaved.avatar !== savedAvatar || seenSaved.learning !== savedLearningStyle) {
+    setSeenSaved({ avatar: savedAvatar, learning: savedLearningStyle });
+    if (savedAvatar && avatarStyle === 'default') setAvatarStyle(savedAvatar);
+    if (savedLearningStyle && !learningStyle) setLearningStyle(savedLearningStyle);
+  }
+
   // ── Per-card completion ────────────────────────────
   const {
     aboutYouDone, curriculumDone, schoolGradeDone, avatarDone, learningStyleDone, requiredDone, completionPct,

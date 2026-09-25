@@ -23,9 +23,10 @@ jest.mock('firebase/auth', () => ({
 }));
 jest.mock('../../../config/firebase', () => ({}));
 
+let mockAuthUser: Record<string, any> = { email: 'a@a.com', role: 'student', name: '' };
 jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({
-    user: { email: 'a@a.com', role: 'student', name: '' },
+    user: mockAuthUser,
     updateUser: jest.fn(),
     logout: jest.fn(),
   }),
@@ -43,6 +44,7 @@ function agedDob(yearsAgo: number): string {
 }
 
 beforeEach(() => {
+  mockAuthUser = { email: 'a@a.com', role: 'student', name: '' };
   global.fetch = jest.fn().mockResolvedValue({ json: async () => [], ok: true });
 });
 
@@ -147,6 +149,48 @@ describe('OnboardingStudentBoxes', () => {
     const body = JSON.parse(profileCall![1].body);
     expect(body.avatarStyle).toBe('gamer');
     expect(body.learningStyle).toBe('visual');
+  });
+
+  async function saveAndGetProfileBody(user: ReturnType<typeof userEvent.setup>) {
+    await user.press(screen.getByLabelText('Back to home page'));
+    await user.press(await screen.findByText('Save & go to home page'));
+    await new Promise((r) => setTimeout(r, 0));
+    const call = (global.fetch as jest.Mock).mock.calls.find(([url]) => String(url).includes('/user/profile'));
+    return JSON.parse(call![1].body);
+  }
+
+  test('resuming onboarding keeps the previously saved avatar and learning style', async () => {
+    mockAuthUser = { email: 'a@a.com', role: 'student', name: 'Brintha', avatarStyle: 'casual', learningStyle: 'visual' };
+    const user = userEvent.setup();
+    await render(<OnboardingStudentBoxes />);
+
+    const body = await saveAndGetProfileBody(user);
+    expect(body.avatarStyle).toBe('casual');
+    expect(body.learningStyle).toBe('visual');
+  });
+
+  test('saved avatar and learning style that load after the screen opens are adopted', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await render(<OnboardingStudentBoxes />);
+
+    mockAuthUser = { ...mockAuthUser, avatarStyle: 'casual', learningStyle: 'visual' };
+    await rerender(<OnboardingStudentBoxes />);
+
+    const body = await saveAndGetProfileBody(user);
+    expect(body.avatarStyle).toBe('casual');
+    expect(body.learningStyle).toBe('visual');
+  });
+
+  test('a late-loading saved avatar does not override one the student already picked', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await render(<OnboardingStudentBoxes />);
+    await user.press(screen.getByText('Gamer'));
+
+    mockAuthUser = { ...mockAuthUser, avatarStyle: 'casual' };
+    await rerender(<OnboardingStudentBoxes />);
+
+    const body = await saveAndGetProfileBody(user);
+    expect(body.avatarStyle).toBe('gamer');
   });
 
   test('under-14 date of birth blocks the About You card from completing', async () => {
