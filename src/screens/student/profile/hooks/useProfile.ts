@@ -11,10 +11,10 @@ export function useProfile() {
   const { user, updateUser, logout } = useAuth();
   const [signOutVisible, setSignOutVisible] = useState(false);
 
-  const [photoUrl, setPhotoUrl] = useState<string | null>((user as any)?.photoUrl ?? null);
+  // Derived from user (not local state) so the hero stays in sync when the server profile lands after the cached one.
+  const photoUrl: string | null = (user as any)?.photoUrl ?? null;
+  const selAvatar: string = (user as any)?.avatarStyle ?? 'default';
   const [uploading, setUploading] = useState(false);
-  const initialAvatar = (user as any)?.avatarStyle ?? 'default';
-  const [selAvatar, setSelAvatar] = useState(initialAvatar);
   const [learningStyle, setLearningStyle] = useState<string>((user as any)?.learningStyle ?? '');
   const [interests, setInterests] = useState<string[]>((user as any)?.interests ?? []);
   const [editVisible, setEditVisible] = useState(false);
@@ -37,8 +37,6 @@ export function useProfile() {
   }
 
   function handleSelectAvatar(id: string) {
-    setSelAvatar(id);
-    setPhotoUrl(null);
     // Bug #9 (second finding): must send an EXPLICIT null, not undefined —
     // JSON.stringify drops undefined keys entirely, so the PATCH never told
     // the backend to clear the previously-uploaded photo. The header/sidebar
@@ -95,7 +93,7 @@ export function useProfile() {
     try {
       const data = await uploadProfilePhoto(user?.email, result.assets[0].base64!, result.assets[0].mimeType ?? 'image/jpeg');
       const url = data.photoUrl || data.url;
-      if (url) { setPhotoUrl(url); updateUser({ photoUrl: url } as any); }
+      if (url) updateUser({ photoUrl: url } as any);
     } catch { Alert.alert('Upload failed', 'Could not upload photo. Please try again.'); }
     finally { setUploading(false); }
   }
