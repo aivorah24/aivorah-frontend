@@ -65,7 +65,7 @@ export default function ListenTab({
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,
-    toggleListenPlay, repeatStep, goToListenStep, skipBy, changePlaybackRate,
+    toggleListenPlay, repeatStep, goToListenStep, playListenStep, skipBy, changePlaybackRate,
   } = narration;
 
   const step = currentListenStep;
@@ -90,6 +90,8 @@ export default function ListenTab({
     if (typeof pg === 'number') { bookPage = pg; break; }
   }
   const followsBook = listenSteps.some((st) => st.lines?.some((l) => typeof l.page === 'number'));
+  const playMode = !!step?.lines?.length;
+  const sceneYRef = React.useRef<Record<number, number>>({});
   const word = vocab[vocabIndex];
   const stepsCount = listenSteps.length;
 
@@ -128,7 +130,7 @@ export default function ListenTab({
             </View>
           )}
 
-          <Text style={[styles.listenHeading, { color: colors.textMain }]}>{step?.heading}</Text>
+          {!playMode && <Text style={[styles.listenHeading, { color: colors.textMain }]}>{step?.heading}</Text>}
 
           {/* Visual column subtraction — solve it on the board like a teacher
               would for a young child, not as a wall of text. */}
@@ -144,35 +146,82 @@ export default function ListenTab({
             );
           })()}
 
-          <View style={styles.listenBodyRow}>
-            {sentences.map((s, i) => {
-              const active = i === curSentenceIdx;
-              const line = s.line;
-              return (
-                <View key={i} onLayout={(e) => { sentenceYRef.current[i] = e.nativeEvent.layout.y; }}>
-                  {line && (i === 0 || sentences[i - 1].line?.speaker !== line.speaker) && !line.stage && (
-                    <Text style={[styles.playSpeaker, { color: active ? colors.accentGreen : colors.textDim }]}>{line.speaker}</Text>
-                  )}
-                  {!!line?.direction && !line.stage && (
-                    <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
-                  )}
-                  <Text
-                    style={[
-                      styles.listenBodyText,
-                      fontLarge && styles.listenBodyTextLarge,
-                      line?.stage && { fontStyle: 'italic' },
-                      {
-                        color: active ? colors.textMain : colors.textMuted,
-                        backgroundColor: active ? colors.accentGreen + '20' : 'transparent',
-                      },
-                    ]}
-                  >
-                    {line?.stage ? `(${s.sentence})` : s.sentence}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+          {playMode ? (
+            <View style={styles.listenBodyRow}>
+              {listenSteps.map((st, si) => {
+                const current = si === listenStep;
+                return (
+                  <View key={si} onLayout={(e) => { sceneYRef.current[si] = e.nativeEvent.layout.y; }} style={{ marginBottom: 18 }}>
+                    <TouchableOpacity
+                      testID={`scene-${si}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Play ${st.heading}`}
+                      onPress={() => playListenStep(si)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: current ? colors.accentGreen : colors.borderColor }}
+                    >
+                      <Feather name={current && listenPlaying ? 'volume-2' : 'play-circle'} size={16} color={current ? colors.accentGreen : colors.textMuted} />
+                      <Text style={[styles.listenHeading, { color: current ? colors.textMain : colors.textMuted, marginVertical: 0, flex: 1 }]}>{st.heading}</Text>
+                    </TouchableOpacity>
+                    {(current ? sentences : (st.lines || []).map((line) => ({ sentence: line.text, line }))).map((s, i, all: any[]) => {
+                      const active = current && i === curSentenceIdx;
+                      const line = s.line;
+                      return (
+                        <View key={i} onLayout={current ? (e) => { sentenceYRef.current[i] = (sceneYRef.current[si] || 0) + e.nativeEvent.layout.y; } : undefined}>
+                          {line && (i === 0 || all[i - 1].line?.speaker !== line.speaker) && !line.stage && (
+                            <Text style={[styles.playSpeaker, { color: active ? colors.accentGreen : colors.textDim }]}>{line.speaker}</Text>
+                          )}
+                          {!!line?.direction && !line.stage && (
+                            <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
+                          )}
+                          <Text
+                            style={[
+                              styles.listenBodyText,
+                              fontLarge && styles.listenBodyTextLarge,
+                              line?.stage && { fontStyle: 'italic' },
+                              { color: active ? colors.textMain : colors.textMuted, backgroundColor: active ? colors.accentGreen + '20' : 'transparent', opacity: current ? 1 : 0.75 },
+                            ]}
+                          >
+                            {line?.stage ? `(${s.sentence})` : s.sentence}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.listenBodyRow}>
+              {sentences.map((s, i) => {
+                const active = i === curSentenceIdx;
+                const line = s.line;
+                return (
+                  <View key={i} onLayout={(e) => { sentenceYRef.current[i] = e.nativeEvent.layout.y; }}>
+                    {line && (i === 0 || sentences[i - 1].line?.speaker !== line.speaker) && !line.stage && (
+                      <Text style={[styles.playSpeaker, { color: active ? colors.accentGreen : colors.textDim }]}>{line.speaker}</Text>
+                    )}
+                    {!!line?.direction && !line.stage && (
+                      <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.listenBodyText,
+                        fontLarge && styles.listenBodyTextLarge,
+                        line?.stage && { fontStyle: 'italic' },
+                        {
+                          color: active ? colors.textMain : colors.textMuted,
+                          backgroundColor: active ? colors.accentGreen + '20' : 'transparent',
+                        },
+                      ]}
+                    >
+                      {line?.stage ? `(${s.sentence})` : s.sentence}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* ── Maths AI Tutor: compact "Listen" so the tutor can read the
               current step aloud (age 7 benefits from hearing it). ── */}
