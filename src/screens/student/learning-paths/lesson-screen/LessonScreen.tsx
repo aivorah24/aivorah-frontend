@@ -22,6 +22,7 @@ import { useDbTopic } from './hooks/useDbTopic';
 import { useNarration } from './hooks/useNarration';
 import { usePracticeRedirect } from './hooks/usePracticeRedirect';
 import { adaptTeacherContentToTopic, type TeacherTopicContent } from './utils/adaptTeacherContent';
+import { buildReasoningListen } from './utils/listenFromBlocks';
 import ReadTab from './components/ReadTab';
 import AskTab from './components/AskTab';
 import ListenTab from './components/ListenTab';
@@ -94,8 +95,12 @@ export default function LessonScreen({ navigation, route }: any) {
     : getSubjectSyllabus(curriculum, grade, subject)[chapterIndex];
   const topic = isDbBacked ? dbTopic ?? undefined : chapter?.topics[topicIndex];
 
+  // A lesson with a reasoning-flow block is narrated card by card so the Listen board can follow the audio.
+  const reasoning = useMemo(() => buildReasoningListen(rawPayload), [rawPayload]);
+
   const listenSteps: ListenStep[] = useMemo(() => {
     if (!topic) return [];
+    if (reasoning) return reasoning.steps;
     if (topic.readText.listenParts && topic.readText.listenParts.length > 0) {
       return topic.readText.listenParts.map((p: any) => ({
         label: p.heading, heading: p.heading, text: p.text, keyIdea: p.keyIdea, pauseThink: p.pauseThink,
@@ -120,7 +125,7 @@ export default function LessonScreen({ navigation, route }: any) {
       ...topic.readText.body.map((p: any, i: number) => ({ label: `Part ${i + 1}`, heading: `Part ${i + 1}`, text: p })),
       { label: 'Try this yourself', heading: 'Try this yourself', text: topic.readText.activity },
     ];
-  }, [topic]);
+  }, [topic, reasoning]);
 
   const vocab = topic?.readText.vocab ?? [];
 
@@ -276,6 +281,9 @@ export default function LessonScreen({ navigation, route }: any) {
                 topic={topic}
                 isMath={isMath}
                 listenSteps={listenSteps}
+                reasoning={reasoning}
+                grade={grade}
+                subject={subject}
                 colors={colors}
                 styles={styles}
                 narration={narration}
