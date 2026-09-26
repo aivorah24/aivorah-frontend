@@ -1,0 +1,61 @@
+import { buildReasoningListen } from '../listenFromBlocks';
+
+const camel = {
+  blocks: [
+    { type: 'overview', text: "How can a few tiny drops of blood on a dusty path reveal the length of a camel's tail?" },
+    { type: 'prose_excerpt', sourceText: 'I noticed small droplets of blood along the track, likely from mosquito bites.', explanation: 'Har Datt explains his deduction.' },
+    { type: 'visual_representation', url: 'https://x/y.png', caption: 'c' },
+    {
+      type: 'process', title: 'Deductive Reasoning Flow',
+      steps: [
+        'Action: Har Datt notices the track.',
+        'Evidence: Small droplets of blood are found.',
+        'Thought: Mosquito bites are the likely cause.',
+        'Reasoning: A long tail would fend off pests.',
+        'Conclusion: The camel must have a short tail.',
+      ],
+    },
+    { type: 'key_points', items: ['Deep-dive question: How does Dev Datt read the footprints?'] },
+    { type: 'key_terms', items: [{ term: 'Deduction', definition: 'Reaching a conclusion from evidence. Context clue: the King praises it.' }] },
+  ],
+};
+
+describe('buildReasoningListen', () => {
+  test('turns a reasoning-flow lesson into ordered listen steps with each card mapped to its step', () => {
+    const r = buildReasoningListen(camel)!;
+    expect(r.cards.map((c) => c.label)).toEqual(['Action', 'Evidence', 'Thought', 'Reasoning', 'Conclusion']);
+    expect(r.steps.map((s) => s.label)).toEqual(['Introduction', 'From the book', 'Action', 'Evidence', 'Thought', 'Reasoning', 'Conclusion', 'Think deeper', 'Key words']);
+    expect(r.stepToCard).toEqual([null, null, 0, 1, 2, 3, 4, null, null]);
+    expect(r.steps.length).toBe(r.stepToCard.length);
+  });
+
+  test('card steps are spoken with their label and end with a full stop', () => {
+    const r = buildReasoningListen(camel)!;
+    expect(r.steps[2].text).toBe('Action. Har Datt notices the track.');
+    expect(r.steps.every((s) => /[.!?]$/.test(s.text))).toBe(true);
+  });
+
+  test('deep-dive prefix is dropped and the context clue is not read out as part of the meaning', () => {
+    const r = buildReasoningListen(camel)!;
+    expect(r.steps[7].text).toBe('How does Dev Datt read the footprints?');
+    expect(r.steps[8].text).toBe('Deduction means Reaching a conclusion from evidence.');
+  });
+
+  test('exposes the book sentence for the follow-along view', () => {
+    expect(buildReasoningListen(camel)!.bookQuote).toContain('small droplets of blood');
+  });
+
+  test('labels without a "Label:" prefix fall back to Step N', () => {
+    const r = buildReasoningListen({ blocks: [{ type: 'process', title: 'Logic chain', steps: ['one', 'two', 'three'] }] })!;
+    expect(r.cards.map((c) => c.label)).toEqual(['Step 1', 'Step 2', 'Step 3']);
+  });
+
+  test.each([
+    ['no blocks', {}],
+    ['a plain process that is not a reasoning flow', { blocks: [{ type: 'process', title: 'Steps of digestion', steps: ['a', 'b', 'c'] }] }],
+    ['too few steps', { blocks: [{ type: 'process', title: 'Reasoning flow', steps: ['a', 'b'] }] }],
+    ['too many steps', { blocks: [{ type: 'process', title: 'Reasoning flow', steps: ['1', '2', '3', '4', '5', '6', '7', '8'] }] }],
+  ])('returns null for %s (keeps the existing Listen behaviour)', (_n, payload) => {
+    expect(buildReasoningListen(payload)).toBeNull();
+  });
+});

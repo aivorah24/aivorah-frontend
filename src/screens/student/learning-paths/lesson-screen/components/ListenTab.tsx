@@ -8,6 +8,8 @@ import { parseSubtraction } from '../utils/math';
 import ColumnSubtraction from './ColumnSubtraction';
 import { makeStyles } from '../styles';
 import type { Mode } from '../types';
+import type { ReasoningListen } from '../utils/listenFromBlocks';
+import ListenVisualBoard from './ListenVisualBoard';
 
 const PLAYBACK_RATES = [0.6, 0.78, 1.0, 1.25];
 
@@ -15,6 +17,9 @@ export default function ListenTab({
   topic,
   isMath,
   listenSteps,
+  reasoning,
+  grade,
+  subject,
   colors,
   styles,
   narration,
@@ -35,6 +40,9 @@ export default function ListenTab({
   topic: any;
   isMath: boolean;
   listenSteps: import('../types').ListenStep[];
+  reasoning?: ReasoningListen | null;
+  grade: string;
+  subject: string;
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
   narration: ReturnType<typeof import('../hooks/useNarration').useNarration>;
@@ -401,6 +409,17 @@ export default function ListenTab({
 
         {/* ── Right pane: illustration + New Word ── */}
         <ScrollView style={styles.rightPane} contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>
+          {reasoning && (
+            <ListenVisualBoard
+              cards={reasoning.cards}
+              activeCard={reasoning.stepToCard[listenStep] ?? null}
+              bookQuote={reasoning.bookQuote}
+              topic={topic}
+              grade={grade}
+              subject={subject}
+              colors={colors}
+            />
+          )}
           {(() => {
             // Per-stanza illustration for the current Listen step — map the
             // active stanza to its book image so the panel shows the real
