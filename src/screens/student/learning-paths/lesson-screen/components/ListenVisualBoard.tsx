@@ -73,6 +73,7 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
 }) {
   const [view, setView] = useState<'chain' | 'book'>(followsBook ? 'book' : 'chain');
   const reduceMotion = useReduceMotion();
+  useEffect(() => { if (followsBook) setView('book'); }, [followsBook]);
   const reached = activeCard ?? -1;
 
   const Tab = ({ id, label, icon }: { id: 'chain' | 'book'; label: string; icon: any }) => {
@@ -99,12 +100,14 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
 
   return (
     <View testID="listen-visual-board" style={{ gap: 12 }}>
-      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-        <Tab id="chain" label="Visual Logic Chain" icon="git-commit" />
-        <Tab id="book" label="Book Follow-Along" icon="book-open" />
-      </View>
+      {cards.length > 0 && (
+        <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
+          <Tab id="chain" label="Visual Logic Chain" icon="git-commit" />
+          <Tab id="book" label="Book Follow-Along" icon="book-open" />
+        </View>
+      )}
 
-      {view === 'chain' ? (
+      {view === 'chain' && cards.length > 0 ? (
         <View style={{ gap: 6 }}>
           {cards.map((c, i) => (
             <React.Fragment key={i}>
@@ -119,7 +122,7 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
         </View>
       ) : (
         <View style={{ gap: 10 }}>
-          {followsBook && (
+          {followsBook && cards.length > 0 && (
             <View testID="clue-strip" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {cards.map((c, i) => {
                 const accent = PALETTE[i % PALETTE.length];

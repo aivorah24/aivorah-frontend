@@ -39,18 +39,22 @@ export function buildReasoningListen(rawPayload: any): ReasoningListen | null {
   const flow = blocks.find(
     (b) => b.type === 'process' && Array.isArray(b.steps) && b.steps.length >= 3 && b.steps.length <= 7 && /reasoning|logic|chain|flow/i.test(String(b.title || '')),
   );
-  if (!flow) return null;
+  // A saved narration script ([{ card, heading, text, lines? }]) is a full spoken explanation, so prefer it over
+  // reading the card lines back. `card` says which visual card the step explains (null = none).
+  const savedScript = Array.isArray(rawPayload?.listenScript)
+    ? (rawPayload.listenScript as any[]).filter((s) => s && typeof s.heading === 'string' && typeof s.text === 'string' && s.text.trim())
+    : [];
+  // A piece read aloud (story, essay, poem) has no reasoning chain: it still gets the script and the book.
+  if (!flow && !savedScript.some((s) => cleanLines(s.lines))) return null;
 
-  const cards: ChainCard[] = (flow.steps as string[]).map((s, i) => {
+  const cards: ChainCard[] = flow ? (flow.steps as string[]).map((s, i) => {
     const m = /^\s*([A-Za-z][A-Za-z ]{1,20}?)\s*:\s*(.+)$/.exec(String(s));
     return m ? { label: m[1].trim(), text: m[2].trim() } : { label: `Step ${i + 1}`, text: String(s).trim() };
-  });
+  }) : [];
 
   // A saved narration script ([{ card, heading, text }]) is a full spoken explanation, so prefer it over
   // reading the card lines back. `card` says which visual card the step explains (null = none).
-  const script = Array.isArray(rawPayload?.listenScript)
-    ? (rawPayload.listenScript as any[]).filter((s) => s && typeof s.heading === 'string' && typeof s.text === 'string' && s.text.trim())
-    : [];
+  const script = savedScript;
   if (script.length) {
     const bookQuote = blocks.find((b) => b.type === 'prose_excerpt' && b.sourceText)?.sourceText;
     return {

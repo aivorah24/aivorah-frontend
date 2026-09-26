@@ -87,3 +87,11 @@ describe('ListenVisualBoard - follows the play', () => {
     expect(screen.getByTestId('chain-card-0')).toBeTruthy();
   });
 });
+
+describe('ListenVisualBoard - no chain', () => {
+  test('shows just the book, with no tabs or clue strip', async () => {
+    await render(<ListenVisualBoard cards={[]} activeCard={null} bookPage={5} followsBook topic={topic} grade="Grade 8" subject="English" colors={colors} />);
+    expect(screen.queryByTestId('board-tab-chain')).toBeNull();
+    expect(screen.queryByTestId('clue-strip')).toBeNull();
+  });
+});
