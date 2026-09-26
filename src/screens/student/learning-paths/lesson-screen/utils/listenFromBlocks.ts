@@ -23,6 +23,8 @@ const cleanLines = (raw: any): PlayLine[] | undefined => {
       ...(typeof l.direction === 'string' && l.direction.trim() ? { direction: l.direction.trim() } : {}),
       ...(l.stage ? { stage: true } : {}),
       ...(Number.isInteger(l.card) ? { card: l.card } : {}),
+      ...(Number.isInteger(l.page) && l.page > 0 ? { page: l.page } : {}),
+      ...(typeof l.audio === 'string' && /^https:\/\//.test(l.audio) ? { audio: l.audio } : {}),
     }));
   return lines.length ? lines : undefined;
 };

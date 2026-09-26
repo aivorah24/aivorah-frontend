@@ -67,3 +67,23 @@ describe('ListenVisualBoard', () => {
     expect(screen.getByTestId('board-tab-book').props.accessibilityState.selected).toBe(true);
   });
 });
+
+describe('ListenVisualBoard - follows the play', () => {
+  const play = (activeCard: number | null, bookPage: number) => (
+    <ListenVisualBoard cards={cards} activeCard={activeCard} bookPage={bookPage} followsBook topic={topic} grade="Grade 8" subject="English" colors={colors} />
+  );
+
+  test('opens on the book with a clue strip that lights the current clue', async () => {
+    await render(play(2, 35));
+    expect(screen.getByTestId('clue-strip')).toBeTruthy();
+    expect(screen.getByText('3. Thought').parent).toBeTruthy();
+    expect(screen.queryByTestId('chain-card-0')).toBeNull();
+  });
+
+  test('the chain tab is still one tap away', async () => {
+    const user = userEvent.setup();
+    await render(play(null, 30));
+    await user.press(screen.getByTestId('board-tab-chain'));
+    expect(screen.getByTestId('chain-card-0')).toBeTruthy();
+  });
+});

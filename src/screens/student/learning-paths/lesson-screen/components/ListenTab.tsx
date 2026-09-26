@@ -83,6 +83,13 @@ export default function ListenTab({
     const c = sentences[i]?.line?.card;
     if (typeof c === 'number') { cardAtLine = c; break; }
   }
+  // The book page follows the play: the page of the latest line spoken so far.
+  let bookPage: number | undefined;
+  for (let i = Math.min(curSentenceIdx, sentences.length - 1); i >= 0; i -= 1) {
+    const pg = sentences[i]?.line?.page;
+    if (typeof pg === 'number') { bookPage = pg; break; }
+  }
+  const followsBook = listenSteps.some((st) => st.lines?.some((l) => typeof l.page === 'number'));
   const word = vocab[vocabIndex];
   const stepsCount = listenSteps.length;
 
@@ -400,7 +407,9 @@ export default function ListenTab({
             <ListenVisualBoard
               cards={reasoning.cards}
               activeCard={cardAtLine ?? reasoning.stepToCard[listenStep] ?? null}
-              bookQuote={reasoning.bookQuote}
+              bookQuote={followsBook ? undefined : reasoning.bookQuote}
+              bookPage={bookPage}
+              followsBook={followsBook}
               topic={topic}
               grade={grade}
               subject={subject}

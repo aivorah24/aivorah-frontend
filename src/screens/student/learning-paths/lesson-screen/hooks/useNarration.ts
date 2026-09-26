@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { speakWithBoundary, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
+import { speakWithBoundary, playClip, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
 import { profileFor } from '../utils/playVoices';
 import type { ListenStep, PlayLine } from '../types';
 
@@ -66,19 +66,22 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
       }
       setSentenceIdx(i);
       const line = sents[i].line;
-      speakWithBoundary(
+      const next = () => {
+        if (seq !== playSeqRef.current) return;
+        // Poem cadence: a short breath between lines; a play pauses for the change of speaker.
+        const gap = line ? (line.stage ? 500 : 350) : isPoemRef.current ? 450 : 0;
+        if (gap) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, gap);
+        else speakIdx(i + 1);
+      };
+      const browserVoice = () => speakWithBoundary(
         sents[i].sentence.trim(),
         () => {}, // highlight is line-level, not word-level
-        () => {
-          if (seq !== playSeqRef.current) return;
-          // Poem cadence: a short breath between lines; a play pauses for the change of speaker.
-          const gap = line ? (line.stage ? 500 : 350) : isPoemRef.current ? 450 : 0;
-          if (gap) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, gap);
-          else speakIdx(i + 1);
-        },
+        next,
         playbackRateRef.current,
         line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : undefined,
       );
+      // A recorded, acted line plays as-is; if it cannot play, the browser voice reads it instead.
+      if (!(line?.audio && playClip(line.audio, playbackRateRef.current, next, () => { if (seq === playSeqRef.current) browserVoice(); }))) browserVoice();
     };
     speakIdx(clamped);
   }
