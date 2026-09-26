@@ -36,8 +36,9 @@ function Flow({ v, colors }: { v: Extract<Visual, { kind: 'flow' }>; colors: App
 
 function Venn({ v, colors }: { v: Extract<Visual, { kind: 'venn' }>; colors: AppColors }) {
   const [a, b] = [TINTS[0], TINTS[1]];
+  // Container is 1.72:1 and each circle is 58% wide and full height, so the circles stay round at any width.
   const circle = (tint: string, side: 'left' | 'right') => ({
-    position: 'absolute' as const, top: 0, [side]: 0, width: '62%' as const, height: 230, borderRadius: 999,
+    position: 'absolute' as const, top: 0, bottom: 0, [side]: 0, width: '58%' as const, borderRadius: 9999,
     borderWidth: 2, borderColor: tint, backgroundColor: tint + '1a',
   });
   const list = (items: string[], align: 'flex-start' | 'center' | 'flex-end') => items.slice(0, 4).map((t, i) => (
@@ -45,10 +46,10 @@ function Venn({ v, colors }: { v: Extract<Visual, { kind: 'venn' }>; colors: App
   ));
   return (
     <View testID="venn">
-      <View style={{ height: 230, position: 'relative' }}>
+      <View style={{ aspectRatio: 1.72, width: '100%', position: 'relative' }}>
         <View style={circle(a, 'left')} />
         <View style={circle(b, 'right')} />
-        <View style={{ position: 'absolute', inset: 0, flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 30 } as any}>
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 24 }}>
           <View style={{ flex: 1, justifyContent: 'center', gap: 3, paddingRight: 4 }}>{list(v.left.items, 'flex-start')}</View>
           <View style={{ flex: 0.9, justifyContent: 'center', gap: 3 }}>{list(v.both, 'center')}</View>
           <View style={{ flex: 1, justifyContent: 'center', gap: 3, paddingLeft: 4 }}>{list(v.right.items, 'flex-end')}</View>
