@@ -95,3 +95,13 @@ describe('ListenVisualBoard - no chain', () => {
     expect(screen.queryByTestId('clue-strip')).toBeNull();
   });
 });
+
+describe('ListenVisualBoard - scene visuals', () => {
+  test('opens on the scene visual when the lesson has visuals, with the book one tap away', async () => {
+    const user = userEvent.setup();
+    await render(<ListenVisualBoard cards={[]} activeCard={null} bookPage={3} followsBook hasVisuals sceneVisual={{ kind: 'flow', steps: ['Seed', 'Tree'] }} topic={topic} grade="Grade 8" subject="English" colors={colors} />);
+    expect(screen.getByTestId('scene-visual-flow')).toBeTruthy();
+    await user.press(screen.getByTestId('board-tab-book'));
+    expect(screen.queryByTestId('scene-visual-flow')).toBeNull();
+  });
+});
