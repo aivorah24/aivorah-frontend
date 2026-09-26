@@ -73,6 +73,7 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
 }) {
   const [view, setView] = useState<'chain' | 'book'>(followsBook ? 'book' : 'chain');
   const reduceMotion = useReduceMotion();
+  useEffect(() => { if (followsBook) setView('book'); }, [followsBook]);
   const reached = activeCard ?? -1;
 
   const Tab = ({ id, label, icon }: { id: 'chain' | 'book'; label: string; icon: any }) => {
