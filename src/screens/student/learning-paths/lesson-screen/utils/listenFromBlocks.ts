@@ -1,4 +1,4 @@
-import type { ListenStep } from '../types';
+import type { ListenStep, PlayLine } from '../types';
 
 export type ChainCard = { label: string; text: string };
 
@@ -12,6 +12,20 @@ export type ReasoningListen = {
 };
 
 type Block = { type: string; [key: string]: any };
+
+const cleanLines = (raw: any): PlayLine[] | undefined => {
+  if (!Array.isArray(raw)) return undefined;
+  const lines = raw
+    .filter((l) => l && typeof l.speaker === 'string' && typeof l.text === 'string' && l.text.trim())
+    .map((l): PlayLine => ({
+      speaker: l.speaker,
+      text: l.text.trim(),
+      ...(typeof l.direction === 'string' && l.direction.trim() ? { direction: l.direction.trim() } : {}),
+      ...(l.stage ? { stage: true } : {}),
+      ...(Number.isInteger(l.card) ? { card: l.card } : {}),
+    }));
+  return lines.length ? lines : undefined;
+};
 
 const withStop = (s: string) => (/[.!?…]$/.test(s.trim()) ? s.trim() : `${s.trim()}.`);
 
@@ -38,7 +52,10 @@ export function buildReasoningListen(rawPayload: any): ReasoningListen | null {
   if (script.length) {
     const bookQuote = blocks.find((b) => b.type === 'prose_excerpt' && b.sourceText)?.sourceText;
     return {
-      steps: script.map((s) => ({ label: s.heading, heading: s.heading, text: withStop(s.text) })),
+      steps: script.map((s) => {
+        const lines = cleanLines(s.lines);
+        return { label: s.heading, heading: s.heading, text: withStop(s.text), ...(lines ? { lines } : {}) };
+      }),
       cards,
       stepToCard: script.map((s) => (Number.isInteger(s.card) && s.card >= 0 && s.card < cards.length ? s.card : null)),
       bookQuote,

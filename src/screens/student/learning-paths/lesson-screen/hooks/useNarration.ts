@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { speakWithBoundary, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
-import type { ListenStep } from '../types';
+import { profileFor } from '../utils/playVoices';
+import type { ListenStep, PlayLine } from '../types';
+
+export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { line?: PlayLine };
 
 // ── Sentence-by-sentence narration engine ────────────────────────────────
 // Each SENTENCE is spoken as its own short utterance, then the engine
@@ -19,7 +22,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
 
   const playSeqRef = useRef(0); // token invalidates stale onEnd callbacks
-  const listenSentencesRef = useRef<ReturnType<typeof sentencesWithOffsets>>([]);
+  const listenSentencesRef = useRef<NarrationLine[]>([]);
   const playbackRateRef = useRef(playbackRate);
   useEffect(() => { playbackRateRef.current = playbackRate; }, [playbackRate]);
   const isPoemRef = useRef(isPoem);
@@ -28,11 +31,17 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   const leftScrollRef = useRef<any>(null);
 
   const currentListenStep = listenSteps[listenStep];
-  const listenSentences = useMemo(
-    () => (currentListenStep ? sentencesWithOffsets(currentListenStep.text) : []),
-    [currentListenStep],
-  );
+  // A play step is spoken one character line at a time; anything else one sentence at a time.
+  const listenSentences: NarrationLine[] = useMemo(() => {
+    if (!currentListenStep) return [];
+    if (currentListenStep.lines?.length) {
+      return currentListenStep.lines.map((line) => ({ sentence: line.text, start: 0, end: line.text.length, line }));
+    }
+    return sentencesWithOffsets(currentListenStep.text);
+  }, [currentListenStep]);
   useEffect(() => { listenSentencesRef.current = listenSentences; }, [listenSentences]);
+  const listenStepRef = useRef(0);
+  useEffect(() => { listenStepRef.current = listenStep; }, [listenStep]);
 
   // Speak sentence `idx` of the current step, then chain to the next.
   function speakFromSentence(idx: number) {
@@ -45,21 +54,30 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
     const speakIdx = (i: number) => {
       if (seq !== playSeqRef.current) return; // superseded — stop
       if (i >= sents.length) { // reached the end
+        const stepNow = listenStepRef.current;
+        setVisitedSteps(prev => new Set(prev).add(stepNow));
+        // A play carries on into its next scene by itself.
+        if (sents[0]?.line && stepNow + 1 < listenSteps.length) {
+          setTimeout(() => { if (seq === playSeqRef.current) playListenStep(stepNow + 1); }, 900);
+          return;
+        }
         setListenPlaying(false);
-        setVisitedSteps(prev => new Set(prev).add(listenStep));
         return;
       }
       setSentenceIdx(i);
+      const line = sents[i].line;
       speakWithBoundary(
         sents[i].sentence.trim(),
         () => {}, // highlight is line-level, not word-level
         () => {
           if (seq !== playSeqRef.current) return;
-          // Poem cadence: a short breath between lines; prose flows straight on.
-          if (isPoemRef.current) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, 450);
+          // Poem cadence: a short breath between lines; a play pauses for the change of speaker.
+          const gap = line ? (line.stage ? 500 : 350) : isPoemRef.current ? 450 : 0;
+          if (gap) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, gap);
           else speakIdx(i + 1);
         },
         playbackRateRef.current,
+        line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : undefined,
       );
     };
     speakIdx(clamped);

@@ -91,3 +91,34 @@ describe('buildReasoningListen', () => {
     expect(buildReasoningListen(payload)).toBeNull();
   });
 });
+
+describe('play script (lines)', () => {
+  const withPlay = {
+    ...camel,
+    listenScript: [
+      {
+        card: null, heading: 'Scene II', text: 'A. B.',
+        lines: [
+          { speaker: 'Har Datt', text: 'I noticed small droplets of blood along the track,', card: 1 },
+          { speaker: 'Narrator', text: 'The Merchant bows.', stage: true },
+          { speaker: 'King', text: 'Extraordinary!', direction: 'Marvelling', card: 'x' },
+          { speaker: 'King', text: '   ' },
+        ],
+      },
+    ],
+  };
+
+  test('keeps valid lines with speaker, direction, stage flag and card, and drops blank or bad ones', () => {
+    const [step] = buildReasoningListen(withPlay)!.steps;
+    expect(step.lines).toEqual([
+      { speaker: 'Har Datt', text: 'I noticed small droplets of blood along the track,', card: 1 },
+      { speaker: 'Narrator', text: 'The Merchant bows.', stage: true },
+      { speaker: 'King', text: 'Extraordinary!', direction: 'Marvelling' },
+    ]);
+  });
+
+  test('a step without lines stays a plain narration step', () => {
+    const r = buildReasoningListen({ ...camel, listenScript: [{ card: 0, heading: 'Action', text: 'Har Datt looks.' }] })!;
+    expect(r.steps[0].lines).toBeUndefined();
+  });
+});
