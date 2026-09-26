@@ -50,6 +50,38 @@ describe('buildReasoningListen', () => {
     expect(r.cards.map((c) => c.label)).toEqual(['Step 1', 'Step 2', 'Step 3']);
   });
 
+  describe('with a saved narration script', () => {
+    const script = [
+      { card: null, heading: 'Introduction', text: 'Imagine knowing a missing animal without seeing it' },
+      { card: 0, heading: 'Action', text: 'Har Datt looks along the track.' },
+      { card: 1, heading: 'Evidence', text: 'He notices small droplets of blood.' },
+      { card: 4, heading: 'Conclusion', text: 'The camel has a short tail.' },
+      { card: 9, heading: 'Bad index', text: 'Out of range card.' },
+    ];
+
+    test("uses the script for the steps and takes each step's card from it", () => {
+      const r = buildReasoningListen({ ...camel, listenScript: script })!;
+      expect(r.steps.map((s) => s.label)).toEqual(['Introduction', 'Action', 'Evidence', 'Conclusion', 'Bad index']);
+      expect(r.stepToCard).toEqual([null, 0, 1, 4, null]);
+      expect(r.cards.length).toBe(5);
+      expect(r.bookQuote).toContain('small droplets of blood');
+    });
+
+    test('adds a full stop to a step that lacks one so the sentence splits correctly', () => {
+      expect(buildReasoningListen({ ...camel, listenScript: script })!.steps[0].text).toBe('Imagine knowing a missing animal without seeing it.');
+    });
+
+    test('ignores malformed entries and falls back to the block-derived steps when nothing usable is left', () => {
+      const r = buildReasoningListen({ ...camel, listenScript: [{ card: 0 }, null, { heading: 'x', text: '  ' }] })!;
+      expect(r.steps.map((s) => s.label)[0]).toBe('Introduction');
+      expect(r.steps.length).toBe(9);
+    });
+
+    test('an empty script keeps the block-derived narration', () => {
+      expect(buildReasoningListen({ ...camel, listenScript: [] })!.steps.length).toBe(9);
+    });
+  });
+
   test.each([
     ['no blocks', {}],
     ['a plain process that is not a reasoning flow', { blocks: [{ type: 'process', title: 'Steps of digestion', steps: ['a', 'b', 'c'] }] }],

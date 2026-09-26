@@ -30,6 +30,21 @@ export function buildReasoningListen(rawPayload: any): ReasoningListen | null {
     return m ? { label: m[1].trim(), text: m[2].trim() } : { label: `Step ${i + 1}`, text: String(s).trim() };
   });
 
+  // A saved narration script ([{ card, heading, text }]) is a full spoken explanation, so prefer it over
+  // reading the card lines back. `card` says which visual card the step explains (null = none).
+  const script = Array.isArray(rawPayload?.listenScript)
+    ? (rawPayload.listenScript as any[]).filter((s) => s && typeof s.heading === 'string' && typeof s.text === 'string' && s.text.trim())
+    : [];
+  if (script.length) {
+    const bookQuote = blocks.find((b) => b.type === 'prose_excerpt' && b.sourceText)?.sourceText;
+    return {
+      steps: script.map((s) => ({ label: s.heading, heading: s.heading, text: withStop(s.text) })),
+      cards,
+      stepToCard: script.map((s) => (Number.isInteger(s.card) && s.card >= 0 && s.card < cards.length ? s.card : null)),
+      bookQuote,
+    };
+  }
+
   const steps: ListenStep[] = [];
   const stepToCard: (number | null)[] = [];
   const push = (step: ListenStep, card: number | null) => { steps.push(step); stepToCard.push(card); };
