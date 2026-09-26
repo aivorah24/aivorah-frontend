@@ -47,7 +47,27 @@ export function speakWithBoundary(
   synth.speak(utter);
 }
 
+let currentClip: HTMLAudioElement | null = null;
+
+// Plays a recorded line. Returns false when it cannot (not web), so the caller can fall back to browser speech.
+export function playClip(url: string, rate: number, onEnd: () => void, onFail: () => void): boolean {
+  if (Platform.OS !== 'web' || typeof Audio === 'undefined') return false;
+  try { currentClip?.pause(); } catch {}
+  const clip = new Audio(url);
+  currentClip = clip;
+  clip.playbackRate = rate;
+  clip.onended = () => { if (currentClip === clip) currentClip = null; onEnd(); };
+  clip.onerror = () => { if (currentClip === clip) currentClip = null; onFail(); };
+  const p = clip.play();
+  if (p && typeof p.catch === 'function') p.catch(() => { if (currentClip === clip) { currentClip = null; onFail(); } });
+  return true;
+}
+
 export function stopSpeaking() {
+  if (currentClip) {
+    try { currentClip.pause(); } catch {}
+    currentClip.onended = null; currentClip.onerror = null; currentClip = null;
+  }
   if (Platform.OS === 'web' && (window as any).speechSynthesis) {
     try { (window as any).speechSynthesis.cancel(); } catch {}
   }

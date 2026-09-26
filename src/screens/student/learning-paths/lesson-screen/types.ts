@@ -6,6 +6,8 @@ export type PlayLine = {
   direction?: string;
   stage?: boolean;
   card?: number | null;
+  page?: number;
+  audio?: string;
 };
 
 export type ListenStep = {

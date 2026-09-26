@@ -68,10 +68,10 @@ function ChainCardView({ card, index, active, done, reduceMotion, colors }: {
 
 // Right-hand board for the Listen tab: follows the audio. `activeCard` is derived from the current listen step
 // (see buildReasoningListen); null means the narration is on an intro / book excerpt / key words step.
-export default function ListenVisualBoard({ cards, activeCard, bookQuote, topic, grade, subject, colors }: {
-  cards: ChainCard[]; activeCard: number | null; bookQuote?: string; topic: any; grade: string; subject: string; colors: AppColors;
+export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPage, followsBook, topic, grade, subject, colors }: {
+  cards: ChainCard[]; activeCard: number | null; bookQuote?: string; bookPage?: number; followsBook?: boolean; topic: any; grade: string; subject: string; colors: AppColors;
 }) {
-  const [view, setView] = useState<'chain' | 'book'>('chain');
+  const [view, setView] = useState<'chain' | 'book'>(followsBook ? 'book' : 'chain');
   const reduceMotion = useReduceMotion();
   const reached = activeCard ?? -1;
 
@@ -119,6 +119,19 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, topic,
         </View>
       ) : (
         <View style={{ gap: 10 }}>
+          {followsBook && (
+            <View testID="clue-strip" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {cards.map((c, i) => {
+                const accent = PALETTE[i % PALETTE.length];
+                const on = i === activeCard;
+                return (
+                  <View key={i} accessibilityState={{ selected: on }} style={{ paddingVertical: 4, paddingHorizontal: 9, borderRadius: 12, borderWidth: on ? 2 : 1, borderColor: accent, backgroundColor: on ? accent + '30' : 'transparent', opacity: on || i < reached ? 1 : 0.55 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: accent }}>{i + 1}. {c.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
           {!!bookQuote && (
             <View
               testID="book-follow-quote"
@@ -126,15 +139,16 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, topic,
             >
               <Text style={{ fontSize: 12, fontWeight: '800', color: '#8A5A00', marginBottom: 4 }}>
                 {activeCard !== null ? 'Now reading in the book' : 'From the book'}
-                {topic?.pdfPage ? ` · page ${topic.pdfPage}` : ''}
+                {(bookPage || topic?.pdfPage) ? ` · page ${bookPage || topic.pdfPage}` : ''}
               </Text>
               <Text style={{ fontSize: 14.5, lineHeight: 22, color: colors.textMain }}>{bookQuote}</Text>
             </View>
           )}
           {Platform.OS === 'web' && topic?.pdfFile ? (
-            <View style={{ height: 520, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderColor }}>
+            <View style={{ height: 640, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderColor }}>
               {React.createElement('iframe', {
-                src: `${bookSrc(topic, grade, subject)}#page=${topic.pdfPage || 1}&view=FitH`,
+                key: bookPage || topic.pdfPage || 1,
+                src: `${bookSrc(topic, grade, subject)}#page=${bookPage || topic.pdfPage || 1}&view=FitH&navpanes=0&pagemode=none`,
                 style: { border: 'none', width: '100%', height: '100%', backgroundColor: colors.cardDark },
                 title: `${topic.name} — textbook page`,
               })}
