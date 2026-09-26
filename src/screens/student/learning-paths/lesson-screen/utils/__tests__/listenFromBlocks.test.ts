@@ -136,3 +136,22 @@ describe('play script (lines)', () => {
     ]);
   });
 });
+
+describe('a piece read aloud with no reasoning chain', () => {
+  const essay = {
+    blocks: [{ type: 'overview', text: 'How did 90 soldiers hold an airport?' }],
+    listenScript: [{ card: null, heading: 'A Tribute', text: 'x', lines: [{ speaker: 'Narrator', text: 'This is a tribute.', page: 2 }] }],
+  };
+
+  test('still gets its script, with no chain cards', () => {
+    const r = buildReasoningListen(essay)!;
+    expect(r.cards).toEqual([]);
+    expect(r.steps[0].lines).toEqual([{ speaker: 'Narrator', text: 'This is a tribute.', page: 2 }]);
+    expect(r.stepToCard).toEqual([null]);
+  });
+
+  test('without a script or a chain it keeps the normal Listen behaviour', () => {
+    expect(buildReasoningListen({ blocks: [{ type: 'overview', text: 'x' }] })).toBeNull();
+    expect(buildReasoningListen({ blocks: [], listenScript: [{ heading: 'a', text: 'b' }] })).toBeNull();
+  });
+});
