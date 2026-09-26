@@ -147,3 +147,36 @@ describe('useNarration — poem cadence', () => {
     jest.useRealTimers();
   });
 });
+
+describe('useNarration — play script', () => {
+  const playSteps: ListenStep[] = [
+    { text: 'x', lines: [{ speaker: 'Narrator', text: 'The court waits.', stage: true }, { speaker: 'King', text: 'Speak.' }] } as any,
+    { text: 'y', lines: [{ speaker: 'Har Datt', text: 'The tail is short.', card: 4 }] } as any,
+  ];
+
+  function PlayHarness() {
+    const h = useNarration(playSteps, false);
+    return (
+      <>
+        <Text testID="step">{h.listenStep}</Text>
+        <Text testID="lines">{h.listenSentences.map((s: any) => s.line?.speaker).join('|')}</Text>
+        <Text testID="playing">{String(h.listenPlaying)}</Text>
+        <TouchableOpacity testID="play" onPress={() => h.playListenStep(0)}><Text>x</Text></TouchableOpacity>
+      </>
+    );
+  }
+
+  test('one line per character turn, and the play carries on into the next scene by itself', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(<PlayHarness />);
+    expect(screen.getByTestId('lines').props.children).toBe('Narrator|King');
+
+    await user.press(screen.getByTestId('play'));
+    jest.advanceTimersByTime(3000);
+    await waitFor(() => expect(screen.getByTestId('step').props.children).toBe(1));
+    expect(screen.getByTestId('lines').props.children).toBe('Har Datt');
+
+    jest.useRealTimers();
+  });
+});
