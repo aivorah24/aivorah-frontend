@@ -11,7 +11,7 @@ import { useTeacherChallenges } from './hooks/useTeacherChallenges';
 import { useTeacherLeaderboard } from './hooks/useTeacherLeaderboard';
 import { useAssignChallenge } from './hooks/useAssignChallenge';
 import ChallengeCard from './components/ChallengeCard';
-import AssignChallengeModal from './components/AssignChallengeModal';
+import AssignChallengeModal, { filterStudentsForChallenge } from './components/AssignChallengeModal';
 import { StatCard, PodiumCard, WeeklyChart, initials } from './components/LeaderboardComponents';
 
 const GOLD = '#D9A93E';
@@ -25,11 +25,11 @@ export default function TeacherChallengesScreen({ navigation }: any) {
 
   const [activeTab, setActiveTab] = useState<'challenges' | 'leaderboard'>('challenges');
 
-  const { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students } =
+  const { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students, assignedByChallenge, refreshAssignments } =
     useTeacherChallenges(user?.email, teacherCurriculum);
   const { leaderboard, lbLoading, rankChange, weekly, totalXP, yourEntry, yourAbove, daysLeft, showPodium } =
     useTeacherLeaderboard(activeTab, user?.email, (user as any)?.name);
-  const assign = useAssignChallenge(user?.email);
+  const assign = useAssignChallenge(user?.email, refreshAssignments);
   const [lbExpanded, setLbExpanded] = useState(false);
 
   const gradeTabs = fetchedGrades.length > 0 ? fetchedGrades : ['Grade 3', 'Grade 4', 'Grade 5'];
@@ -104,6 +104,8 @@ export default function TeacherChallengesScreen({ navigation }: any) {
                           <ChallengeCard
                             key={ch.id} ch={ch} colors={colors} isDark={isDark} styles={styles}
                             onAssign={() => assign.openAssign(ch)}
+                            assignedCount={(assignedByChallenge[ch.id] ?? []).length}
+                            eligibleCount={filterStudentsForChallenge(students, ch, '').length}
                           />
                         ))}
                       </View>
@@ -285,6 +287,7 @@ export default function TeacherChallengesScreen({ navigation }: any) {
         onAssign={assign.doAssign}
         colors={colors}
         styles={styles}
+        assignedStudentIds={assign.assignChallengeItem ? assignedByChallenge[assign.assignChallengeItem.id] ?? [] : []}
       />
     </ScreenLayout>
   );

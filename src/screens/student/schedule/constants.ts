@@ -28,6 +28,19 @@ export const EVENT_TAGS = [
   { key: 'SmartTask Cycle Timeline', color: '#E58AA6' },
 ];
 
+// Options a student picks from when adding their own event (filters still use the tags above).
+export const STUDENT_EVENT_TAGS = [
+  { key: 'Study Session',     type: 'study',      color: '#7FB2D6' },
+  { key: 'Class / Lesson',    type: 'lesson',     color: '#7FC29B' },
+  { key: 'Homework',          type: 'assignment', color: '#E3B24C' },
+  { key: 'Assignment',        type: 'assignment', color: '#E3B24C' },
+  { key: 'Challenge',         type: 'practice',   color: '#E58AA6' },
+  { key: 'Quick Task',        type: 'study',      color: '#7FB2D6' },
+  { key: 'Learning Activity', type: 'study',      color: '#9B8FE8' },
+  { key: 'Break',             type: 'break',      color: '#C4BCA9' },
+  { key: 'Other',             type: 'study',      color: '#A8A29A' },
+];
+
 export const HOUR_HEIGHT = 56;
 export const DAY_COL_WIDTH = 140;
 export const TIME_LABEL_WIDTH = 52;

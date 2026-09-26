@@ -53,6 +53,9 @@ export default function SubjectCard({
           </View>
         </View>
         <Text testID="subject-card-name" style={[cardStyles.subjectName, { color: '#1C2A28' }]} numberOfLines={2}>{data.subject}</Text>
+        {!!data.books?.length && (
+          <Text testID="subject-card-book" style={[cardStyles.statMini, { color: '#3A5A56' }]} numberOfLines={1}>{data.books.join(' · ')}</Text>
+        )}
         <View style={cardStyles.statRow}>
           <Text style={[cardStyles.statMini, { color: '#3A5A56' }]}>{countLabel}</Text>
           <Text style={[cardStyles.statMini, { color: '#3A5A56' }]}>{done} completed</Text>

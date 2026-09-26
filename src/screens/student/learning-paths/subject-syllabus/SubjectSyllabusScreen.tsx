@@ -96,6 +96,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   // If a chapter or topic matches the search, force it open.
   const effectiveOpen = q ? new Set(filteredChapters.map(x => x.ci)) : openChapters;
 
+  const books = [...new Set(chapters.map((c) => (c as { book?: string | null }).book).filter((b): b is string => !!b))];
   const totalTopicsCount = chapters.reduce((s, c) => s + c.topics.length, 0);
   // Guard the denominator, not just chapters.length — a subject can have real
   // chapters with zero real topics yet (all pending/"Being prepared"), which
@@ -147,7 +148,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       <View style={styles.screen}>
         <Header
           title={subject}
-          subtitle={`${curriculum} · ${grade} · Full syllabus`}
+          subtitle={`${books.length ? `${books.join(' · ')} · ` : ''}${curriculum} · ${grade} · Full syllabus`}
           showBack
           onMenuPress={() => navigation.openDrawer()}
         />

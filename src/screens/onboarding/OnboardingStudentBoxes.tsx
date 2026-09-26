@@ -71,6 +71,16 @@ export default function OnboardingStudentBoxes() {
   const [avatarStyle, setAvatarStyle] = useState((user as any)?.avatarStyle || 'default');
   const [learningStyle, setLearningStyle] = useState((user as any)?.learningStyle || '');
 
+  // Saved picks can land after mount (profile loads async); adopt them unless the student already chose.
+  const savedAvatar: string | undefined = (user as any)?.avatarStyle;
+  const savedLearningStyle: string | undefined = (user as any)?.learningStyle;
+  const [seenSaved, setSeenSaved] = useState({ avatar: savedAvatar, learning: savedLearningStyle });
+  if (seenSaved.avatar !== savedAvatar || seenSaved.learning !== savedLearningStyle) {
+    setSeenSaved({ avatar: savedAvatar, learning: savedLearningStyle });
+    if (savedAvatar && avatarStyle === 'default') setAvatarStyle(savedAvatar);
+    if (savedLearningStyle && !learningStyle) setLearningStyle(savedLearningStyle);
+  }
+
   // ── Per-card completion ────────────────────────────
   const {
     aboutYouDone, curriculumDone, schoolGradeDone, avatarDone, learningStyleDone, requiredDone, completionPct,
@@ -110,6 +120,7 @@ export default function OnboardingStudentBoxes() {
           country: country || undefined,
           dob: dob || undefined,
           gender: gender || undefined,
+          avatarStyle, learningStyle: learningStyle || undefined,
         }),
       });
       if (!profileRes.ok) {
@@ -166,6 +177,8 @@ export default function OnboardingStudentBoxes() {
         // primary, awaited profile save otherwise succeeded.
         dob: dob || undefined,
         gender: gender || undefined,
+        avatarStyle,
+        learningStyle: learningStyle || undefined,
       };
 
       const profileRes = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {

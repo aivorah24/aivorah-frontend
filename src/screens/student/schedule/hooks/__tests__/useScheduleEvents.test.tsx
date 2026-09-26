@@ -61,6 +61,17 @@ describe('useScheduleEvents — initial fetch', () => {
     expect(screen.getByTestId('hasTimetable').props.children).toBe('true');
   });
 
+  test('upcoming deadlines always exclude completed work, even with the calendar toggle off', async () => {
+    global.fetch = jest.fn((url: string) => jsonRes(url.includes('/schedule/month') ? { dates: [] } : [])) as any;
+
+    await render(<Harness hideCompleted={false} />);
+
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    const urls = (global.fetch as jest.Mock).mock.calls.map(([u]) => String(u));
+    expect(urls.find(u => u.includes('/schedule/upcoming'))).toContain('hideCompleted=true');
+    expect(urls.find(u => u.includes('/schedule/month'))).toContain('hideCompleted=false');
+  });
+
   test('a per-day fetch failure yields an empty array for that day, not a crash', async () => {
     global.fetch = jest.fn((url: string) => {
       if (url.includes('/schedule/upcoming') || url.includes('/schedule/month') || url.includes('/timetable')) return jsonRes([]);

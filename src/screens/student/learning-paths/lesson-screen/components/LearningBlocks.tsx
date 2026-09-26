@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import ZoomableImage from './ZoomableImage';
 import type { AppColors } from '../../../../../theme';
 import { spacing } from '../../../../../theme';
 import { makeStyles } from '../styles';
@@ -209,12 +210,7 @@ function renderBlock(block: Block, i: number, colors: AppColors): React.ReactNod
     case 'visual_representation':
       return !block.url ? null : (
         <Card key={i} colors={colors}>
-          <Image
-            source={{ uri: block.url }}
-            style={{ width: '100%', height: 180, borderRadius: 8, backgroundColor: colors.cardDark }}
-            resizeMode="contain"
-            accessibilityLabel={block.alt_text || block.caption}
-          />
+          <ZoomableImage url={block.url} alt={block.alt_text || block.caption} colors={colors} />
           {!!block.caption && <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{block.caption}</Text>}
         </Card>
       );

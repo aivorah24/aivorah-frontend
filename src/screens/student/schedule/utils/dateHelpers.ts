@@ -1,7 +1,9 @@
-import { DAYS_SHORT, HOUR_HEIGHT, TIMELINE_START_HOUR, DURATION_MINS } from '../constants';
+import { DAYS_SHORT, HOUR_HEIGHT, TIMELINE_START_HOUR, DURATION_MINS, STUDENT_EVENT_TAGS } from '../constants';
 
 export function deriveTypeFromTag(tag: string): string {
   if (!tag) return 'study';
+  const own = STUDENT_EVENT_TAGS.find(t => t.key === tag);
+  if (own) return own.type;
   const lower = tag.toLowerCase();
   if (lower.includes('lesson') || lower.includes('live class') || lower.includes('video')) return 'lesson';
   if (lower.includes('challenge')) return 'challenge';
@@ -42,6 +44,7 @@ export function typeColors(type: string): [string, string, string] {
     lesson:     ['#7FC29B', '#E4F3E9', '#2E7D5B'],  // live class — mint
     study:      ['#7FB2D6', '#E1EEFA', '#2E6285'],  // daily task / personal study — sky
     challenge:  ['#E58AA6', '#FCE0E9', '#9C3556'],  // challenge — rose
+    practice:   ['#E58AA6', '#FCE0E9', '#9C3556'],  // student-scheduled challenge session
     deadline:   ['#E3B24C', '#FFF6C9', '#6E5410'],  // worksheet / assignment due — gold
     assignment: ['#E3B24C', '#FFF6C9', '#6E5410'],  // worksheet — gold
     break:      ['#C4BCA9', '#EDE9E2', '#6E6A60'],  // neutral

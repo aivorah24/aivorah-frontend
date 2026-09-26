@@ -44,6 +44,8 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   aaBtnText: { fontSize: 12, fontWeight: '700' },
   listenHeading: { fontFamily: fonts.serif, fontSize: 22, fontWeight: '700', marginHorizontal: spacing.xl, marginBottom: 12 },
   listenBodyRow: { marginHorizontal: spacing.xl },
+  playSpeaker: { fontSize: 12, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 12, marginBottom: 2 },
+  playDirection: { fontSize: 12.5, fontStyle: 'italic', marginBottom: 2 },
 
   playerTimeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   playerTimeText: { fontSize: 11.5, fontWeight: '600' },

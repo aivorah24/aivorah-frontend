@@ -738,11 +738,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           curriculum: updated.curriculum,
           school: updated.school,
           location: updated.location,
-          avatarStyle: updated.avatarStyle,
           learningStyle: updated.learningStyle,
           interests: updated.interests,
           bio: updated.bio,
-          photoUrl: updated.photoUrl,
+          // Only when explicitly changed — re-sending a stale snapshot overwrote a newer avatar/photo pick.
+          ...('avatarStyle' in fields ? { avatarStyle: updated.avatarStyle } : {}),
+          ...('photoUrl' in fields ? { photoUrl: updated.photoUrl } : {}),
         }),
       }).catch(() => {});
       return updated;
@@ -900,6 +901,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         gender:             profile.gender  || undefined,
         state:              profile.state   || undefined,
         country:            profile.country || undefined,
+        avatarStyle:        profile.avatarStyle,
+        learningStyle:      profile.learningStyle,
+        interests:          profile.interests,
+        bio:                profile.bio,
+        photoUrl:           profile.photoUrl,
       };
       setUser(newUser);
       prefetchStudentDashboard(newUser);
@@ -1166,6 +1172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           gender:             profile.gender  || undefined,
           state:              profile.state   || undefined,
           country:            profile.country || undefined,
+          avatarStyle:        profile.avatarStyle,
+          learningStyle:      profile.learningStyle,
+          interests:          profile.interests,
+          bio:                profile.bio,
+          photoUrl:           profile.photoUrl,
         };
         setUser(newUser);
         prefetchStudentDashboard(newUser);

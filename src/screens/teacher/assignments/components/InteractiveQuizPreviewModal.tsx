@@ -94,14 +94,19 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
               style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#2e7d32', flexDirection: 'row', gap: 6, alignItems: 'center' }}
               onPress={() => {
                 if (needsReviewBanner) {
-                  Alert.alert(
-                    'Review needed before saving',
-                    `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} could not be fully verified against the source document (see the banner above). Save anyway?`,
+                  const msg = `${nonPreservedCount} task${nonPreservedCount === 1 ? '' : 's'} could not be fully verified against the source document (see the banner above). Save anyway?`;
+                  // Alert.alert with buttons is a no-op on react-native-web.
+                  if (Platform.OS === 'web') {
+                    if (window.confirm(msg)) onClose();
+                    return;
+                  }
+                  Alert.alert('Review needed before saving', msg,
                     [{ text: 'Cancel', style: 'cancel' }, { text: 'Save anyway', onPress: () => { onClose(); Alert.alert('Saved', 'Interactive quiz is ready for publishing.'); } }]
                   );
                   return;
                 }
-                onClose(); Alert.alert('Saved', 'Interactive quiz is ready for publishing.');
+                onClose();
+                if (Platform.OS !== 'web') Alert.alert('Saved', 'Interactive quiz is ready for publishing.');
               }}
             >
               <Feather name="check-circle" size={14} color="#fff" />

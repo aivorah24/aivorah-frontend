@@ -8,6 +8,8 @@ import { parseSubtraction } from '../utils/math';
 import ColumnSubtraction from './ColumnSubtraction';
 import { makeStyles } from '../styles';
 import type { Mode } from '../types';
+import type { ReasoningListen } from '../utils/listenFromBlocks';
+import ListenVisualBoard from './ListenVisualBoard';
 
 const PLAYBACK_RATES = [0.6, 0.78, 1.0, 1.25];
 
@@ -15,6 +17,9 @@ export default function ListenTab({
   topic,
   isMath,
   listenSteps,
+  reasoning,
+  grade,
+  subject,
   colors,
   styles,
   narration,
@@ -35,6 +40,9 @@ export default function ListenTab({
   topic: any;
   isMath: boolean;
   listenSteps: import('../types').ListenStep[];
+  reasoning?: ReasoningListen | null;
+  grade: string;
+  subject: string;
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
   narration: ReturnType<typeof import('../hooks/useNarration').useNarration>;
@@ -53,7 +61,7 @@ export default function ListenTab({
   setZoomImage: (img: { uri: string; caption?: string } | null) => void;
 }) {
   const {
-    listenStep, listenPlaying, sentenceIdx, visitedSteps, clockTick,
+    listenStep, listenPlaying, sentenceIdx, clockTick,
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,
@@ -69,6 +77,12 @@ export default function ListenTab({
   const lineCount = Math.max(1, sentences.length);
   const lineProgress = Math.min(100, ((sentenceIdx + (listenPlaying ? 0.5 : 1)) / lineCount) * 100);
   void clockTick;
+  // The clue card stays lit until a later line triggers the next one.
+  let cardAtLine: number | null = null;
+  for (let i = Math.min(curSentenceIdx, sentences.length - 1); i >= 0; i -= 1) {
+    const c = sentences[i]?.line?.card;
+    if (typeof c === 'number') { cardAtLine = c; break; }
+  }
   const word = vocab[vocabIndex];
   const stepsCount = listenSteps.length;
 
@@ -126,19 +140,27 @@ export default function ListenTab({
           <View style={styles.listenBodyRow}>
             {sentences.map((s, i) => {
               const active = i === curSentenceIdx;
+              const line = s.line;
               return (
                 <View key={i} onLayout={(e) => { sentenceYRef.current[i] = e.nativeEvent.layout.y; }}>
+                  {line && (i === 0 || sentences[i - 1].line?.speaker !== line.speaker) && !line.stage && (
+                    <Text style={[styles.playSpeaker, { color: active ? colors.accentGreen : colors.textDim }]}>{line.speaker}</Text>
+                  )}
+                  {!!line?.direction && !line.stage && (
+                    <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
+                  )}
                   <Text
                     style={[
                       styles.listenBodyText,
                       fontLarge && styles.listenBodyTextLarge,
+                      line?.stage && { fontStyle: 'italic' },
                       {
                         color: active ? colors.textMain : colors.textMuted,
                         backgroundColor: active ? colors.accentGreen + '20' : 'transparent',
                       },
                     ]}
                   >
-                    {s.sentence}
+                    {line?.stage ? `(${s.sentence})` : s.sentence}
                   </Text>
                 </View>
               );
@@ -242,33 +264,6 @@ export default function ListenTab({
               </View>
             </View>
           </View>
-          )}
-
-          {/* Step navigation for Listen — SAME inline pattern as the Math AI
-              Tutor (Grade 2 Subtraction with Borrowing): compact Previous +
-              primary Next sitting directly under the content, so a young
-              reader never hunts for a far-away footer. */}
-          {!isMath && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 }}>
-              <TouchableOpacity
-                style={[styles.mathFooterBtn, { borderColor: colors.borderColor }, listenStep === 0 && { opacity: 0.4 }]}
-                onPress={() => goToListenStep(listenStep - 1, closeAllPanels)}
-                disabled={listenStep === 0}
-                activeOpacity={0.85}
-              >
-                <Feather name="arrow-left" size={14} color={colors.textMain} />
-                <Text style={[styles.mathFooterBtnText, { color: colors.textMain }]}>Previous</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.mathFooterBtnPrimary, { backgroundColor: colors.accentGreen }, listenStep === (stepsCount ?? 1) - 1 && { opacity: 0.5 }]}
-                onPress={() => goToListenStep(listenStep + 1, closeAllPanels)}
-                disabled={listenStep === (stepsCount ?? 1) - 1}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.nextPartText}>{listenStep === (stepsCount ?? 1) - 1 ? 'Finished' : 'Next'}</Text>
-                {listenStep !== (stepsCount ?? 1) - 1 && <Feather name="arrow-right" size={13} color="#fff" />}
-              </TouchableOpacity>
-            </View>
           )}
 
           {/* ── "Explain This Step" — written, not spoken. No audio anywhere
@@ -401,6 +396,17 @@ export default function ListenTab({
 
         {/* ── Right pane: illustration + New Word ── */}
         <ScrollView style={styles.rightPane} contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>
+          {reasoning && (
+            <ListenVisualBoard
+              cards={reasoning.cards}
+              activeCard={cardAtLine ?? reasoning.stepToCard[listenStep] ?? null}
+              bookQuote={reasoning.bookQuote}
+              topic={topic}
+              grade={grade}
+              subject={subject}
+              colors={colors}
+            />
+          )}
           {(() => {
             // Per-stanza illustration for the current Listen step — map the
             // active stanza to its book image so the panel shows the real
@@ -521,38 +527,6 @@ export default function ListenTab({
           )}
         </ScrollView>
       </View>
-
-      {/* ── Bottom bar: audiobook progress for Science/English, a
-          step-notebook footer (Previous/Hint/Try Yourself/Next) for Math ── */}
-      {!isMath && (
-      <View style={[styles.listenBottomBar, { borderColor: colors.borderColor, backgroundColor: colors.bgDark }]}>
-        <View style={styles.listenBottomProgress}>
-          <Feather name="headphones" size={13} color={colors.textMuted} />
-          <Text style={[styles.listenBottomLabel, { color: colors.textMuted }]}>Listening Progress</Text>
-          <View style={[styles.listenBottomTrack, { backgroundColor: colors.borderColor }]}>
-            <View style={[styles.listenBottomFill, { backgroundColor: colors.accentGreen, width: `${(visitedSteps.size / Math.max(1, stepsCount ?? 1)) * 100}%` }]} />
-          </View>
-          <Text style={[styles.listenBottomCount, { color: colors.textMuted }]}>{listenStep + 1} of {stepsCount}</Text>
-        </View>
-        <View style={[styles.listenToast, { backgroundColor: colors.accentYellow + '16' }]}>
-          <Feather name="star" size={12} color={colors.accentYellow} />
-          <Text style={[styles.listenToastText, { color: colors.textMain }]}>Great! You are building strong listening skills.</Text>
-        </View>
-        {/* Step navigation now lives inline under the content (Math pattern).
-            The footer keeps only the replay control so there is exactly ONE
-            Previous/Next control on screen. */}
-        <View style={styles.listenBottomActions}>
-          <TouchableOpacity
-            style={[styles.listenAgainBtn, { borderColor: colors.borderColor }]}
-            onPress={repeatStep}
-            activeOpacity={0.8}
-          >
-            <Feather name="rotate-ccw" size={13} color={colors.textMain} />
-            <Text style={[styles.listenAgainText, { color: colors.textMain }]}>Listen Again</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      )}
 
       {isMath && (
       <View style={[styles.mathFooter, { borderColor: colors.borderColor, backgroundColor: colors.bgDark }]}>

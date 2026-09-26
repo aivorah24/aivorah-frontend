@@ -68,6 +68,15 @@ export function fetchStudentWeekly(studentId: string): Promise<{ days: { day: st
     .then(r => r.ok ? r.json() : null);
 }
 
+export interface TeacherAssignment { challengeId: string; studentId: string; status: string; dueDate: string | null; }
+
+export function fetchTeacherAssignments(teacherEmail: string): Promise<TeacherAssignment[]> {
+  return fetch(`${CHALLENGES_SERVER_URL}/challenges/assigned-by?assignedById=${encodeURIComponent(teacherEmail)}`)
+    .then(r => r.ok ? r.json() : [])
+    .then(data => Array.isArray(data) ? data : [])
+    .catch(() => []);
+}
+
 export async function assignChallenge({
   challengeId,
   studentId,
