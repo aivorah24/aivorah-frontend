@@ -121,4 +121,18 @@ describe('play script (lines)', () => {
     const r = buildReasoningListen({ ...camel, listenScript: [{ card: 0, heading: 'Action', text: 'Har Datt looks.' }] })!;
     expect(r.steps[0].lines).toBeUndefined();
   });
+
+  test('keeps a book page and a recorded audio url, but only for real values (https, positive integer)', () => {
+    const r = buildReasoningListen({
+      ...camel,
+      listenScript: [{ card: null, heading: 'S', text: 'x', lines: [
+        { speaker: 'King', text: 'Speak.', page: 33, audio: 'https://cdn/x.mp3' },
+        { speaker: 'King', text: 'Again.', page: 0, audio: 'http://insecure/x.mp3' },
+      ] }],
+    })!;
+    expect(r.steps[0].lines).toEqual([
+      { speaker: 'King', text: 'Speak.', page: 33, audio: 'https://cdn/x.mp3' },
+      { speaker: 'King', text: 'Again.' },
+    ]);
+  });
 });
