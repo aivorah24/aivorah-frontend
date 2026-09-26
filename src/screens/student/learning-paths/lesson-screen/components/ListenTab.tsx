@@ -90,6 +90,11 @@ export default function ListenTab({
     if (typeof pg === 'number') { bookPage = pg; break; }
   }
   const followsBook = listenSteps.some((st) => st.lines?.some((l) => typeof l.page === 'number'));
+  const hasVisuals = listenSteps.some((st) => !!st.visual);
+  // A scene without its own visual keeps the last one; the opening scenes borrow the first, so the board is never blank.
+  let sceneVisual = listenSteps[listenStep]?.visual;
+  for (let i = listenStep - 1; !sceneVisual && i >= 0; i -= 1) sceneVisual = listenSteps[i]?.visual;
+  if (!sceneVisual) sceneVisual = listenSteps.find((st) => st.visual)?.visual;
   const playMode = !!step?.lines?.length;
   const sceneYRef = React.useRef<Record<number, number>>({});
   const word = vocab[vocabIndex];
@@ -459,6 +464,8 @@ export default function ListenTab({
               bookQuote={followsBook ? undefined : reasoning.bookQuote}
               bookPage={bookPage}
               followsBook={followsBook}
+              sceneVisual={sceneVisual}
+              hasVisuals={hasVisuals}
               topic={topic}
               grade={grade}
               subject={subject}
