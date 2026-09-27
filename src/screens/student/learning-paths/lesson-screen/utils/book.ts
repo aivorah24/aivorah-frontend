@@ -1,4 +1,4 @@
-import AUTH_SERVER_URL from '../../../../../config/authServerUrl';
+import { LIVE_SERVICE as BOOKS_HOST } from '../../../../../config/authServerUrl';
 
 // The source PDFs live in server/data/ncert_books/grade6/<folder>/ — folder
 // names don't always match the subject label shown in the UI (e.g. "Social
@@ -33,7 +33,8 @@ export function bookSrc(topic: any, grade: string, subject: string): string {
   // Signed-URL redirect route lives on the auth service, not the (dead)
   // monolith SERVER_URL — see aivorah-auth-service/index.js's
   // /data/ncert_books/* route and its comment for why.
-  return `${AUTH_SERVER_URL}/data/ncert_books/${rel}`;
+  // Books are the same everywhere, so even local dev reads them from the live service.
+  return `${BOOKS_HOST}/data/ncert_books/${rel}`;
 }
 
 // The real NCERT book title varies by grade + subject — "Poorvi" is only the

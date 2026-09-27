@@ -10,6 +10,9 @@ import { makeStyles } from '../styles';
 import type { Mode } from '../types';
 import type { ReasoningListen } from '../utils/listenFromBlocks';
 import ListenVisualBoard from './ListenVisualBoard';
+import MathBoard, { IntroBoard } from './MathBoard';
+import { ExampleTabs, TutorControls } from './TutorControls';
+import TutorSteps from './TutorSteps';
 
 const PLAYBACK_RATES = [0.6, 0.78, 1.0, 1.25];
 
@@ -20,6 +23,8 @@ export default function ListenTab({
   reasoning,
   grade,
   subject,
+  curriculum = 'CBSE',
+  unitTitle,
   colors,
   styles,
   narration,
@@ -43,6 +48,8 @@ export default function ListenTab({
   reasoning?: ReasoningListen | null;
   grade: string;
   subject: string;
+  curriculum?: string;
+  unitTitle?: string;
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
   narration: ReturnType<typeof import('../hooks/useNarration').useNarration>;
@@ -95,7 +102,9 @@ export default function ListenTab({
   let sceneVisual = listenSteps[listenStep]?.visual;
   for (let i = listenStep - 1; !sceneVisual && i >= 0; i -= 1) sceneVisual = listenSteps[i]?.visual;
   if (!sceneVisual) sceneVisual = listenSteps.find((st) => st.visual)?.visual;
-  const playMode = !!step?.lines?.length;
+  const playMode = !!step?.lines?.length && !isMath;
+  const tutorMode = isMath && listenSteps.some((st) => st.math);
+  const tutorFinished = !!narration.completedSteps?.has(listenStep);
   const sceneYRef = React.useRef<Record<number, number>>({});
   const word = vocab[vocabIndex];
   const stepsCount = listenSteps.length;
@@ -112,30 +121,44 @@ export default function ListenTab({
       <View style={styles.dualPane}>
         <ScrollView ref={leftScrollRef} style={styles.leftPane} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.listenTopRow}>
+            {tutorMode ? <View /> : (
             <View style={[styles.listeningToChip, { backgroundColor: colors.accentGreen + '1c' }]}>
               <Text style={[styles.listeningToText, { color: colors.accentGreen }]}>
                 {isMath ? `Step ${listenStep + 1} of ${stepsCount}: ${step?.label}` : `Listening to: ${step?.label} of ${stepsCount}`}
               </Text>
             </View>
+            )}
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity
+              {!tutorMode && <TouchableOpacity
                 style={[styles.aaBtn, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}
                 onPress={() => setFontLarge(v => !v)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.aaBtnText, { color: colors.textMain }]}>Aa</Text>
-              </TouchableOpacity>
+              </TouchableOpacity>}
             </View>
           </View>
 
-          {isMath && (
+          {tutorMode && (
+            <ExampleTabs steps={listenSteps} current={listenStep} completed={narration.completedSteps} onOpen={(i) => goToListenStep(i, closeAllPanels)} colors={colors} />
+          )}
+          {isMath && !tutorMode && (
             <View style={[styles.aiTutorBadge, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '30' }]}>
               <Feather name="cpu" size={12} color={colors.primary} />
               <Text style={[styles.aiTutorBadgeText, { color: colors.primary }]}>AI Tutor — let&apos;s understand this step by step</Text>
             </View>
           )}
 
-          {!playMode && <Text style={[styles.listenHeading, { color: colors.textMain }]}>{step?.heading}</Text>}
+          {!playMode && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <Text style={[styles.listenHeading, { color: colors.textMain }]}>{tutorMode && !step?.math ? 'Let us begin' : step?.heading}</Text>
+              {tutorMode && !!step?.math?.page && (
+                <View style={{ paddingVertical: 3, paddingHorizontal: 9, borderRadius: 10, backgroundColor: colors.accentYellow + '22' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentYellow }}>Book page {step.math.page}</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Visual column subtraction — solve it on the board like a teacher
               would for a young child, not as a wall of text. */}
@@ -151,7 +174,18 @@ export default function ListenTab({
             );
           })()}
 
-          {playMode ? (
+          {tutorMode && step ? (
+            <TutorSteps
+              step={step}
+              current={curSentenceIdx}
+              started={listenPlaying || curSentenceIdx > 0}
+              finished={tutorFinished}
+              playing={listenPlaying}
+              fontLarge={fontLarge}
+              onLayoutStep={(i, y) => { sentenceYRef.current[i] = y; }}
+              colors={colors}
+            />
+          ) : playMode ? (
             <View style={styles.listenBodyRow}>
               {listenSteps.map((st, si) => {
                 const current = si === listenStep;
@@ -230,7 +264,22 @@ export default function ListenTab({
 
           {/* ── Maths AI Tutor: compact "Listen" so the tutor can read the
               current step aloud (age 7 benefits from hearing it). ── */}
-          {isMath && (
+          {tutorMode && (
+            <TutorControls
+              step={step}
+              isLast={listenStep === stepsCount - 1}
+              nextLabel={listenSteps[listenStep + 1]?.math ? `Next: ${listenSteps[listenStep + 1].heading}` : 'Next'}
+              playing={listenPlaying}
+              finished={tutorFinished}
+              onPlay={toggleListenPlay}
+              onReplay={repeatStep}
+              onNext={() => { closeAllPanels(); narration.playListenStep(listenStep + 1); }}
+              onPractice={() => setMode('practice')}
+              colors={colors}
+            />
+          )}
+
+          {isMath && !tutorMode && (
             <TouchableOpacity
               onPress={toggleListenPlay}
               activeOpacity={0.85}
@@ -249,7 +298,7 @@ export default function ListenTab({
 
           {/* Step navigation — placed right under the content so the student
               moves through steps without scrolling to a far footer. */}
-          {isMath && (
+          {isMath && !tutorMode && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 }}>
               <TouchableOpacity
                 style={[styles.mathFooterBtn, { borderColor: colors.borderColor }, listenStep === 0 && { opacity: 0.4 }]}
@@ -334,7 +383,7 @@ export default function ListenTab({
             <View style={[styles.whyBox, { borderColor: colors.accentGreen + '40', backgroundColor: colors.accentGreen + '0d' }]}>
               <Text style={[styles.whyLabel, { color: colors.accentGreen }]}>Explanation</Text>
               <Text style={[styles.whyText, { color: colors.textMain }]}>
-                {step?.text || step?.heading}
+                {sentences[curSentenceIdx]?.sentence || step?.text || step?.heading}
               </Text>
             </View>
           )}
@@ -344,7 +393,7 @@ export default function ListenTab({
             <View style={[styles.whyBox, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '0d' }]}>
               <Text style={[styles.whyLabel, { color: colors.primary }]}>Why?</Text>
               <Text style={[styles.whyText, { color: colors.textMain }]}>
-                {step?.keyIdea || 'This step follows directly from the one before it — look at the reasoning in the step above.'}
+                {step?.math?.why || step?.keyIdea || 'This step follows directly from the one before it — look at the reasoning in the step above.'}
               </Text>
             </View>
           )}
@@ -354,10 +403,11 @@ export default function ListenTab({
           {isMath && hintOpen && (() => {
             const worked = (topic.readText as any).workedExamples as any[] | undefined;
             const curEx = worked?.[Math.max(0, Math.min((worked?.length || 1) - 1, listenStep - 1))];
-            const hint = (topic.readText as any).hint
-              || curEx?.steps?.[1] // the "borrow" step is the real hint
+            const hint = step?.math?.hint
+              || (topic.readText as any).hint
+              || curEx?.steps?.[1]
               || (topic.readText as any).keyLearnings?.[1]
-              || 'When the top ones digit is smaller than the bottom, borrow 1 ten first.';
+              || 'Read the problem again and write down what you know before you start.';
             return (
               <View style={[styles.whyBox, { borderColor: colors.accentYellow + '50', backgroundColor: colors.accentYellow + '0d' }]}>
                 <Text style={[styles.whyLabel, { color: colors.accentYellow }]}>Hint</Text>
@@ -368,7 +418,25 @@ export default function ListenTab({
 
           {/* ── "Show Another Example" — shows a DIFFERENT worked example than
               the current step, structured as problem + steps. ── */}
-          {isMath && exampleOpen && (() => {
+          {isMath && exampleOpen && !!step?.math && (() => {
+            const next = listenSteps.slice(listenStep + 1).find((st) => st.math) || listenSteps.find((st, i) => i !== listenStep && st.math);
+            return (
+              <View style={[styles.whyBox, { borderColor: colors.accentGreen + '50', backgroundColor: colors.accentGreen + '0d' }]}>
+                <Text style={[styles.whyLabel, { color: colors.accentGreen }]}>Another Example</Text>
+                {next?.math ? (
+                  <>
+                    <Text style={[styles.whyText, { color: colors.textMain, fontWeight: '700' }]}>{next.math.problem}</Text>
+                    <TouchableOpacity onPress={() => goToListenStep(listenSteps.indexOf(next), closeAllPanels)} activeOpacity={0.8}>
+                      <Text style={{ color: colors.accentGreen, fontWeight: '700', marginTop: 8 }}>Solve this one with the tutor →</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={[styles.whyText, { color: colors.textMain }]}>This is the only example in this part. Try the Your Turn question on the board.</Text>
+                )}
+              </View>
+            );
+          })()}
+          {isMath && exampleOpen && !step?.math && (() => {
             const worked = ((topic.readText as any).workedExamples as any[]) || [];
             const curIdx = Math.max(0, listenStep - 1);
             const other = worked.filter((_, i) => i !== curIdx);
@@ -457,6 +525,23 @@ export default function ListenTab({
 
         {/* ── Right pane: illustration + New Word ── */}
         <ScrollView style={styles.rightPane} contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>
+          {isMath && !step?.math && listenSteps.some((st) => st.math) && (
+            <IntroBoard
+              intro={step?.keyIdea || step?.text || ''}
+              examples={listenSteps.map((st, index) => ({ index, st })).filter(({ st }) => st.math).map(({ index, st }) => ({ index, title: st.heading, problem: st.math!.problem, page: st.math!.page }))}
+              onOpen={(i) => goToListenStep(i, closeAllPanels)}
+              colors={colors}
+            />
+          )}
+          {isMath && !!step?.math && (
+            <MathBoard
+              key={listenStep}
+              math={step.math}
+              revealed={curSentenceIdx}
+              finished={!!narration.completedSteps?.has(listenStep)}
+              colors={colors}
+            />
+          )}
           {reasoning && (
             <ListenVisualBoard
               cards={reasoning.cards}
@@ -593,7 +678,7 @@ export default function ListenTab({
         </ScrollView>
       </View>
 
-      {isMath && (
+      {isMath && !tutorMode && (
       <View style={[styles.mathFooter, { borderColor: colors.borderColor, backgroundColor: colors.bgDark }]}>
         <View style={styles.mathActionGrid}>
           <TouchableOpacity

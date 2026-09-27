@@ -17,6 +17,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   const [listenPlaying, setListenPlaying] = useState(false);
   const [sentenceIdx, setSentenceIdx] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [clockTick, setClockTick] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
@@ -56,8 +57,9 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
       if (i >= sents.length) { // reached the end
         const stepNow = listenStepRef.current;
         setVisitedSteps(prev => new Set(prev).add(stepNow));
-        // A play carries on into its next scene by itself.
-        if (sents[0]?.line && stepNow + 1 < listenSteps.length) {
+        setCompletedSteps(prev => new Set(prev).add(stepNow));
+        // A play carries on into its next scene by itself; the maths tutor stops so the student can try the problem.
+        if (sents[0]?.line && sents[0].line.speaker !== 'Tutor' && stepNow + 1 < listenSteps.length) {
           setTimeout(() => { if (seq === playSeqRef.current) playListenStep(stepNow + 1); }, 900);
           return;
         }
@@ -149,6 +151,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
     setListenStep(0);
     setSentenceIdx(0);
     setVisitedSteps(new Set([0]));
+    setCompletedSteps(new Set());
   }
 
   // Ticks every 200ms while a part is actually playing, so the elapsed-time
@@ -174,7 +177,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   useEffect(() => () => { playSeqRef.current++; stopSpeaking(); }, []);
 
   return {
-    listenStep, listenPlaying, sentenceIdx, visitedSteps, clockTick,
+    listenStep, listenPlaying, sentenceIdx, visitedSteps, completedSteps, clockTick,
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,

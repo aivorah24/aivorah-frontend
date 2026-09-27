@@ -11,7 +11,7 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-auth-service-g27s.onrender.com';
+export const LIVE_SERVICE = 'https://aivorah-auth-service-g27s.onrender.com';
 
 const AUTH_SERVER_URL =
   Platform.OS === 'web' && __DEV__ ? 'http://localhost:4001' : LIVE_SERVICE;

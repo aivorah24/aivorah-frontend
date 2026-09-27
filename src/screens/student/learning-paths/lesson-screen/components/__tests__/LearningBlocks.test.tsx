@@ -40,7 +40,7 @@ describe('LearningBlocks', () => {
         colors={colors}
       />
     );
-    expect(screen.getByText('Solve x^2 - 5x + 6 = 0', { exact: false })).toBeTruthy();
+    expect(screen.getByText('Solve x² - 5x + 6 = 0', { exact: false })).toBeTruthy();
     expect(screen.getByText('Step 1: Factor the expression')).toBeTruthy();
     expect(screen.getByText('(x-2)(x-3)=0')).toBeTruthy();
     expect(screen.getByText('Why: A product is zero only if one factor is zero.')).toBeTruthy();

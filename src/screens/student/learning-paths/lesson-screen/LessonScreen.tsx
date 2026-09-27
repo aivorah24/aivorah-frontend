@@ -23,6 +23,7 @@ import { useNarration } from './hooks/useNarration';
 import { usePracticeRedirect } from './hooks/usePracticeRedirect';
 import { adaptTeacherContentToTopic, type TeacherTopicContent } from './utils/adaptTeacherContent';
 import { buildReasoningListen } from './utils/listenFromBlocks';
+import { buildMathTutorSteps } from './utils/mathTutor';
 import ReadTab from './components/ReadTab';
 import AskTab from './components/AskTab';
 import ListenTab from './components/ListenTab';
@@ -98,8 +99,11 @@ export default function LessonScreen({ navigation, route }: any) {
   // A lesson with a reasoning-flow block is narrated card by card so the Listen board can follow the audio.
   const reasoning = useMemo(() => buildReasoningListen(rawPayload), [rawPayload]);
 
+  const mathTutorSteps = useMemo(() => (isMath ? buildMathTutorSteps(rawPayload) : null), [isMath, rawPayload]);
+
   const listenSteps: ListenStep[] = useMemo(() => {
     if (!topic) return [];
+    if (mathTutorSteps) return mathTutorSteps;
     if (reasoning) return reasoning.steps;
     if (topic.readText.listenParts && topic.readText.listenParts.length > 0) {
       return topic.readText.listenParts.map((p: any) => ({
@@ -117,7 +121,7 @@ export default function LessonScreen({ navigation, route }: any) {
           heading: `Example ${i + 1}: ${ex.problem}`,
           text: `${ex.problem}. ${(ex.steps || []).join(' ')} So the answer is ${ex.answer}.`,
         })),
-        { label: 'Your turn', heading: 'Your turn', text: topic.readText.activity || 'Now try a subtraction with borrowing on your own.' },
+        ...(topic.readText.activity ? [{ label: 'Your turn', heading: 'Your turn', text: topic.readText.activity }] : []),
       ];
     }
     return [
@@ -125,7 +129,7 @@ export default function LessonScreen({ navigation, route }: any) {
       ...topic.readText.body.map((p: any, i: number) => ({ label: `Part ${i + 1}`, heading: `Part ${i + 1}`, text: p })),
       { label: 'Try this yourself', heading: 'Try this yourself', text: topic.readText.activity },
     ];
-  }, [topic, reasoning]);
+  }, [topic, reasoning, mathTutorSteps]);
 
   const vocab = topic?.readText.vocab ?? [];
 
@@ -284,6 +288,8 @@ export default function LessonScreen({ navigation, route }: any) {
                 reasoning={reasoning}
                 grade={grade}
                 subject={subject}
+                curriculum={curriculum}
+                unitTitle={chapter?.title}
                 colors={colors}
                 styles={styles}
                 narration={narration}
