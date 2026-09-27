@@ -31,6 +31,9 @@ export function speakWithBoundary(
     /zira/i,                                          // last-resort Windows default
   ];
   let pick: SpeechSynthesisVoice | undefined;
+  // The script of the text decides the voice too, so Hindi/Urdu text is never handed to an English voice.
+  const scriptLang = /[؀-ۿ]/.test(text) ? 'ur' : /[ऀ-ॿ]/.test(text) ? 'hi' : undefined;
+  if (scriptLang && !profile?.lang) profile = { ...(profile || {}), lang: scriptLang };
   // Hindi / Urdu lessons are read by a voice for that language when the browser has one.
   if (profile?.lang) {
     const code = profile.lang === 'ur' ? 'ur-PK' : profile.lang === 'hi' ? 'hi-IN' : profile.lang;
@@ -85,7 +88,8 @@ export function stopSpeaking() {
 // can highlight the whole sentence currently being read (not just one word).
 export function sentencesWithOffsets(text: string): { sentence: string; start: number; end: number }[] {
   const out: { sentence: string; start: number; end: number }[] = [];
-  const re = /[^.!?]+[.!?]*/g;
+  // Hindi ends a sentence with । (danda) and Urdu with ۔ — they count as full stops too.
+  const re = /[^.!?।۔]+[.!?।۔]*/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     if (!m[0].trim()) continue;

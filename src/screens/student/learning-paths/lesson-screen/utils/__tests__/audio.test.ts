@@ -47,3 +47,12 @@ describe('sentencesWithOffsets', () => {
     expect(result[0].sentence).toBe('No punctuation here');
   });
 });
+
+describe('sentencesWithOffsets - Hindi and Urdu', () => {
+  test('splits at the Hindi danda and the Urdu full stop', () => {
+    const { sentencesWithOffsets } = require('../audio');
+    const hi = sentencesWithOffsets('बदलू पेशे से मनिहार था। वह चूड़ियाँ बनाता था।');
+    expect(hi.map((s: any) => s.sentence.trim())).toEqual(['बदलू पेशे से मनिहार था।', 'वह चूड़ियाँ बनाता था।']);
+    expect(sentencesWithOffsets('یہ پہلا جملہ ہے۔ یہ دوسرا ہے۔')).toHaveLength(2);
+  });
+});
