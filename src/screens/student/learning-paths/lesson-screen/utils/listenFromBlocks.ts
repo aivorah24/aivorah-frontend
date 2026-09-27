@@ -1,4 +1,5 @@
 import type { ListenStep, PlayLine } from '../types';
+import { parseSceneVisual } from './sceneVisual';
 
 export type ChainCard = { label: string; text: string };
 
@@ -60,7 +61,8 @@ export function buildReasoningListen(rawPayload: any): ReasoningListen | null {
     return {
       steps: script.map((s) => {
         const lines = cleanLines(s.lines);
-        return { label: s.heading, heading: s.heading, text: withStop(s.text), ...(lines ? { lines } : {}) };
+        const visual = parseSceneVisual(s.visual);
+        return { label: s.heading, heading: s.heading, text: withStop(s.text), ...(lines ? { lines } : {}), ...(visual ? { visual } : {}) };
       }),
       cards,
       stepToCard: script.map((s) => (Number.isInteger(s.card) && s.card >= 0 && s.card < cards.length ? s.card : null)),

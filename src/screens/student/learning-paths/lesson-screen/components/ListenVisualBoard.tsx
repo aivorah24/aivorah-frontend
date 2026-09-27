@@ -4,6 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
 import type { ChainCard } from '../utils/listenFromBlocks';
 import { bookSrc } from '../utils/book';
+import type { SceneVisual as Visual } from '../types';
+import SceneVisual from './SceneVisual';
 
 const PALETTE = ['#4C8FD6', '#D65C5C', '#B07A10', '#7A5CC8', '#2E8B5A', '#C2578F', '#3B8EA5'];
 
@@ -68,15 +70,18 @@ function ChainCardView({ card, index, active, done, reduceMotion, colors }: {
 
 // Right-hand board for the Listen tab: follows the audio. `activeCard` is derived from the current listen step
 // (see buildReasoningListen); null means the narration is on an intro / book excerpt / key words step.
-export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPage, followsBook, topic, grade, subject, colors }: {
-  cards: ChainCard[]; activeCard: number | null; bookQuote?: string; bookPage?: number; followsBook?: boolean; topic: any; grade: string; subject: string; colors: AppColors;
+export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPage, followsBook, sceneVisual, hasVisuals, topic, grade, subject, colors }: {
+  cards: ChainCard[]; activeCard: number | null; bookQuote?: string; bookPage?: number; followsBook?: boolean;
+  sceneVisual?: Visual; hasVisuals?: boolean; topic: any; grade: string; subject: string; colors: AppColors;
 }) {
-  const [view, setView] = useState<'chain' | 'book'>(followsBook ? 'book' : 'chain');
+  type View_ = 'visual' | 'chain' | 'book';
+  const initial: View_ = hasVisuals ? 'visual' : followsBook ? 'book' : 'chain';
+  const [view, setView] = useState<View_>(initial);
   const reduceMotion = useReduceMotion();
-  useEffect(() => { if (followsBook) setView('book'); }, [followsBook]);
+  useEffect(() => { setView(initial); }, [initial]);
   const reached = activeCard ?? -1;
 
-  const Tab = ({ id, label, icon }: { id: 'chain' | 'book'; label: string; icon: any }) => {
+  const Tab = ({ id, label, icon }: { id: View_; label: string; icon: any }) => {
     const on = view === id;
     return (
       <TouchableOpacity
@@ -100,14 +105,19 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
 
   return (
     <View testID="listen-visual-board" style={{ gap: 12 }}>
-      {cards.length > 0 && (
+      {(cards.length > 0 || hasVisuals) && (
         <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-          <Tab id="chain" label="Visual Logic Chain" icon="git-commit" />
+          {hasVisuals && <Tab id="visual" label="See It" icon="image" />}
+          {cards.length > 0 && <Tab id="chain" label="Visual Logic Chain" icon="git-commit" />}
           <Tab id="book" label="Book Follow-Along" icon="book-open" />
         </View>
       )}
 
-      {view === 'chain' && cards.length > 0 ? (
+      {view === 'visual' && hasVisuals ? (
+        sceneVisual
+          ? <SceneVisual visual={sceneVisual} colors={colors} />
+          : <Text style={{ fontSize: 13, color: colors.textMuted }}>This part has no picture. Open Book Follow-Along to read along.</Text>
+      ) : view === 'chain' && cards.length > 0 ? (
         <View style={{ gap: 6 }}>
           {cards.map((c, i) => (
             <React.Fragment key={i}>
