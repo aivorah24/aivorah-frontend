@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
 import { makeStyles } from '../styles';
+import InlineQuiz, { type QuizQuestion } from './InlineQuiz';
 
 export default function PracticeTab({
   topic,
@@ -15,6 +16,7 @@ export default function PracticeTab({
   colors,
   styles,
   navigation,
+  quiz,
 }: {
   topic: any;
   grade: string;
@@ -26,7 +28,18 @@ export default function PracticeTab({
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
   navigation: any;
+  quiz?: QuizQuestion[];
 }) {
+  const stored = (quiz || []).filter((q) => q && typeof q.question === 'string' && Array.isArray(q.options) && q.options.length >= 2
+    && Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < q.options.length);
+  if (stored.length) {
+    return (
+      <View style={[styles.card, { borderColor: colors.borderColor, backgroundColor: colors.cardDark, gap: 12 }]}>
+        <Text style={[styles.introText, { color: colors.textMain }]}>Practice — {topic.name}</Text>
+        <InlineQuiz questions={stored} colors={colors} />
+      </View>
+    );
+  }
   return (
     <View style={[styles.card, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
       <Text style={[styles.introText, { color: colors.textMain }]}>Practice — {topic.name}</Text>

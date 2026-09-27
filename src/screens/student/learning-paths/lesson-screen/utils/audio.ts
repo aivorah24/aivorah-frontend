@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // Speaks text and reports word-boundary positions so the UI can highlight
 // the word currently being read (karaoke-style), and calls onEnd when done.
-export type VoiceProfile = { gender?: 'f' | 'm'; pitch?: number; rate?: number };
+export type VoiceProfile = { gender?: 'f' | 'm'; pitch?: number; rate?: number; lang?: string };
 
 const FEMALE_VOICES = [/aria/i, /jenny/i, /michelle/i, /zira/i, /samantha/i, /karen/i, /moira/i, /female/i];
 const MALE_VOICES = [/guy/i, /ryan/i, /davis/i, /david/i, /mark/i, /alex/i, /daniel/i, /george/i, /male/i];
@@ -31,15 +31,23 @@ export function speakWithBoundary(
     /zira/i,                                          // last-resort Windows default
   ];
   let pick: SpeechSynthesisVoice | undefined;
-  for (const re of PREFERRED) { pick = voices.find(v => re.test(v.name) && /^en/i.test(v.lang)); if (pick) break; }
-  if (profile?.gender) {
+  // Hindi / Urdu lessons are read by a voice for that language when the browser has one.
+  if (profile?.lang) {
+    const code = profile.lang === 'ur' ? 'ur-PK' : profile.lang === 'hi' ? 'hi-IN' : profile.lang;
+    utter.lang = code;
+    pick = voices.find((v) => v.lang.toLowerCase().startsWith(profile.lang!.toLowerCase()))
+      || (profile.lang === 'ur' ? voices.find((v) => /^hi/i.test(v.lang)) : undefined);
+    if (pick) { utter.voice = pick; }
+  }
+  if (!pick && !profile?.lang) for (const re of PREFERRED) { pick = voices.find(v => re.test(v.name) && /^en/i.test(v.lang)); if (pick) break; }
+  if (profile?.gender && !profile?.lang) {
     const pool = profile.gender === 'm' ? MALE_VOICES : FEMALE_VOICES;
     for (const re of pool) {
       const v = voices.find(x => re.test(x.name) && /^en/i.test(x.lang));
       if (v) { pick = v; break; }
     }
   }
-  if (!pick) pick = voices.find(v => /en[-_]US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
+  if (!pick && !profile?.lang) pick = voices.find(v => /en[-_]US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
   if (pick) utter.voice = pick;
   utter.onboundary = (e: any) => { if (e.name === 'word' || e.charIndex !== undefined) onWordBoundary(e.charIndex ?? 0); };
   utter.onend = () => onEnd();
