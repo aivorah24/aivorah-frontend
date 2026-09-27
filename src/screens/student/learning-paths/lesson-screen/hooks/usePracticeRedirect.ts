@@ -25,6 +25,8 @@ export function usePracticeRedirect(
     // must round-trip through the quiz the same way byNameTopic does, or
     // returning from Quiz loses the content and shows "not available".
     teacherContent?: unknown;
+    // Questions built from the book for this section ({ question, options, correctIndex, explanation, page }).
+    bookQuiz?: any[];
   },
   contentReady: boolean = true,
 ) {
@@ -38,7 +40,12 @@ export function usePracticeRedirect(
     setMode('read');
     // Teacher-authored practice questions (Phase 2) — when present, Quiz
     // uses these directly and skips the /ibpyp/quiz generation call.
-    const practiceQuiz = (params.teacherContent as any)?.practiceQuiz;
+    const bookQuiz = Array.isArray(params.bookQuiz) ? params.bookQuiz.filter((q: any) => q && q.question && Array.isArray(q.options)) : [];
+    const practiceQuiz = (params.teacherContent as any)?.practiceQuiz || (bookQuiz.length ? bookQuiz.map((q: any) => ({
+      type: 'mcq', question: q.question, options: q.options, correct: q.correctIndex,
+      hint: q.page ? `Look again at page ${q.page} of your book.` : 'Read this part in Learn once more.',
+      explanation: q.explanation || '',
+    })) : undefined);
     navigation.navigate('Quiz', {
       topic: topic.name, grade: params.grade, subject: params.subject, curriculum: params.curriculum, topicId: params.topicId,
       passageText: (topic as any).readText

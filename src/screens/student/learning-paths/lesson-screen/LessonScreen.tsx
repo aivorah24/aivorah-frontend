@@ -142,6 +142,7 @@ export default function LessonScreen({ navigation, route }: any) {
   usePracticeRedirect(mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
     byNameTopic, chapterTitle: chapter?.title, teacherContent,
+    bookQuiz: (rawPayload as any)?.practiceQuiz,
   }, contentReady);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson
@@ -323,7 +324,6 @@ export default function LessonScreen({ navigation, route }: any) {
                     colors={colors}
                     styles={styles}
                     navigation={navigation}
-                    quiz={(rawPayload as any)?.practiceQuiz}
                   />
                 )}
               </ScrollView>
