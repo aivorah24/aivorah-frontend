@@ -22,12 +22,23 @@ export type SceneVisual = Titled & (
   | { kind: 'web'; center: string; nodes: { label: string; note?: string }[] }
 );
 
+export type MathStep = {
+  problem: string;
+  shows: string[];
+  answer: string;
+  why?: string;
+  hint?: string;
+  page?: number;
+  yourTurn?: { question: string; answer: string };
+};
+
 export type ListenStep = {
   label: string;
   heading: string;
   text: string;
   lines?: PlayLine[];
   visual?: SceneVisual;
+  math?: MathStep;
   keyIdea?: string;
   pauseThink?: { question: string; options: string[]; correctIndex: number };
 };

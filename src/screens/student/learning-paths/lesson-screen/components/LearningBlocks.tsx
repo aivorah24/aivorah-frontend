@@ -5,6 +5,7 @@ import ZoomableImage from './ZoomableImage';
 import type { AppColors } from '../../../../../theme';
 import { spacing } from '../../../../../theme';
 import { makeStyles } from '../styles';
+import { plainMathDeep } from '../utils/plainMath';
 
 // Generic renderer for the AI enrichment pilot's structured Learn-tab
 // content (see aivorah-learning-paths-service's services/curriculum/
@@ -284,17 +285,19 @@ export default function LearningBlocks({
   blocks: Block[];
   colors: AppColors;
 }) {
+  const learn = React.useMemo(() => plainMathDeep(whatYoullLearn || []), [whatYoullLearn]);
+  const clean = React.useMemo(() => plainMathDeep(blocks), [blocks]);
   return (
     <View style={{ gap: spacing.md }}>
-      {!!whatYoullLearn?.length && (
+      {!!learn.length && (
         <View style={[{ borderRadius: 10, padding: 12, gap: 4 }, { backgroundColor: colors.primary + '14', borderWidth: 1, borderColor: colors.primary + '40' }]}>
           <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 0.5, color: colors.primary }}>WHAT YOU&apos;LL LEARN</Text>
-          {whatYoullLearn.map((w, i) => (
+          {learn.map((w, i) => (
             <Text key={i} style={{ fontSize: 13, color: colors.textMain }}>{'•'} {w}</Text>
           ))}
         </View>
       )}
-      {blocks.map((b, i) => renderBlock(b, i, colors)).filter(Boolean)}
+      {clean.map((b, i) => renderBlock(b, i, colors)).filter(Boolean)}
     </View>
   );
 }
