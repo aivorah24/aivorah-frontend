@@ -6,6 +6,8 @@ import type { AppColors } from '../../../../../theme';
 import { spacing } from '../../../../../theme';
 import { makeStyles } from '../styles';
 import { plainMathDeep } from '../utils/plainMath';
+import { blockToVisual } from '../utils/blockVisual';
+import SceneVisual from './SceneVisual';
 
 // Generic renderer for the AI enrichment pilot's structured Learn-tab
 // content (see aivorah-learning-paths-service's services/curriculum/
@@ -44,6 +46,9 @@ function BodyText({ children, colors }: { children: React.ReactNode; colors: App
 }
 
 function renderBlock(block: Block, i: number, colors: AppColors): React.ReactNode {
+  // Diagram-like blocks are drawn (flow chart, columns, timeline, cause -> effect, grid) when their data is complete.
+  const visual = blockToVisual(block);
+  if (visual) return <SceneVisual key={i} visual={visual} colors={colors} />;
   switch (block.type) {
     case 'overview':
     case 'explanation':
