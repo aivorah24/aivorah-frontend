@@ -59,7 +59,7 @@ export default function BookSidePane({ topic, pathGrade, colors }: { topic: Lear
               style={{ borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, borderColor: i === selected && p.pdfFile ? colors.primary : colors.borderColor, opacity: p.pdfFile ? 1 : 0.6 }}
             >
               <Text style={{ fontSize: 11, color: p.pdfFile ? colors.textMain : colors.textMuted }}>
-                {p.subtopic}{p.pdfFile ? ` · p.${p.pdfPage}` : ' · not in book'}
+                {p.subtopic}{p.pdfFile ? ` · p.${p.pdfPage}` : ' · not in book, taught by AI · check'}
               </Text>
             </TouchableOpacity>
           ))}

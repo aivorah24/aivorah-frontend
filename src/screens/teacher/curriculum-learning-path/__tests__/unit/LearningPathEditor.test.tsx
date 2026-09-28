@@ -292,11 +292,11 @@ describe('LearningPathEditor', () => {
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
       await user.press(screen.getByTestId('preview-as-student-0-0'));
 
-      expect(screen.getByTestId('preview-source-note').props.children).toContain('2 of 3 subtopics');
+      expect(screen.getByTestId('preview-source-note').props.children).toContain('2 of 3 subtopics in the book; the rest taught by AI');
       expect(screen.queryByTestId('preview-book-other-grade')).toBeNull();
       await user.press(screen.getByTestId('book-page-chip-1'));
       expect(screen.getByTestId('preview-book-other-grade').props.children).toEqual(['From Grade ', 7, ' book']);
-      expect(screen.getByText('Successor · not in book')).toBeTruthy();
+      expect(screen.getByText('Successor · not in book, taught by AI · check')).toBeTruthy();
     });
 
     test('Learn text can be edited and saved via onChange', async () => {

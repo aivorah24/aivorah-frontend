@@ -40,7 +40,7 @@ export default function StudentPreviewModal({
   const bookPages = topic.content?.book?.pages || [];
   const inBook = bookPages.filter((p) => p.pdfFile).length;
   const sourceNote = topic.groundingSource === 'ncert_book'
-    ? `From the NCERT book${bookPages.length ? ` · ${inBook} of ${bookPages.length} subtopics found in the book` : ''}`
+    ? `From the NCERT book${bookPages.length ? ` · ${inBook} of ${bookPages.length} subtopics in the book${inBook < bookPages.length ? '; the rest taught by AI — please check' : ''}` : ''}`
     : topic.groundingSource === 'model_knowledge' || topic.groundingSource === 'upload_text_only'
       ? 'Written by AI from your outline — please check it'
       : null;
