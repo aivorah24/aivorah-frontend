@@ -114,6 +114,7 @@ export default function TeacherCurriculumLearningPathScreen() {
             <LearningPathEditor
               content={draft.learningPath.content}
               onChange={draft.updateContent}
+              onRebuildTopic={draft.rebuildTopic}
               readOnly={isPublished}
             />
           </View>

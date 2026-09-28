@@ -18,6 +18,7 @@ jest.mock('../../hooks/useCurriculumUpload', () => ({
 }));
 
 const mockUseLearningPathDraft = jest.fn();
+jest.mock('../../services/curriculumLearningPathService', () => ({ getBookSections: jest.fn() }));
 jest.mock('../../hooks/useLearningPathDraft', () => ({
   useLearningPathDraft: () => mockUseLearningPathDraft(),
 }));

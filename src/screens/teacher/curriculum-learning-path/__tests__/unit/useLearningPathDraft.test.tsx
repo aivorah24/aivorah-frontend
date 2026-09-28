@@ -32,6 +32,19 @@ function Harness() {
   );
 }
 
+function RebuildHarness() {
+  const h = useLearningPathDraft('c1');
+  const topics = h.learningPath?.content.units[0].topics || [];
+  return (
+    <View>
+      <Text testID="topics">{topics.map((t) => `${t.title}:${t.objectives.join(',')}`).join('|')}</Text>
+      <TouchableOpacity testID="load" onPress={() => h.load()} />
+      <TouchableOpacity testID="edit-other" onPress={() => h.updateContent({ ...h.learningPath!.content, units: [{ ...h.learningPath!.content.units[0], topics: [topics[0], { ...topics[1], objectives: ['local edit'] }] }] })} />
+      <TouchableOpacity testID="rebuild" onPress={() => h.rebuildTopic(0, 0, [null])} />
+    </View>
+  );
+}
+
 describe('useLearningPathDraft', () => {
   test('loads the draft', async () => {
     global.fetch = jest.fn().mockImplementation(() => jsonResponse({ learningPath: { id: 'lp1', curriculum_id: 'c1', status: 'draft', content: CONTENT } })) as any;
@@ -103,5 +116,25 @@ describe('useLearningPathDraft', () => {
     await waitFor(() => expect(screen.getByTestId('status').props.children).toBe('draft'));
     await user.press(screen.getByTestId('publish'));
     await waitFor(() => expect(screen.getByTestId('error').props.children).toMatch(/Draft failed validation/));
+  });
+
+  test('rebuildTopic merges only the rebuilt topic, keeping unsaved edits elsewhere', async () => {
+    const topic = (title: string, objectives: string[]) => ({ title, order: title === 'A' ? 0 : 1, objectives, lessons: [], subtopics: [] });
+    const draft = { id: 'lp1', curriculum_id: 'c1', status: 'draft', content: { version: 1, units: [{ title: 'U', order: 0, topics: [topic('A', ['old']), topic('B', ['old'])] }] } };
+    const server = { ...draft, content: { version: 1, units: [{ title: 'U', order: 0, topics: [topic('A', ['rebuilt']), topic('B', ['old'])] }] } };
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => jsonResponse({ learningPath: draft }))
+      .mockImplementationOnce(() => jsonResponse({ learningPath: server })) as any;
+    const user = userEvent.setup();
+    await render(<RebuildHarness />);
+    await user.press(screen.getByTestId('load'));
+    await waitFor(() => expect(screen.getByTestId('topics').props.children).toBe('A:old|B:old'));
+    await user.press(screen.getByTestId('edit-other'));
+    await user.press(screen.getByTestId('rebuild'));
+
+    await waitFor(() => expect(screen.getByTestId('topics').props.children).toBe('A:rebuilt|B:local edit'));
+    const [url, opts] = (global.fetch as jest.Mock).mock.calls[1];
+    expect(url).toBe('https://server.test/teacher-curriculum/c1/learning-path/topics/rebuild');
+    expect(JSON.parse(opts.body)).toEqual({ unitOrder: 0, topicOrder: 0, subtopicSections: [null] });
   });
 });

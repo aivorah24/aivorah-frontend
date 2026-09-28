@@ -4,17 +4,19 @@ import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
 import { LearningPathContent, TeacherTopicContent } from '../types';
 import StudentPreviewModal from './StudentPreviewModal';
+import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';
 
 interface Props {
   content: LearningPathContent;
   onChange: (content: LearningPathContent) => void;
   readOnly?: boolean;
+  onRebuildTopic?: (unitOrder: number, topicOrder: number, picks: SubtopicSectionPick[]) => Promise<void>;
 }
 
 // Whole-document edit pattern: mutate a deep copy, then call onChange with the
 // full content — same convention as InteractiveQuizPreviewModal.tsx's
 // question editing, so this saves through PUT /:id/learning-path the same way.
-export default function LearningPathEditor({ content, onChange, readOnly }: Props) {
+export default function LearningPathEditor({ content, onChange, readOnly, onRebuildTopic }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [previewIndex, setPreviewIndex] = useState<{ ui: number; ti: number } | null>(null);
@@ -304,6 +306,10 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
           topic={content.units[previewIndex.ui].topics[previewIndex.ti]}
           colors={colors}
           pathGrade={content.metadata?.grade}
+          subject={content.metadata?.subject}
+          onRebuild={readOnly || !onRebuildTopic ? undefined : (picks) => onRebuildTopic(
+            content.units[previewIndex.ui].order, content.units[previewIndex.ui].topics[previewIndex.ti].order, picks,
+          )}
           onClose={() => setPreviewIndex(null)}
           onChangeContent={readOnly ? undefined : (next) => updateTopicContent(previewIndex.ui, previewIndex.ti, next)}
         />

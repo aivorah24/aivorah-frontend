@@ -3,6 +3,9 @@ import { render, screen, waitFor, userEvent, fireEvent } from '@testing-library/
 import LearningPathEditor from '../../components/LearningPathEditor';
 import { LearningPathContent } from '../../types';
 
+const mockGetBookSections = jest.fn();
+jest.mock('../../services/curriculumLearningPathService', () => ({ getBookSections: (...a: any[]) => mockGetBookSections(...a) }));
+
 function baseContent(): LearningPathContent {
   return {
     version: 1,
@@ -297,6 +300,49 @@ describe('LearningPathEditor', () => {
       await user.press(screen.getByTestId('book-page-chip-1'));
       expect(screen.getByTestId('preview-book-other-grade').props.children).toEqual(['From Grade ', 7, ' book']);
       expect(screen.getByText('Successor · not in book, taught by AI · check')).toBeTruthy();
+    });
+
+    test('teacher picks book sections per subtopic and rebuilds the topic', async () => {
+      const content = contentWithAudioAndPractice();
+      content.metadata = { grade: '6', subject: 'Mathematics' };
+      content.units[0].topics[0].subtopics = [{ title: 'Number line', order: 0 }, { title: 'Successor', order: 1 }];
+      mockGetBookSections.mockResolvedValueOnce({ sections: [
+        { grade: 6, pdfFile: 'fegp103.pdf', bookPath: null, bookTitle: null, chapterTitle: 'Number Play', title: '3.3 Patterns on the Number Line', page: 5 },
+      ] });
+      const onRebuildTopic = jest.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={onRebuildTopic} />);
+      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('change-book-pages'));
+
+      await waitFor(() => expect(screen.getByTestId('picker-option-0')).toBeTruthy());
+      expect(mockGetBookSections).toHaveBeenCalledWith('6', 'Mathematics');
+      await user.press(screen.getByTestId('picker-option-0'));
+      await user.press(screen.getByTestId('picker-rebuild'));
+
+      expect(onRebuildTopic).toHaveBeenCalledWith(0, 0, [{ pdfFile: 'fegp103.pdf', title: '3.3 Patterns on the Number Line' }, null]);
+      await waitFor(() => expect(screen.queryByTestId('book-section-picker')).toBeNull());
+    });
+
+    test('a failed rebuild shows the error and keeps the picker open', async () => {
+      const content = contentWithAudioAndPractice();
+      content.metadata = { grade: '6', subject: 'Mathematics' };
+      mockGetBookSections.mockResolvedValueOnce({ sections: [] });
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn().mockRejectedValue(new Error('Try again later'))} />);
+      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('change-book-pages'));
+      await user.press(screen.getByTestId('picker-rebuild'));
+      await waitFor(() => expect(screen.getByTestId('picker-error').props.children).toBe('Try again later'));
+      expect(screen.getByTestId('book-section-picker')).toBeTruthy();
+    });
+
+    test('no Change pages button when read only', async () => {
+      const content = contentWithAudioAndPractice();
+      content.metadata = { grade: '6', subject: 'Mathematics' };
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn()} readOnly />);
+      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
+      expect(screen.queryByTestId('change-book-pages')).toBeNull();
     });
 
     test('Learn text can be edited and saved via onChange', async () => {

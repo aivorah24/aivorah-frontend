@@ -6,6 +6,7 @@ import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
 import BookSidePane from './BookSidePane';
 import LearnBlockEditor from './LearnBlockEditor';
+import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';
 import { LearningPathTopic, TeacherTopicContent, TeacherListenPart, TeacherPauseThink, TeacherPracticeQuestion } from '../types';
 
 type Tab = 'learn' | 'audio' | 'practice';
@@ -23,9 +24,13 @@ export default function StudentPreviewModal({
   onClose,
   onChangeContent,
   pathGrade,
+  subject,
+  onRebuild,
 }: {
   topic: LearningPathTopic;
   pathGrade?: string;
+  subject?: string;
+  onRebuild?: (picks: SubtopicSectionPick[]) => Promise<void>;
   colors: AppColors;
   onClose: () => void;
   // Wired to LearningPathEditor's updateContent → save, same PUT
@@ -164,7 +169,7 @@ export default function StudentPreviewModal({
                     </View>
                   )}
                 </View>
-                <BookSidePane key={`${topic.title}`} topic={topic} pathGrade={pathGrade} colors={colors} />
+                <BookSidePane key={`${topic.title}-${topic.content?.book?.pdfFile}-${topic.content?.book?.pdfPage}`} topic={topic} pathGrade={pathGrade} subject={subject} colors={colors} onRebuild={onRebuild} />
               </View>
             )}
 

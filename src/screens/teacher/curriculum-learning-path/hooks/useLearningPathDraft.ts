@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { getLearningPath, saveLearningPathDraft, publishLearningPath } from '../services/curriculumLearningPathService';
+import { getLearningPath, saveLearningPathDraft, publishLearningPath, rebuildTopic as rebuildTopicApi, SubtopicSectionPick } from '../services/curriculumLearningPathService';
 import { TeacherLearningPath, LearningPathContent } from '../types';
 
 export function useLearningPathDraft(curriculumId: string | null) {
@@ -26,6 +26,23 @@ export function useLearningPathDraft(curriculumId: string | null) {
   const updateContent = useCallback((content: LearningPathContent) => {
     setLearningPath((prev) => (prev ? { ...prev, content } : prev));
   }, []);
+
+  // Only the rebuilt topic is merged in, so unsaved edits to other topics stay.
+  const rebuildTopic = useCallback(async (unitOrder: number, topicOrder: number, picks: SubtopicSectionPick[]) => {
+    if (!curriculumId) return;
+    const { learningPath: server } = await rebuildTopicApi(curriculumId, unitOrder, topicOrder, picks);
+    const rebuilt = server.content.units.find((u) => u.order === unitOrder)?.topics.find((t) => t.order === topicOrder);
+    if (!rebuilt) return;
+    setLearningPath((prev) => (prev ? {
+      ...prev,
+      content: {
+        ...prev.content,
+        units: prev.content.units.map((u) => (u.order !== unitOrder ? u : {
+          ...u, topics: u.topics.map((t) => (t.order !== topicOrder ? t : { ...rebuilt, title: t.title })),
+        })),
+      },
+    } : prev));
+  }, [curriculumId]);
 
   const save = useCallback(async () => {
     if (!curriculumId || !learningPath) return false;
@@ -59,5 +76,5 @@ export function useLearningPathDraft(curriculumId: string | null) {
     }
   }, [curriculumId]);
 
-  return { learningPath, loading, saving, publishing, error, load, updateContent, save, publish };
+  return { learningPath, loading, saving, publishing, error, load, updateContent, rebuildTopic, save, publish };
 }

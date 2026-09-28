@@ -93,3 +93,33 @@ export async function publishLearningPath(curriculumId: string): Promise<{ learn
   });
   return parseOrThrow(res);
 }
+
+export interface BookSectionOption {
+  grade: number;
+  pdfFile: string;
+  bookPath: string | null;
+  bookTitle: string | null;
+  chapterTitle: string | null;
+  title: string;
+  page: number;
+}
+
+export type SubtopicSectionPick = { pdfFile: string; title: string } | null;
+
+export async function getBookSections(grade: string, subject: string): Promise<{ sections: BookSectionOption[] }> {
+  const headers = await authHeaders();
+  const qs = `grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`;
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/book-sections?${qs}`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function rebuildTopic(
+  curriculumId: string, unitOrder: number, topicOrder: number, subtopicSections: SubtopicSectionPick[]
+): Promise<{ learningPath: TeacherLearningPath }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}/learning-path/topics/rebuild`, {
+    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unitOrder, topicOrder, subtopicSections }),
+  });
+  return parseOrThrow(res);
+}
