@@ -137,11 +137,12 @@ export default function LessonScreen({ navigation, route }: any) {
   // lines so it lands as a rhythmic recitation rather than flat narration.
   const isPoem = ((rawPayload?.instructionalType as string) || '').toLowerCase().includes('poem');
 
-  const narration = useNarration(listenSteps, isPoem);
+  const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang);
 
   usePracticeRedirect(mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
     byNameTopic, chapterTitle: chapter?.title, teacherContent,
+    bookQuiz: (rawPayload as any)?.practiceQuiz,
   }, contentReady);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson

@@ -12,7 +12,7 @@ export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { 
 // exact (we drive it), seeking maps to whole lines, and pauses fall only at
 // punctuation — no robotic word-by-word gaps. `sentenceIdx` is the single
 // source of truth for which line is active.
-export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
+export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: string) {
   const [listenStep, setListenStep] = useState(0);
   const [listenPlaying, setListenPlaying] = useState(false);
   const [sentenceIdx, setSentenceIdx] = useState(0);
@@ -26,6 +26,8 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
   const listenSentencesRef = useRef<NarrationLine[]>([]);
   const playbackRateRef = useRef(playbackRate);
   useEffect(() => { playbackRateRef.current = playbackRate; }, [playbackRate]);
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
   const isPoemRef = useRef(isPoem);
   useEffect(() => { isPoemRef.current = isPoem; }, [isPoem]);
   const sentenceYRef = useRef<Record<number, number>>({});
@@ -80,7 +82,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean) {
         () => {}, // highlight is line-level, not word-level
         next,
         playbackRateRef.current,
-        line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : undefined,
+        { ...(line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : {}), ...(langRef.current && langRef.current !== 'en' ? { lang: langRef.current } : {}) },
       );
       // A recorded, acted line plays as-is; if it cannot play, the browser voice reads it instead.
       if (!(line?.audio && playClip(line.audio, playbackRateRef.current, next, () => { if (seq === playSeqRef.current) browserVoice(); }))) browserVoice();
