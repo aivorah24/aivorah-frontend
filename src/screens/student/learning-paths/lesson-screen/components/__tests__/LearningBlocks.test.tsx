@@ -108,3 +108,19 @@ describe('LearningBlocks', () => {
     expect(screen.getByText('Hydrogen burns in oxygen to form water.')).toBeTruthy();
   });
 });
+
+describe('LearningBlocks - drawn diagrams', () => {
+  test('process, comparison, timeline, cause-effect and tables are drawn, not listed', async () => {
+    const c: any = { cardDark: '#fff', textMain: '#111', textMuted: '#666', borderColor: '#ccc', primary: '#0a7', accentGreen: '#0a7', accentYellow: '#9A7B2E', bgDark: '#F5F3EE' };
+    await render(<LearningBlocks colors={c} blocks={[
+      { type: 'process', title: 'Water cycle', steps: ['Evaporation', 'Condensation', 'Rain'] },
+      { type: 'comparison', title: 'Cells', items: [{ name: 'Plant cell', description: 'cell wall' }, { name: 'Animal cell', description: 'no cell wall' }] },
+      { type: 'timeline', title: 'Freedom', events: [{ date: '1857', description: 'Revolt' }, { date: '1947', description: 'Independence' }] },
+      { type: 'cause_and_effect', title: 'Why', items: [{ cause: 'No rain', effect: 'Dry fields' }] },
+      { type: 'table', caption: 'Place value', headers: ['Tens', 'Ones'], rows: [['4', '7']] },
+    ]} />);
+    for (const kind of ['flow', 'compare', 'timeline', 'cause_effect', 'table']) expect(screen.getByTestId(`scene-visual-${kind}`)).toBeTruthy();
+    expect(screen.getByText('1. Evaporation')).toBeTruthy();
+    expect(screen.getByText('Plant cell')).toBeTruthy();
+  });
+});
