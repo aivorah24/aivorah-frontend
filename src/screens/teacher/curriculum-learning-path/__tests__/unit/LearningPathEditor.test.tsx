@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
+import { render, screen, waitFor, userEvent, fireEvent } from '@testing-library/react-native';
 import LearningPathEditor from '../../components/LearningPathEditor';
 import { LearningPathContent } from '../../types';
 
@@ -267,12 +267,58 @@ describe('LearningPathEditor', () => {
       expect(updated.units[0].topics[0].content.practiceQuiz[0].correct).toBe(2);
     });
 
-    test('shows "No matching textbook chapter" when the topic has no content.book', async () => {
+    test('shows the teacher outline when the topic has no content.book', async () => {
       const content = contentWithAudioAndPractice();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
       await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
       expect(screen.getByTestId('preview-no-book')).toBeTruthy();
-      expect(screen.getByText('No matching textbook chapter')).toBeTruthy();
+      expect(screen.getByText('YOUR OUTLINE')).toBeTruthy();
+    });
+
+    test('book pane: a page chip per subtopic, other-grade label, "not in book" chip disabled', async () => {
+      const content = contentWithAudioAndPractice();
+      content.metadata = { grade: '6', subject: 'Mathematics' };
+      content.units[0].topics[0].groundingSource = 'ncert_book';
+      content.units[0].topics[0].content!.book = {
+        pdfFile: 'fegp102.pdf', bookPath: 'grade6/mathematics/fegp102.pdf', bookTitle: 'Ganita Prakash',
+        chapterTitle: 'Lines and Angles', pdfPage: 3, confidence: 10, grade: 6,
+        pages: [
+          { subtopic: 'Rays', pdfFile: 'fegp102.pdf', bookPath: 'grade6/mathematics/fegp102.pdf', chapterTitle: 'Lines and Angles', grade: 6, pdfPage: 3, section: '2.4 Ray' },
+          { subtopic: 'Comparing decimals', pdfFile: 'gegp103.pdf', bookPath: 'grade7/mathematics/gegp103.pdf', chapterTitle: 'A Peek Beyond the Point', grade: 7, pdfPage: 28, section: '3.6' },
+          { subtopic: 'Successor', pdfFile: null },
+        ],
+      };
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+      await user.press(screen.getByTestId('preview-as-student-0-0'));
+
+      expect(screen.getByTestId('preview-source-note').props.children).toContain('2 of 3 subtopics');
+      expect(screen.queryByTestId('preview-book-other-grade')).toBeNull();
+      await user.press(screen.getByTestId('book-page-chip-1'));
+      expect(screen.getByTestId('preview-book-other-grade').props.children).toEqual(['From Grade ', 7, ' book']);
+      expect(screen.getByText('Successor · not in book')).toBeTruthy();
+    });
+
+    test('Learn text can be edited and saved via onChange', async () => {
+      const content = contentWithAudioAndPractice();
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={onChange} />);
+      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('toggle-edit-learn'));
+
+      fireEvent.changeText(screen.getByTestId('block-0-text'), 'Edited by teacher.');
+      expect(onChange.mock.calls.at(-1)[0].units[0].topics[0].content.blocks[0].text).toBe('Edited by teacher.');
+
+      await user.press(screen.getByTestId('remove-block-0'));
+      expect(onChange.mock.calls.at(-1)[0].units[0].topics[0].content.blocks).toEqual([]);
+    });
+
+    test('readOnly mode has no Learn edit button', async () => {
+      const content = contentWithAudioAndPractice();
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} readOnly />);
+      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
+      expect(screen.queryByTestId('toggle-edit-learn')).toBeNull();
     });
 
     test('shows the real textbook pane when content.book is present', async () => {

@@ -43,6 +43,20 @@ export interface TeacherTopicBook {
   chapterTitle: string;
   pdfPage: number;
   confidence: number;
+  grade?: number;
+  pages?: TeacherBookPage[];
+}
+
+// One entry per subtopic; pdfFile null = no NCERT section teaches it.
+export interface TeacherBookPage {
+  subtopic: string;
+  pdfFile: string | null;
+  bookPath?: string | null;
+  bookTitle?: string | null;
+  chapterTitle?: string | null;
+  grade?: number;
+  pdfPage?: number;
+  section?: string;
 }
 
 export interface TeacherPauseThink {

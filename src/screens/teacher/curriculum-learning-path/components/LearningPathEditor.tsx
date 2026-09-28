@@ -170,6 +170,11 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
                   Generated from AI knowledge — please review
                 </Text>
               )}
+              {topic.groundingSource === 'ncert_book' && (
+                <Text testID={`book-source-note-${ui}-${ti}`} style={styles.subtopicText}>
+                  From the NCERT book{topic.content?.book ? ` · ${topic.content.book.chapterTitle}, p.${topic.content.book.pdfPage}` : ''}
+                </Text>
+              )}
 
               {topic.status === 'needs_teacher_input' && (
                 <View testID={`needs-input-banner-${ui}-${ti}`} style={styles.needsInputBanner}>
@@ -298,6 +303,7 @@ export default function LearningPathEditor({ content, onChange, readOnly }: Prop
         <StudentPreviewModal
           topic={content.units[previewIndex.ui].topics[previewIndex.ti]}
           colors={colors}
+          pathGrade={content.metadata?.grade}
           onClose={() => setPreviewIndex(null)}
           onChangeContent={readOnly ? undefined : (next) => updateTopicContent(previewIndex.ui, previewIndex.ti, next)}
         />
