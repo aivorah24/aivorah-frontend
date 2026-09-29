@@ -22,6 +22,7 @@ type Badge = { label: string; tone: 'ok' | 'warn' | 'info' };
 
 function badgeFor(topic: LearningPathTopic): Badge {
   if (topic.status === 'needs_teacher_input') return { label: 'Needs your input', tone: 'warn' };
+  if (topic.groundingSource === 'reference_sources') return { label: 'From reference material · check', tone: 'info' };
   if (topic.groundingSource === 'ncert_book') {
     return (topic.content as any)?.aiWrittenSubtopics?.length
       ? { label: 'Book + AI parts', tone: 'info' }
@@ -43,6 +44,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
   const grade = content.metadata?.grade || '';
   const gradeLabel = /^\d+$/.test(grade) ? `Grade ${grade}` : grade || 'Grade 6';
   const subject = content.metadata?.subject || '';
+  const hasNcertBooks = /\b(cbse|ncert)\b/i.test(content.metadata?.curriculum || 'CBSE');
 
   function updateTopic(ui: number, ti: number, patch: Partial<LearningPathTopic>) {
     onChange({
@@ -98,7 +100,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
             {!readOnly && (
               <TouchableOpacity testID={`edit-topic-${selected.ui}-${selected.ti}`} onPress={() => setEditing(true)} activeOpacity={0.8} style={styles.editBtn}>
                 <Feather name="edit-3" size={14} color={colors.primary} />
-                <Text style={styles.editBtnText}>Edit · Change pages</Text>
+                <Text style={styles.editBtnText}>{hasNcertBooks ? 'Edit · Change pages' : 'Edit'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -125,7 +127,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
             />
           ) : (
             <View testID="no-lesson-content" style={styles.empty}>
-              <Text style={styles.hint}>No lesson content for this topic yet. Use Edit to choose book pages and rebuild it.</Text>
+              <Text style={styles.hint}>{hasNcertBooks ? 'No lesson content for this topic yet. Use Edit to choose book pages and rebuild it.' : 'No lesson content for this topic yet. Use Edit to add it.'}</Text>
             </View>
           )}
         </View>
@@ -137,6 +139,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
           colors={colors}
           pathGrade={content.metadata?.grade}
           subject={subject}
+          curriculum={content.metadata?.curriculum}
           onClose={() => setEditing(false)}
           onChangeContent={readOnly ? undefined : (next: TeacherTopicContent) => updateTopic(selected.ui, selected.ti, { content: next })}
           onRebuild={readOnly || !onRebuildTopic ? undefined : (picks) => onRebuildTopic(unit.order, topic.order, picks)}

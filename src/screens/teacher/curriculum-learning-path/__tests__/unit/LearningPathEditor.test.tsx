@@ -113,6 +113,20 @@ describe('LearningPathEditor', () => {
     expect(screen.queryByTestId('lesson-view')).toBeNull();
   });
 
+  test('IB: topics say "From reference material", the Edit button has no book pages and there is no NCERT picker', async () => {
+    const content = reviewContent();
+    content.metadata = { grade: '6', subject: 'Mathematics', curriculum: 'IB MYP' };
+    content.units[0].topics[0].groundingSource = 'reference_sources';
+    content.units[0].topics[0].content!.book = undefined;
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn()} />);
+    expect(screen.getByTestId('topic-badge-0-0').props.children).toBe('From reference material · check');
+    expect(screen.getByText('Edit')).toBeTruthy();
+    await user.press(screen.getByTestId('edit-topic-0-0'));
+    expect(screen.getByTestId('preview-no-book')).toBeTruthy();
+    expect(screen.queryByTestId('change-book-pages')).toBeNull();
+  });
+
   test('read only: the title cannot be edited and there is no Edit button', async () => {
     await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} readOnly />);
     expect(screen.getByTestId('topic-title-0-0').props.editable).toBe(false);

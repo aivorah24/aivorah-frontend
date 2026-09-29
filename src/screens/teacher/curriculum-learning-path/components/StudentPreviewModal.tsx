@@ -5,6 +5,9 @@ import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
 import BookSidePane from './BookSidePane';
+
+// NCERT book sections can only be picked for curricula that follow the NCERT books (CBSE).
+const usesNcertBooks = (curriculum?: string) => /\b(cbse|ncert)\b/i.test(curriculum || 'CBSE');
 import LearnBlockEditor from './LearnBlockEditor';
 import MathTutorEditor from './MathTutorEditor';
 import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';
@@ -26,11 +29,13 @@ export default function StudentPreviewModal({
   onChangeContent,
   pathGrade,
   subject,
+  curriculum,
   onRebuild,
 }: {
   topic: LearningPathTopic;
   pathGrade?: string;
   subject?: string;
+  curriculum?: string;
   onRebuild?: (picks: SubtopicSectionPick[]) => Promise<void>;
   colors: AppColors;
   onClose: () => void;
@@ -48,7 +53,9 @@ export default function StudentPreviewModal({
   const inBook = bookPages.filter((p) => p.pdfFile).length;
   const sourceNote = topic.groundingSource === 'ncert_book'
     ? `From the NCERT book${bookPages.length ? ` · ${inBook} of ${bookPages.length} subtopics in the book${inBook < bookPages.length ? '; the rest taught by AI — please check' : ''}` : ''}`
-    : topic.groundingSource === 'model_knowledge' || topic.groundingSource === 'upload_text_only'
+    : topic.groundingSource === 'reference_sources'
+      ? 'Written from reference material for your curriculum — please check it'
+      : topic.groundingSource === 'model_knowledge' || topic.groundingSource === 'upload_text_only'
       ? 'Written by AI from your outline — please check it'
       : null;
   const listenParts = topic.content?.listenParts || [];
@@ -171,7 +178,7 @@ export default function StudentPreviewModal({
                     </View>
                   )}
                 </View>
-                <BookSidePane key={`${topic.title}-${topic.content?.book?.pdfFile}-${topic.content?.book?.pdfPage}`} topic={topic} pathGrade={pathGrade} subject={subject} colors={colors} onRebuild={onRebuild} />
+                <BookSidePane key={`${topic.title}-${topic.content?.book?.pdfFile}-${topic.content?.book?.pdfPage}`} topic={topic} pathGrade={pathGrade} subject={subject} colors={colors} onRebuild={usesNcertBooks(curriculum) ? onRebuild : undefined} />
               </View>
             )}
 

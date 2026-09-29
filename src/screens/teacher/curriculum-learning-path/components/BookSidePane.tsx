@@ -51,7 +51,7 @@ export default function BookSidePane({ topic, pathGrade, subject, colors, onRebu
       <View testID="preview-no-book" style={{ flex: 0.8, borderWidth: 1, borderColor: colors.borderColor, borderRadius: 10, padding: 12, gap: 8 }}>
         <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted }}>YOUR OUTLINE</Text>
         <Text style={{ fontSize: 12, color: colors.textMuted }}>
-          No NCERT section teaches this topic, so Learn was written from your outline. Please check it.
+          No book is attached to this topic, so Learn was written for you from reference material. Please check it.
         </Text>
         <Text style={{ fontSize: 13.5, fontWeight: '700', color: colors.textMain }}>{topic.title}</Text>
         {topic.subtopics.map((s, i) => (
