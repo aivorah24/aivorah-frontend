@@ -16,7 +16,8 @@ import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
 import SubjectCard from './components/SubjectCard';
-import TeacherLearningPathsSection from './teacher-learning-paths/components/TeacherLearningPathsSection';
+import { useTeacherLearningPaths } from './teacher-learning-paths/hooks/useTeacherLearningPaths';
+import { mergeTeacherSubjects } from './mergeTeacherSubjects';
 
 export default function LearningPathsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -37,7 +38,14 @@ export default function LearningPathsScreen({ navigation }: any) {
   const isPYP = /^ib.?pyp$/i.test(curriculum.trim());
   const isCBSE = !isPYP && (curriculum === 'NCERT' || curriculum === 'CBSE');
 
-  const { subjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
+  const { subjects: courseSubjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
+  // Teacher-published paths join the subject cards: an existing subject gets a "From your teacher" tag, a subject
+  // the curriculum has no card for (e.g. an IB upload) gets its own card.
+  const { learningPaths: teacherPaths } = useTeacherLearningPaths();
+  const { subjects, teacherSubjects } = useMemo(
+    () => mergeTeacherSubjects(courseSubjects, teacherPaths, grade),
+    [courseSubjects, teacherPaths, grade],
+  );
   const blockedSubjects = useBlockedSubjects(user?.email);
 
   const completedSet = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
@@ -167,10 +175,6 @@ export default function LearningPathsScreen({ navigation }: any) {
             </View>
           </LinearGradient>
 
-          <TeacherLearningPathsSection
-            onOpen={(curriculumId, title) => navigation.navigate('TeacherPublishedLearningPath', { curriculumId, title })}
-          />
-
           <>
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>Subjects</Text>
@@ -193,6 +197,7 @@ export default function LearningPathsScreen({ navigation }: any) {
                       completedSet={completedSet}
                       width={cardWidth}
                       isBlocked={blockedSubjects.has(subject.subject)}
+                      fromTeacher={teacherSubjects.has(subject.subject.toLowerCase())}
                       onPress={() => {
                         // Always route through the textbook-first Syllabus screen: it
                         // fetches the DB-published syllabus first (the real pipeline

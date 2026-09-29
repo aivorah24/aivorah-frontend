@@ -26,7 +26,7 @@ const route = { params: { curriculumId: 'c1', title: 'Grade 6 Maths' } };
 const navigation = {};
 
 describe('TeacherPublishedLearningPathScreen', () => {
-  test('renders the published hierarchy — objectives, lessons and titles', async () => {
+  test('renders units and one tappable row per topic (no raw objectives/lessons dump)', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonResponse({
       learningPath: {
         id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
@@ -50,8 +50,8 @@ describe('TeacherPublishedLearningPathScreen', () => {
     await waitFor(() => expect(screen.getByTestId('teacher-lp-unit-0')).toBeTruthy());
     expect(screen.getByText('Numbers')).toBeTruthy();
     expect(screen.getByText('Whole Numbers')).toBeTruthy();
-    expect(screen.getByText(/Add two numbers/)).toBeTruthy();
-    expect(screen.getByText('Intro')).toBeTruthy();
+    expect(screen.queryByText(/Add two numbers/)).toBeNull();
+    expect(screen.queryByText('Intro')).toBeNull();
   });
 
   test('shows a not-found message on a 404 without leaking draft-vs-missing distinction', async () => {
@@ -101,11 +101,12 @@ describe('TeacherPublishedLearningPathScreen', () => {
     const navigate = jest.fn();
 
     await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate }} />);
-    await waitFor(() => expect(screen.getByTestId('teacher-lp-open-0-0')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('teacher-lp-open-0-0'));
+    await waitFor(() => expect(screen.getByTestId('teacher-topic-c1-0-0')).toBeTruthy());
+    expect(screen.getByText('Learn · AI Tutor · Practice')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('teacher-topic-c1-0-0'));
 
     expect(navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
-      grade: '6', subject: 'Mathematics', curriculum: 'NCERT',
+      grade: 'Grade 6', subject: 'Mathematics', curriculum: 'NCERT',
       chapterIndex: 0, topicIndex: 0, chapterTitle: 'Numbers', topicName: 'Adding Fractions',
       teacherContent,
     }));
@@ -125,9 +126,12 @@ describe('TeacherPublishedLearningPathScreen', () => {
         },
       },
     })) as any;
-    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate: jest.fn() }} />);
-    await waitFor(() => expect(screen.getByTestId('teacher-lp-topic-0-0')).toBeTruthy());
-    expect(screen.queryByTestId('teacher-lp-open-0-0')).toBeNull();
+    const navigate = jest.fn();
+    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate }} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-topic-c1-0-0')).toBeTruthy());
+    expect(screen.getByText('Being prepared by your teacher')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('teacher-topic-c1-0-0'));
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   test('a topic with content but missing curriculum metadata (grade/subject) gets no open action', async () => {
@@ -143,8 +147,10 @@ describe('TeacherPublishedLearningPathScreen', () => {
         },
       },
     })) as any;
-    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate: jest.fn() }} />);
-    await waitFor(() => expect(screen.getByTestId('teacher-lp-topic-0-0')).toBeTruthy());
-    expect(screen.queryByTestId('teacher-lp-open-0-0')).toBeNull();
+    const navigate = jest.fn();
+    await render(<TeacherPublishedLearningPathScreen route={route} navigation={{ navigate }} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-topic-c1-0-0')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('teacher-topic-c1-0-0'));
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

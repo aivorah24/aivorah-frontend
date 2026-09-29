@@ -38,6 +38,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // A subject can exist only through the teacher's published path (e.g. an IB upload with no book syllabus here).
+  const [teacherFound, setTeacherFound] = useState(false);
   const { stats: studentStats } = useStudentData();
   const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
 
@@ -125,7 +127,10 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       <ScreenLayout>
         <View style={styles.screen}>
           <Header title={subject} subtitle={`${curriculum} · ${grade}`} showBack onMenuPress={() => navigation.openDrawer()} />
-          <View style={styles.emptyWrap}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <FromYourTeacherBlock grade={grade} subject={subject} curriculum={curriculum} colors={colors} navigation={navigation} onFound={setTeacherFound} />
+          </ScrollView>
+          {!teacherFound && <View style={styles.emptyWrap}>
             <Feather name={loadError ? 'alert-circle' : 'book'} size={36} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
               {loadError
@@ -138,7 +143,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
             >
               <Text style={styles.emptyBtnText}>View topic list instead</Text>
             </TouchableOpacity>
-          </View>
+          </View>}
         </View>
       </ScreenLayout>
     );
