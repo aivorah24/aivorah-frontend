@@ -104,7 +104,8 @@ export interface BookSectionOption {
   page: number;
 }
 
-export type SubtopicSectionPick = { pdfFile: string; title: string } | null;
+// The book sections (up to 2) chosen for one subtopic; empty = not in the book, AI explains it.
+export type SubtopicSectionPick = { pdfFile: string; title: string }[];
 
 export async function getBookSections(grade: string, subject: string): Promise<{ sections: BookSectionOption[] }> {
   const headers = await authHeaders();

@@ -57,6 +57,25 @@ export interface TeacherBookPage {
   grade?: number;
   pdfPage?: number;
   section?: string;
+  sections?: { pdfFile: string; title: string; page: number; grade: number }[];
+}
+
+// The book's AI Tutor script (Maths): the student AI Tutor tab plays one step per example.
+export interface TeacherMathTutorExample {
+  title?: string;
+  problem: string;
+  steps: { say: string; show?: string }[];
+  answer: string;
+  why?: string;
+  hint?: string;
+  page?: number;
+  yourTurn?: { question: string; answer: string };
+}
+
+export interface TeacherMathTutor {
+  intro?: string;
+  keyIdea?: string;
+  examples: TeacherMathTutorExample[];
 }
 
 export interface TeacherPauseThink {
@@ -88,6 +107,8 @@ export interface TeacherTopicContent {
   book?: TeacherTopicBook;
   listenParts?: TeacherListenPart[];
   practiceQuiz?: TeacherPracticeQuestion[];
+  mathTutor?: TeacherMathTutor;
+  aiWrittenSubtopics?: string[];
 }
 
 export interface TopicQuality {

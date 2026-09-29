@@ -158,7 +158,7 @@ describe('LearningPathEditor', () => {
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
       await user.press(screen.getByTestId('edit-topic-0-0'));
 
-      expect(screen.getByText('A number line shows relative size.')).toBeTruthy();
+      expect(screen.getByDisplayValue('A number line shows relative size.')).toBeTruthy();
 
       await user.press(screen.getByTestId('preview-tab-audio'));
       expect(screen.getByTestId('listen-part-0')).toBeTruthy();
@@ -270,7 +270,7 @@ describe('LearningPathEditor', () => {
       await user.press(screen.getByTestId('picker-option-0'));
       await user.press(screen.getByTestId('picker-rebuild'));
 
-      expect(onRebuildTopic).toHaveBeenCalledWith(0, 0, [{ pdfFile: 'fegp103.pdf', title: '3.3 Patterns on the Number Line' }, null]);
+      expect(onRebuildTopic).toHaveBeenCalledWith(0, 0, [[{ pdfFile: 'fegp103.pdf', title: '3.3 Patterns on the Number Line' }], []]);
       await waitFor(() => expect(screen.queryByTestId('book-section-picker')).toBeNull());
     });
 
@@ -287,13 +287,65 @@ describe('LearningPathEditor', () => {
       expect(screen.getByTestId('book-section-picker')).toBeTruthy();
     });
 
+    test('the Maths AI Tutor tab edits the tutor script the student actually hears', async () => {
+      const content = contentWithAudioAndPractice();
+      content.units[0].topics[0].content!.contentType = 'mathematics';
+      content.units[0].topics[0].content!.mathTutor = {
+        intro: 'Numbers sit on a line.',
+        examples: [{ title: 'Placing 7', problem: 'Where is 7?', steps: [{ say: 'Count from 0', show: '0..7' }], answer: 'Right of 6', yourTurn: { question: 'After 9?', answer: '10' } }],
+      };
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={onChange} />);
+      await user.press(screen.getByTestId('edit-topic-0-0'));
+      await user.press(screen.getByTestId('preview-tab-audio'));
+
+      expect(screen.getByTestId('math-tutor-editor')).toBeTruthy();
+      await fireEvent.changeText(screen.getByTestId('tutor-say-0-0'), 'Start counting at zero');
+      const tutor = onChange.mock.calls.at(-1)[0].units[0].topics[0].content.mathTutor;
+      expect(tutor.examples[0].steps[0]).toEqual({ say: 'Start counting at zero', show: '0..7' });
+      await fireEvent.changeText(screen.getByTestId('tutor-yourturn-a-0'), 'ten');
+      expect(onChange.mock.calls.at(-1)[0].units[0].topics[0].content.mathTutor.examples[0].yourTurn).toEqual({ question: 'After 9?', answer: 'ten' });
+    });
+
+    test('book section picker: own grade first, search filters, up to two sections per subtopic', async () => {
+      const content = contentWithAudioAndPractice();
+      content.metadata = { grade: '6', subject: 'Mathematics' };
+      content.units[0].topics[0].subtopics = [{ title: 'Rays and angles', order: 0 }];
+      mockGetBookSections.mockResolvedValueOnce({ sections: [
+        { grade: 7, pdfFile: 'gegp105.pdf', bookPath: null, bookTitle: null, chapterTitle: 'Parallel Lines', title: '5.1 Across the Line', page: 1 },
+        { grade: 6, pdfFile: 'fegp102.pdf', bookPath: null, bookTitle: null, chapterTitle: 'Lines and Angles', title: '2.4 Ray', page: 3 },
+        { grade: 6, pdfFile: 'fegp102.pdf', bookPath: null, bookTitle: null, chapterTitle: 'Lines and Angles', title: '2.5 Angle', page: 5 },
+      ] });
+      const onRebuildTopic = jest.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={onRebuildTopic} />);
+      await user.press(screen.getByTestId('edit-topic-0-0'));
+      await user.press(screen.getByTestId('change-book-pages'));
+      await waitFor(() => expect(screen.getByTestId('picker-option-0')).toBeTruthy());
+
+      expect(screen.getByText('2.4 Ray · p.3')).toBeTruthy();
+      expect(screen.getByTestId('picker-option-2')).toBeTruthy();
+      await fireEvent.changeText(screen.getByTestId('picker-search'), 'angle');
+      expect(screen.queryByText('5.1 Across the Line · p.1')).toBeNull();
+      await user.press(screen.getByText('2.5 Angle · p.5'));
+      await fireEvent.changeText(screen.getByTestId('picker-search'), 'ray');
+      await user.press(screen.getByText('2.4 Ray · p.3'));
+      await user.press(screen.getByTestId('picker-rebuild'));
+
+      expect(onRebuildTopic).toHaveBeenCalledWith(0, 0, [[
+        { pdfFile: 'fegp102.pdf', title: '2.5 Angle' },
+        { pdfFile: 'fegp102.pdf', title: '2.4 Ray' },
+      ]]);
+    });
+
     test('Learn text can be edited and saved via onChange', async () => {
       const content = contentWithAudioAndPractice();
       const onChange = jest.fn();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={onChange} />);
       await user.press(screen.getByTestId('edit-topic-0-0'));
-      await user.press(screen.getByTestId('toggle-edit-learn'));
+      // The edit panel opens with Learn ready to edit.
 
       fireEvent.changeText(screen.getByTestId('block-0-text'), 'Edited by teacher.');
       expect(onChange.mock.calls.at(-1)[0].units[0].topics[0].content.blocks[0].text).toBe('Edited by teacher.');

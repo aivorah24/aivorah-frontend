@@ -40,7 +40,7 @@ function RebuildHarness() {
       <Text testID="topics">{topics.map((t) => `${t.title}:${t.objectives.join(',')}`).join('|')}</Text>
       <TouchableOpacity testID="load" onPress={() => h.load()} />
       <TouchableOpacity testID="edit-other" onPress={() => h.updateContent({ ...h.learningPath!.content, units: [{ ...h.learningPath!.content.units[0], topics: [topics[0], { ...topics[1], objectives: ['local edit'] }] }] })} />
-      <TouchableOpacity testID="rebuild" onPress={() => h.rebuildTopic(0, 0, [null])} />
+      <TouchableOpacity testID="rebuild" onPress={() => h.rebuildTopic(0, 0, [[]])} />
     </View>
   );
 }
@@ -135,6 +135,6 @@ describe('useLearningPathDraft', () => {
     await waitFor(() => expect(screen.getByTestId('topics').props.children).toBe('A:rebuilt|B:local edit'));
     const [url, opts] = (global.fetch as jest.Mock).mock.calls[1];
     expect(url).toBe('https://server.test/teacher-curriculum/c1/learning-path/topics/rebuild');
-    expect(JSON.parse(opts.body)).toEqual({ unitOrder: 0, topicOrder: 0, subtopicSections: [null] });
+    expect(JSON.parse(opts.body)).toEqual({ unitOrder: 0, topicOrder: 0, subtopicSections: [[]] });
   });
 });

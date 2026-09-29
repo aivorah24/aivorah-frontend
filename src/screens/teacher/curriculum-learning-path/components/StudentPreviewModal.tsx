@@ -6,6 +6,7 @@ import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
 import BookSidePane from './BookSidePane';
 import LearnBlockEditor from './LearnBlockEditor';
+import MathTutorEditor from './MathTutorEditor';
 import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';
 import { LearningPathTopic, TeacherTopicContent, TeacherListenPart, TeacherPauseThink, TeacherPracticeQuestion } from '../types';
 
@@ -38,7 +39,8 @@ export default function StudentPreviewModal({
   onChangeContent?: (content: TeacherTopicContent) => void;
 }) {
   const [tab, setTab] = useState<Tab>('learn');
-  const [editingLearn, setEditingLearn] = useState(false);
+  // This panel is for editing, so Learn opens ready to edit; the toggle shows how it reads.
+  const [editingLearn, setEditingLearn] = useState(!!onChangeContent);
   const hasBlocks = !!topic.content?.blocks?.length || !!topic.content?.whatYoullLearn?.length;
   const isMath = /math/i.test(topic.content?.contentType || topic.title || '');
   const audioLabel = isMath ? 'AI Tutor' : 'Listen';
@@ -134,7 +136,7 @@ export default function StudentPreviewModal({
                       </Text>
                       {editable && hasBlocks && (
                         <TouchableOpacity testID="toggle-edit-learn" onPress={() => setEditingLearn((v) => !v)} activeOpacity={0.7}>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>{editingLearn ? 'Done' : 'Edit text'}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>{editingLearn ? 'Preview' : 'Edit text'}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -173,7 +175,14 @@ export default function StudentPreviewModal({
               </View>
             )}
 
-            {tab === 'audio' && (
+            {tab === 'audio' && topic.content?.mathTutor?.examples?.length ? (
+              <MathTutorEditor
+                tutor={topic.content.mathTutor}
+                colors={colors}
+                editable={editable}
+                onChange={(mathTutor) => updateContent((content) => ({ ...content, mathTutor }))}
+              />
+            ) : tab === 'audio' && (
               listenParts.length === 0 ? (
                 <Text style={{ fontSize: 13, color: colors.textMuted }}>No {audioLabel.toLowerCase()} script yet for this topic.</Text>
               ) : listenParts.map((part, pi) => (
