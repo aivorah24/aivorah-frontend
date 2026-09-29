@@ -13,14 +13,12 @@ export default function SubjectCard({
   onPress,
   width,
   isBlocked,
-  fromTeacher,
 }: {
   data: SubjectData;
   completedSet: Set<string>;
   onPress: () => void;
   width: `${number}%` | number;
   isBlocked?: boolean;
-  fromTeacher?: boolean;
 }) {
   const { isDark } = useTheme();
   const meta = subjectMeta(data.subject);
@@ -55,12 +53,6 @@ export default function SubjectCard({
           </View>
         </View>
         <Text testID="subject-card-name" style={[cardStyles.subjectName, { color: '#1C2A28' }]} numberOfLines={2}>{data.subject}</Text>
-        {fromTeacher && (
-          <View testID="subject-card-from-teacher" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: '#ffffff80', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 }}>
-            <Feather name="user-check" size={11} color={accent} />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: accent }}>From your teacher</Text>
-          </View>
-        )}
         {!!data.books?.length && (
           <Text testID="subject-card-book" style={[cardStyles.statMini, { color: '#3A5A56' }]} numberOfLines={1}>{data.books.join(' · ')}</Text>
         )}

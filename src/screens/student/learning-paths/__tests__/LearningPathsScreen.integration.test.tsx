@@ -26,8 +26,8 @@ jest.mock('../../../../hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false }),
 }));
 
-// Needed since the new TeacherLearningPathsSection (rendered inline on this
-// screen) pulls in config/firebase transitively — real firebase/auth is ESM
+// Needed since the teacher-path loader (useTeacherPaths, merged into the subject cards) pulls in
+// config/firebase transitively — real firebase/auth is ESM
 // and jest can't parse it without this mock.
 jest.mock('../../../../config/firebase', () => ({
   auth: { currentUser: { getIdToken: jest.fn().mockResolvedValue('token') } },

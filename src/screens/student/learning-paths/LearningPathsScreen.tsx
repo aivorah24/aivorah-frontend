@@ -16,7 +16,7 @@ import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
 import SubjectCard from './components/SubjectCard';
-import { useTeacherLearningPaths } from './teacher-learning-paths/hooks/useTeacherLearningPaths';
+import { useTeacherPaths } from './teacher-learning-paths/hooks/useTeacherPaths';
 import { mergeTeacherSubjects } from './mergeTeacherSubjects';
 
 export default function LearningPathsScreen({ navigation }: any) {
@@ -39,10 +39,10 @@ export default function LearningPathsScreen({ navigation }: any) {
   const isCBSE = !isPYP && (curriculum === 'NCERT' || curriculum === 'CBSE');
 
   const { subjects: courseSubjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
-  // Teacher-published paths join the subject cards: an existing subject gets a "From your teacher" tag, a subject
-  // the curriculum has no card for (e.g. an IB upload) gets its own card.
-  const { learningPaths: teacherPaths } = useTeacherLearningPaths();
-  const { subjects, teacherSubjects } = useMemo(
+  // Teacher-published units count as chapters of their subject; a subject the curriculum has no card for (IB has
+  // no standard syllabus) gets its own card built from them.
+  const { paths: teacherPaths } = useTeacherPaths(grade);
+  const subjects = useMemo(
     () => mergeTeacherSubjects(courseSubjects, teacherPaths, grade),
     [courseSubjects, teacherPaths, grade],
   );
@@ -197,7 +197,6 @@ export default function LearningPathsScreen({ navigation }: any) {
                       completedSet={completedSet}
                       width={cardWidth}
                       isBlocked={blockedSubjects.has(subject.subject)}
-                      fromTeacher={teacherSubjects.has(subject.subject.toLowerCase())}
                       onPress={() => {
                         // Always route through the textbook-first Syllabus screen: it
                         // fetches the DB-published syllabus first (the real pipeline

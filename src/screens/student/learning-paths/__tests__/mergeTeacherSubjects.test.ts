@@ -1,24 +1,49 @@
 import { mergeTeacherSubjects } from '../mergeTeacherSubjects';
 
-const subject = (name: string) => ({ subject: name, topicCount: 10, topics: [], chapterCount: 10 });
-const path = (subjectName: string | null, grade: string | null) => ({ id: `lp-${subjectName}`, curriculumId: 'c', title: 't', grade, subject: subjectName, publishedAt: 'x' });
+const subject = (name: string, extra = {}) => ({ subject: name, topicCount: 10, topics: [], ...extra });
+function teacherPath(subjectName: string | null, grade: string | null, units: [string, string[]][]) {
+  return {
+    summary: { id: `lp-${subjectName}`, curriculumId: 'c', title: 't', grade, subject: subjectName, publishedAt: 'x' },
+    path: {
+      id: 'lp', curriculumId: 'c', publishedAt: 'x',
+      content: {
+        version: 1,
+        metadata: { grade: grade || undefined, subject: subjectName || undefined },
+        units: units.map(([title, topics], ui) => ({
+          title, order: ui,
+          topics: topics.map((t, ti) => ({ title: t, order: ti, objectives: [], lessons: [], subtopics: [], content: { whatYoullLearn: [], blocks: [] } })),
+        })),
+      },
+    },
+  } as any;
+}
 
-test('a teacher path for an existing subject tags that card instead of adding a new one', () => {
-  const { subjects, teacherSubjects } = mergeTeacherSubjects([subject('Mathematics'), subject('Science')], [path('mathematics', '6')], 'Grade 6');
-  expect(subjects.map((s) => s.subject)).toEqual(['Mathematics', 'Science']);
-  expect(teacherSubjects.has('mathematics')).toBe(true);
-  expect(teacherSubjects.has('science')).toBe(false);
+test('teacher units add to an existing chapter-counted subject: chapters and topics both grow, no new card', () => {
+  const merged = mergeTeacherSubjects(
+    [subject('Science', { chapterCount: 12, topicCount: 24 })],
+    [teacherPath('science', '6', [['Plants', ['Leaves', 'Roots']], ['Animals', ['Birds']]])],
+    'Grade 6',
+  );
+  expect(merged).toHaveLength(1);
+  expect(merged[0]).toMatchObject({ subject: 'Science', chapterCount: 14, topicCount: 27 });
+  expect(merged[0].topics.map((t) => t.topic)).toEqual(['Leaves', 'Roots', 'Birds']);
 });
 
-test('a subject the curriculum has no card for (e.g. an IB upload) gets its own card', () => {
-  const { subjects, teacherSubjects } = mergeTeacherSubjects([subject('Mathematics')], [path('Visual Arts', 'Grade 6')], 'Grade 6');
-  expect(subjects.map((s) => s.subject)).toEqual(['Mathematics', 'Visual Arts']);
-  expect(subjects[1]).toMatchObject({ topicCount: 0, chapterCount: 0 });
-  expect(teacherSubjects.has('visual arts')).toBe(true);
+test('a card that counts its book chapters as "topics" (Maths) grows its count by the teacher units', () => {
+  const merged = mergeTeacherSubjects(
+    [subject('Mathematics', { topicCount: 10 })],
+    [teacherPath('Mathematics', '6', [['Number Systems', ['A', 'B']], ['Fractions', ['C']], ['Geometry', ['D']]])],
+    'Grade 6',
+  );
+  expect(merged[0]).toMatchObject({ subject: 'Mathematics', topicCount: 13 });
+});
+
+test('IB: a subject with no standard syllabus gets a card built from the teacher path', () => {
+  const merged = mergeTeacherSubjects([], [teacherPath('Visual Arts', '3', [['Colour', ['Mixing', 'Shades']]])], 'Grade 3');
+  expect(merged).toEqual([expect.objectContaining({ subject: 'Visual Arts', chapterCount: 1, topicCount: 2, units: ['Colour'] })]);
 });
 
 test("another grade's path, or one with no subject, is ignored", () => {
-  const { subjects, teacherSubjects } = mergeTeacherSubjects([subject('Mathematics')], [path('Science', '7'), path(null, '6')], 'Grade 6');
-  expect(subjects).toHaveLength(1);
-  expect(teacherSubjects.size).toBe(0);
+  const merged = mergeTeacherSubjects([subject('Mathematics')], [teacherPath('Science', '7', [['X', ['y']]]), teacherPath(null, '6', [['X', ['y']]])], 'Grade 6');
+  expect(merged).toEqual([subject('Mathematics')]);
 });

@@ -9,10 +9,10 @@ import SubjectSyllabusScreen from '../SubjectSyllabusScreen';
 
 jest.setTimeout(15000);
 
-jest.mock('../../teacher-learning-paths/components/FromYourTeacherBlock', () => {
-  const { View } = require('react-native');
-  return { __esModule: true, default: (props: any) => <View testID="from-your-teacher-stub" {...{ grade: props.grade, subject: props.subject }} /> };
-});
+const mockTeacherPaths: any[] = [];
+jest.mock('../../teacher-learning-paths/hooks/useTeacherPaths', () => ({
+  useTeacherPaths: () => ({ paths: mockTeacherPaths, loaded: true }),
+}));
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888',
@@ -190,5 +190,37 @@ describe('SubjectSyllabusScreen — navigation', () => {
     await waitFor(() => expect(screen.getByText(/Fables and Folk Tales/)).toBeTruthy());
     // Its topics should now be visible (chapter opened), not just the collapsed heading.
     expect(screen.getAllByText(/Topic \d/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('SubjectSyllabusScreen — teacher-published units', () => {
+  afterEach(() => { mockTeacherPaths.length = 0; });
+  const content = { whatYoullLearn: ['x'], blocks: [] };
+  const teacherPath = {
+    summary: { id: 'lp1', curriculumId: 'c1', title: 'Visual Arts', publishedAt: 'x' },
+    path: {
+      id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
+      content: {
+        version: 1, metadata: { grade: '4', subject: 'Visual Arts', curriculum: 'IB PYP' },
+        units: [{ title: 'Colour', order: 0, topics: [{ title: 'Mixing colours', order: 0, objectives: [], lessons: [], subtopics: [], content }] }],
+      },
+    },
+  };
+
+  test("IB: with no standard syllabus, the teacher's units are the subject's chapters and a topic opens the lesson", async () => {
+    mockTeacherPaths.push(teacherPath);
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Visual Arts', curriculum: 'IB PYP', grade: 'Grade 4' })} />);
+
+    await waitFor(() => expect(screen.getByText('Unit 1: Colour')).toBeTruthy());
+    expect(screen.queryByText(/being processed/)).toBeNull();
+    expect(screen.queryByText(/FROM YOUR TEACHER/i)).toBeNull();
+
+    if (!screen.queryByText('Topic 1: Mixing colours')) await user.press(screen.getByText('Unit 1: Colour'));
+    await user.press(await screen.findByText('Topic 1: Mixing colours'));
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      subject: 'Visual Arts', grade: 'Grade 4', curriculum: 'IB PYP', chapterTitle: 'Colour', topicName: 'Mixing colours', teacherContent: content,
+    }));
   });
 });

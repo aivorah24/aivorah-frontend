@@ -25,7 +25,8 @@ import { makeStyles } from './styles';
 import { useSyllabusChapters } from './hooks/useSyllabusChapters';
 import { useChapterExpansion } from './hooks/useChapterExpansion';
 import ChapterCard from './components/ChapterCard';
-import FromYourTeacherBlock from '../teacher-learning-paths/components/FromYourTeacherBlock';
+import { useTeacherPaths } from '../teacher-learning-paths/hooks/useTeacherPaths';
+import { teacherChapters } from './teacherChapters';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -38,12 +39,13 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  // A subject can exist only through the teacher's published path (e.g. an IB upload with no book syllabus here).
-  const [teacherFound, setTeacherFound] = useState(false);
   const { stats: studentStats } = useStudentData();
   const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
 
-  const { chapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  const { chapters: bookChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  // The teacher's published units are ordinary chapters of this subject (first, as the class follows them).
+  const { paths: teacherPaths } = useTeacherPaths(grade, subject);
+  const chapters = useMemo(() => [...teacherChapters(teacherPaths), ...bookChapters], [teacherPaths, bookChapters]);
 
   // Grade 1-2 NCERT books are genuinely two levels — a Unit (e.g. "My Family
   // and Me") directly containing individual poems/stories, with no chapter
@@ -66,6 +68,19 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
     const topic = chapter.topics[topicIndex] as any;
+    if ((chapter as any).teacherUnit) {
+      const meta = (chapter as any).teacherMeta || {};
+      navigation.navigate('LessonScreen', {
+        subject, grade,
+        curriculum: meta.curriculum || curriculum,
+        chapterTitle: chapter.title,
+        chapterIndex: topic.unitOrder,
+        topicIndex: topic.topicOrder,
+        topicName: topic.name,
+        teacherContent: topic.teacherContent,
+      });
+      return;
+    }
     // Two different kinds of "real" (non-curated) topic share this list:
     // a teacher-published one with a real syllabus_topics DB id, and a real
     // NCERT/Qdrant topic with no DB row at all (kind: 'qdrant' — see Bug #8
@@ -127,10 +142,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       <ScreenLayout>
         <View style={styles.screen}>
           <Header title={subject} subtitle={`${curriculum} · ${grade}`} showBack onMenuPress={() => navigation.openDrawer()} />
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <FromYourTeacherBlock grade={grade} subject={subject} curriculum={curriculum} colors={colors} navigation={navigation} onFound={setTeacherFound} />
-          </ScrollView>
-          {!teacherFound && <View style={styles.emptyWrap}>
+          <View style={styles.emptyWrap}>
             <Feather name={loadError ? 'alert-circle' : 'book'} size={36} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
               {loadError
@@ -143,7 +155,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
             >
               <Text style={styles.emptyBtnText}>View topic list instead</Text>
             </TouchableOpacity>
-          </View>}
+          </View>
         </View>
       </ScreenLayout>
     );
@@ -160,8 +172,6 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
         />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <FromYourTeacherBlock grade={grade} subject={subject} curriculum={curriculum} colors={colors} navigation={navigation} />
-
           {/* Search */}
           <View style={[styles.searchBar, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
             <Feather name="search" size={15} color={colors.textMuted} />
@@ -198,7 +208,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
               next to whichever card was expanded to show its topics. */}
           {filteredChapters.map(({ chapter, ci, topics }) => (
             <ChapterCard
-              key={chapter.title}
+              key={`${(chapter as any).teacherUnit ? 'u' : 'c'}-${ci}-${chapter.title}`}
               chapter={chapter}
               ci={ci}
               topics={topics}
