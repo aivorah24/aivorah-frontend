@@ -2,6 +2,8 @@ export interface TeacherLearningPathSummary {
   id: string;
   curriculumId: string;
   title: string;
+  grade?: string | null;
+  subject?: string | null;
   publishedAt: string;
 }
 

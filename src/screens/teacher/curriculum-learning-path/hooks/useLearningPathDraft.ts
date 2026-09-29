@@ -8,6 +8,8 @@ export function useLearningPathDraft(curriculumId: string | null) {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
+  // Edits made in the browser that are not on the server yet.
+  const [dirty, setDirty] = useState(false);
 
   const load = useCallback(async () => {
     if (!curriculumId) return;
@@ -16,6 +18,7 @@ export function useLearningPathDraft(curriculumId: string | null) {
     try {
       const { learningPath: lp } = await getLearningPath(curriculumId);
       setLearningPath(lp);
+      setDirty(false);
     } catch (err: any) {
       setError(err.message || 'Failed to load the learning path.');
     } finally {
@@ -25,6 +28,7 @@ export function useLearningPathDraft(curriculumId: string | null) {
 
   const updateContent = useCallback((content: LearningPathContent) => {
     setLearningPath((prev) => (prev ? { ...prev, content } : prev));
+    setDirty(true);
   }, []);
 
   // Only the rebuilt topic is merged in, so unsaved edits to other topics stay.
@@ -35,6 +39,7 @@ export function useLearningPathDraft(curriculumId: string | null) {
     if (!rebuilt) return;
     setLearningPath((prev) => (prev ? {
       ...prev,
+      updated_at: server.updated_at,
       content: {
         ...prev.content,
         units: prev.content.units.map((u) => (u.order !== unitOrder ? u : {
@@ -51,6 +56,7 @@ export function useLearningPathDraft(curriculumId: string | null) {
     try {
       const { learningPath: updated } = await saveLearningPathDraft(curriculumId, learningPath.content);
       setLearningPath(updated);
+      setDirty(false);
       return true;
     } catch (err: any) {
       setError(err.message || 'Failed to save edits.');
@@ -60,8 +66,10 @@ export function useLearningPathDraft(curriculumId: string | null) {
     }
   }, [curriculumId, learningPath]);
 
+  // Publishing sends what is on the server, so unsaved edits are saved first — never silently left out.
   const publish = useCallback(async () => {
     if (!curriculumId) return false;
+    if (dirty && !(await save())) return false;
     setPublishing(true);
     setError('');
     try {
@@ -74,7 +82,15 @@ export function useLearningPathDraft(curriculumId: string | null) {
     } finally {
       setPublishing(false);
     }
-  }, [curriculumId]);
+  }, [curriculumId, dirty, save]);
 
-  return { learningPath, loading, saving, publishing, error, load, updateContent, rebuildTopic, save, publish };
+  const isPublished = learningPath?.status === 'published';
+  // Students still see an older version: edits saved (or pending) after the last publish.
+  const hasUnpublishedChanges = isPublished && (dirty || (!!learningPath?.updated_at && !!learningPath?.published_at
+    && new Date(learningPath.updated_at).getTime() > new Date(learningPath.published_at).getTime() + 1000));
+
+  return {
+    learningPath, loading, saving, publishing, error, dirty, isPublished, hasUnpublishedChanges,
+    load, updateContent, rebuildTopic, save, publish,
+  };
 }

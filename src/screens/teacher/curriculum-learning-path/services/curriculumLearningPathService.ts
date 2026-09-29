@@ -1,6 +1,6 @@
 import { auth } from '../../../../config/firebase';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
-import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent } from '../types';
+import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent, MyLearningPathSummary } from '../types';
 
 async function authHeaders(): Promise<Record<string, string>> {
   const idToken = await auth.currentUser?.getIdToken();
@@ -123,4 +123,16 @@ export async function rebuildTopic(
     body: JSON.stringify({ unitOrder, topicOrder, subtopicSections }),
   });
   return parseOrThrow(res);
+}
+
+export async function listMyLearningPaths(): Promise<{ learningPaths: MyLearningPathSummary[] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/learning-paths`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function deleteLearningPath(curriculumId: string): Promise<void> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}`, { method: 'DELETE', headers });
+  if (!res.ok) await parseOrThrow(res);
 }

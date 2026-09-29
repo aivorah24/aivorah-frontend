@@ -22,7 +22,13 @@ jest.mock('../../../../student/learning-paths/lesson-screen/LessonScreen', () =>
   const { View } = require('react-native');
   return { __esModule: true, default: () => <View testID="lesson-view" /> };
 });
-jest.mock('../../services/curriculumLearningPathService', () => ({ getBookSections: jest.fn() }));
+const mockListMyLearningPaths = jest.fn();
+jest.mock('../../services/curriculumLearningPathService', () => ({
+  getBookSections: jest.fn(),
+  listMyLearningPaths: (...a: any[]) => mockListMyLearningPaths(...a),
+  deleteLearningPath: jest.fn(),
+}));
+beforeEach(() => mockListMyLearningPaths.mockResolvedValue({ learningPaths: [] }));
 jest.mock('../../hooks/useLearningPathDraft', () => ({
   useLearningPathDraft: () => mockUseLearningPathDraft(),
 }));
@@ -30,48 +36,70 @@ jest.mock('../../hooks/useLearningPathDraft', () => ({
 function baseDraftHookReturn(overrides = {}) {
   return {
     learningPath: null, loading: false, saving: false, publishing: false, error: '',
-    load: jest.fn(), updateContent: jest.fn(), save: jest.fn(), publish: jest.fn(),
+    dirty: false, isPublished: false, hasUnpublishedChanges: false,
+    load: jest.fn(), updateContent: jest.fn(), rebuildTopic: jest.fn(), save: jest.fn().mockResolvedValue(true), publish: jest.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
 
-describe('TeacherCurriculumLearningPathScreen metadata display', () => {
-  test('shows file name, grade, subject and learning path id once the draft has metadata', async () => {
+describe('TeacherCurriculumLearningPathScreen learning path name and save state', () => {
+  function generated() {
     mockUseCurriculumUpload.mockReturnValue({
       curriculum: { id: 'c1', file_name: 'Grade_6_Mathematics_Curriculum_Test.docx', status: 'generated' },
       error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
     });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: {
-        id: 'lp1', curriculum_id: 'c1', status: 'draft',
-        content: { version: 1, metadata: { grade: '6', subject: 'Mathematics' }, units: [] },
-      },
-    }));
-
-    await render(<TeacherCurriculumLearningPathScreen />);
-
-    await waitFor(() => expect(screen.getByTestId('curriculum-metadata')).toBeTruthy());
-    expect(screen.getByText('File: Grade_6_Mathematics_Curriculum_Test.docx')).toBeTruthy();
-    expect(screen.getByText('Grade: 6')).toBeTruthy();
-    expect(screen.getByText('Subject: Mathematics')).toBeTruthy();
-    expect(screen.getByText('Learning Path ID: lp1')).toBeTruthy();
+  }
+  const lp = (extra = {}) => ({
+    id: 'lp1', curriculum_id: 'c1', status: 'draft', updated_at: '2026-09-29T10:00:00Z',
+    content: { version: 1, metadata: { grade: '6', subject: 'Mathematics' }, units: [] }, ...extra,
   });
 
-  test('omits metadata lines that are not present rather than showing blanks', async () => {
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: { id: 'c1', file_name: 'no-metadata.pdf', status: 'generated' },
-      error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
-    });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: { id: 'lp1', curriculum_id: 'c1', status: 'draft', content: { version: 1, units: [] } },
-    }));
-
+  test('the name field suggests "Grade 6 Mathematics" and says a draft is only visible to the teacher', async () => {
+    generated();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({ learningPath: lp() }));
     await render(<TeacherCurriculumLearningPathScreen />);
+    await waitFor(() => expect(screen.getByTestId('learning-path-title')).toBeTruthy());
+    expect(screen.getByTestId('learning-path-title').props.placeholder).toBe('Grade 6 Mathematics');
+    expect(screen.getByTestId('save-state').props.children[0]).toBe('Draft · only you can see this');
+  });
 
-    await waitFor(() => expect(screen.getByTestId('curriculum-metadata')).toBeTruthy());
-    expect(screen.queryByText(/Grade:/)).toBeNull();
-    expect(screen.queryByText(/Subject:/)).toBeNull();
-    expect(screen.getByText('Learning Path ID: lp1')).toBeTruthy();
+  test('typing a name updates the path settings (metadata.title)', async () => {
+    generated();
+    const updateContent = jest.fn();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({ learningPath: lp(), updateContent }));
+    const { fireEvent } = require('@testing-library/react-native');
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await fireEvent.changeText(screen.getByTestId('learning-path-title'), 'Term 1 Maths');
+    expect(updateContent.mock.calls[0][0].metadata).toEqual({ grade: '6', subject: 'Mathematics', title: 'Term 1 Maths' });
+  });
+
+  test('unsaved edits are flagged next to the save state', async () => {
+    generated();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({ learningPath: lp(), dirty: true }));
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await waitFor(() => expect(screen.getByTestId('save-state')).toBeTruthy());
+    expect(screen.getByTestId('save-state').props.children[1]).toBe(' · You have unsaved changes');
+  });
+
+  test('a published path stays editable and offers "Publish updates" once it has new edits', async () => {
+    generated();
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({ learningPath: lp({ status: 'published' }), isPublished: true, hasUnpublishedChanges: true }));
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await waitFor(() => expect(screen.getByText('Publish updates')).toBeTruthy());
+  });
+
+  test('My Learning Paths lists every path, and Continue editing opens that one', async () => {
+    mockUseCurriculumUpload.mockReturnValue({ curriculum: null, error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn() });
+    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn());
+    mockListMyLearningPaths.mockResolvedValue({ learningPaths: [
+      { id: 'lp9', curriculumId: 'c9', title: 'Grade 6 Mathematics', fileName: 'x.docx', grade: '6', subject: 'Mathematics', status: 'published', updatedAt: '2026-09-29T10:00:00Z', publishedAt: '2026-09-29T09:00:00Z', hasUnpublishedChanges: true },
+    ] });
+    const user = userEvent.setup();
+    await render(<TeacherCurriculumLearningPathScreen />);
+    await waitFor(() => expect(screen.getByTestId('my-path-c9')).toBeTruthy());
+    expect(screen.getByTestId('my-path-status-c9').props.children).toBe('Published · edits not published yet');
+    await user.press(screen.getByTestId('open-path-c9'));
+    await waitFor(() => expect(screen.getByText('Open below')).toBeTruthy());
   });
 });
 
@@ -120,7 +148,7 @@ describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {
   afterEach(() => jest.restoreAllMocks());
 
   test('Case A: blocks publish and shows an alert when at least one topic needs teacher input', async () => {
-    const publish = jest.fn();
+    const publish = jest.fn().mockResolvedValue(true);
     mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
       learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'needs_teacher_input' }, { status: 'needs_teacher_input' }]),
       publish,
@@ -138,7 +166,7 @@ describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {
   });
 
   test('Case B: proceeds with the normal publish flow when all topics are ready', async () => {
-    const publish = jest.fn();
+    const publish = jest.fn().mockResolvedValue(true);
     mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
       learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'ready' }]),
       publish,
@@ -153,7 +181,7 @@ describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {
   });
 
   test('treats topics with no status field (predating this feature) as valid, not blocking', async () => {
-    const publish = jest.fn();
+    const publish = jest.fn().mockResolvedValue(true);
     mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
       learningPath: learningPathWithTopics([{}, {}]),
       publish,

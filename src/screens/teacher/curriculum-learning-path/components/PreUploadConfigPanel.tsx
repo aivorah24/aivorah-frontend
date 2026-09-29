@@ -69,12 +69,14 @@ interface Props {
   canPublish: boolean;
   saving: boolean;
   publishing: boolean;
+  publishLabel?: string;
+  saveNote?: string;
 }
 
 export default function PreUploadConfigPanel({
   curriculum, setCurriculum, grade, setGrade, subject, setSubject, academicYear, setAcademicYear,
   fileName, status, statusError, phase = 'idle', progress = null, connectionIssue = false, onRetry, busy, onPickFile, detected,
-  onSaveDraft, onPublish, canSaveDraft, canPublish, saving, publishing,
+  onSaveDraft, onPublish, canSaveDraft, canPublish, saving, publishing, publishLabel = 'Publish', saveNote,
 }: Props) {
   const { colors } = useTheme();
   const s = React.useMemo(() => makeStyles(colors), [colors]);
@@ -219,8 +221,8 @@ export default function PreUploadConfigPanel({
             <Feather name="shield" size={14} color={colors.primary} />
             <Text style={{ color: colors.textMuted, fontSize: 11.5, flex: 1 }}>Nothing is published until you review and approve.</Text>
           </View>
-          <ActionRow testID="pre-upload-save-draft" icon="bookmark" label="Save as Draft" sub="Save changes and review later" colors={colors} disabled={!canSaveDraft || saving} onPress={onSaveDraft} />
-          <ActionRow testID="pre-upload-publish" icon="send" label="Publish Updates" sub="Publish and make available to classes" colors={colors} primary disabled={!canPublish || publishing} onPress={onPublish} />
+          <ActionRow testID="pre-upload-save-draft" icon="bookmark" label={saving ? 'Saving…' : 'Save as Draft'} sub={saveNote || 'Save changes and review later'} colors={colors} disabled={!canSaveDraft || saving} onPress={onSaveDraft} />
+          <ActionRow testID="pre-upload-publish" icon="send" label={publishing ? 'Publishing…' : publishLabel} sub="Your connected students of this grade and subject will see it" colors={colors} primary disabled={!canPublish || publishing} onPress={onPublish} />
         </View>
       </View>
     </View>

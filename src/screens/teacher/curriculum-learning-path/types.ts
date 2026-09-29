@@ -138,6 +138,8 @@ export interface LearningPathUnit {
 }
 
 export interface LearningPathMetadata {
+  // The teacher's name for the path, shown to students; defaults to "Grade 6 Mathematics".
+  title?: string;
   grade?: string;
   subject?: string;
   curriculum?: string;
@@ -156,4 +158,19 @@ export interface TeacherLearningPath {
   content: LearningPathContent;
   published_content?: LearningPathContent | null;
   published_at?: string | null;
+  updated_at?: string | null;
+}
+
+// One row of the teacher's "My Learning Paths" list.
+export interface MyLearningPathSummary {
+  id: string;
+  curriculumId: string;
+  title: string;
+  fileName: string | null;
+  grade: string | null;
+  subject: string | null;
+  status: 'draft' | 'published';
+  updatedAt: string;
+  publishedAt: string | null;
+  hasUnpublishedChanges: boolean;
 }

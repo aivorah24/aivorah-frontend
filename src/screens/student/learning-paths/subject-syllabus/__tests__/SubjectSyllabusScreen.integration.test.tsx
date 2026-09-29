@@ -9,6 +9,10 @@ import SubjectSyllabusScreen from '../SubjectSyllabusScreen';
 
 jest.setTimeout(15000);
 
+jest.mock('../../teacher-learning-paths/components/FromYourTeacherBlock', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: (props: any) => <View testID="from-your-teacher-stub" {...{ grade: props.grade, subject: props.subject }} /> };
+});
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888',

@@ -22,9 +22,11 @@ async function parseOrThrow(res: Response) {
   return data;
 }
 
-export async function listTeacherLearningPaths(): Promise<{ learningPaths: TeacherLearningPathSummary[] }> {
+// `filter` narrows to one subject screen's paths (e.g. Grade 6 Mathematics).
+export async function listTeacherLearningPaths(filter?: { grade?: string; subject?: string }): Promise<{ learningPaths: TeacherLearningPathSummary[] }> {
   const headers = await authHeaders();
-  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths`, { headers });
+  const qs = new URLSearchParams(Object.entries(filter || {}).filter(([, v]) => !!v) as [string, string][]).toString();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths${qs ? `?${qs}` : ''}`, { headers });
   return parseOrThrow(res);
 }
 

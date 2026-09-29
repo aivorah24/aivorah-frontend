@@ -25,6 +25,7 @@ import { makeStyles } from './styles';
 import { useSyllabusChapters } from './hooks/useSyllabusChapters';
 import { useChapterExpansion } from './hooks/useChapterExpansion';
 import ChapterCard from './components/ChapterCard';
+import FromYourTeacherBlock from '../teacher-learning-paths/components/FromYourTeacherBlock';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -154,6 +155,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
         />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <FromYourTeacherBlock grade={grade} subject={subject} curriculum={curriculum} colors={colors} navigation={navigation} />
+
           {/* Search */}
           <View style={[styles.searchBar, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
             <Feather name="search" size={15} color={colors.textMuted} />
