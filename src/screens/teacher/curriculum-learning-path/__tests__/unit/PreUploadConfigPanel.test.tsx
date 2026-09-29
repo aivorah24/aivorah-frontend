@@ -10,8 +10,6 @@ function baseProps(overrides = {}) {
     academicYear: '2026-27', setAcademicYear: jest.fn(),
     fileName: null, status: null, statusError: null, busy: false,
     onPickFile: jest.fn(), detected: null,
-    onSaveDraft: jest.fn(), onPublish: jest.fn(),
-    canSaveDraft: false, canPublish: false, saving: false, publishing: false,
     ...overrides,
   };
 }
@@ -119,26 +117,20 @@ describe('PreUploadConfigPanel', () => {
     expect(screen.getByText('Nothing detected yet.')).toBeTruthy();
   });
 
-  test('Save as Draft and Publish actions call their handlers only when enabled', async () => {
-    const onSaveDraft = jest.fn();
-    const onPublish = jest.fn();
+  test('once the path is ready, "Review & publish in Learning Paths" opens it', async () => {
+    const onOpenReview = jest.fn();
     const user = userEvent.setup();
-    await render(<PreUploadConfigPanel {...baseProps({ canSaveDraft: true, canPublish: true, onSaveDraft, onPublish })} />);
+    await render(<PreUploadConfigPanel {...baseProps({ onOpenReview })} />);
 
-    await user.press(screen.getByTestId('pre-upload-save-draft'));
-    await user.press(screen.getByTestId('pre-upload-publish'));
-
-    expect(onSaveDraft).toHaveBeenCalled();
-    expect(onPublish).toHaveBeenCalled();
+    expect(screen.getByText('Your learning path is ready')).toBeTruthy();
+    await user.press(screen.getByTestId('pre-upload-open-review'));
+    expect(onOpenReview).toHaveBeenCalled();
   });
 
-  test('Publish is disabled when canPublish is false', async () => {
-    const onPublish = jest.fn();
-    const user = userEvent.setup();
-    await render(<PreUploadConfigPanel {...baseProps({ canPublish: false, onPublish })} />);
-
-    await user.press(screen.getByTestId('pre-upload-publish'));
-
-    expect(onPublish).not.toHaveBeenCalled();
+  test('before that, the review button is disabled and there is no save/publish here', async () => {
+    await render(<PreUploadConfigPanel {...baseProps()} />);
+    expect(screen.getByText('Available when processing finishes')).toBeTruthy();
+    expect(screen.queryByTestId('pre-upload-save-draft')).toBeNull();
+    expect(screen.queryByTestId('pre-upload-publish')).toBeNull();
   });
 });

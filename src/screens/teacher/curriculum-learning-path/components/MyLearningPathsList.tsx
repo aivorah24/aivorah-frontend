@@ -11,6 +11,9 @@ function when(iso: string | null) {
   return `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+const groupOf = (p: MyLearningPathSummary) =>
+  [p.grade && `Grade ${String(p.grade).replace(/^grade\s*/i, '')}`, p.subject].filter(Boolean).join(' ') || 'Other';
+
 // Every learning path this teacher has made — drafts and published — so any of them can be reopened and edited.
 export default function MyLearningPathsList({
   colors, openCurriculumId, onOpen, onDeleted, refreshKey,
@@ -24,6 +27,8 @@ export default function MyLearningPathsList({
   const [paths, setPaths] = useState<MyLearningPathSummary[] | null>(null);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // A teacher of several subjects/grades (e.g. Grade 6 Maths and Science) narrows the list with these.
+  const [filter, setFilter] = useState('All');
 
   const load = useCallback(() => {
     listMyLearningPaths()
@@ -52,8 +57,22 @@ export default function MyLearningPathsList({
       </Text>
       {!paths && !error && <ActivityIndicator color={colors.primary} />}
       {!!error && <Text testID="my-paths-error" style={{ fontSize: 12, color: colors.accentRed }}>{error}</Text>}
-      {paths?.length === 0 && <Text style={{ fontSize: 13, color: colors.textMuted }}>No learning paths yet. Upload a curriculum above to create one.</Text>}
-      {paths?.map((p) => {
+      {paths?.length === 0 && <Text style={{ fontSize: 13, color: colors.textMuted }}>No learning paths yet. Upload a curriculum in Curriculum Upload to create one.</Text>}
+      {(() => {
+        const groups = [...new Set((paths || []).map(groupOf))];
+        if (groups.length < 2) return null;
+        return (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {['All', ...groups].map((g) => (
+              <TouchableOpacity key={g} testID={`paths-filter-${g}`} onPress={() => setFilter(g)} activeOpacity={0.7}
+                style={{ borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5, borderColor: filter === g ? colors.primary : colors.borderColor, backgroundColor: filter === g ? colors.primary + '18' : 'transparent' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: filter === g ? colors.primary : colors.textMuted }}>{g}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        );
+      })()}
+      {paths?.filter((p) => filter === 'All' || groupOf(p) === filter).map((p) => {
         const open = p.curriculumId === openCurriculumId;
         const statusLabel = p.status === 'published'
           ? (p.hasUnpublishedChanges ? 'Published · edits not published yet' : 'Published')
@@ -73,7 +92,7 @@ export default function MyLearningPathsList({
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>Open below</Text>
             ) : (
               <TouchableOpacity testID={`open-path-${p.curriculumId}`} onPress={() => onOpen(p.curriculumId)} activeOpacity={0.7}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>Continue editing</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>Open</Text>
               </TouchableOpacity>
             )}
             {confirmDelete === p.curriculumId ? (

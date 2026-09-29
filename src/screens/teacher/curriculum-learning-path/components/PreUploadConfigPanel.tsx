@@ -63,20 +63,14 @@ interface Props {
   busy: boolean;
   onPickFile: () => void;
   detected: DetectedStructure | null;
-  onSaveDraft: () => void;
-  onPublish: () => void;
-  canSaveDraft: boolean;
-  canPublish: boolean;
-  saving: boolean;
-  publishing: boolean;
-  publishLabel?: string;
-  saveNote?: string;
+  // Present once the learning path is ready: opens it on the Learning Paths screen to review, edit and publish.
+  onOpenReview?: () => void;
 }
 
 export default function PreUploadConfigPanel({
   curriculum, setCurriculum, grade, setGrade, subject, setSubject, academicYear, setAcademicYear,
   fileName, status, statusError, phase = 'idle', progress = null, connectionIssue = false, onRetry, busy, onPickFile, detected,
-  onSaveDraft, onPublish, canSaveDraft, canPublish, saving, publishing, publishLabel = 'Publish', saveNote,
+  onOpenReview,
 }: Props) {
   const { colors } = useTheme();
   const s = React.useMemo(() => makeStyles(colors), [colors]);
@@ -216,13 +210,12 @@ export default function PreUploadConfigPanel({
         {/* Panel 4: Review & Publish actions */}
         <View style={[s.panel, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
           <PanelHeader n={4} title="Review & Publish" colors={colors} />
-          <Text style={{ color: colors.textMuted, fontSize: 11.5, marginBottom: 12 }}>Review the generated learning path below before publishing to your classes.</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11.5, marginBottom: 12 }}>When processing finishes, review, edit and publish the learning path in Learning Paths.</Text>
           <View style={[s.safeBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
             <Feather name="shield" size={14} color={colors.primary} />
             <Text style={{ color: colors.textMuted, fontSize: 11.5, flex: 1 }}>Nothing is published until you review and approve.</Text>
           </View>
-          <ActionRow testID="pre-upload-save-draft" icon="bookmark" label={saving ? 'Saving…' : 'Save as Draft'} sub={saveNote || 'Save changes and review later'} colors={colors} disabled={!canSaveDraft || saving} onPress={onSaveDraft} />
-          <ActionRow testID="pre-upload-publish" icon="send" label={publishing ? 'Publishing…' : publishLabel} sub="Your connected students of this grade and subject will see it" colors={colors} primary disabled={!canPublish || publishing} onPress={onPublish} />
+          <ActionRow testID="pre-upload-open-review" icon="map" label="Review & publish in Learning Paths" sub={onOpenReview ? 'Your learning path is ready' : 'Available when processing finishes'} colors={colors} primary disabled={!onOpenReview} onPress={() => onOpenReview?.()} />
         </View>
       </View>
     </View>

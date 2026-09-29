@@ -84,6 +84,7 @@ export type TeacherDrawerParamList = {
   TeacherProgress: undefined;
   TeacherLearningPaths: undefined;
   TeacherCurriculumLearningPath: undefined;
+  TeacherClassLearningPaths: { curriculumId?: string } | undefined;
   TeacherAchievements: undefined;
   TeacherVideoLibrary: undefined;
   TeacherHelp: undefined;
