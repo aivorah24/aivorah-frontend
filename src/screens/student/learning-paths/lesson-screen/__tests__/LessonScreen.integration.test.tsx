@@ -41,7 +41,7 @@ jest.mock('../components/AskTab', () => {
 });
 jest.mock('../components/ListenTab', () => {
   const { Text } = require('react-native');
-  return { __esModule: true, default: () => <Text testID="listen-tab">listen-tab</Text> };
+  return { __esModule: true, default: (props: any) => <Text testID="listen-tab">{`listen-tab steps:${props.listenSteps?.length ?? 0}`}</Text> };
 });
 jest.mock('../components/PracticeTab', () => {
   const { Text } = require('react-native');
@@ -174,5 +174,47 @@ describe('LessonScreen — teacher-published learning path content', () => {
     await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith('Quiz', expect.objectContaining({
       returnParams: expect.objectContaining({ teacherContent, topicName: 'Adding Fractions' }),
     })));
+  });
+});
+
+describe('LessonScreen — embedded in the teacher review', () => {
+  const teacherContent = {
+    whatYoullLearn: ['Place numbers on a number line'],
+    contentType: 'mathematics',
+    blocks: [{ type: 'overview', text: 'Numbers sit on a line.' }],
+    mathTutor: {
+      intro: 'Numbers sit on a line.',
+      examples: [
+        { title: 'Placing 7', problem: 'Where is 7?', steps: [{ say: 'Count from 0', show: '0..7' }], answer: 'Right of 6' },
+        { title: 'Placing 3', problem: 'Where is 3?', steps: [{ say: 'Count from 0', show: '0..3' }], answer: 'Right of 2' },
+      ],
+    },
+  };
+  const embeddedRoute = () => routeProp({ subject: 'Mathematics', topicId: undefined, chapterTitle: 'Numbers', topicName: 'Number line', teacherContent });
+
+  test('no page header and no Ask tab; the teacher sees Learn, AI Tutor and Practice', async () => {
+    await render(<LessonScreen embedded navigation={navProp()} route={embeddedRoute()} />);
+    await waitFor(() => expect(screen.getByTestId('read-tab')).toBeTruthy());
+    expect(screen.getByTestId('embedded-lesson')).toBeTruthy();
+    expect(screen.queryByText('Ask Aivorah')).toBeNull();
+    expect(screen.getByText('AI Tutor')).toBeTruthy();
+    expect(screen.queryByText('Number line')).toBeNull();
+  });
+
+  test('the AI Tutor plays the book examples from the teacher content (intro + one step per example)', async () => {
+    const user = userEvent.setup();
+    await render(<LessonScreen embedded navigation={navProp()} route={embeddedRoute()} />);
+    await user.press(screen.getByText('AI Tutor'));
+    await waitFor(() => expect(screen.getByTestId('listen-tab').props.children).toBe('listen-tab steps:3'));
+  });
+
+  test('Practice shows the given slot in place and never opens the Quiz screen', async () => {
+    const { Text } = require('react-native');
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<LessonScreen embedded navigation={nav} route={embeddedRoute()} practiceSlot={<Text testID="teacher-practice">questions</Text>} />);
+    await user.press(screen.getByText('Practice'));
+    await waitFor(() => expect(screen.getByTestId('teacher-practice')).toBeTruthy());
+    expect(nav.navigate).not.toHaveBeenCalled();
   });
 });

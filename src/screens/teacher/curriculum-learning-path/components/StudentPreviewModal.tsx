@@ -106,7 +106,7 @@ export default function StudentPreviewModal({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: fonts.serif, fontSize: 16, fontWeight: '800', color: colors.textMain }} numberOfLines={1}>{topic.title || 'Topic preview'}</Text>
-              <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted }}>Student preview</Text>
+              <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted }}>Edit topic · Learn, Listen, Practice, book pages</Text>
             </View>
             <TouchableOpacity testID="close-student-preview" onPress={onClose} activeOpacity={0.7}>
               <Feather name="x" size={22} color={colors.textMuted} />

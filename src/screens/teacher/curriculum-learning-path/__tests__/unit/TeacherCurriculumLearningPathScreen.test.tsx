@@ -18,6 +18,10 @@ jest.mock('../../hooks/useCurriculumUpload', () => ({
 }));
 
 const mockUseLearningPathDraft = jest.fn();
+jest.mock('../../../../student/learning-paths/lesson-screen/LessonScreen', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: () => <View testID="lesson-view" /> };
+});
 jest.mock('../../services/curriculumLearningPathService', () => ({ getBookSections: jest.fn() }));
 jest.mock('../../hooks/useLearningPathDraft', () => ({
   useLearningPathDraft: () => mockUseLearningPathDraft(),

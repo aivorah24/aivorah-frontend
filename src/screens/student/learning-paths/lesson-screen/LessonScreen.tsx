@@ -31,7 +31,15 @@ import PracticeTab from './components/PracticeTab';
 import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
 
-export default function LessonScreen({ navigation, route }: any) {
+function LessonShell({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
+  return embedded
+    ? <View testID="embedded-lesson" style={{ height: 760, borderRadius: 12, overflow: 'hidden' }}>{children}</View>
+    : <ScreenLayout>{children}</ScreenLayout>;
+}
+
+// `embedded`: rendered inside another screen (the teacher's review) — no page header, no Ask tab, and Practice shows
+// `practiceSlot` in place instead of opening the Quiz screen.
+export default function LessonScreen({ navigation, route, embedded = false, practiceSlot }: any) {
   const subject = (route?.params?.subject ?? 'English') as string;
   const curriculum = (route?.params?.curriculum ?? 'CBSE') as string;
   const grade = (route?.params?.grade ?? 'Grade 6') as string;
@@ -66,7 +74,9 @@ export default function LessonScreen({ navigation, route }: any) {
     [isTeacherContentBacked, teacherContent, teacherTopicName]
   );
   const dbTopic = isTeacherContentBacked ? teacherDbTopic : fetchedDbTopic;
-  const rawPayload = isTeacherContentBacked ? { whatYoullLearn: teacherContent?.whatYoullLearn, blocks: teacherContent?.blocks } : fetchedRawPayload;
+  const rawPayload = isTeacherContentBacked
+    ? { whatYoullLearn: teacherContent?.whatYoullLearn, blocks: teacherContent?.blocks, mathTutor: (teacherContent as any)?.mathTutor }
+    : fetchedRawPayload;
   const contentReady = isTeacherContentBacked ? true : fetchedContentReady;
 
   const { colors } = useTheme();
@@ -139,7 +149,7 @@ export default function LessonScreen({ navigation, route }: any) {
 
   const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang);
 
-  usePracticeRedirect(mode, setMode, topic, navigation, {
+  usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
     byNameTopic, chapterTitle: chapter?.title, teacherContent,
     bookQuiz: (rawPayload as any)?.practiceQuiz,
@@ -168,26 +178,26 @@ export default function LessonScreen({ navigation, route }: any) {
 
   if (loadingDbTopic) {
     return (
-      <ScreenLayout>
+      <LessonShell embedded={embedded}>
         <View style={styles.screen}>
-          <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />
+          {!embedded && <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />}
           <View style={styles.centerWrap}><ActivityIndicator color={colors.primary} /></View>
         </View>
-      </ScreenLayout>
+      </LessonShell>
     );
   }
 
   if (!chapter || !topic) {
     return (
-      <ScreenLayout>
+      <LessonShell embedded={embedded}>
         <View style={styles.screen}>
-          <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />
+          {!embedded && <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />}
           <View style={styles.centerWrap}>
             <Feather name="alert-circle" size={32} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, marginTop: 10 }}>This lesson isn&apos;t available yet.</Text>
           </View>
         </View>
-      </ScreenLayout>
+      </LessonShell>
     );
   }
 
@@ -196,17 +206,19 @@ export default function LessonScreen({ navigation, route }: any) {
     { key: 'listen', label: isMath ? 'AI Tutor' : 'Listen', icon: isMath ? 'cpu' : 'headphones' },
     { key: 'ask', label: 'Ask Aivorah', icon: 'message-circle' },
     { key: 'practice', label: 'Practice', icon: 'check-square' },
-  ];
+  ].filter((t) => !(embedded && t.key === 'ask')) as { key: Mode; label: string; icon: any }[];
 
   return (
-    <ScreenLayout>
+    <LessonShell embedded={embedded}>
       <View style={styles.screen}>
-        <Header
-          title={topic.name}
-          subtitle={`Unit ${chapterIndex + 1} · ${chapter.title}`}
-          showBack
-          onMenuPress={() => navigation.openDrawer()}
-        />
+        {!embedded && (
+          <Header
+            title={topic.name}
+            subtitle={`Unit ${chapterIndex + 1} · ${chapter.title}`}
+            showBack
+            onMenuPress={() => navigation.openDrawer()}
+          />
+        )}
 
         <View style={styles.tabBarRow}>
           <View style={[styles.tabBar, { backgroundColor: colors.bgDark, borderColor: colors.borderColor }]}>
@@ -312,7 +324,8 @@ export default function LessonScreen({ navigation, route }: any) {
 
             {mode !== 'read' && mode !== 'ask' && mode !== 'listen' && (
               <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {mode === 'practice' && (
+                {mode === 'practice' && embedded && practiceSlot}
+                {mode === 'practice' && !embedded && (
                   <PracticeTab
                     topic={topic}
                     grade={grade}
@@ -337,6 +350,6 @@ export default function LessonScreen({ navigation, route }: any) {
         caption={zoomImage?.caption}
         onClose={() => setZoomImage(null)}
       />
-    </ScreenLayout>
+    </LessonShell>
   );
 }

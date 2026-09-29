@@ -4,6 +4,21 @@ import LearningPathEditor from '../../components/LearningPathEditor';
 import { LearningPathContent } from '../../types';
 
 const mockGetBookSections = jest.fn();
+jest.mock('../../../../student/learning-paths/lesson-screen/LessonScreen', () => {
+  const { View, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: (props: any) => (
+      <View testID="lesson-view">
+        <Text testID="lesson-view-params">{JSON.stringify({
+          topicName: props.route.params.topicName, grade: props.route.params.grade, subject: props.route.params.subject,
+          embedded: props.embedded, pdfFile: props.route.params.teacherContent?.book?.pdfFile,
+        })}</Text>
+        {props.practiceSlot}
+      </View>
+    ),
+  };
+});
 jest.mock('../../services/curriculumLearningPathService', () => ({ getBookSections: (...a: any[]) => mockGetBookSections(...a) }));
 
 function baseContent(): LearningPathContent {
@@ -22,169 +37,104 @@ function baseContent(): LearningPathContent {
 }
 
 describe('LearningPathEditor', () => {
-  test('editing the unit title calls onChange with the updated content, everything else untouched', async () => {
-    const content = baseContent();
-    const onChange = jest.fn();
-    const user = userEvent.setup();
-    await render(<LearningPathEditor content={content} onChange={onChange} />);
-
-    await user.type(screen.getByTestId('unit-title-0'), 'X');
-
-    await waitFor(() => expect(onChange).toHaveBeenCalled());
-    const updated = onChange.mock.calls[0][0];
-    expect(updated.units[0].topics[0].title).toBe('Whole Numbers');
-  });
-
-  test('adding an objective appends a new blank entry', async () => {
-    const content = baseContent();
-    let current = content;
-    const onChange = jest.fn((next) => { current = next; });
-    const user = userEvent.setup();
-    const { rerender } = await render(<LearningPathEditor content={content} onChange={onChange} />);
-
-    await user.press(screen.getByTestId('add-objective-0-0'));
-
-    expect(current.units[0].topics[0].objectives).toEqual(['Add two numbers', '']);
-    await rerender(<LearningPathEditor content={current} onChange={onChange} />);
-    expect(screen.getByTestId('objective-0-0-1')).toBeTruthy();
-  });
-
-  test('removing a lesson drops it from the topic', async () => {
-    const content = baseContent();
-    const onChange = jest.fn();
-    const user = userEvent.setup();
-    await render(<LearningPathEditor content={content} onChange={onChange} />);
-
-    await user.press(screen.getByTestId('remove-lesson-0-0-0'));
-
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
-      units: [expect.objectContaining({ topics: [expect.objectContaining({ lessons: [] })] })],
-    }));
-  });
-
-  test('readOnly disables every input and hides mutation controls', async () => {
-    const content = baseContent();
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} readOnly />);
-
-    expect(screen.getByTestId('unit-title-0').props.editable).toBe(false);
-    expect(screen.queryByTestId('add-objective-0-0')).toBeNull();
-    expect(screen.queryByTestId('remove-lesson-0-0-0')).toBeNull();
-  });
-
-  test('renders subtopics read-only regardless of edit mode', async () => {
-    const content = baseContent();
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-    expect(screen.getByTestId('subtopic-0-0-0').props.children).toBe('Addition');
-  });
-
-  test('renders the needs-your-input badge and hint when a topic needs teacher input', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].status = 'needs_teacher_input';
-    content.units[0].topics[0].teacherHint = 'Specify whether this covers area formulas, angle sums, or proofs.';
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-
-    expect(screen.getByTestId('needs-input-banner-0-0')).toBeTruthy();
-    expect(screen.getByText('Needs your input')).toBeTruthy();
-    expect(screen.getByTestId('teacher-hint-0-0').props.children).toBe(
-      'Specify whether this covers area formulas, angle sums, or proofs.'
-    );
-  });
-
-  test('does not render the banner when status is omitted', async () => {
-    const content = baseContent();
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-    expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
-  });
-
-  test('does not render the banner when status is "ready"', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].status = 'ready';
-    content.units[0].topics[0].teacherHint = null;
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-    expect(screen.queryByTestId('needs-input-banner-0-0')).toBeNull();
-  });
-
-  test('renders the AI-knowledge note when groundingSource is model_knowledge', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].groundingSource = 'model_knowledge';
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-    expect(screen.getByTestId('model-knowledge-note-0-0')).toBeTruthy();
-  });
-
-  test('does not render the AI-knowledge note for other grounding sources', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].groundingSource = 'ncert_vector';
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-    expect(screen.queryByTestId('model-knowledge-note-0-0')).toBeNull();
-  });
-
-  test('opens the student preview modal showing grounded content.blocks, and closes it', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].content = {
-      whatYoullLearn: ['Understand place value'],
-      blocks: [{ type: 'explanation', text: 'A number line shows relative size.' }],
+  function reviewContent(): LearningPathContent {
+    const book = (pdfFile: string) => ({ pdfFile, bookPath: null, bookTitle: 'Ganita Prakash', chapterTitle: 'Ch', pdfPage: 3, confidence: 10 });
+    return {
+      version: 1,
+      metadata: { grade: '6', subject: 'Mathematics', curriculum: 'CBSE' },
+      units: [
+        { title: 'Numbers', order: 0, topics: [
+          { title: 'Number line', order: 0, objectives: ['x'], lessons: [], subtopics: [], groundingSource: 'ncert_book', status: 'ready',
+            content: { whatYoullLearn: ['x'], blocks: [{ type: 'overview', text: 'o' }], book: book('fegp103.pdf'),
+              practiceQuiz: [
+                { type: 'mcq', question: '2 + 2?', options: ['3', '4'], correct: 1, explanation: 'Add them.' },
+                { type: 'fill_blank', question: 'After 9 comes?', options: [], correct: '10' },
+              ] } },
+          { title: 'Whole Numbers', order: 1, objectives: ['x'], lessons: [], subtopics: [], groundingSource: 'ncert_book', status: 'ready',
+            content: { whatYoullLearn: ['x'], blocks: [], aiWrittenSubtopics: ['Successor'] } as any },
+        ] },
+        { title: 'Shapes', order: 1, topics: [
+          { title: 'Triangles', order: 0, objectives: ['x'], lessons: [], subtopics: [], groundingSource: 'model_knowledge', status: 'needs_teacher_input',
+            teacherHint: 'Add content for: Triangles', content: null },
+        ] },
+      ],
     };
+  }
+
+  test('lists every unit and topic with where its content came from', async () => {
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    expect(screen.getAllByText('Numbers').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('topic-badge-0-0').props.children).toBe('From the book');
+    expect(screen.getByTestId('topic-badge-0-1').props.children).toBe('Book + AI parts');
+    expect(screen.getByTestId('topic-badge-1-0').props.children).toBe('Needs your input');
+  });
+
+  test('the selected topic is shown in the real student lesson screen, embedded', async () => {
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    expect(JSON.parse(screen.getByTestId('lesson-view-params').props.children)).toEqual({
+      topicName: 'Number line', grade: 'Grade 6', subject: 'Mathematics', embedded: true, pdfFile: 'fegp103.pdf',
+    });
+  });
+
+  test('picking another topic switches the lesson shown', async () => {
     const user = userEvent.setup();
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    await user.press(screen.getByTestId('topic-0-1'));
+    expect(JSON.parse(screen.getByTestId('lesson-view-params').props.children).topicName).toBe('Whole Numbers');
+    expect(screen.getByTestId('ai-written-note').props.children).toEqual(['Not in the book, explained by AI — please check: ', 'Successor']);
+  });
 
-    expect(screen.queryByTestId('student-preview-scroll')).toBeNull();
-    await user.press(screen.getByTestId('preview-as-student-0-0'));
+  test('Practice shows each question with the correct answer marked', async () => {
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    expect(screen.getByTestId('practice-preview')).toBeTruthy();
+    expect(screen.getByText('✓ 4')).toBeTruthy();
+    expect(screen.getByText('○ 3')).toBeTruthy();
+    expect(screen.getByText('Answer: 10')).toBeTruthy();
+  });
 
+  test('editing the topic title calls onChange with only that title changed', async () => {
+    const content = reviewContent();
+    const onChange = jest.fn();
+    await render(<LearningPathEditor content={content} onChange={onChange} />);
+    fireEvent.changeText(screen.getByTestId('topic-title-0-0'), 'The number line');
+    const next = onChange.mock.calls[0][0];
+    expect(next.units[0].topics[0].title).toBe('The number line');
+    expect(next.units[0].topics[1]).toBe(content.units[0].topics[1]);
+    expect(next.units[1]).toBe(content.units[1]);
+  });
+
+  test('a topic that needs input shows the hint, and says there is no lesson yet', async () => {
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    await user.press(screen.getByTestId('topic-1-0'));
+    expect(screen.getByTestId('needs-input-banner-1-0')).toBeTruthy();
+    expect(screen.getByTestId('teacher-hint-1-0').props.children).toBe('Add content for: Triangles');
+    expect(screen.getByTestId('no-lesson-content')).toBeTruthy();
+    expect(screen.queryByTestId('lesson-view')).toBeNull();
+  });
+
+  test('read only: the title cannot be edited and there is no Edit button', async () => {
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} readOnly />);
+    expect(screen.getByTestId('topic-title-0-0').props.editable).toBe(false);
+    expect(screen.queryByTestId('edit-topic-0-0')).toBeNull();
+  });
+
+  test('Edit opens the edit panel for the selected topic, and closes it', async () => {
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} />);
+    await user.press(screen.getByTestId('edit-topic-0-0'));
     expect(screen.getByTestId('student-preview-scroll')).toBeTruthy();
-    expect(screen.getByText('A number line shows relative size.')).toBeTruthy();
-    expect(screen.queryByTestId('student-preview-fallback')).toBeNull();
-
     await user.press(screen.getByTestId('close-student-preview'));
     expect(screen.queryByTestId('student-preview-scroll')).toBeNull();
   });
 
-  test('student preview falls back to objectives/lessons when the topic has no grounded content', async () => {
+  test('the edit panel falls back to objectives/lessons when the topic has no lesson content', async () => {
     const content = baseContent();
     const user = userEvent.setup();
     await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-
-    await user.press(screen.getByTestId('preview-as-student-0-0'));
-
+    await user.press(screen.getByTestId('edit-topic-0-0'));
     expect(screen.getByTestId('student-preview-fallback')).toBeTruthy();
-    expect(screen.getByText(/Add two numbers/)).toBeTruthy();
     expect(screen.getByText('Intro')).toBeTruthy();
-  });
-
-  test('shows the visuals count for a topic with image blocks', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].content = {
-      whatYoullLearn: [],
-      blocks: [
-        { type: 'explanation', text: 'x' },
-        { type: 'image', url: 'https://cdn/a.png', caption: 'A' },
-        { type: 'image', url: 'https://cdn/b.png', caption: 'B' },
-      ],
-    };
-    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-
-    expect(screen.getByText('Visuals: 2')).toBeTruthy();
-  });
-
-  test('removing an image drops only that image block via updateContent', async () => {
-    const content = baseContent();
-    content.units[0].topics[0].content = {
-      whatYoullLearn: [],
-      blocks: [
-        { type: 'explanation', text: 'x' },
-        { type: 'image', url: 'https://cdn/a.png', caption: 'A' },
-        { type: 'image', url: 'https://cdn/b.png', caption: 'B' },
-      ],
-    };
-    const onChange = jest.fn();
-    const user = userEvent.setup();
-    await render(<LearningPathEditor content={content} onChange={onChange} />);
-
-    await user.press(screen.getByTestId('remove-image-0-0-0'));
-
-    const updated = onChange.mock.calls[0][0];
-    const blocks = updated.units[0].topics[0].content.blocks;
-    expect(blocks.filter((b: any) => b.type === 'image')).toHaveLength(1);
-    expect(blocks.find((b: any) => b.type === 'image').url).toBe('https://cdn/b.png');
   });
 
   describe('student preview — three tabs (Learn / Audio / Practice)', () => {
@@ -206,7 +156,7 @@ describe('LearningPathEditor', () => {
       const content = contentWithAudioAndPractice();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
 
       expect(screen.getByText('A number line shows relative size.')).toBeTruthy();
 
@@ -223,7 +173,7 @@ describe('LearningPathEditor', () => {
       mathContent.units[0].topics[0].content!.contentType = 'mathematics';
       const user = userEvent.setup();
       await render(<LearningPathEditor content={mathContent} onChange={jest.fn()} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       expect(screen.getByText('AI Tutor')).toBeTruthy();
     });
 
@@ -232,7 +182,7 @@ describe('LearningPathEditor', () => {
       const onChange = jest.fn();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={onChange} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('preview-tab-audio'));
 
       await user.type(screen.getByTestId('listen-part-text-0'), 'X');
@@ -247,7 +197,7 @@ describe('LearningPathEditor', () => {
       const onChange = jest.fn();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={onChange} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('preview-tab-audio'));
 
       await user.press(screen.getByTestId('listen-part-correct-0-2'));
@@ -261,7 +211,7 @@ describe('LearningPathEditor', () => {
       const onChange = jest.fn();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={onChange} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('preview-tab-practice'));
 
       await user.press(screen.getByTestId('practice-correct-0-2'));
@@ -273,7 +223,7 @@ describe('LearningPathEditor', () => {
     test('shows the teacher outline when the topic has no content.book', async () => {
       const content = contentWithAudioAndPractice();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
+      await userEvent.setup().press(screen.getByTestId('edit-topic-0-0'));
       expect(screen.getByTestId('preview-no-book')).toBeTruthy();
       expect(screen.getByText('YOUR OUTLINE')).toBeTruthy();
     });
@@ -293,7 +243,7 @@ describe('LearningPathEditor', () => {
       };
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
 
       expect(screen.getByTestId('preview-source-note').props.children).toContain('2 of 3 subtopics in the book; the rest taught by AI');
       expect(screen.queryByTestId('preview-book-other-grade')).toBeNull();
@@ -312,7 +262,7 @@ describe('LearningPathEditor', () => {
       const onRebuildTopic = jest.fn().mockResolvedValue(undefined);
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={onRebuildTopic} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('change-book-pages'));
 
       await waitFor(() => expect(screen.getByTestId('picker-option-0')).toBeTruthy());
@@ -330,19 +280,11 @@ describe('LearningPathEditor', () => {
       mockGetBookSections.mockResolvedValueOnce({ sections: [] });
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn().mockRejectedValue(new Error('Try again later'))} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('change-book-pages'));
       await user.press(screen.getByTestId('picker-rebuild'));
       await waitFor(() => expect(screen.getByTestId('picker-error').props.children).toBe('Try again later'));
       expect(screen.getByTestId('book-section-picker')).toBeTruthy();
-    });
-
-    test('no Change pages button when read only', async () => {
-      const content = contentWithAudioAndPractice();
-      content.metadata = { grade: '6', subject: 'Mathematics' };
-      await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn()} readOnly />);
-      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
-      expect(screen.queryByTestId('change-book-pages')).toBeNull();
     });
 
     test('Learn text can be edited and saved via onChange', async () => {
@@ -350,7 +292,7 @@ describe('LearningPathEditor', () => {
       const onChange = jest.fn();
       const user = userEvent.setup();
       await render(<LearningPathEditor content={content} onChange={onChange} />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
+      await user.press(screen.getByTestId('edit-topic-0-0'));
       await user.press(screen.getByTestId('toggle-edit-learn'));
 
       fireEvent.changeText(screen.getByTestId('block-0-text'), 'Edited by teacher.');
@@ -360,13 +302,6 @@ describe('LearningPathEditor', () => {
       expect(onChange.mock.calls.at(-1)[0].units[0].topics[0].content.blocks).toEqual([]);
     });
 
-    test('readOnly mode has no Learn edit button', async () => {
-      const content = contentWithAudioAndPractice();
-      await render(<LearningPathEditor content={content} onChange={jest.fn()} readOnly />);
-      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
-      expect(screen.queryByTestId('toggle-edit-learn')).toBeNull();
-    });
-
     test('shows the real textbook pane when content.book is present', async () => {
       const content = contentWithAudioAndPractice();
       content.units[0].topics[0].content!.book = {
@@ -374,19 +309,9 @@ describe('LearningPathEditor', () => {
         chapterTitle: 'Nutrition', pdfPage: 8, confidence: 0.9,
       };
       await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
-      await userEvent.setup().press(screen.getByTestId('preview-as-student-0-0'));
+      await userEvent.setup().press(screen.getByTestId('edit-topic-0-0'));
       expect(screen.getByTestId('preview-book-pane')).toBeTruthy();
     });
 
-    test('readOnly mode does not allow edits (no onChangeContent wired)', async () => {
-      const content = contentWithAudioAndPractice();
-      const onChange = jest.fn();
-      const user = userEvent.setup();
-      await render(<LearningPathEditor content={content} onChange={onChange} readOnly />);
-      await user.press(screen.getByTestId('preview-as-student-0-0'));
-      await user.press(screen.getByTestId('preview-tab-audio'));
-
-      expect(screen.getByTestId('listen-part-text-0').props.editable).toBe(false);
-    });
   });
 });
