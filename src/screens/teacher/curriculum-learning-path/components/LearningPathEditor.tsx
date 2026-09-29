@@ -38,6 +38,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [selected, setSelected] = useState<{ ui: number; ti: number }>({ ui: 0, ti: 0 });
   const [editing, setEditing] = useState(false);
+  const [showAdvice, setShowAdvice] = useState(false);
 
   const unit = content.units[selected.ui];
   const topic = unit?.topics[selected.ti];
@@ -68,7 +69,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
                 <TouchableOpacity
                   key={ti}
                   testID={`topic-${ui}-${ti}`}
-                  onPress={() => setSelected({ ui, ti })}
+                  onPress={() => { setSelected({ ui, ti }); setShowAdvice(false); }}
                   activeOpacity={0.7}
                   style={[styles.topicRow, active && { borderColor: colors.primary, backgroundColor: colors.primary + '12' }]}
                 >
@@ -109,6 +110,18 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
             <View testID={`needs-input-banner-${selected.ui}-${selected.ti}`} style={styles.needsInput}>
               <Text style={styles.needsInputTitle}>Needs your input</Text>
               {!!topic.teacherHint && <Text testID={`teacher-hint-${selected.ui}-${selected.ti}`} style={styles.needsInputText}>{topic.teacherHint}</Text>}
+            </View>
+          )}
+          {!!topic.quality?.issues?.length && topic.status !== 'needs_teacher_input' && (
+            <View testID="quality-advice">
+              <TouchableOpacity onPress={() => setShowAdvice((v) => !v)} activeOpacity={0.7}>
+                <Text style={styles.aiNote}>
+                  {showAdvice ? '▾' : '▸'} Suggestions to improve this topic ({topic.quality.issues.length})
+                </Text>
+              </TouchableOpacity>
+              {showAdvice && topic.quality.issues.map((issue, i) => (
+                <Text key={i} testID={`quality-advice-${i}`} style={styles.hint}>{'•'} {issue}</Text>
+              ))}
             </View>
           )}
           {!!(topic.content as any)?.aiWrittenSubtopics?.length && (

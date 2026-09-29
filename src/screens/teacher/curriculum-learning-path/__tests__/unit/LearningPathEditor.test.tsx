@@ -127,6 +127,17 @@ describe('LearningPathEditor', () => {
     expect(screen.queryByTestId('change-book-pages')).toBeNull();
   });
 
+  test('style suggestions from the quality check are shown as advice the teacher can expand', async () => {
+    const content = reviewContent();
+    content.units[0].topics[0].quality = { readingGrade: 8.4, sentenceLength: 14, judgeScores: null, issues: ['Learn text reading grade 8.4 is too high for Grade 6', '1 explanation block(s) are too short (under 15 words)'] };
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} />);
+    expect(screen.getByText('▸ Suggestions to improve this topic (2)')).toBeTruthy();
+    expect(screen.queryByTestId('quality-advice-0')).toBeNull();
+    await user.press(screen.getByText('▸ Suggestions to improve this topic (2)'));
+    expect(screen.getByTestId('quality-advice-1').props.children).toEqual(['•', ' ', '1 explanation block(s) are too short (under 15 words)']);
+  });
+
   test('read only: the title cannot be edited and there is no Edit button', async () => {
     await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} readOnly />);
     expect(screen.getByTestId('topic-title-0-0').props.editable).toBe(false);
