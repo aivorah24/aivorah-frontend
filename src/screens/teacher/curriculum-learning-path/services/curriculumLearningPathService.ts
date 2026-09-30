@@ -3,6 +3,8 @@ import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl
 import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent, MyLearningPathSummary } from '../types';
 
 async function authHeaders(): Promise<Record<string, string>> {
+  // After a page refresh Firebase restores the sign-in a moment later; asking before that read as "not signed in".
+  await auth.authStateReady?.();
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) throw new Error('Not signed in.');
   return { Authorization: `Bearer ${idToken}` };

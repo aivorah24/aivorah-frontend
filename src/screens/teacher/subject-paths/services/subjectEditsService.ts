@@ -7,6 +7,8 @@ export type EditsStatus = { status: 'none' | 'draft' | 'published'; updatedAt: s
 export type SubjectEditsSummary = SubjectScope & EditsStatus;
 
 async function authHeaders(): Promise<Record<string, string>> {
+  // After a page refresh Firebase restores the sign-in a moment later; asking before that read as "not signed in".
+  await auth.authStateReady?.();
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) throw new Error('Not signed in.');
   return { Authorization: `Bearer ${idToken}` };
