@@ -43,6 +43,39 @@ export interface TeacherTopicBook {
   chapterTitle: string;
   pdfPage: number;
   confidence: number;
+  grade?: number;
+  pages?: TeacherBookPage[];
+}
+
+// One entry per subtopic; pdfFile null = no NCERT section teaches it.
+export interface TeacherBookPage {
+  subtopic: string;
+  pdfFile: string | null;
+  bookPath?: string | null;
+  bookTitle?: string | null;
+  chapterTitle?: string | null;
+  grade?: number;
+  pdfPage?: number;
+  section?: string;
+  sections?: { pdfFile: string; title: string; page: number; grade: number }[];
+}
+
+// The book's AI Tutor script (Maths): the student AI Tutor tab plays one step per example.
+export interface TeacherMathTutorExample {
+  title?: string;
+  problem: string;
+  steps: { say: string; show?: string }[];
+  answer: string;
+  why?: string;
+  hint?: string;
+  page?: number;
+  yourTurn?: { question: string; answer: string };
+}
+
+export interface TeacherMathTutor {
+  intro?: string;
+  keyIdea?: string;
+  examples: TeacherMathTutorExample[];
 }
 
 export interface TeacherPauseThink {
@@ -74,6 +107,8 @@ export interface TeacherTopicContent {
   book?: TeacherTopicBook;
   listenParts?: TeacherListenPart[];
   practiceQuiz?: TeacherPracticeQuestion[];
+  mathTutor?: TeacherMathTutor;
+  aiWrittenSubtopics?: string[];
 }
 
 export interface TopicQuality {
@@ -103,6 +138,8 @@ export interface LearningPathUnit {
 }
 
 export interface LearningPathMetadata {
+  // The teacher's name for the path, shown to students; defaults to "Grade 6 Mathematics".
+  title?: string;
   grade?: string;
   subject?: string;
   curriculum?: string;
@@ -121,4 +158,19 @@ export interface TeacherLearningPath {
   content: LearningPathContent;
   published_content?: LearningPathContent | null;
   published_at?: string | null;
+  updated_at?: string | null;
+}
+
+// One row of the teacher's "My Learning Paths" list.
+export interface MyLearningPathSummary {
+  id: string;
+  curriculumId: string;
+  title: string;
+  fileName: string | null;
+  grade: string | null;
+  subject: string | null;
+  status: 'draft' | 'published';
+  updatedAt: string;
+  publishedAt: string | null;
+  hasUnpublishedChanges: boolean;
 }

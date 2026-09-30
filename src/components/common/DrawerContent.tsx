@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeMode } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
-import { useAnnouncements } from '../../features/announcements/context/AnnouncementProvider';
+import { useAnnouncements } from '../../screens/shared/announcements/context/AnnouncementProvider';
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 import { SwitchProfile } from './SwitchProfile';
@@ -36,6 +36,7 @@ const STUDENT_NAV_ITEMS = [
   { label: 'My Learning Paths', icon: 'book-open', screen: 'LearningPaths', group: 'MENU' },
   { label: 'AI Coach', icon: 'message-circle', screen: 'AICoach', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'Schedule', group: 'MENU' },
+  { label: 'Announcements', icon: 'volume-2', screen: 'Announcements', group: 'MENU' },
   { label: 'The World & You', icon: 'globe', screen: 'WorldAndYou', group: 'MENU' },
   { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
   { label: 'Daily Habits', icon: 'sun', screen: 'DailyHabits', group: 'MENU' },
@@ -75,15 +76,12 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MENU' },
-  // Student Progress restored 2026-08-29 — real screen now, backed by a
-  // real extracted endpoint (see aivorah-teacher-dashboard-service's
-  // /heatmap route), not the dummy mock it was on 2026-08-28 when this
-  // whole group was removed. Manage Syllabus / Announcements remain
-  // removed — still not refactored, still served from
-  // src/.legacy-screens/teacher-legacy/.
+  { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MENU' },
+  { label: 'Send Announcement', icon: 'edit-3', screen: 'AnnouncementManager', group: 'MENU' },
   { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MENU' },
-  { label: 'Curriculum & Syllabus', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'TEACHING DEVELOPMENT' },
-  { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'TEACHING DEVELOPMENT' },
+  { label: 'Curriculum Upload', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'TEACHING DEVELOPMENT' },
+  { label: 'Learning Paths', icon: 'map', screen: 'TeacherClassLearningPaths', group: 'TEACHING DEVELOPMENT' },
+  { label: 'Professional Development', icon: 'briefcase', screen: 'TeacherLearningPaths', group: 'TEACHING DEVELOPMENT' },
   { label: 'Achievements', icon: 'award', screen: 'TeacherAchievements', group: 'TEACHING DEVELOPMENT' },
   { label: 'Project Details', icon: 'activity', screen: 'ProjectDetails', group: 'SYSTEM' },
   { label: 'Help Center', icon: 'help-circle', screen: 'TeacherHelp', group: 'SYSTEM' },

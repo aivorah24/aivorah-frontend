@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useScheduleScroll } from '../../hooks/useScheduleScroll';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -140,6 +141,9 @@ interface ScheduleEvent {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+// Web keeps the header row in view with CSS sticky; the page's vertical ScrollView is its scroll container.
+const PINNED: any = Platform.OS === 'web' ? { position: 'sticky', top: 0 } : null;
+
 export default function ParentScheduleScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -330,7 +334,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   function nextWeek() { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }
 
   const horizScrollRef = useRef<ScrollView>(null);
-  const vScrollRef = useRef<ScrollView>(null);
+  const headerScrollRef = useRef<ScrollView>(null);
 
   // Scroll horizontally to show today's column (0-indexed day of week, Mon=0)
   function scrollToToday(cw: number) {
@@ -340,14 +344,14 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   }
 
   function scrollToCurrentTime(animated = true) {
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    const timeOffsetY = Math.max(0, ((currentMins - TIMELINE_START_HOUR * 60 - 60) / 60) * HOUR_HEIGHT);
-    setTimeout(() => vScrollRef.current?.scrollTo({ y: timeOffsetY, animated }), 200);
+    scheduleScroll.scrollToNow(animated);
   }
 
+
   const { width: screenWidth } = useWindowDimensions();
-  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor((screenWidth - TIME_LABEL_WIDTH) / 7));
+  // The calendar's measured width, so the 7 day columns fill it exactly (the window size is only a first guess).
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
+  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor(((gridWidth || screenWidth - 300) - TIME_LABEL_WIDTH) / 7));
 
   // Auto-scroll to today on mount and when weekBase changes to current week
   useEffect(() => {
@@ -355,9 +359,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     if (weekIsos.includes(todayISO)) {
       setTimeout(() => scrollToToday(colWidth), 300);
     }
-    scrollToCurrentTime();
   }, [weekBase, colWidth]);
   const gridHeight = TIMES.length * HOUR_HEIGHT;
+  const scheduleScroll = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, headerHeight: 56, pinnedHeader: Platform.OS === 'web' });
   const totalGridWidth = TIME_LABEL_WIDTH + colWidth * 7;
 
   return (
@@ -370,7 +374,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
 
-        <ScrollView ref={vScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScroll.scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           {/* ── Child Selector ── */}
           {children.length > 0 && (
@@ -405,12 +409,12 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.mainLayout}>
+          <View style={styles.mainLayout} onLayout={(e) => { scheduleScroll.onGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
             {/* ── Left: Week Calendar Grid ── */}
             <View style={styles.calendarContainer}>
               {/* Sticky time label column + scrollable day columns */}
-              <View style={{ flexDirection: 'row', height: 56 + allDayHeight + gridHeight }}>
-                {/* Time labels — sticky, outside horizontal scroll */}
+              {/* Pinned: dates and the all-day row stay at the top while the hours scroll under them (like Teams). */}
+              <View style={[{ flexDirection: 'row', zIndex: 5, backgroundColor: colors.bgDark }, PINNED]}>
                 <View style={{ width: TIME_LABEL_WIDTH }}>
                   {/* Spacer matching day header height with GMT label */}
                   <View style={[styles.timeColHeader, { justifyContent: 'flex-end', paddingBottom: 6, alignItems: 'center' }]}>
@@ -420,15 +424,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                   <View style={[styles.allDayGutter, { height: allDayHeight }]}>
                     <Text style={styles.allDayGutterText}>All{'\n'}day</Text>
                   </View>
-                  {TIMES.map((t) => (
-                    <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
-                      <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
-                    </View>
-                  ))}
                 </View>
-
-              <ScrollView ref={horizScrollRef} horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                <View style={{ width: colWidth * 7 }}>
+                <ScrollView ref={headerScrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                  <View style={{ width: colWidth * 7 }}>
                   {/* Day header row — inside scroll */}
                   <View style={[styles.dayHeaderRow, { marginLeft: 0 }]}>
                     {week.map((d) => {
@@ -445,13 +443,8 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                       );
                     })}
                   </View>
-                  {loading ? (
-                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                      <ActivityIndicator size="small" color={colors.accentYellow} />
-                      <Text style={styles.emptyText}>Loading schedule…</Text>
-                    </View>
-                  ) : (
-                    <>
+                    {!loading && (
+                      <>
                     {/* All-day row — deadline/challenge items (stored at 23:59) are excluded
                         from the hourly grid below since a 1-minute-tall block there would be
                         invisible; show them here instead. */}
@@ -481,6 +474,35 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                         );
                       })}
                     </View>
+                      </>
+                    )}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {loading ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <ActivityIndicator size="small" color={colors.accentYellow} />
+                      <Text style={styles.emptyText}>Loading schedule…</Text>
+                    </View>
+              ) : (
+              <View style={{ flexDirection: 'row', height: gridHeight }}>
+                <View style={{ width: TIME_LABEL_WIDTH }}>
+                  {TIMES.map((t) => (
+                    <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
+                      <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
+                    </View>
+                  ))}
+                </View>
+                <ScrollView
+                  ref={horizScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  onScroll={(e) => headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}
+                  scrollEventThrottle={16}
+                >
+                  <View style={{ width: colWidth * 7 }}>
                     <View style={{ flexDirection: 'row' }}>
                       {/* Day columns */}
                       {week.map((d) => {
@@ -594,11 +616,10 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                         );
                       })}
                     </View>
-                    </>
-                  )}
-                </View>
-              </ScrollView>
-              </View>{/* end sticky row wrapper */}
+                  </View>
+                </ScrollView>
+              </View>
+              )}
 
 
               {/* Add event button */}
@@ -614,9 +635,10 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                 </TouchableOpacity>
               ) : null}
             </View>
+          </View>
 
-            {/* ── Right Sidebar ── */}
-            <View style={styles.sideCol}>
+          {/* Month view and the rest sit under the full-width calendar. */}
+          <View style={styles.sideCol}>
               {/* Mini Calendar */}
               <View style={styles.sideCard}>
                 <View style={styles.calHeader}>
@@ -681,7 +703,6 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                   })
                 )}
               </View>
-            </View>
           </View>
         </ScrollView>
 
@@ -817,8 +838,8 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
 
   // Layout
   mainLayout:        { flexDirection: 'row', gap: spacing.xl },
-  calendarContainer: { flex: 1.5 },
-  sideCol:           { flex: 1, gap: spacing.lg },
+  calendarContainer: { flex: 1 },
+  sideCol:           { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.xl },
 
   // Day header
   dayHeaderRow:         { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.borderColor, marginBottom: 0 },
@@ -867,7 +888,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   emptyText:    { fontFamily: fonts.serif, fontSize: 12, color: c.textMuted, marginTop: 8 },
 
   // Sidebar
-  sideCard:      { backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: radius.lg, padding: spacing.lg },
+  sideCard:      { flex: 1, minWidth: 280, backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: radius.lg, padding: spacing.lg },
   calHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   calMonth:      { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: c.textMain },
   calDayHeaders: { flexDirection: 'row', marginBottom: spacing.sm },

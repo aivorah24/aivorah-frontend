@@ -200,17 +200,3 @@ describe('ScheduleScreen — removing an event', () => {
     expect(mockRemoveEvent).toHaveBeenCalledWith('ev-77', '2026-04-13');
   });
 });
-
-describe('ScheduleScreen — tag filters', () => {
-  test('unchecking a tag from the panel hides matching events from the grid', async () => {
-    scheduleEventsState = baseScheduleEventsState({ eventsMap: { '2026-04-13': [ev({ title: 'Homework', tag: 'Worksheet / Assignment' })] } });
-    const user = userEvent.setup();
-    await render(<ScheduleScreen navigation={navProp()} />);
-    await screen.findByText('Homework');
-
-    await user.press(screen.getByTestId('schedule-tag-filters-toggle'));
-    await user.press(screen.getByTestId('schedule-tag-filter-Worksheet / Assignment'));
-
-    expect(screen.queryByText('Homework')).toBeNull();
-  });
-});

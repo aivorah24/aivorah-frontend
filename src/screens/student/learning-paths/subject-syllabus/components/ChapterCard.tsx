@@ -48,6 +48,8 @@ export default function ChapterCard({
   const serverPending = (chapter as any).pending;
   const isPending = serverPending !== undefined ? !!serverPending : chapter.topics.length === 0;
   const subtopicNames: string[] = (chapter as any).subtopics || [];
+  // A teacher's own units read "Unit N" like the teacher's document; their topics stay "Topic N".
+  const chapterWord = isUnitShaped || (chapter as any).teacherUnit ? 'Unit' : 'Chapter';
 
   return (
     <View style={[styles.chapterCard, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
@@ -72,8 +74,8 @@ export default function ChapterCard({
                 "Chapter 7: Chapter 7". Show the number once. */}
             <Text style={[styles.chapterTitle, { color: colors.textMain }]}>
               {/^chapter\s*\d+$/i.test(String(chapter.title || '').trim())
-                ? `${isUnitShaped ? 'Unit' : 'Chapter'} ${chapterNo}`
-                : `${isUnitShaped ? 'Unit' : 'Chapter'} ${chapterNo}: ${chapter.title}`}
+                ? `${chapterWord} ${chapterNo}`
+                : `${chapterWord} ${chapterNo}: ${chapter.title}`}
             </Text>
             {(chapter.comingSoon || isPending) && (
               <View style={[styles.comingSoonBadge, { borderColor: colors.borderColor, backgroundColor: colors.borderColor + '55' }]}>

@@ -348,58 +348,6 @@ describe('TeacherScheduleScreen — create event via modal', () => {
   });
 });
 
-describe('TeacherScheduleScreen — tag filters panel', () => {
-  test('opening the Tag Filters panel shows assignment and event tag checkboxes, all enabled by default', async () => {
-    const user = userEvent.setup();
-    await render(<TeacherScheduleScreen navigation={navProp()} />);
-    await screen.findByText('Class Schedule');
-
-    await user.press(screen.getByText('Tag Filters'));
-    expect(await screen.findByText('ASSIGNMENT TAGS')).toBeTruthy();
-    expect(screen.getByText('EVENT TAGS')).toBeTruthy();
-    expect(screen.getByText('Live Class / Lesson')).toBeTruthy();
-    expect(screen.getByText('Holidays and vacations')).toBeTruthy();
-  });
-
-  test('toggling a single assignment tag off clears its checkbox fill', async () => {
-    const user = userEvent.setup();
-    await render(<TeacherScheduleScreen navigation={navProp()} />);
-    await screen.findByText('Class Schedule');
-
-    await user.press(screen.getByText('Tag Filters'));
-    await screen.findByText('ASSIGNMENT TAGS');
-
-    // Structure: TouchableOpacity(row) > [checkboxView, labelText]. The
-    // checkbox View's inline style backgroundColor is the tag color when
-    // checked, 'transparent' when unchecked — a reliable signal since
-    // Feather icons don't carry their `name` prop into the host tree.
-    const label = screen.getByText('Live Class / Lesson');
-    const row = label.parent;
-    const checkboxBefore = (row?.children ?? []).find((c: any) => typeof c !== 'string' && c.type === 'View') as any;
-    expect(checkboxBefore.props.style.backgroundColor).not.toBe('transparent');
-
-    await user.press(label);
-
-    await waitFor(() => {
-      const rowAfter = screen.getByText('Live Class / Lesson').parent;
-      const checkboxAfter = (rowAfter?.children ?? []).find((c: any) => typeof c !== 'string' && c.type === 'View') as any;
-      expect(checkboxAfter.props.style.backgroundColor).toBe('transparent');
-    });
-  });
-
-  test('collapsing the panel hides the tag lists again', async () => {
-    const user = userEvent.setup();
-    await render(<TeacherScheduleScreen navigation={navProp()} />);
-    await screen.findByText('Class Schedule');
-
-    await user.press(screen.getByText('Tag Filters'));
-    await screen.findByText('ASSIGNMENT TAGS');
-    await user.press(screen.getByText('Tag Filters'));
-
-    await waitFor(() => expect(screen.queryByText('ASSIGNMENT TAGS')).toBeNull());
-  });
-});
-
 describe('TeacherScheduleScreen — drag-to-create on the calendar grid', () => {
   // The day-column onMouseDown handler is a plain RN <View> prop (not a raw
   // <div>), so it renders fine even in this harness — no event tile is

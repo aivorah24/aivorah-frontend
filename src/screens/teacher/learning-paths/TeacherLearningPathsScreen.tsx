@@ -26,7 +26,7 @@ export default function TeacherLearningPathsScreen({ navigation }: any) {
     <ScreenLayout hideAIPanel>
       <View style={styles.screen}>
         <Header
-          title="Learning Paths"
+          title="Professional Development"
           subtitle="Professional development for educators"
           onMenuPress={() => navigation.openDrawer()}
         />

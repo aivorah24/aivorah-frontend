@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeMode } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
-import { useAnnouncements } from '../../features/announcements/context/AnnouncementProvider';
+import { useAnnouncements } from '../../screens/shared/announcements/context/AnnouncementProvider';
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 import { useFocusEffect } from '@react-navigation/native';
@@ -43,6 +43,7 @@ const STUDENT_NAV_ITEMS = [
     ] },
   { label: 'AI Coach',         icon: 'message-circle',screen: 'AICoach',           group: 'MENU',    premium: false },
   { label: 'Schedule',         icon: 'calendar',     screen: 'Schedule',           group: 'MENU',    premium: false },
+  { label: 'Announcements',    icon: 'volume-2',     screen: 'Announcements',      group: 'MENU',    premium: false },
   { label: 'The World & You',  icon: 'globe',        screen: 'WorldAndYou',        group: 'MENU',    premium: false },
   { label: 'My Classes',       icon: 'layers',       screen: 'MyClasses',          group: 'MENU',    premium: false },
   { label: 'Bedtime Stories',  icon: 'book',         screen: 'BhagavathaStories',  group: 'MENU',    premium: false },
@@ -65,18 +66,15 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MANAGE' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MANAGE' },
-  { label: 'Curriculum & Syllabus', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'MANAGE' },
-  { label: 'Learning Paths', icon: 'map', screen: 'TeacherLearningPaths', group: 'MANAGE' },
+  { label: 'Curriculum Upload', icon: 'upload-cloud', screen: 'TeacherCurriculumLearningPath', group: 'MANAGE' },
+  { label: 'Learning Paths', icon: 'map', screen: 'TeacherClassLearningPaths', group: 'MANAGE' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MANAGE' },
+  { label: 'Professional Development', icon: 'briefcase', screen: 'TeacherLearningPaths', group: 'MANAGE' },
   // Student Progress restored 2026-08-29 — it's now a real, refactored
   // screen backed by a real extracted endpoint (see
   // aivorah-teacher-dashboard-service's /heatmap route), not the dummy
   // mock it was on 2026-08-28 when this whole group was removed.
-  // Manage Syllabus / Announcements remain removed — still not refactored,
-  // still served from src/.legacy-screens/teacher-legacy/. "Send
-  // Announcement" (AnnouncementManager) is a separate, already-refactored
-  // feature — kept.
-  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MANAGE' },
+  { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MANAGE' },
   { label: 'Send Announcement', icon: 'edit-3', screen: 'AnnouncementManager', group: 'MANAGE' },
   { label: 'Settings', icon: 'settings', screen: 'TeacherSettings', group: 'SYSTEM' },
 ];

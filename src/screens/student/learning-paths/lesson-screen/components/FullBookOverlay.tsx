@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
-import { bookSrc, bookTitleFor } from '../utils/book';
+import { bookSrc, bookLabel } from '../utils/book';
 import { makeStyles } from '../styles';
 
 export default function FullBookOverlay({
@@ -31,7 +31,7 @@ export default function FullBookOverlay({
           <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 13 }}>Back to Learning</Text>
         </TouchableOpacity>
         <Text style={{ color: colors.textMuted, fontSize: 12.5 }}>
-          {bookTitleFor(grade, subject)} — {grade} {subject} · full textbook, use the built-in page controls to browse
+          {bookLabel(topic, grade, subject)} — {grade} {subject} · full book, use the built-in page controls to browse
         </Text>
         <View style={{ width: 130 }} />
       </View>

@@ -6,6 +6,7 @@ import ScreenLayout from '../../../../components/common/ScreenLayout';
 import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
 import { useTeacherLearningPath } from './hooks/useTeacherLearningPath';
+import TeacherPathTopics from './components/TeacherPathTopics';
 
 interface Props {
   route: { params: { curriculumId: string; title: string } };
@@ -44,60 +45,9 @@ export default function TeacherPublishedLearningPathScreen({ route, navigation }
           <Text testID="teacher-lp-detail-empty" style={styles.dimText}>This learning path has no content yet.</Text>
         )}
 
-        {status === 'ok' && learningPath && learningPath.content.units.map((unit, ui) => (
-          <View key={ui} testID={`teacher-lp-unit-${ui}`} style={styles.unit}>
-            <Text style={styles.unitTitle}>{unit.title || 'Untitled Unit'}</Text>
-            {unit.topics.map((topic, ti) => {
-              const metadata = learningPath.content.metadata;
-              // AI Tutor/Listen/Ask Aivorah/Practice all need grade+subject to
-              // resolve grounded context — a topic with no generated content
-              // yet (still awaiting AI generation) also has nothing to open.
-              const canOpen = !!topic.content && !!metadata?.grade && !!metadata?.subject;
-              return (
-                <View key={ti} testID={`teacher-lp-topic-${ui}-${ti}`} style={styles.topic}>
-                  <Text style={styles.topicTitle}>{topic.title || 'Untitled Topic'}</Text>
-                  {topic.objectives.length > 0 && (
-                    <View style={styles.block}>
-                      <Text style={styles.blockLabel}>What you&apos;ll learn</Text>
-                      {topic.objectives.map((o, oi) => <Text key={oi} style={styles.item}>• {o}</Text>)}
-                    </View>
-                  )}
-                  {topic.lessons.length > 0 && (
-                    <View style={styles.block}>
-                      <Text style={styles.blockLabel}>Lessons</Text>
-                      {topic.lessons.map((l, li) => (
-                        <View key={li} testID={`teacher-lp-lesson-${ui}-${ti}-${li}`}>
-                          <Text style={styles.lessonTitle}>{l.title}</Text>
-                          {!!l.summary && <Text style={styles.item}>{l.summary}</Text>}
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  {canOpen && (
-                    <TouchableOpacity
-                      testID={`teacher-lp-open-${ui}-${ti}`}
-                      style={styles.openBtn}
-                      activeOpacity={0.85}
-                      onPress={() => navigation.navigate('LessonScreen', {
-                        grade: metadata!.grade,
-                        subject: metadata!.subject,
-                        curriculum: metadata!.curriculum || 'CBSE',
-                        chapterIndex: unit.order,
-                        topicIndex: topic.order,
-                        chapterTitle: unit.title || undefined,
-                        topicName: topic.title || 'This topic',
-                        teacherContent: topic.content,
-                      })}
-                    >
-                      <Feather name="cpu" size={13} color="#fff" />
-                      <Text style={styles.openBtnText}>Learn · AI Tutor · Ask Aivorah · Practice</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        ))}
+        {status === 'ok' && learningPath && learningPath.content.units.length > 0 && (
+          <TeacherPathTopics content={learningPath.content} pathKey={curriculumId} colors={colors} navigation={navigation} />
+        )}
       </ScrollView>
     </ScreenLayout>
   );

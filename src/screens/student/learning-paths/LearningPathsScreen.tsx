@@ -16,7 +16,8 @@ import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
 import SubjectCard from './components/SubjectCard';
-import TeacherLearningPathsSection from './teacher-learning-paths/components/TeacherLearningPathsSection';
+import { useTeacherPaths } from './teacher-learning-paths/hooks/useTeacherPaths';
+import { mergeTeacherSubjects } from './mergeTeacherSubjects';
 
 export default function LearningPathsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -37,7 +38,14 @@ export default function LearningPathsScreen({ navigation }: any) {
   const isPYP = /^ib.?pyp$/i.test(curriculum.trim());
   const isCBSE = !isPYP && (curriculum === 'NCERT' || curriculum === 'CBSE');
 
-  const { subjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
+  const { subjects: courseSubjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
+  // Teacher-published units count as chapters of their subject; a subject the curriculum has no card for (IB has
+  // no standard syllabus) gets its own card built from them.
+  const { paths: teacherPaths } = useTeacherPaths(grade);
+  const subjects = useMemo(
+    () => mergeTeacherSubjects(courseSubjects, teacherPaths, grade),
+    [courseSubjects, teacherPaths, grade],
+  );
   const blockedSubjects = useBlockedSubjects(user?.email);
 
   const completedSet = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
@@ -166,10 +174,6 @@ export default function LearningPathsScreen({ navigation }: any) {
               </View>
             </View>
           </LinearGradient>
-
-          <TeacherLearningPathsSection
-            onOpen={(curriculumId, title) => navigation.navigate('TeacherPublishedLearningPath', { curriculumId, title })}
-          />
 
           <>
             <View style={styles.sectionHead}>

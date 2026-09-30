@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
-import { bookSrc, bookTitleFor } from '../utils/book';
+import { bookSrc, bookLabel } from '../utils/book';
 import { makeStyles } from '../styles';
 
 export default function BookPane({
@@ -26,7 +26,7 @@ export default function BookPane({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Feather name="file-text" size={12} color={colors.textMuted} />
           <Text style={[styles.paneLabelText, { color: colors.textMuted }]} numberOfLines={1}>
-            Original Textbook · {bookTitleFor(grade, subject)}, {grade} {subject}
+            {topic.bookUrl ? bookLabel(topic, grade, subject) : `Original Textbook · ${bookLabel(topic, grade, subject)}, ${grade} ${subject}`}
           </Text>
         </View>
         <TouchableOpacity

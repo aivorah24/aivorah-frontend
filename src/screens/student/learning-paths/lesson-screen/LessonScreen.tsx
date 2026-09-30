@@ -30,8 +30,26 @@ import ListenTab from './components/ListenTab';
 import PracticeTab from './components/PracticeTab';
 import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
+import { useStudentSubjectEdits } from '../subject-syllabus/hooks/useStudentSubjectEdits';
+import { useRefreshOnFocus } from '../subject-syllabus/hooks/useRefreshOnFocus';
 
-export default function LessonScreen({ navigation, route }: any) {
+// A link without an edit key finds the teacher's lesson by topic name, when exactly one edited topic has that name.
+function lessonForTopicName(edits: any, name?: string) {
+  if (!edits?.topics || !name) return undefined;
+  const suffix = `::${name.trim().toLowerCase()}`;
+  const keys = Object.keys(edits.topics).filter((k) => k.endsWith(suffix));
+  return keys.length === 1 ? edits.topics[keys[0]] : undefined;
+}
+
+function LessonShell({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
+  return embedded
+    ? <View testID="embedded-lesson" style={{ height: 760, borderRadius: 12, overflow: 'hidden' }}>{children}</View>
+    : <ScreenLayout>{children}</ScreenLayout>;
+}
+
+// `embedded`: rendered inside another screen (the teacher's review) — no page header, no Ask tab, and Practice shows
+// `practiceSlot` in place instead of opening the Quiz screen.
+export default function LessonScreen({ navigation, route, embedded = false, practiceSlot }: any) {
   const subject = (route?.params?.subject ?? 'English') as string;
   const curriculum = (route?.params?.curriculum ?? 'CBSE') as string;
   const grade = (route?.params?.grade ?? 'Grade 6') as string;
@@ -44,7 +62,10 @@ export default function LessonScreen({ navigation, route }: any) {
   const chapterTitleParam = route?.params?.chapterTitle as string | undefined;
   // A real NCERT/Qdrant-only topic with no DB id (Bug #8, BUGS_AND_FIXES.md) —
   // resolved by curriculum+grade+subject+topic instead of topicId.
-  const byNameTopic = route?.params?.byNameTopic as string | undefined;
+  // A link that carries a topic name but no id or teacher content (e.g. one saved before book-section topics were
+  // opened by name) still resolves by that name rather than falling back to the old built-in lessons.
+  const byNameTopic = (route?.params?.byNameTopic
+    ?? (route?.params?.topicName && !route?.params?.topicId && !route?.params?.teacherContent ? route.params.topicName : undefined)) as string | undefined;
   const byName = !topicId && byNameTopic
     ? { curriculum, grade, subject, topic: byNameTopic }
     : undefined;
@@ -59,14 +80,26 @@ export default function LessonScreen({ navigation, route }: any) {
   const isTeacherContentBacked = !!teacherContent;
   const teacherTopicName = route?.params?.topicName as string | undefined;
 
-  const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic, contentReady: fetchedContentReady } =
-    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked });
+  // The student's teacher's edited version of this topic, by its key (a plain string, so it survives a page refresh).
+  // The teacher's own preview passes the edits in directly instead.
+  const editKey = route?.params?.editKey as string | undefined;
+  const directEdits = route?.params?.lessonEdits;
+  const wantsEdits = !directEdits && !embedded && (!!editKey || !!byName);
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: wantsEdits, refreshKey: useRefreshOnFocus(embedded ? null : navigation) });
+  const lessonEdits = directEdits || (editKey ? subjectEdits?.topics?.[editKey] : lessonForTopicName(subjectEdits, byName?.topic));
+  const waitingForEdits = wantsEdits && !editsLoaded;
+
+  const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic: loadingFetchedTopic, contentReady: fetchedContentReady } =
+    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked && !waitingForEdits, override: lessonEdits });
+  const loadingDbTopic = loadingFetchedTopic || waitingForEdits;
   const teacherDbTopic = useMemo(
     () => (isTeacherContentBacked ? adaptTeacherContentToTopic(teacherTopicName || '', teacherContent) : null),
     [isTeacherContentBacked, teacherContent, teacherTopicName]
   );
   const dbTopic = isTeacherContentBacked ? teacherDbTopic : fetchedDbTopic;
-  const rawPayload = isTeacherContentBacked ? { whatYoullLearn: teacherContent?.whatYoullLearn, blocks: teacherContent?.blocks } : fetchedRawPayload;
+  const rawPayload = isTeacherContentBacked
+    ? { whatYoullLearn: teacherContent?.whatYoullLearn, blocks: teacherContent?.blocks, mathTutor: (teacherContent as any)?.mathTutor }
+    : fetchedRawPayload;
   const contentReady = isTeacherContentBacked ? true : fetchedContentReady;
 
   const { colors } = useTheme();
@@ -139,9 +172,9 @@ export default function LessonScreen({ navigation, route }: any) {
 
   const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang);
 
-  usePracticeRedirect(mode, setMode, topic, navigation, {
+  usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
-    byNameTopic, chapterTitle: chapter?.title, teacherContent,
+    byNameTopic, chapterTitle: chapter?.title, teacherContent, editKey,
     bookQuiz: (rawPayload as any)?.practiceQuiz,
   }, contentReady);
 
@@ -168,26 +201,26 @@ export default function LessonScreen({ navigation, route }: any) {
 
   if (loadingDbTopic) {
     return (
-      <ScreenLayout>
+      <LessonShell embedded={embedded}>
         <View style={styles.screen}>
-          <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />
+          {!embedded && <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />}
           <View style={styles.centerWrap}><ActivityIndicator color={colors.primary} /></View>
         </View>
-      </ScreenLayout>
+      </LessonShell>
     );
   }
 
   if (!chapter || !topic) {
     return (
-      <ScreenLayout>
+      <LessonShell embedded={embedded}>
         <View style={styles.screen}>
-          <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />
+          {!embedded && <Header title="Lesson" showBack onMenuPress={() => navigation.openDrawer()} />}
           <View style={styles.centerWrap}>
             <Feather name="alert-circle" size={32} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, marginTop: 10 }}>This lesson isn&apos;t available yet.</Text>
           </View>
         </View>
-      </ScreenLayout>
+      </LessonShell>
     );
   }
 
@@ -196,17 +229,19 @@ export default function LessonScreen({ navigation, route }: any) {
     { key: 'listen', label: isMath ? 'AI Tutor' : 'Listen', icon: isMath ? 'cpu' : 'headphones' },
     { key: 'ask', label: 'Ask Aivorah', icon: 'message-circle' },
     { key: 'practice', label: 'Practice', icon: 'check-square' },
-  ];
+  ].filter((t) => !(embedded && t.key === 'ask')) as { key: Mode; label: string; icon: any }[];
 
   return (
-    <ScreenLayout>
+    <LessonShell embedded={embedded}>
       <View style={styles.screen}>
-        <Header
-          title={topic.name}
-          subtitle={`Unit ${chapterIndex + 1} · ${chapter.title}`}
-          showBack
-          onMenuPress={() => navigation.openDrawer()}
-        />
+        {!embedded && (
+          <Header
+            title={topic.name}
+            subtitle={`Unit ${chapterIndex + 1} · ${chapter.title}`}
+            showBack
+            onMenuPress={() => navigation.openDrawer()}
+          />
+        )}
 
         <View style={styles.tabBarRow}>
           <View style={[styles.tabBar, { backgroundColor: colors.bgDark, borderColor: colors.borderColor }]}>
@@ -312,7 +347,8 @@ export default function LessonScreen({ navigation, route }: any) {
 
             {mode !== 'read' && mode !== 'ask' && mode !== 'listen' && (
               <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {mode === 'practice' && (
+                {mode === 'practice' && embedded && practiceSlot}
+                {mode === 'practice' && !embedded && (
                   <PracticeTab
                     topic={topic}
                     grade={grade}
@@ -337,6 +373,6 @@ export default function LessonScreen({ navigation, route }: any) {
         caption={zoomImage?.caption}
         onClose={() => setZoomImage(null)}
       />
-    </ScreenLayout>
+    </LessonShell>
   );
 }

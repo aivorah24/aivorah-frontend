@@ -28,8 +28,8 @@ export function parseSceneVisual(raw: any): SceneVisual | undefined {
         : undefined;
     }
     case 'table': {
-      const headers = strs(raw.headers, 2, 4);
-      const rows = Array.isArray(raw.rows) ? raw.rows.filter((row: any) => Array.isArray(row) && row.some(str)).slice(0, 8).map((row: any[]) => row.map((c) => (str(c) ? c.trim() : ''))) : [];
+      const headers = strs(raw.headers, 2, 8);
+      const rows = Array.isArray(raw.rows) ? raw.rows.filter((row: any) => Array.isArray(row) && row.some(str)).slice(0, 30).map((row: any[]) => row.map((c) => (str(c) ? c.trim() : ''))) : [];
       return headers && rows.length ? { kind: 'table', headers, rows, ...title } : undefined;
     }
     case 'timeline': {

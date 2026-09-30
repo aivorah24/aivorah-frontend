@@ -4,7 +4,13 @@ import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
-import { bookSrc } from '../../../student/learning-paths/lesson-screen/utils/book';
+import BookSidePane from './BookSidePane';
+
+// NCERT book sections can only be picked for curricula that follow the NCERT books (CBSE).
+const usesNcertBooks = (curriculum?: string) => /\b(cbse|ncert)\b/i.test(curriculum || 'CBSE');
+import LearnBlockEditor from './LearnBlockEditor';
+import MathTutorEditor from './MathTutorEditor';
+import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';
 import { LearningPathTopic, TeacherTopicContent, TeacherListenPart, TeacherPauseThink, TeacherPracticeQuestion } from '../types';
 
 type Tab = 'learn' | 'audio' | 'practice';
@@ -21,8 +27,16 @@ export default function StudentPreviewModal({
   colors,
   onClose,
   onChangeContent,
+  pathGrade,
+  subject,
+  curriculum,
+  onRebuild,
 }: {
   topic: LearningPathTopic;
+  pathGrade?: string;
+  subject?: string;
+  curriculum?: string;
+  onRebuild?: (picks: SubtopicSectionPick[]) => Promise<void>;
   colors: AppColors;
   onClose: () => void;
   // Wired to LearningPathEditor's updateContent → save, same PUT
@@ -30,10 +44,20 @@ export default function StudentPreviewModal({
   onChangeContent?: (content: TeacherTopicContent) => void;
 }) {
   const [tab, setTab] = useState<Tab>('learn');
+  // This panel is for editing, so Learn opens ready to edit; the toggle shows how it reads.
+  const [editingLearn, setEditingLearn] = useState(!!onChangeContent);
   const hasBlocks = !!topic.content?.blocks?.length || !!topic.content?.whatYoullLearn?.length;
   const isMath = /math/i.test(topic.content?.contentType || topic.title || '');
   const audioLabel = isMath ? 'AI Tutor' : 'Listen';
-  const book = topic.content?.book;
+  const bookPages = topic.content?.book?.pages || [];
+  const inBook = bookPages.filter((p) => p.pdfFile).length;
+  const sourceNote = topic.groundingSource === 'ncert_book'
+    ? `From the NCERT book${bookPages.length ? ` · ${inBook} of ${bookPages.length} subtopics in the book${inBook < bookPages.length ? '; the rest taught by AI — please check' : ''}` : ''}`
+    : topic.groundingSource === 'reference_sources'
+      ? 'Written from reference material for your curriculum — please check it'
+      : topic.groundingSource === 'model_knowledge' || topic.groundingSource === 'upload_text_only'
+      ? 'Written by AI from your outline — please check it'
+      : null;
   const listenParts = topic.content?.listenParts || [];
   const practiceQuiz = topic.content?.practiceQuiz || [];
   const editable = !!onChangeContent;
@@ -91,7 +115,7 @@ export default function StudentPreviewModal({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: fonts.serif, fontSize: 16, fontWeight: '800', color: colors.textMain }} numberOfLines={1}>{topic.title || 'Topic preview'}</Text>
-              <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted }}>Student preview</Text>
+              <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted }}>Edit topic · Learn, Listen, Practice, book pages</Text>
             </View>
             <TouchableOpacity testID="close-student-preview" onPress={onClose} activeOpacity={0.7}>
               <Feather name="x" size={22} color={colors.textMuted} />
@@ -111,8 +135,26 @@ export default function StudentPreviewModal({
           <ScrollView testID="student-preview-scroll" showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 48 }}>
             {tab === 'learn' && (
               <View style={{ flexDirection: 'row', gap: 16 }}>
-                <View style={{ flex: 1 }}>
-                  {hasBlocks ? (
+                <View style={{ flex: 1, gap: 10 }}>
+                  {(!!sourceNote || (editable && hasBlocks)) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <Text testID="preview-source-note" style={{ flex: 1, fontSize: 12, fontWeight: '600', color: topic.groundingSource === 'ncert_book' ? colors.primary : colors.textMuted }}>
+                        {sourceNote}
+                      </Text>
+                      {editable && hasBlocks && (
+                        <TouchableOpacity testID="toggle-edit-learn" onPress={() => setEditingLearn((v) => !v)} activeOpacity={0.7}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>{editingLearn ? 'Preview' : 'Edit text'}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                  {editingLearn && editable && topic.content ? (
+                    <LearnBlockEditor
+                      blocks={topic.content.blocks || []}
+                      colors={colors}
+                      onChange={(blocks) => updateContent((content) => ({ ...content, blocks }))}
+                    />
+                  ) : hasBlocks ? (
                     <LearningBlocks whatYoullLearn={topic.content?.whatYoullLearn} blocks={topic.content?.blocks || []} colors={colors} />
                   ) : (
                     <View testID="student-preview-fallback" style={{ gap: 16 }}>
@@ -136,26 +178,18 @@ export default function StudentPreviewModal({
                     </View>
                   )}
                 </View>
-                {book ? (
-                  <View testID="preview-book-pane" style={{ flex: 0.7, borderWidth: 1, borderColor: colors.borderColor, borderRadius: 10, padding: 8, gap: 6 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted }} numberOfLines={2}>
-                      {book.bookTitle || 'Textbook'} · {book.chapterTitle}
-                    </Text>
-                    {React.createElement('iframe', {
-                      src: `${bookSrc(book, '', '')}#page=${book.pdfPage}&view=FitH`,
-                      style: { flex: 1, minHeight: 300, border: 'none', width: '100%', backgroundColor: colors.bgDark },
-                      title: `${topic.title || 'topic'} — real textbook page`,
-                    })}
-                  </View>
-                ) : (
-                  <View testID="preview-no-book" style={{ flex: 0.7, alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-                    <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>No matching textbook chapter</Text>
-                  </View>
-                )}
+                <BookSidePane key={`${topic.title}-${topic.content?.book?.pdfFile}-${topic.content?.book?.pdfPage}`} topic={topic} pathGrade={pathGrade} subject={subject} colors={colors} onRebuild={usesNcertBooks(curriculum) ? onRebuild : undefined} />
               </View>
             )}
 
-            {tab === 'audio' && (
+            {tab === 'audio' && topic.content?.mathTutor?.examples?.length ? (
+              <MathTutorEditor
+                tutor={topic.content.mathTutor}
+                colors={colors}
+                editable={editable}
+                onChange={(mathTutor) => updateContent((content) => ({ ...content, mathTutor }))}
+              />
+            ) : tab === 'audio' && (
               listenParts.length === 0 ? (
                 <Text style={{ fontSize: 13, color: colors.textMuted }}>No {audioLabel.toLowerCase()} script yet for this topic.</Text>
               ) : listenParts.map((part, pi) => (

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
@@ -12,6 +12,8 @@ import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
 import type { ScheduleEvent, SelectedEventDetail } from './types';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
 import { useWeekNavigation } from './hooks/useWeekNavigation';
+import { useScheduleScroll } from '../../../hooks/useScheduleScroll';
+import { HOUR_HEIGHT } from './constants';
 import { useTagFilters } from './hooks/useTagFilters';
 import { useDragToCreate } from './hooks/useDragToCreate';
 import { useAddEventModal } from './hooks/useAddEventModal';
@@ -21,7 +23,6 @@ import { typeColors } from './utils/dateHelpers';
 import FilterBar from './components/FilterBar';
 import WeekNavBar from './components/WeekNavBar';
 import CalendarGrid from './components/CalendarGrid';
-import TagFilterPanel from './components/TagFilterPanel';
 import MiniCalendar from './components/MiniCalendar';
 import UpcomingDeadlines from './components/UpcomingDeadlines';
 import AddEventModal from './components/AddEventModal';
@@ -34,6 +35,8 @@ export default function ScheduleScreen({ navigation, route }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { studentId } = useStudentData();
 
+  const scrollToNowRef = useRef<((animated?: boolean) => void) | null>(null);
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
   const {
     today, todayISO, weekBase, week,
     calYear, calMonth, calWeeks,
@@ -41,13 +44,10 @@ export default function ScheduleScreen({ navigation, route }: any) {
     hScrollRef, didInitialScrollRef,
     prevWeek, nextWeek, goToday, prevMonth, nextMonth, selectDate,
     scrollToToday,
-  } = useWeekNavigation();
+  } = useWeekNavigation(scrollToNowRef, gridWidth);
 
   const {
-    filterType, setFilterType, hideCompleted, setHideCompleted,
-    enabledAssignmentTags, enabledEventTags, showTagPanel, setShowTagPanel,
-    passesTagFilter, toggleAssignmentTag, toggleEventTag, toggleAllAssignment, toggleAllEvent,
-    allAssignmentOn, allEventOn,
+    filterType, setFilterType, hideCompleted, setHideCompleted, passesTagFilter,
   } = useTagFilters();
 
   const {
@@ -90,7 +90,9 @@ export default function ScheduleScreen({ navigation, route }: any) {
       )
     );
     return Math.max(36, max * 26 + 10);
-  }, [eventsMap, week, hideCompleted, filterType, enabledAssignmentTags, enabledEventTags]);
+  }, [eventsMap, week, hideCompleted, filterType, passesTagFilter]);
+  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, pinnedHeader: Platform.OS === 'web' });
+  useEffect(() => { scrollToNowRef.current = scrollScheduleToNow; });
 
   function handleEventPress(event: ScheduleEvent, [accent, fill, textCol]: [string, string, string]) {
     setSelectedEvent({ ...event, accent, fill, textCol });
@@ -125,7 +127,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           <FilterBar
             filterType={filterType}
@@ -145,7 +147,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
             colors={colors}
           />
 
-          <View style={styles.mainLayout}>
+          <View style={styles.mainLayout} onLayout={(e) => { onScheduleGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
             <CalendarGrid
               loading={loading}
               week={week}
@@ -171,22 +173,11 @@ export default function ScheduleScreen({ navigation, route }: any) {
               colors={colors}
             />
 
-            <View style={styles.sideCol}>
-              <TagFilterPanel
-                showTagPanel={showTagPanel}
-                setShowTagPanel={setShowTagPanel}
-                enabledAssignmentTags={enabledAssignmentTags}
-                enabledEventTags={enabledEventTags}
-                allAssignmentOn={allAssignmentOn}
-                allEventOn={allEventOn}
-                toggleAssignmentTag={toggleAssignmentTag}
-                toggleEventTag={toggleEventTag}
-                toggleAllAssignment={toggleAllAssignment}
-                toggleAllEvent={toggleAllEvent}
-                styles={styles}
-                colors={colors}
-              />
+          </View>
 
+          {/* Month view and deadlines sit under the full-width calendar. */}
+          <View style={styles.belowRow}>
+            <View style={{ flex: 1, minWidth: 280 }}>
               <MiniCalendar
                 calYear={calYear}
                 calMonth={calMonth}
@@ -201,6 +192,8 @@ export default function ScheduleScreen({ navigation, route }: any) {
                 colors={colors}
               />
 
+            </View>
+            <View style={{ flex: 2, minWidth: 280 }}>
               <UpcomingDeadlines deadlines={deadlines} styles={styles} colors={colors} />
             </View>
           </View>
@@ -284,7 +277,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   // Layout
   mainLayout:        { flexDirection: 'row', gap: spacing.xl },
   calendarContainer: { flex: 1 },
-  sideCol:           { width: 260, gap: spacing.lg },
+  belowRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl, marginTop: spacing.xl },
 
   timeColHeader: { height: 60 }, // matches dayHeader height so time labels align with grid
   // Day header row (above grid)

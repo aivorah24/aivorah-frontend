@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -7,6 +7,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import Header from '../../../components/common/Header';
 
 import { TIMES, HOUR_HEIGHT } from './constants';
+import { useScheduleScroll } from '../../../hooks/useScheduleScroll';
 import { makeStyles } from './styles';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
 import { useStudents } from './hooks/useStudents';
@@ -16,7 +17,6 @@ import { useEventForm } from './hooks/useEventForm';
 import { useDragToMove } from './hooks/useDragToMove';
 import { useDragToCreate } from './hooks/useDragToCreate';
 import WeekNavBar from './components/WeekNavBar';
-import TagFilterPanel from './components/TagFilterPanel';
 import CalendarGrid from './components/CalendarGrid';
 import EventFormModal from './components/EventFormModal';
 import EventDetailModal from './components/EventDetailModal';
@@ -32,18 +32,17 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   // same dual-purpose ref the monolithic screen used.
   const firstLoadDoneRef = useRef(false);
 
-  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, vScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
-    useWeekNav(firstLoadDoneRef);
+  const scrollToNowRef = useRef<((animated?: boolean) => void) | null>(null);
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
+  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
+    useWeekNav(firstLoadDoneRef, scrollToNowRef, gridWidth);
 
   const { eventsMap, setEventsMap, loading, nowTime, removeEvent } =
     useScheduleEvents(week, user?.email, firstLoadDoneRef);
 
   const { students } = useStudents(user?.email);
 
-  const { passesTagFilter, allDayHeight, showTagPanel, setShowTagPanel,
-    enabledAssignmentTags, enabledEventTags, allAssignmentOn, allEventOn,
-    toggleAssignmentTag, toggleEventTag, toggleAllAssignment, toggleAllEvent,
-  } = useTagFilters(eventsMap, week);
+  const { passesTagFilter, allDayHeight } = useTagFilters(eventsMap, week);
 
   const form = useEventForm({
     todayISO,
@@ -70,6 +69,8 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   );
 
   const gridHeight = TIMES.length * HOUR_HEIGHT;
+  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, pinnedHeader: Platform.OS === 'web' });
+  useEffect(() => { scrollToNowRef.current = scrollScheduleToNow; });
 
   return (
     <ScreenLayout>
@@ -85,7 +86,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView ref={vScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           {/* Info banner */}
           <View style={styles.infoBanner}>
@@ -100,7 +101,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           {loading ? (
             <ActivityIndicator size="large" color={gold} style={{ marginTop: 40 }} />
           ) : (
-            <View style={styles.mainLayout}>
+            <View style={styles.mainLayout} onLayout={(e) => { onScheduleGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
               <CalendarGrid
                 colors={colors}
                 gold={gold}
@@ -126,22 +127,6 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                 onDayHeaderPress={() => scrollToCurrentTime()}
               />
 
-              {/* ── Right Sidebar: Tag Filters ── */}
-              <TagFilterPanel
-                colors={colors}
-                gold={gold}
-                styles={styles}
-                showTagPanel={showTagPanel}
-                setShowTagPanel={setShowTagPanel}
-                enabledAssignmentTags={enabledAssignmentTags}
-                enabledEventTags={enabledEventTags}
-                allAssignmentOn={allAssignmentOn}
-                allEventOn={allEventOn}
-                toggleAssignmentTag={toggleAssignmentTag}
-                toggleEventTag={toggleEventTag}
-                toggleAllAssignment={toggleAllAssignment}
-                toggleAllEvent={toggleAllEvent}
-              />
             </View>
           )}
         </ScrollView>

@@ -28,6 +28,8 @@ export function subjectToBookFolder(subject: string): string {
 // authoritative; only fall back to rebuilding the path from grade+subject for
 // older lessons published before the map existed.
 export function bookSrc(topic: any, grade: string, subject: string): string {
+  // A book the teacher uploaded for this lesson.
+  if (topic?.bookUrl) return topic.bookUrl;
   const rel = topic?.bookPath
     || `grade${grade.replace(/[^0-9]/g, '')}/${subjectToBookFolder(subject)}/${topic?.pdfFile}`;
   // Signed-URL redirect route lives on the auth service, not the (dead)
@@ -41,6 +43,11 @@ export function bookSrc(topic: any, grade: string, subject: string): string {
 // Grade 6 English reader. Using it as a blanket label mislabels every other
 // book (e.g. Grade 6 Science is "Curiosity"). Map the ones we ship; fall back
 // to a neutral, non-misleading label for the rest.
+// The teacher's own book keeps the name they gave it.
+export function bookLabel(topic: any, grade: string, subject: string): string {
+  return topic?.bookUrl ? (topic.bookTitle || "Your teacher's book") : bookTitleFor(grade, subject);
+}
+
 export function bookTitleFor(grade: string, subject: string): string {
   const g = grade.replace(/[^0-9]/g, '');
   const s = subject.trim().toLowerCase();

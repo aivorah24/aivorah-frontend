@@ -1,11 +1,10 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import TeacherCurriculumLearningPathScreen from '../../TeacherCurriculumLearningPathScreen';
 
 jest.mock('../../../../../components/common/Header', () => {
-  const { View } = require('react-native');
-  return { __esModule: true, default: () => <View testID="header-stub" /> };
+  const { View, Text } = require('react-native');
+  return { __esModule: true, default: (props: any) => <View testID="header-stub"><Text>{props.title}</Text></View> };
 });
 jest.mock('../../../../../components/common/ScreenLayout', () => {
   const { View } = require('react-native');
@@ -22,64 +21,23 @@ jest.mock('../../hooks/useLearningPathDraft', () => ({
   useLearningPathDraft: () => mockUseLearningPathDraft(),
 }));
 
-function baseDraftHookReturn(overrides = {}) {
-  return {
-    learningPath: null, loading: false, saving: false, publishing: false, error: '',
-    load: jest.fn(), updateContent: jest.fn(), save: jest.fn(), publish: jest.fn(),
-    ...overrides,
-  };
-}
+const draftReturn = (learningPath: any = null) => ({ learningPath, load: jest.fn() });
+const upload = (curriculum: any, extra = {}) => ({ curriculum, error: '', busy: false, pickAndUpload: jest.fn(), retry: jest.fn(), ...extra });
 
-describe('TeacherCurriculumLearningPathScreen metadata display', () => {
-  test('shows file name, grade, subject and learning path id once the draft has metadata', async () => {
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: { id: 'c1', file_name: 'Grade_6_Mathematics_Curriculum_Test.docx', status: 'generated' },
-      error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
-    });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: {
-        id: 'lp1', curriculum_id: 'c1', status: 'draft',
-        content: { version: 1, metadata: { grade: '6', subject: 'Mathematics' }, units: [] },
-      },
-    }));
-
-    await render(<TeacherCurriculumLearningPathScreen />);
-
-    await waitFor(() => expect(screen.getByTestId('curriculum-metadata')).toBeTruthy());
-    expect(screen.getByText('File: Grade_6_Mathematics_Curriculum_Test.docx')).toBeTruthy();
-    expect(screen.getByText('Grade: 6')).toBeTruthy();
-    expect(screen.getByText('Subject: Mathematics')).toBeTruthy();
-    expect(screen.getByText('Learning Path ID: lp1')).toBeTruthy();
+describe('TeacherCurriculumLearningPathScreen (sidebar: Curriculum Upload)', () => {
+  test('is titled Curriculum Upload', async () => {
+    mockUseCurriculumUpload.mockReturnValue(upload(null));
+    mockUseLearningPathDraft.mockReturnValue(draftReturn());
+    await render(<TeacherCurriculumLearningPathScreen navigation={{ navigate: jest.fn() }} />);
+    expect(screen.getByText('Curriculum Upload')).toBeTruthy();
   });
 
-  test('omits metadata lines that are not present rather than showing blanks', async () => {
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: { id: 'c1', file_name: 'no-metadata.pdf', status: 'generated' },
-      error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
-    });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: { id: 'lp1', curriculum_id: 'c1', status: 'draft', content: { version: 1, units: [] } },
-    }));
-
-    await render(<TeacherCurriculumLearningPathScreen />);
-
-    await waitFor(() => expect(screen.getByTestId('curriculum-metadata')).toBeTruthy());
-    expect(screen.queryByText(/Grade:/)).toBeNull();
-    expect(screen.queryByText(/Subject:/)).toBeNull();
-    expect(screen.getByText('Learning Path ID: lp1')).toBeTruthy();
-  });
-});
-
-describe('TeacherCurriculumLearningPathScreen pre-upload config wiring', () => {
   test('picking a file passes the selected curriculum/grade/subject to pickAndUpload', async () => {
     const pickAndUpload = jest.fn();
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: null, error: '', busy: false, pickAndUpload, reset: jest.fn(),
-    });
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn());
-
+    mockUseCurriculumUpload.mockReturnValue(upload(null, { pickAndUpload }));
+    mockUseLearningPathDraft.mockReturnValue(draftReturn());
     const user = userEvent.setup();
-    await render(<TeacherCurriculumLearningPathScreen />);
+    await render(<TeacherCurriculumLearningPathScreen navigation={{ navigate: jest.fn() }} />);
 
     await user.press(screen.getByTestId('pre-upload-dropzone'));
 
@@ -87,78 +45,29 @@ describe('TeacherCurriculumLearningPathScreen pre-upload config wiring', () => {
       expect.objectContaining({ curriculum: expect.any(String), grade: expect.any(String), subject: expect.any(String) })
     );
   });
-});
 
-describe('TeacherCurriculumLearningPathScreen publish validation guard', () => {
-  function learningPathWithTopics(topics: { status?: 'ready' | 'needs_teacher_input' }[]) {
-    return {
-      id: 'lp1', curriculum_id: 'c1', status: 'draft' as const,
-      content: {
-        version: 1,
-        units: [{
-          title: 'Unit 1', order: 0,
-          topics: topics.map((t, i) => ({
-            title: `Topic ${i}`, order: i, objectives: [], lessons: [], subtopics: [], ...t,
-          })),
-        }],
-      },
-    };
-  }
-
-  beforeEach(() => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    mockUseCurriculumUpload.mockReturnValue({
-      curriculum: { id: 'c1', file_name: 'doc.pdf', status: 'generated' },
-      error: '', busy: false, pickAndUpload: jest.fn(), reset: jest.fn(),
-    });
-  });
-  afterEach(() => jest.restoreAllMocks());
-
-  test('Case A: blocks publish and shows an alert when at least one topic needs teacher input', async () => {
-    const publish = jest.fn();
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'needs_teacher_input' }, { status: 'needs_teacher_input' }]),
-      publish,
-    }));
-
-    const user = userEvent.setup();
-    await render(<TeacherCurriculumLearningPathScreen />);
-    await user.press(screen.getByTestId('pre-upload-publish'));
-
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Cannot publish yet',
-      'Please review and provide input for 2 topics marked "Needs Your Input".'
-    );
-    expect(publish).not.toHaveBeenCalled();
+  test('while processing, the review button waits; there is no save/publish here any more', async () => {
+    mockUseCurriculumUpload.mockReturnValue(upload({ id: 'c1', file_name: 'x.pdf', status: 'generating' }));
+    mockUseLearningPathDraft.mockReturnValue(draftReturn());
+    await render(<TeacherCurriculumLearningPathScreen navigation={{ navigate: jest.fn() }} />);
+    expect(screen.getByText('Available when processing finishes')).toBeTruthy();
+    expect(screen.queryByTestId('pre-upload-publish')).toBeNull();
+    expect(screen.queryByTestId('pre-upload-save-draft')).toBeNull();
   });
 
-  test('Case B: proceeds with the normal publish flow when all topics are ready', async () => {
-    const publish = jest.fn();
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: learningPathWithTopics([{ status: 'ready' }, { status: 'ready' }]),
-      publish,
+  test('once ready it shows what was detected and opens the path in Learning Paths', async () => {
+    const navigate = jest.fn();
+    mockUseCurriculumUpload.mockReturnValue(upload({ id: 'c1', file_name: 'x.pdf', status: 'generated' }));
+    mockUseLearningPathDraft.mockReturnValue(draftReturn({
+      id: 'lp1', curriculum_id: 'c1', status: 'draft',
+      content: { version: 1, units: [{ title: 'U', order: 0, topics: [{ title: 'A', order: 0, objectives: [], lessons: [], subtopics: [] }, { title: 'B', order: 1, objectives: [], lessons: [], subtopics: [] }] }] },
     }));
-
     const user = userEvent.setup();
-    await render(<TeacherCurriculumLearningPathScreen />);
-    await user.press(screen.getByTestId('pre-upload-publish'));
+    await render(<TeacherCurriculumLearningPathScreen navigation={{ navigate }} />);
 
-    expect(Alert.alert).not.toHaveBeenCalled();
-    expect(publish).toHaveBeenCalled();
-  });
+    await waitFor(() => expect(screen.getByText('Your learning path is ready')).toBeTruthy());
+    await user.press(screen.getByTestId('pre-upload-open-review'));
 
-  test('treats topics with no status field (predating this feature) as valid, not blocking', async () => {
-    const publish = jest.fn();
-    mockUseLearningPathDraft.mockReturnValue(baseDraftHookReturn({
-      learningPath: learningPathWithTopics([{}, {}]),
-      publish,
-    }));
-
-    const user = userEvent.setup();
-    await render(<TeacherCurriculumLearningPathScreen />);
-    await user.press(screen.getByTestId('pre-upload-publish'));
-
-    expect(Alert.alert).not.toHaveBeenCalled();
-    expect(publish).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('TeacherClassLearningPaths', { curriculumId: 'c1' });
   });
 });

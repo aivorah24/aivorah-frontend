@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { ScrollView, useWindowDimensions } from 'react-native';
 import { DAY_COL_WIDTH, TIME_LABEL_WIDTH, TIMES, HOUR_HEIGHT, TIMELINE_START_HOUR } from '../constants';
 import { buildWeek, buildMonthCalendar, dateISO } from '../utils/dateHelpers';
 
-export function useWeekNavigation() {
+// `gridWidth`: the calendar's measured width, so the 7 day columns fill it exactly (the window size is only a first guess).
+export function useWeekNavigation(scrollToNow?: MutableRefObject<((animated?: boolean) => void) | null>, gridWidth?: number | null) {
   const today = useMemo(() => new Date(), []);
   const [weekBase, setWeekBase] = useState(today);
   const week = useMemo(() => buildWeek(weekBase), [weekBase]);
@@ -14,7 +15,7 @@ export function useWeekNavigation() {
   const calWeeks = useMemo(() => buildMonthCalendar(calYear, calMonth), [calYear, calMonth]);
 
   const { width: screenWidth } = useWindowDimensions();
-  const availableGridWidth = Math.max(700, screenWidth - 260 - 24);
+  const availableGridWidth = gridWidth || Math.max(700, screenWidth - 260 - 24);
   const colWidth = Math.max(DAY_COL_WIDTH, Math.floor((availableGridWidth - TIME_LABEL_WIDTH) / 7));
   const gridHeight = TIMES.length * HOUR_HEIGHT;
 
@@ -31,13 +32,9 @@ export function useWeekNavigation() {
     hScrollRef.current?.scrollTo({ x: todayCol * cw, animated: true });
   }
 
-  // Auto-scroll horizontal timeline to show today's column
+  // Vertical scrolling (open at now, Today → now) lives in useScheduleScroll; the screen passes it in.
   function scrollToCurrentTime(animated = true) {
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    // Offset within grid: 1 hour before current time so you see context
-    const timeOffsetY = Math.max(0, ((currentMins - TIMELINE_START_HOUR * 60 - 60) / 60) * HOUR_HEIGHT);
-    setTimeout(() => vScrollRef.current?.scrollTo({ y: timeOffsetY, animated }), 200);
+    scrollToNow?.current?.(animated);
   }
 
   function prevWeek() { const d = new Date(weekBase); d.setDate(d.getDate() - 7); setWeekBase(d); }
@@ -72,8 +69,6 @@ export function useWeekNavigation() {
     if (week.some(d => d.iso === todayISO)) {
       setTimeout(() => scrollToToday(colWidth), 300);
     }
-    // Vertical: scroll outer page ScrollView to current time
-    scrollToCurrentTime();
   }, [week, todayISO, colWidth]);
 
   return {

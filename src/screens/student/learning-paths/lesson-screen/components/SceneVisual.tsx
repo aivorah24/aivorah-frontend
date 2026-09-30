@@ -5,7 +5,7 @@ import type { AppColors } from '../../../../../theme';
 import type { SceneVisual as Visual } from '../types';
 import ZoomableImage from './ZoomableImage';
 
-const TINTS = ['#4C8FD6', '#D65C5C', '#B07A10', '#7A5CC8', '#2E8B5A', '#C2578F', '#3B8EA5'];
+export const TINTS = ['#4C8FD6', '#D65C5C', '#B07A10', '#7A5CC8', '#2E8B5A', '#C2578F', '#3B8EA5'];
 
 function Box({ text, tint, colors, bold }: { text: string; tint: string; colors: AppColors; bold?: boolean }) {
   return (

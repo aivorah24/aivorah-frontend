@@ -1,8 +1,10 @@
 import { auth } from '../../../../config/firebase';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
-import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent } from '../types';
+import { TeacherCurriculum, CurriculumProgress, TeacherLearningPath, LearningPathContent, MyLearningPathSummary } from '../types';
 
 async function authHeaders(): Promise<Record<string, string>> {
+  // After a page refresh Firebase restores the sign-in a moment later; asking before that read as "not signed in".
+  await auth.authStateReady?.();
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) throw new Error('Not signed in.');
   return { Authorization: `Bearer ${idToken}` };
@@ -92,4 +94,47 @@ export async function publishLearningPath(curriculumId: string): Promise<{ learn
     method: 'POST', headers,
   });
   return parseOrThrow(res);
+}
+
+export interface BookSectionOption {
+  grade: number;
+  pdfFile: string;
+  bookPath: string | null;
+  bookTitle: string | null;
+  chapterTitle: string | null;
+  title: string;
+  page: number;
+}
+
+// The book sections (up to 2) chosen for one subtopic; empty = not in the book, AI explains it.
+export type SubtopicSectionPick = { pdfFile: string; title: string }[];
+
+export async function getBookSections(grade: string, subject: string): Promise<{ sections: BookSectionOption[] }> {
+  const headers = await authHeaders();
+  const qs = `grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`;
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/book-sections?${qs}`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function rebuildTopic(
+  curriculumId: string, unitOrder: number, topicOrder: number, subtopicSections: SubtopicSectionPick[]
+): Promise<{ learningPath: TeacherLearningPath }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}/learning-path/topics/rebuild`, {
+    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ unitOrder, topicOrder, subtopicSections }),
+  });
+  return parseOrThrow(res);
+}
+
+export async function listMyLearningPaths(): Promise<{ learningPaths: MyLearningPathSummary[] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/learning-paths`, { headers });
+  return parseOrThrow(res);
+}
+
+export async function deleteLearningPath(curriculumId: string): Promise<void> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/teacher-curriculum/${curriculumId}`, { method: 'DELETE', headers });
+  if (!res.ok) await parseOrThrow(res);
 }

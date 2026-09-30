@@ -109,9 +109,11 @@ export function adaptTeacherContentToTopic(topicTitle: string, content: TeacherT
     page: '',
     // Real NCERT chapter match (Phase 3, backend) — falls through to
     // undefined for older paths, which keeps today's no-book-pane behavior.
-    pdfFile: book?.pdfFile,
+    pdfFile: (book as any)?.bookUrl ? (book?.pdfFile || 'teacher-book.pdf') : book?.pdfFile,
     bookPath: book?.bookPath || undefined,
     pdfPage: book?.pdfPage,
+    bookUrl: (book as any)?.bookUrl || undefined,
+    bookTitle: (book as any)?.bookTitle || undefined,
     readText: {
       intro,
       keyLearnings: content?.whatYoullLearn || [],

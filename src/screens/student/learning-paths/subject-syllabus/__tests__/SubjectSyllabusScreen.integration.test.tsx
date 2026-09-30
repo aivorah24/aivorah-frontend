@@ -9,6 +9,14 @@ import SubjectSyllabusScreen from '../SubjectSyllabusScreen';
 
 jest.setTimeout(15000);
 
+const mockTeacherPaths: any[] = [];
+jest.mock('../../teacher-learning-paths/hooks/useTeacherPaths', () => ({
+  useTeacherPaths: () => ({ paths: mockTeacherPaths, loaded: true }),
+}));
+let mockSubjectEdits: any = null;
+jest.mock('../hooks/useStudentSubjectEdits', () => ({
+  useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
+}));
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888',
@@ -43,7 +51,50 @@ function routeProp(params: any = {}) {
 }
 
 beforeEach(() => {
+  mockSubjectEdits = null;
   global.fetch = jest.fn().mockResolvedValue(jsonRes({ units: [] })) as any;
+});
+
+describe("SubjectSyllabusScreen — the teacher's version of the subject", () => {
+  test('hidden chapters are gone, renamed topics show their new name, and an edited lesson opens with the edits', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      units: [
+        { unitNo: 1, title: 'Patterns', pdfFile: 'a.pdf', topics: [{ name: 'What is a pattern', kind: 'qdrant' }] },
+        { unitNo: 2, title: 'Angles', pdfFile: 'b.pdf', topics: [{ name: 'Point', kind: 'qdrant' }] },
+      ],
+    })) as any;
+    mockSubjectEdits = {
+      chapters: [
+        { key: 'pdf:a.pdf', topics: [{ key: 'pdf:a.pdf::what is a pattern', name: 'Spotting patterns' }] },
+        { key: 'pdf:b.pdf', hidden: true, topics: [] },
+      ],
+      topics: { 'pdf:a.pdf::what is a pattern': { whatYoullLearn: ['See patterns around you'] } },
+    };
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Mathematics' })} />);
+    await waitFor(() => expect(screen.getByPlaceholderText('Search chapters or topics…')).toBeTruthy());
+    expect(screen.queryByText(/Angles/)).toBeNull();
+
+    await user.type(screen.getByPlaceholderText('Search chapters or topics…'), 'Spot');
+    await user.press(await screen.findByText(/Spotting patterns/));
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      byNameTopic: 'What is a pattern',
+      topicName: 'Spotting patterns',
+      editKey: 'pdf:a.pdf::what is a pattern',
+    }));
+  });
+});
+
+test("a book section (no id) opens its real lesson by name, not the old built-in one", async () => {
+  global.fetch = jest.fn().mockResolvedValue(jsonRes({
+    units: [{ unitNo: 1, title: 'The Wonderful World of Science', pdfFile: 'fecu101.pdf', topics: [{ name: 'The Scientific Method', kind: 'section', page: 5 }] }],
+  })) as any;
+  const nav = navProp();
+  const user = userEvent.setup();
+  await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Science' })} />);
+  await user.press(await screen.findByText(/The Scientific Method/));
+  expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({ byNameTopic: 'The Scientific Method', topicId: undefined }));
 });
 
 describe('SubjectSyllabusScreen — states', () => {
@@ -186,5 +237,37 @@ describe('SubjectSyllabusScreen — navigation', () => {
     await waitFor(() => expect(screen.getByText(/Fables and Folk Tales/)).toBeTruthy());
     // Its topics should now be visible (chapter opened), not just the collapsed heading.
     expect(screen.getAllByText(/Topic \d/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('SubjectSyllabusScreen — teacher-published units', () => {
+  afterEach(() => { mockTeacherPaths.length = 0; });
+  const content = { whatYoullLearn: ['x'], blocks: [] };
+  const teacherPath = {
+    summary: { id: 'lp1', curriculumId: 'c1', title: 'Visual Arts', publishedAt: 'x' },
+    path: {
+      id: 'lp1', curriculumId: 'c1', publishedAt: 'x',
+      content: {
+        version: 1, metadata: { grade: '4', subject: 'Visual Arts', curriculum: 'IB PYP' },
+        units: [{ title: 'Colour', order: 0, topics: [{ title: 'Mixing colours', order: 0, objectives: [], lessons: [], subtopics: [], content }] }],
+      },
+    },
+  };
+
+  test("IB: with no standard syllabus, the teacher's units are the subject's chapters and a topic opens the lesson", async () => {
+    mockTeacherPaths.push(teacherPath);
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Visual Arts', curriculum: 'IB PYP', grade: 'Grade 4' })} />);
+
+    await waitFor(() => expect(screen.getByText('Unit 1: Colour')).toBeTruthy());
+    expect(screen.queryByText(/being processed/)).toBeNull();
+    expect(screen.queryByText(/FROM YOUR TEACHER/i)).toBeNull();
+
+    if (!screen.queryByText('Topic 1: Mixing colours')) await user.press(screen.getByText('Unit 1: Colour'));
+    await user.press(await screen.findByText('Topic 1: Mixing colours'));
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      subject: 'Visual Arts', grade: 'Grade 4', curriculum: 'IB PYP', chapterTitle: 'Colour', topicName: 'Mixing colours', teacherContent: content,
+    }));
   });
 });

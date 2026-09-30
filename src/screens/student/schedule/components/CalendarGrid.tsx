@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
@@ -31,12 +31,16 @@ interface Props {
   colors: AppColors;
 }
 
+// Web keeps the header row in view with CSS sticky; the page's vertical ScrollView is its scroll container.
+const PINNED: any = Platform.OS === 'web' ? { position: 'sticky', top: 0 } : null;
+
 export default function CalendarGrid({
   loading, week, todayISO, eventDates, eventsMap, hideCompleted, filterType, passesTagFilter,
   allDayHeight, gridHeight, colWidth, hScrollRef, didInitialScrollRef, scrollToToday,
   dragPreview, onColMouseDown, onAllDaySlotPress, onEventPress, onRemoveEvent, onAddEventPress,
   styles, colors,
 }: Props) {
+  const headerScrollRef = useRef<ScrollView>(null);
   return (
     <View style={styles.calendarContainer}>
       {loading ? (
@@ -45,8 +49,9 @@ export default function CalendarGrid({
           <Text style={styles.emptyText}>Loading schedule…</Text>
         </View>
       ) : (
-        <View style={{ flexDirection: 'row', height: 60 + allDayHeight + gridHeight }}>
-          {/* FIXED LEFT: time labels (never scroll horizontally) */}
+        <>
+        {/* Pinned: dates and the all-day row stay at the top while the hours scroll under them (like Teams). */}
+        <View style={[{ flexDirection: 'row', zIndex: 5, backgroundColor: colors.bgDark }, PINNED]}>
           <View style={{ width: TIME_LABEL_WIDTH, backgroundColor: colors.bgDark, zIndex: 2 }}>
             <View style={[styles.timeColHeader, { justifyContent: 'flex-end', paddingBottom: 6, alignItems: 'center' }]}>
               <Text style={{ fontSize: 8.5, fontWeight: '700', color: colors.textDim, textAlign: 'center', lineHeight: 11 }}>GMT{'\n'}+05:30</Text>
@@ -56,28 +61,8 @@ export default function CalendarGrid({
             <View style={[styles.allDayGutter, { height: allDayHeight }]}>
               <Text style={styles.allDayGutterText}>All{'\n'}day</Text>
             </View>
-            {TIMES.map((t) => (
-              <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
-                <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
-              </View>
-            ))}
           </View>
-
-          {/* SCROLLABLE RIGHT: day headers + columns */}
-          <ScrollView
-            ref={hScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ flex: 1 }}
-            // Scroll to today once the grid content has actually laid out — the
-            // effect alone can fire before the (loading-gated) ScrollView mounts.
-            onContentSizeChange={() => {
-              if (!didInitialScrollRef.current && week.some(d => d.iso === todayISO)) {
-                didInitialScrollRef.current = true;
-                scrollToToday(colWidth);
-              }
-            }}
-          >
+          <ScrollView ref={headerScrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
             <View style={{ width: colWidth * 7 }}>
               {/* Day header row */}
               <View style={styles.dayHeaderRow}>
@@ -155,6 +140,37 @@ export default function CalendarGrid({
                 })}
               </View>
 
+            </View>
+          </ScrollView>
+        </View>
+
+        <View style={{ flexDirection: 'row', height: gridHeight }}>
+          <View style={{ width: TIME_LABEL_WIDTH, backgroundColor: colors.bgDark, zIndex: 2 }}>
+            {TIMES.map((t) => (
+              <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
+                <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* The day columns scroll sideways; the pinned dates follow them. */}
+          <ScrollView
+            ref={hScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            // Scroll to today once the grid content has actually laid out — the
+            // effect alone can fire before the (loading-gated) ScrollView mounts.
+            onContentSizeChange={() => {
+              if (!didInitialScrollRef.current && week.some(d => d.iso === todayISO)) {
+                didInitialScrollRef.current = true;
+                scrollToToday(colWidth);
+              }
+            }}
+            onScroll={(e) => headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}
+            scrollEventThrottle={16}
+          >
+            <View style={{ width: colWidth * 7 }}>
               {/* Day columns */}
               <View style={{ flexDirection: 'row' }}>
                 {week.map((d) => {
@@ -242,6 +258,7 @@ export default function CalendarGrid({
             </View>
           </ScrollView>
         </View>
+        </>
       )}
 
       {/* Add event button */}

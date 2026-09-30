@@ -25,6 +25,7 @@ export function usePracticeRedirect(
     // must round-trip through the quiz the same way byNameTopic does, or
     // returning from Quiz loses the content and shows "not available".
     teacherContent?: unknown;
+    editKey?: string;
     // Questions built from the book for this section ({ question, options, correctIndex, explanation, page }).
     bookQuiz?: any[];
   },
@@ -59,6 +60,7 @@ export function usePracticeRedirect(
         topicId: params.topicId, byNameTopic: params.byNameTopic, chapterTitle: params.chapterTitle,
         topicName: params.byNameTopic || (params.teacherContent ? topic.name : undefined),
         teacherContent: params.teacherContent,
+        editKey: params.editKey,
       },
     });
   }, [mode, topic, contentReady]);

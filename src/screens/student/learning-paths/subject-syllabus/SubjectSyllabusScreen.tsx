@@ -25,6 +25,11 @@ import { makeStyles } from './styles';
 import { useSyllabusChapters } from './hooks/useSyllabusChapters';
 import { useChapterExpansion } from './hooks/useChapterExpansion';
 import ChapterCard from './components/ChapterCard';
+import { useTeacherPaths } from '../teacher-learning-paths/hooks/useTeacherPaths';
+import { teacherChapters } from './teacherChapters';
+import { useStudentSubjectEdits } from './hooks/useStudentSubjectEdits';
+import { useRefreshOnFocus } from './hooks/useRefreshOnFocus';
+import { applySubjectEdits, lessonAsTeacherContent } from './subjectEdits';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -40,7 +45,17 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   const { stats: studentStats } = useStudentData();
   const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
 
-  const { chapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  const { chapters: standardChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  // The teacher's own version of this subject: renamed, reordered, hidden or added chapters/topics and edited lessons.
+  const refreshKey = useRefreshOnFocus(navigation);
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { refreshKey });
+  const bookChapters = useMemo(
+    () => (subjectEdits ? applySubjectEdits(standardChapters as any, subjectEdits) as unknown as SyllabusChapter[] : standardChapters),
+    [standardChapters, subjectEdits],
+  );
+  // The teacher's published units are ordinary chapters of this subject (first, as the class follows them).
+  const { paths: teacherPaths } = useTeacherPaths(grade, subject);
+  const chapters = useMemo(() => [...teacherChapters(teacherPaths), ...bookChapters], [teacherPaths, bookChapters]);
 
   // Grade 1-2 NCERT books are genuinely two levels — a Unit (e.g. "My Family
   // and Me") directly containing individual poems/stories, with no chapter
@@ -63,14 +78,31 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
     const topic = chapter.topics[topicIndex] as any;
-    // Two different kinds of "real" (non-curated) topic share this list:
-    // a teacher-published one with a real syllabus_topics DB id, and a real
-    // NCERT/Qdrant topic with no DB row at all (kind: 'qdrant' — see Bug #8
-    // and its Bug #11 follow-up, BUGS_AND_FIXES.md). Sending a Qdrant topic's
-    // synthetic id ("qdrant:...") as `topicId` made LessonScreen fetch from
-    // the DB-id route instead of the byName route, which found nothing —
-    // "Content coming soon" for a topic that has real content in Qdrant.
-    const isQdrantTopic = isDbBacked && topic?.kind === 'qdrant';
+    if (topic?.added) {
+      navigation.navigate('LessonScreen', {
+        subject, grade, curriculum, chapterTitle: chapter.title, chapterIndex, topicIndex,
+        topicName: topic.name, teacherContent: lessonAsTeacherContent(topic.lessonEdit),
+      });
+      return;
+    }
+    if ((chapter as any).teacherUnit) {
+      const meta = (chapter as any).teacherMeta || {};
+      navigation.navigate('LessonScreen', {
+        subject, grade,
+        curriculum: meta.curriculum || curriculum,
+        chapterTitle: chapter.title,
+        chapterIndex: topic.unitOrder,
+        topicIndex: topic.topicOrder,
+        topicName: topic.name,
+        teacherContent: topic.teacherContent,
+      });
+      return;
+    }
+    // A topic with a real syllabus_topics id is fetched by id. Everything else from the server — Qdrant topics
+    // (kind 'qdrant', synthetic ids) and book sections (kind 'section', no id) — is fetched by name; sending
+    // neither left the lesson on the old built-in dataset. A topic the teacher renamed is looked up by its
+    // original name.
+    const isQdrantTopic = isDbBacked && (topic?.kind === 'qdrant' || !topic?.id);
     navigation.navigate('LessonScreen', {
       subject, curriculum, grade,
       chapterTitle: chapter.title,
@@ -80,7 +112,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       // resources from the DB instead of the static curated dataset.
       topicId: isDbBacked && !isQdrantTopic ? topic?.id : undefined,
       topicName: isDbBacked ? topic?.name : undefined,
-      byNameTopic: isQdrantTopic ? topic?.name : undefined,
+      byNameTopic: isQdrantTopic ? (topic?.baseName || topic?.name) : undefined,
+      ...(topic?.lessonEdit ? { editKey: topic.editKey } : {}),
     });
   }
 
@@ -106,7 +139,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
     : 0;
   const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
 
-  if (loadingDb) {
+  if (loadingDb || !editsLoaded) {
     return (
       <ScreenLayout>
         <View style={styles.screen}>
@@ -190,7 +223,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
               next to whichever card was expanded to show its topics. */}
           {filteredChapters.map(({ chapter, ci, topics }) => (
             <ChapterCard
-              key={chapter.title}
+              key={`${(chapter as any).teacherUnit ? 'u' : 'c'}-${ci}-${chapter.title}`}
               chapter={chapter}
               ci={ci}
               topics={topics}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import { type CBSE_G6_ENGLISH_SYLLABUS } from '../../../../../data/cbseG6EnglishSyllabus';
 
@@ -20,7 +20,8 @@ export interface TopicByName {
 // this is what makes an uploaded book actually reach students. A topic
 // identified by name instead (`byName`) resolves the same way, straight
 // from Qdrant — see TopicByName above.
-export function useDbTopic(topicId: string | undefined, topicNameParam: string | undefined, byName?: TopicByName, opts?: { enabled?: boolean }) {
+// `override`: the teacher's edited lesson fields, laid over what the server returns.
+export function useDbTopic(topicId: string | undefined, topicNameParam: string | undefined, byName?: TopicByName, opts?: { enabled?: boolean; override?: Record<string, any> }) {
   const [dbTopic, setDbTopic] = useState<typeof CBSE_G6_ENGLISH_SYLLABUS[0]['topics'][0] | null>(null);
   // Raw AI_EXPLANATION payload — fed to the type-driven LessonRenderer so the
   // Learn view is composed from canonical components (poem/story/math layouts),
@@ -39,6 +40,10 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
   // rendering an empty lesson.
   const [contentReady, setContentReady] = useState(!active);
   const byNameKey = byName ? `${byName.curriculum}|${byName.grade}|${byName.subject}|${byName.topic}` : undefined;
+  const override = opts?.override;
+  const overrideKey = override ? JSON.stringify(override) : '';
+  // Only a different topic shows the loading state; the teacher's newly published edits swap in place.
+  const shownTopic = useRef<string | null>(null);
 
   useEffect(() => {
     if (!active) {
@@ -48,7 +53,8 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
       return;
     }
     let cancelled = false;
-    setLoadingDbTopic(true);
+    const topicKey = `${topicId || ''}|${byNameKey || ''}`;
+    if (shownTopic.current !== topicKey) setLoadingDbTopic(true);
     const url = topicId
       ? `${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/topic/${topicId}/resources`
       : `${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/topic-by-name/resources?${new URLSearchParams({
@@ -67,9 +73,10 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
         // Older imported topics only carry { text } — handle both. We never
         // synthesize a blank figure box: figureUrl stays undefined unless a real
         // image exists.
-        const p = explanation?.status === 'READY' ? (explanation.payload || {}) : {};
+        const edited = !!override && Object.keys(override).length > 0;
+        const p = { ...(explanation?.status === 'READY' ? (explanation.payload || {}) : {}), ...(edited ? override : {}) };
         setRawPayload(p);
-        setContentReady(explanation?.status === 'READY');
+        setContentReady(explanation?.status === 'READY' || edited);
         const hasRich = Array.isArray(p.body) && p.body.length > 0;
         const realImg = images?.status === 'READY' ? images.payload?.items?.[0]?.description : undefined;
         setDbTopic({
@@ -78,8 +85,11 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
           page: images?.payload?.pageRef ? String(images.payload.pageRef) : '',
           // Real source PDF → the "View in Book" right pane shows the actual
           // NCERT book (with its illustrations), same as the curated G6 topics.
-          pdfFile: p.pdfFile || undefined,
-          pdfPage: p.pdfFile ? (p.pdfPage || 1) : undefined,
+          // A teacher's uploaded book (bookUrl) takes the place of the standard book.
+          pdfFile: p.bookUrl ? (p.pdfFile || 'teacher-book.pdf') : (p.pdfFile || undefined),
+          pdfPage: p.pdfFile || p.bookUrl ? (p.pdfPage || 1) : undefined,
+          bookUrl: p.bookUrl || undefined,
+          bookTitle: p.bookTitle || undefined,
           // Exact storage path from the syllabus map, so the reader opens the
           // right book without the client re-deriving a folder name.
           bookPath: p.bookPath || undefined,
@@ -105,11 +115,12 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
             instructionalType: typeof p.instructionalType === 'string' ? p.instructionalType : undefined,
           },
         } as any);
+        shownTopic.current = topicKey;
         setLoadingDbTopic(false);
       })
       .catch(() => { if (!cancelled) { setContentReady(false); setLoadingDbTopic(false); } });
     return () => { cancelled = true; };
-  }, [topicId, byNameKey, enabled]);
+  }, [topicId, byNameKey, enabled, overrideKey]);
 
   return { dbTopic, rawPayload, loadingDbTopic, contentReady };
 }
