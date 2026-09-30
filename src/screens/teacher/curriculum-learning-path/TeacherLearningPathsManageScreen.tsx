@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
@@ -18,8 +18,12 @@ export default function TeacherLearningPathsManageScreen({ route }: any) {
   const [listRefresh, setListRefresh] = useState(0);
   const dirty = useRef(false);
 
-  // Opened from Curriculum Upload with a freshly generated path.
-  useEffect(() => { if (wanted) setOpenedId(wanted); }, [wanted]);
+  // Opened from Curriculum Upload with a freshly generated path (adjusted during render when the param changes).
+  const [prevWanted, setPrevWanted] = useState(wanted);
+  if (wanted !== prevWanted) {
+    setPrevWanted(wanted);
+    if (wanted) setOpenedId(wanted);
+  }
 
   const refreshList = useCallback(() => setListRefresh((n) => n + 1), []);
   const trackDirty = useCallback((d: boolean) => { dirty.current = d; }, []);

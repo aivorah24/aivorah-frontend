@@ -12,6 +12,8 @@ export function useTeacherPaths(grade: string, subject?: string) {
 
   useEffect(() => {
     let cancelled = false;
+    // data fetching effect — reset before the async fetch below
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoaded(false);
     (async () => {
       try {
