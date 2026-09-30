@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../components/common/Header';
@@ -10,6 +10,7 @@ import { applySubjectEdits, setLesson, resetLesson } from '../../student/learnin
 import { useSubjectEditsDraft } from './hooks/useSubjectEditsDraft';
 import SubjectOutline from './components/SubjectOutline';
 import TopicCanvas from './components/TopicCanvas';
+import Toast, { type ToastMessage } from './components/Toast';
 
 function when(iso: string | null | undefined) {
   if (!iso) return '';
@@ -37,19 +38,16 @@ export default function TeacherSubjectEditorScreen({ route, navigation }: any) {
   const chapter = chapters.find((c) => c.editKey === selected?.chapterKey);
   const topic = chapter?.topics.find((t) => t.editKey === selected?.topicKey);
 
-  const [notice, setNotice] = useState('');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   const [publishing, setPublishing] = useState(false);
-  useEffect(() => {
-    if (!notice) return undefined;
-    const t = setTimeout(() => setNotice(''), 6000);
-    return () => clearTimeout(t);
-  }, [notice]);
   async function publish() {
     const wasPublished = draft.status?.status === 'published';
     setPublishing(true);
     const ok = await draft.publish();
     setPublishing(false);
-    if (ok) setNotice(wasPublished ? `Updates published — your ${grade} students now see the latest ${subject}.` : `Published — your ${grade} students now see your version of ${subject}.`);
+    setToast(ok
+      ? { kind: 'success', title: wasPublished ? 'Updates published' : 'Published to students', detail: `Your ${grade} students now see your ${subject}.` }
+      : { kind: 'error', title: 'Could not publish', detail: 'Please try again.' });
   }
 
   const s = draft.status;
@@ -101,13 +99,6 @@ export default function TeacherSubjectEditorScreen({ route, navigation }: any) {
           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13.5 }}>{publishing ? 'Publishing…' : s?.status === 'published' ? 'Publish updates' : 'Publish to students'}</Text>
         </TouchableOpacity>
       </View>
-      {!!notice && (
-        <View testID="publish-notice" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: colors.accentGreen + '1F', borderWidth: 1, borderColor: colors.accentGreen + '66' }}>
-          <Feather name="check-circle" size={18} color={colors.accentGreen} />
-          <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: colors.textMain }}>{notice}</Text>
-          <TouchableOpacity onPress={() => setNotice('')}><Feather name="x" size={16} color={colors.textMuted} /></TouchableOpacity>
-        </View>
-      )}
 
       {loadingDb || draft.loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
@@ -133,6 +124,7 @@ export default function TeacherSubjectEditorScreen({ route, navigation }: any) {
           </ScrollView>
         </View>
       )}
+      <Toast toast={toast} colors={colors} onClose={() => setToast(null)} />
     </ScreenLayout>
   );
 }

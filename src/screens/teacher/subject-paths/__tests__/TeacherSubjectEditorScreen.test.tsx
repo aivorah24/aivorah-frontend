@@ -75,8 +75,9 @@ test('hiding a chapter saves it on its own, then publishing sends it to students
   await fireEvent.press(screen.getByTestId('publish-subject'));
   await waitFor(() => expect(mockPublish).toHaveBeenCalledWith(SCOPE));
   expect(await screen.findByText(/students see this/)).toBeTruthy();
-  expect(screen.getByTestId('publish-notice')).toBeTruthy();
-  expect(screen.getByText(/Published — your Grade 6 students now see your version of Mathematics/)).toBeTruthy();
+  expect(screen.getByTestId('toast')).toBeTruthy();
+  expect(screen.getByText('Published to students')).toBeTruthy();
+  expect(screen.getByText('Your Grade 6 students now see your Mathematics.')).toBeTruthy();
 });
 
 test('editing an objective and adding a key-points block makes the lesson the teacher version, shown in Student view', async () => {
