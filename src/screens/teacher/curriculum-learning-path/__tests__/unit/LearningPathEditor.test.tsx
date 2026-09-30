@@ -138,6 +138,27 @@ describe('LearningPathEditor', () => {
     expect(screen.getByTestId('quality-advice-1').props.children).toEqual(['•', ' ', '1 explanation block(s) are too short (under 15 words)']);
   });
 
+  test('a topic without a lesson offers "Generate lesson again" and retries just that topic', async () => {
+    const content = reviewContent();
+    const onRebuildTopic = jest.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={onRebuildTopic} />);
+    await user.press(screen.getByTestId('topic-1-0'));
+
+    await user.press(screen.getByTestId('regenerate-topic'));
+    expect(onRebuildTopic).toHaveBeenCalledWith(1, 0, [[]]);
+  });
+
+  test('a failed retry says so and keeps the button', async () => {
+    const content = reviewContent();
+    const user = userEvent.setup();
+    await render(<LearningPathEditor content={content} onChange={jest.fn()} onRebuildTopic={jest.fn().mockRejectedValue(new Error('AI busy, try later'))} />);
+    await user.press(screen.getByTestId('topic-1-0'));
+    await user.press(screen.getByTestId('regenerate-topic'));
+    await waitFor(() => expect(screen.getByTestId('regenerate-error').props.children).toBe('AI busy, try later'));
+    expect(screen.getByTestId('regenerate-topic')).toBeTruthy();
+  });
+
   test('read only: the title cannot be edited and there is no Edit button', async () => {
     await render(<LearningPathEditor content={reviewContent()} onChange={jest.fn()} readOnly />);
     expect(screen.getByTestId('topic-title-0-0').props.editable).toBe(false);

@@ -39,6 +39,26 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
   const [selected, setSelected] = useState<{ ui: number; ti: number }>({ ui: 0, ti: 0 });
   const [editing, setEditing] = useState(false);
   const [showAdvice, setShowAdvice] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenError, setRegenError] = useState('');
+
+  // Retries one topic that came out without a lesson (e.g. the AI service was busy), keeping any book picks.
+  async function regenerate() {
+    if (!onRebuildTopic || !topic) return;
+    setRegenerating(true);
+    setRegenError('');
+    try {
+      const picks = topic.subtopics.map((s) => {
+        const page = topic.content?.book?.pages?.find((p) => p.subtopic === s.title);
+        return (page?.sections || []).map((x) => ({ pdfFile: x.pdfFile, title: x.title }));
+      });
+      await onRebuildTopic(unit.order, topic.order, picks.length ? picks : [[]]);
+    } catch (e: any) {
+      setRegenError(e.message || 'Could not generate this topic right now.');
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   const unit = content.units[selected.ui];
   const topic = unit?.topics[selected.ti];
@@ -69,7 +89,7 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
                 <TouchableOpacity
                   key={ti}
                   testID={`topic-${ui}-${ti}`}
-                  onPress={() => { setSelected({ ui, ti }); setShowAdvice(false); }}
+                  onPress={() => { setSelected({ ui, ti }); setShowAdvice(false); setRegenError(''); }}
                   activeOpacity={0.7}
                   style={[styles.topicRow, active && { borderColor: colors.primary, backgroundColor: colors.primary + '12' }]}
                 >
@@ -139,8 +159,15 @@ export default function LearningPathEditor({ content, onChange, readOnly, onRebu
               practiceSlot={<PracticePreview questions={topic.content.practiceQuiz || []} colors={colors} />}
             />
           ) : (
-            <View testID="no-lesson-content" style={styles.empty}>
-              <Text style={styles.hint}>{hasNcertBooks ? 'No lesson content for this topic yet. Use Edit to choose book pages and rebuild it.' : 'No lesson content for this topic yet. Use Edit to add it.'}</Text>
+            <View testID="no-lesson-content" style={[styles.empty, { gap: 10 }]}>
+              <Text style={styles.hint}>No lesson for this topic yet. Generate it again, or add it yourself in Edit.</Text>
+              {!readOnly && !!onRebuildTopic && (
+                <TouchableOpacity testID="regenerate-topic" disabled={regenerating} onPress={regenerate} activeOpacity={0.8} style={[styles.editBtn, { alignSelf: 'flex-start', opacity: regenerating ? 0.6 : 1 }]}>
+                  <Feather name="refresh-cw" size={14} color={colors.primary} />
+                  <Text style={styles.editBtnText}>{regenerating ? 'Generating… about a minute' : 'Generate lesson again'}</Text>
+                </TouchableOpacity>
+              )}
+              {!!regenError && <Text testID="regenerate-error" style={{ fontSize: 12, color: colors.accentRed }}>{regenError}</Text>}
             </View>
           )}
         </View>
