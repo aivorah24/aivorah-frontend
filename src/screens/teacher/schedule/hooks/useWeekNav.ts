@@ -3,14 +3,15 @@ import { ScrollView, useWindowDimensions } from 'react-native';
 import { buildWeek, dateISO } from '../utils/scheduleUtils';
 import { DAY_COL_WIDTH, HOUR_HEIGHT, TIME_LABEL_WIDTH, TIMELINE_START_HOUR } from '../constants';
 
-export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>, scrollToNow?: MutableRefObject<((animated?: boolean) => void) | null>) {
+// `gridWidth`: the calendar's measured width, so the 7 day columns fill it exactly (the window size is only a first guess).
+export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>, scrollToNow?: MutableRefObject<((animated?: boolean) => void) | null>, gridWidth?: number | null) {
   const today = useMemo(() => new Date(), []);
   const todayISO = useMemo(() => dateISO(today), [today]);
   const [weekBase, setWeekBase] = useState(today);
   const week = useMemo(() => buildWeek(weekBase), [weekBase]);
 
   const { width: screenWidth } = useWindowDimensions();
-  const availableGridWidth = Math.max(700, screenWidth - 260 - 24);
+  const availableGridWidth = gridWidth || Math.max(700, screenWidth - 260 - 24);
   const colWidth = Math.max(DAY_COL_WIDTH, Math.floor((availableGridWidth - TIME_LABEL_WIDTH) / 7));
 
   const hScrollRef = useRef<ScrollView>(null);

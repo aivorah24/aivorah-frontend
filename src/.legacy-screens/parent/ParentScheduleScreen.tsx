@@ -349,7 +349,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
 
 
   const { width: screenWidth } = useWindowDimensions();
-  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor((screenWidth - TIME_LABEL_WIDTH) / 7));
+  // The calendar's measured width, so the 7 day columns fill it exactly (the window size is only a first guess).
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
+  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor(((gridWidth || screenWidth - 300) - TIME_LABEL_WIDTH) / 7));
 
   // Auto-scroll to today on mount and when weekBase changes to current week
   useEffect(() => {
@@ -407,7 +409,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.mainLayout} onLayout={scheduleScroll.onGridLayout}>
+          <View style={styles.mainLayout} onLayout={(e) => { scheduleScroll.onGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
             {/* ── Left: Week Calendar Grid ── */}
             <View style={styles.calendarContainer}>
               {/* Sticky time label column + scrollable day columns */}
@@ -633,9 +635,10 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                 </TouchableOpacity>
               ) : null}
             </View>
+          </View>
 
-            {/* ── Right Sidebar ── */}
-            <View style={styles.sideCol}>
+          {/* Month view and the rest sit under the full-width calendar. */}
+          <View style={styles.sideCol}>
               {/* Mini Calendar */}
               <View style={styles.sideCard}>
                 <View style={styles.calHeader}>
@@ -700,7 +703,6 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                   })
                 )}
               </View>
-            </View>
           </View>
         </ScrollView>
 
@@ -836,8 +838,8 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
 
   // Layout
   mainLayout:        { flexDirection: 'row', gap: spacing.xl },
-  calendarContainer: { flex: 1.5 },
-  sideCol:           { flex: 1, gap: spacing.lg },
+  calendarContainer: { flex: 1 },
+  sideCol:           { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.xl },
 
   // Day header
   dayHeaderRow:         { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.borderColor, marginBottom: 0 },
@@ -886,7 +888,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   emptyText:    { fontFamily: fonts.serif, fontSize: 12, color: c.textMuted, marginTop: 8 },
 
   // Sidebar
-  sideCard:      { backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: radius.lg, padding: spacing.lg },
+  sideCard:      { flex: 1, minWidth: 280, backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: radius.lg, padding: spacing.lg },
   calHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   calMonth:      { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: c.textMain },
   calDayHeaders: { flexDirection: 'row', marginBottom: spacing.sm },

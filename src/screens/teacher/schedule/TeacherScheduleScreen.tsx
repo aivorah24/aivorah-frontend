@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
@@ -17,7 +17,6 @@ import { useEventForm } from './hooks/useEventForm';
 import { useDragToMove } from './hooks/useDragToMove';
 import { useDragToCreate } from './hooks/useDragToCreate';
 import WeekNavBar from './components/WeekNavBar';
-import TagFilterPanel from './components/TagFilterPanel';
 import CalendarGrid from './components/CalendarGrid';
 import EventFormModal from './components/EventFormModal';
 import EventDetailModal from './components/EventDetailModal';
@@ -34,18 +33,16 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   const firstLoadDoneRef = useRef(false);
 
   const scrollToNowRef = useRef<((animated?: boolean) => void) | null>(null);
+  const [gridWidth, setGridWidth] = useState<number | null>(null);
   const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
-    useWeekNav(firstLoadDoneRef, scrollToNowRef);
+    useWeekNav(firstLoadDoneRef, scrollToNowRef, gridWidth);
 
   const { eventsMap, setEventsMap, loading, nowTime, removeEvent } =
     useScheduleEvents(week, user?.email, firstLoadDoneRef);
 
   const { students } = useStudents(user?.email);
 
-  const { passesTagFilter, allDayHeight, showTagPanel, setShowTagPanel,
-    enabledAssignmentTags, enabledEventTags, allAssignmentOn, allEventOn,
-    toggleAssignmentTag, toggleEventTag, toggleAllAssignment, toggleAllEvent,
-  } = useTagFilters(eventsMap, week);
+  const { passesTagFilter, allDayHeight } = useTagFilters(eventsMap, week);
 
   const form = useEventForm({
     todayISO,
@@ -104,7 +101,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           {loading ? (
             <ActivityIndicator size="large" color={gold} style={{ marginTop: 40 }} />
           ) : (
-            <View style={styles.mainLayout} onLayout={onScheduleGridLayout}>
+            <View style={styles.mainLayout} onLayout={(e) => { onScheduleGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
               <CalendarGrid
                 colors={colors}
                 gold={gold}
@@ -130,22 +127,6 @@ export default function TeacherScheduleScreen({ navigation }: any) {
                 onDayHeaderPress={() => scrollToCurrentTime()}
               />
 
-              {/* ── Right Sidebar: Tag Filters ── */}
-              <TagFilterPanel
-                colors={colors}
-                gold={gold}
-                styles={styles}
-                showTagPanel={showTagPanel}
-                setShowTagPanel={setShowTagPanel}
-                enabledAssignmentTags={enabledAssignmentTags}
-                enabledEventTags={enabledEventTags}
-                allAssignmentOn={allAssignmentOn}
-                allEventOn={allEventOn}
-                toggleAssignmentTag={toggleAssignmentTag}
-                toggleEventTag={toggleEventTag}
-                toggleAllAssignment={toggleAllAssignment}
-                toggleAllEvent={toggleAllEvent}
-              />
             </View>
           )}
         </ScrollView>
