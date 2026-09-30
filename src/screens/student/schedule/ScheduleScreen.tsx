@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
@@ -12,6 +12,8 @@ import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
 import type { ScheduleEvent, SelectedEventDetail } from './types';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
 import { useWeekNavigation } from './hooks/useWeekNavigation';
+import { useScheduleScroll } from '../../../hooks/useScheduleScroll';
+import { HOUR_HEIGHT } from './constants';
 import { useTagFilters } from './hooks/useTagFilters';
 import { useDragToCreate } from './hooks/useDragToCreate';
 import { useAddEventModal } from './hooks/useAddEventModal';
@@ -34,6 +36,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { studentId } = useStudentData();
 
+  const scrollToNowRef = useRef<((animated?: boolean) => void) | null>(null);
   const {
     today, todayISO, weekBase, week,
     calYear, calMonth, calWeeks,
@@ -41,7 +44,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
     hScrollRef, didInitialScrollRef,
     prevWeek, nextWeek, goToday, prevMonth, nextMonth, selectDate,
     scrollToToday,
-  } = useWeekNavigation();
+  } = useWeekNavigation(scrollToNowRef);
 
   const {
     filterType, setFilterType, hideCompleted, setHideCompleted,
@@ -91,6 +94,8 @@ export default function ScheduleScreen({ navigation, route }: any) {
     );
     return Math.max(36, max * 26 + 10);
   }, [eventsMap, week, hideCompleted, filterType, enabledAssignmentTags, enabledEventTags]);
+  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT });
+  useEffect(() => { scrollToNowRef.current = scrollScheduleToNow; });
 
   function handleEventPress(event: ScheduleEvent, [accent, fill, textCol]: [string, string, string]) {
     setSelectedEvent({ ...event, accent, fill, textCol });
@@ -125,7 +130,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           <FilterBar
             filterType={filterType}
@@ -145,7 +150,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
             colors={colors}
           />
 
-          <View style={styles.mainLayout}>
+          <View style={styles.mainLayout} onLayout={onScheduleGridLayout}>
             <CalendarGrid
               loading={loading}
               week={week}

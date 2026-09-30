@@ -3,7 +3,7 @@ import { ScrollView, useWindowDimensions } from 'react-native';
 import { buildWeek, dateISO } from '../utils/scheduleUtils';
 import { DAY_COL_WIDTH, HOUR_HEIGHT, TIME_LABEL_WIDTH, TIMELINE_START_HOUR } from '../constants';
 
-export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>) {
+export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>, scrollToNow?: MutableRefObject<((animated?: boolean) => void) | null>) {
   const today = useMemo(() => new Date(), []);
   const todayISO = useMemo(() => dateISO(today), [today]);
   const [weekBase, setWeekBase] = useState(today);
@@ -24,11 +24,9 @@ export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>) {
     hScrollRef.current?.scrollTo({ x: todayCol * cw, animated: true });
   }
 
+  // Vertical scrolling (open at now, Today → now) lives in useScheduleScroll; the screen passes it in.
   function scrollToCurrentTime(animated = true) {
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    const timeOffsetY = Math.max(0, ((currentMins - TIMELINE_START_HOUR * 60 - 60) / 60) * HOUR_HEIGHT);
-    setTimeout(() => vScrollRef.current?.scrollTo({ y: timeOffsetY, animated }), 200);
+    scrollToNow?.current?.(animated);
   }
 
   function goToday() {
@@ -46,7 +44,6 @@ export function useWeekNav(firstLoadDoneRef: MutableRefObject<boolean>) {
     if (week.some(d => d.iso === todayISO)) {
       setTimeout(() => scrollToTodayCol(weekBase, colWidth), 300);
     }
-    scrollToCurrentTime();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [week, todayISO, colWidth]);
 

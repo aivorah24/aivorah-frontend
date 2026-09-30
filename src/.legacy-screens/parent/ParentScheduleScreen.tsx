@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useScheduleScroll } from '../../hooks/useScheduleScroll';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -330,7 +331,6 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   function nextWeek() { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }
 
   const horizScrollRef = useRef<ScrollView>(null);
-  const vScrollRef = useRef<ScrollView>(null);
 
   // Scroll horizontally to show today's column (0-indexed day of week, Mon=0)
   function scrollToToday(cw: number) {
@@ -340,11 +340,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   }
 
   function scrollToCurrentTime(animated = true) {
-    const now = new Date();
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-    const timeOffsetY = Math.max(0, ((currentMins - TIMELINE_START_HOUR * 60 - 60) / 60) * HOUR_HEIGHT);
-    setTimeout(() => vScrollRef.current?.scrollTo({ y: timeOffsetY, animated }), 200);
+    scheduleScroll.scrollToNow(animated);
   }
+
 
   const { width: screenWidth } = useWindowDimensions();
   const colWidth = Math.max(DAY_COL_WIDTH, Math.floor((screenWidth - TIME_LABEL_WIDTH) / 7));
@@ -355,9 +353,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     if (weekIsos.includes(todayISO)) {
       setTimeout(() => scrollToToday(colWidth), 300);
     }
-    scrollToCurrentTime();
   }, [weekBase, colWidth]);
   const gridHeight = TIMES.length * HOUR_HEIGHT;
+  const scheduleScroll = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, headerHeight: 56 });
   const totalGridWidth = TIME_LABEL_WIDTH + colWidth * 7;
 
   return (
@@ -370,7 +368,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
           onMenuPress={() => navigation.openDrawer()}
         />
 
-        <ScrollView ref={vScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScroll.scrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           {/* ── Child Selector ── */}
           {children.length > 0 && (
@@ -405,7 +403,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.mainLayout}>
+          <View style={styles.mainLayout} onLayout={scheduleScroll.onGridLayout}>
             {/* ── Left: Week Calendar Grid ── */}
             <View style={styles.calendarContainer}>
               {/* Sticky time label column + scrollable day columns */}

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
@@ -7,6 +7,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import Header from '../../../components/common/Header';
 
 import { TIMES, HOUR_HEIGHT } from './constants';
+import { useScheduleScroll } from '../../../hooks/useScheduleScroll';
 import { makeStyles } from './styles';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
 import { useStudents } from './hooks/useStudents';
@@ -32,8 +33,9 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   // same dual-purpose ref the monolithic screen used.
   const firstLoadDoneRef = useRef(false);
 
-  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, vScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
-    useWeekNav(firstLoadDoneRef);
+  const scrollToNowRef = useRef<((animated?: boolean) => void) | null>(null);
+  const { week, todayISO, weekBase, setWeekBase, colWidth, hScrollRef, goToday, onGridContentSizeChange, scrollToCurrentTime } =
+    useWeekNav(firstLoadDoneRef, scrollToNowRef);
 
   const { eventsMap, setEventsMap, loading, nowTime, removeEvent } =
     useScheduleEvents(week, user?.email, firstLoadDoneRef);
@@ -70,6 +72,8 @@ export default function TeacherScheduleScreen({ navigation }: any) {
   );
 
   const gridHeight = TIMES.length * HOUR_HEIGHT;
+  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT });
+  useEffect(() => { scrollToNowRef.current = scrollScheduleToNow; });
 
   return (
     <ScreenLayout>
@@ -85,7 +89,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView ref={vScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scheduleScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           {/* Info banner */}
           <View style={styles.infoBanner}>
@@ -100,7 +104,7 @@ export default function TeacherScheduleScreen({ navigation }: any) {
           {loading ? (
             <ActivityIndicator size="large" color={gold} style={{ marginTop: 40 }} />
           ) : (
-            <View style={styles.mainLayout}>
+            <View style={styles.mainLayout} onLayout={onScheduleGridLayout}>
               <CalendarGrid
                 colors={colors}
                 gold={gold}
