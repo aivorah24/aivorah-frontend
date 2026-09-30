@@ -19,6 +19,7 @@ import TeacherAnnouncementsScreen from '@legacy/teacher-legacy/TeacherAnnounceme
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
 import TeacherLearningPathsManageScreen from '../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen';
+import TeacherSubjectEditorScreen from '../screens/teacher/subject-paths/TeacherSubjectEditorScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
 import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
@@ -66,6 +67,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherCurriculumLearningPath" component={TeacherCurriculumLearningPathScreen} />
       <Drawer.Screen name="TeacherClassLearningPaths" component={TeacherLearningPathsManageScreen} />
+      <Drawer.Screen name="TeacherSubjectEditor" component={TeacherSubjectEditorScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
       <Drawer.Screen name="TeacherHelp" component={HelpSupportScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />

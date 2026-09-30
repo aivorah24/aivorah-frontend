@@ -16,6 +16,11 @@ jest.mock('../../../../student/learning-paths/lesson-screen/LessonScreen', () =>
   return { __esModule: true, default: () => <View testID="lesson-view" /> };
 });
 
+jest.mock('../../../subject-paths/components/TeacherSubjectCards', () => {
+  const { View } = require('react-native');
+  return { __esModule: true, default: () => <View testID="subject-cards" /> };
+});
+
 const mockListMyLearningPaths = jest.fn();
 jest.mock('../../services/curriculumLearningPathService', () => ({
   getBookSections: jest.fn(),

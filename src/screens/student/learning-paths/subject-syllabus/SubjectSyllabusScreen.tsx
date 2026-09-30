@@ -27,6 +27,8 @@ import { useChapterExpansion } from './hooks/useChapterExpansion';
 import ChapterCard from './components/ChapterCard';
 import { useTeacherPaths } from '../teacher-learning-paths/hooks/useTeacherPaths';
 import { teacherChapters } from './teacherChapters';
+import { useStudentSubjectEdits } from './hooks/useStudentSubjectEdits';
+import { applySubjectEdits, lessonAsTeacherContent } from './subjectEdits';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -42,7 +44,13 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   const { stats: studentStats } = useStudentData();
   const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
 
-  const { chapters: bookChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  const { chapters: standardChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
+  // The teacher's own version of this subject: renamed, reordered, hidden or added chapters/topics and edited lessons.
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject);
+  const bookChapters = useMemo(
+    () => (subjectEdits ? applySubjectEdits(standardChapters as any, subjectEdits) as unknown as SyllabusChapter[] : standardChapters),
+    [standardChapters, subjectEdits],
+  );
   // The teacher's published units are ordinary chapters of this subject (first, as the class follows them).
   const { paths: teacherPaths } = useTeacherPaths(grade, subject);
   const chapters = useMemo(() => [...teacherChapters(teacherPaths), ...bookChapters], [teacherPaths, bookChapters]);
@@ -68,6 +76,13 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
     const topic = chapter.topics[topicIndex] as any;
+    if (topic?.added) {
+      navigation.navigate('LessonScreen', {
+        subject, grade, curriculum, chapterTitle: chapter.title, chapterIndex, topicIndex,
+        topicName: topic.name, teacherContent: lessonAsTeacherContent(topic.lessonEdit),
+      });
+      return;
+    }
     if ((chapter as any).teacherUnit) {
       const meta = (chapter as any).teacherMeta || {};
       navigation.navigate('LessonScreen', {
@@ -99,6 +114,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       topicId: isDbBacked && !isQdrantTopic ? topic?.id : undefined,
       topicName: isDbBacked ? topic?.name : undefined,
       byNameTopic: isQdrantTopic ? topic?.name : undefined,
+      ...(topic?.lessonEdit ? { lessonEdits: topic.lessonEdit } : {}),
     });
   }
 
@@ -124,7 +140,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
     : 0;
   const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
 
-  if (loadingDb) {
+  if (loadingDb || !editsLoaded) {
     return (
       <ScreenLayout>
         <View style={styles.screen}>

@@ -6,6 +6,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import type { AppColors } from '../../../theme';
 import MyLearningPathsList from './components/MyLearningPathsList';
 import LearningPathWorkspace from './components/LearningPathWorkspace';
+import TeacherSubjectCards from '../subject-paths/components/TeacherSubjectCards';
 
 // Sidebar "Learning Paths": every class learning path the teacher has made — open one to review it as students
 // see it, edit it, and publish it (or publish updates).
@@ -30,8 +31,9 @@ export default function TeacherLearningPathsManageScreen({ route }: any) {
 
   return (
     <ScreenLayout>
-      <Header title="Learning Paths" subtitle="Review, edit and publish your class learning paths" />
+      <Header title="Learning Paths" subtitle="See, edit and publish what your students learn" />
       <ScrollView contentContainerStyle={styles.container}>
+        <TeacherSubjectCards colors={colors} />
         <MyLearningPathsList
           colors={colors}
           openCurriculumId={openedId}

@@ -13,6 +13,10 @@ const mockTeacherPaths: any[] = [];
 jest.mock('../../teacher-learning-paths/hooks/useTeacherPaths', () => ({
   useTeacherPaths: () => ({ paths: mockTeacherPaths, loaded: true }),
 }));
+let mockSubjectEdits: any = null;
+jest.mock('../hooks/useStudentSubjectEdits', () => ({
+  useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
+}));
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888',
@@ -47,7 +51,38 @@ function routeProp(params: any = {}) {
 }
 
 beforeEach(() => {
+  mockSubjectEdits = null;
   global.fetch = jest.fn().mockResolvedValue(jsonRes({ units: [] })) as any;
+});
+
+describe("SubjectSyllabusScreen — the teacher's version of the subject", () => {
+  test('hidden chapters are gone, renamed topics show their new name, and an edited lesson opens with the edits', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      units: [
+        { unitNo: 1, title: 'Patterns', pdfFile: 'a.pdf', topics: [{ name: 'What is a pattern', kind: 'qdrant' }] },
+        { unitNo: 2, title: 'Angles', pdfFile: 'b.pdf', topics: [{ name: 'Point', kind: 'qdrant' }] },
+      ],
+    })) as any;
+    mockSubjectEdits = {
+      chapters: [
+        { key: 'pdf:a.pdf', topics: [{ key: 'pdf:a.pdf::what is a pattern', name: 'Spotting patterns' }] },
+        { key: 'pdf:b.pdf', hidden: true, topics: [] },
+      ],
+      topics: { 'pdf:a.pdf::what is a pattern': { whatYoullLearn: ['See patterns around you'] } },
+    };
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Mathematics' })} />);
+    await waitFor(() => expect(screen.getByPlaceholderText('Search chapters or topics…')).toBeTruthy());
+    expect(screen.queryByText(/Angles/)).toBeNull();
+
+    await user.type(screen.getByPlaceholderText('Search chapters or topics…'), 'Spot');
+    await user.press(await screen.findByText(/Spotting patterns/));
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
+      byNameTopic: 'Spotting patterns',
+      lessonEdits: { whatYoullLearn: ['See patterns around you'] },
+    }));
+  });
 });
 
 describe('SubjectSyllabusScreen — states', () => {

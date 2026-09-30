@@ -35,3 +35,10 @@ export async function getTeacherLearningPath(curriculumId: string): Promise<{ le
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths/${curriculumId}`, { headers });
   return parseOrThrow(res);
 }
+
+// Your teacher's published changes to a standard subject path (null when there are none).
+export async function getSubjectEditsForStudent(scope: { curriculum: string; grade: string; subject: string }): Promise<{ edits: any | null }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/student/learning-paths/subject-edits?${new URLSearchParams(scope).toString()}`, { headers });
+  return parseOrThrow(res);
+}

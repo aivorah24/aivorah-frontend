@@ -4,15 +4,15 @@ import type { AppColors } from '../../../../theme';
 import { TeacherContentBlock } from '../types';
 
 // Fields that are data, not wording the teacher should edit.
-const HIDDEN_KEYS = new Set(['type', 'url', 'exampleType', 'synthetic', 'bookPage', 'step', 'step_number', 'correctIndex']);
+export const HIDDEN_KEYS = new Set(['type', 'url', 'exampleType', 'synthetic', 'bookPage', 'step', 'step_number', 'correctIndex']);
 
-const LABELS: Record<string, string> = {
+export const LABELS: Record<string, string> = {
   overview: 'Overview', explanation: 'Explanation', key_terms: 'Key terms', key_points: 'Key points', example: 'Example',
   worked_example: 'Worked example', formula: 'Formula', process: 'Steps', comparison: 'Comparison', table: 'Table',
   activity: 'Activity', tip: 'Tip', common_mistake: 'Common mistake', image: 'Picture',
 };
 
-function setAt(value: any, path: (string | number)[], next: string): any {
+export function setAt(value: any, path: (string | number)[], next: string): any {
   if (!path.length) return next;
   const [head, ...rest] = path;
   const copy = Array.isArray(value) ? [...value] : { ...value };
@@ -21,7 +21,7 @@ function setAt(value: any, path: (string | number)[], next: string): any {
 }
 
 // Every string inside a block, with its path, so any block type can be edited without a per-type form.
-function textFields(value: any, path: (string | number)[] = []): { path: (string | number)[]; label: string; text: string }[] {
+export function textFields(value: any, path: (string | number)[] = []): { path: (string | number)[]; label: string; text: string }[] {
   if (typeof value === 'string') return [{ path, label: String(path[path.length - 1] ?? ''), text: value }];
   if (Array.isArray(value)) return value.flatMap((v, i) => textFields(v, [...path, i]));
   if (value && typeof value === 'object') {

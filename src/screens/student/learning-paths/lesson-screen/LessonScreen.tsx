@@ -68,7 +68,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const teacherTopicName = route?.params?.topicName as string | undefined;
 
   const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic, contentReady: fetchedContentReady } =
-    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked });
+    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked, override: route?.params?.lessonEdits });
   const teacherDbTopic = useMemo(
     () => (isTeacherContentBacked ? adaptTeacherContentToTopic(teacherTopicName || '', teacherContent) : null),
     [isTeacherContentBacked, teacherContent, teacherTopicName]
