@@ -196,7 +196,7 @@ import { StudentDataProvider } from './src/context/StudentDataContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import NotificationBanner from './src/components/common/NotificationBanner';
-import { AnnouncementProvider } from './src/features/announcements/context/AnnouncementProvider';
+import { AnnouncementProvider } from './src/screens/shared/announcements/context/AnnouncementProvider';
 import { colors } from './src/theme';
 import { auth } from './src/config/firebase';
 import { isStudentLocked, subscribeStudentLocked } from './src/services/lockStatus';

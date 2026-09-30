@@ -1,5 +1,5 @@
-import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
-import { Announcement } from '../types/announcement.types';
+import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
+import { Announcement } from '../types';
 
 export interface InboxPage {
   items: Announcement[];

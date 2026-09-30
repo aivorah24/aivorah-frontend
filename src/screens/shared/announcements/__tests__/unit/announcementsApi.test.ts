@@ -3,7 +3,7 @@ import {
   adminListAnnouncements, adminListSchools, adminCreateAnnouncement,
   adminDraftAnnouncement, adminUpdateAnnouncement, adminPublishAnnouncement,
   adminArchiveAnnouncement, adminUploadAttachment,
-} from '../../api/announcementsApi';
+} from '../../services/announcementsApi';
 
 const ANNOUNCEMENT = { id: '1', title: 'Hi', body: 'Body', severity: 'info', displayType: 'both', status: 'published' };
 

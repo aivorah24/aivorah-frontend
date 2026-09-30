@@ -11,7 +11,7 @@ import type { AppColors } from '../../theme';
 import { Feather } from '@expo/vector-icons';
 import PARENTAL_CONTROLS_SERVER_URL from '../../config/parentalControlsServerUrl';
 import { setStudentLocked } from '../../services/lockStatus';
-import AnnouncementBanner from '../../features/announcements/components/AnnouncementBanner';
+import AnnouncementBanner from '../../screens/shared/announcements/components/AnnouncementBanner';
 
 interface ScreenLayoutProps {
   children: React.ReactNode;

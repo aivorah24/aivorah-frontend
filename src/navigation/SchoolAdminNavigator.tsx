@@ -27,8 +27,8 @@ import SchoolAdminClassesScreen from '../screens/school-admin/classes/SchoolAdmi
 import SchoolAdminAddTeacherScreen from '../screens/school-admin/teachers/SchoolAdminAddTeacherScreen';
 import SchoolAdminEditTeacherScreen from '../screens/school-admin/teachers/SchoolAdminEditTeacherScreen';
 import SchoolAdminTeacherBulkImportScreen from '../screens/school-admin/bulk-import/SchoolAdminTeacherBulkImportScreen';
-import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
-import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
+import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
+import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';

@@ -18,8 +18,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { spacing, radius, fonts } from '../../../theme';
-import type { AppColors } from '../../../theme';
+import { spacing, radius, fonts } from '../../../../theme';
+import type { AppColors } from '../../../../theme';
 
 const STYLE_ID = 'aivorah-rich-body-editor-style';
 if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {

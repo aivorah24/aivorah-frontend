@@ -12,7 +12,7 @@ import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChalle
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
-import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
+import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
 import TimetableScreen from '../features/timetable/components/TimetableScreen';
 import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';

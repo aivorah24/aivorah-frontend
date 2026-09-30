@@ -20,7 +20,7 @@ import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import DatePicker from '../../../components/common/DatePicker';
 import TimePicker from '../../../components/common/TimePicker';
-import RichBodyEditor from './RichBodyEditor';
+import RichBodyEditor from './components/RichBodyEditor';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
@@ -29,10 +29,10 @@ import {
   adminListAnnouncements, adminListSchools, adminCreateAnnouncement,
   adminUpdateAnnouncement, adminPublishAnnouncement, adminArchiveAnnouncement,
   adminUploadAttachment, adminDraftAnnouncement, AnnouncementDraft,
-} from '../api/announcementsApi';
-import { SEVERITY_LABEL, severityColor } from '../utils/severity';
-import { audienceLabel } from '../utils/audience';
-import { Announcement, AnnouncementAttachment } from '../types/announcement.types';
+} from './services/announcementsApi';
+import { SEVERITY_LABEL, severityColor } from './utils/severity';
+import { audienceLabel } from './utils/audience';
+import { Announcement, AnnouncementAttachment } from './types';
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Draft', scheduled: 'Scheduled', published: 'Published', archived: 'Archived',

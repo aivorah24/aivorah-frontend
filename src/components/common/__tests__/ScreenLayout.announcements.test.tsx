@@ -18,7 +18,7 @@ jest.mock('../../../hooks/useResponsive', () => ({ useResponsive: () => ({ showP
 jest.mock('../Sidebar', () => () => null);
 jest.mock('../TeacherAIPanel', () => () => null);
 jest.mock('../ParentAIPanel', () => () => null);
-jest.mock('../../../features/announcements/context/AnnouncementProvider', () => ({
+jest.mock('../../../screens/shared/announcements/context/AnnouncementProvider', () => ({
   useAnnouncements: () => ({
     bannerAnnouncements: [{ id: 'a1', title: 'School closed Friday', body: 'Heavy rain', severity: 'info' }],
     dismiss: jest.fn(),

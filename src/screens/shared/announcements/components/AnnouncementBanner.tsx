@@ -18,8 +18,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAnnouncements } from '../context/AnnouncementProvider';
-import { useTheme } from '../../../context/ThemeContext';
-import { spacing, radius } from '../../../theme';
+import { useTheme } from '../../../../context/ThemeContext';
+import { spacing, radius } from '../../../../theme';
 import { SEVERITY_ICON, severityColor } from '../utils/severity';
 import { plainPreview } from '../utils/markdown';
 

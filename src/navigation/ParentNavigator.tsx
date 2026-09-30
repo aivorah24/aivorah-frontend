@@ -18,7 +18,7 @@ import ParentProgressScreen from '../screens/parent/progress/ParentProgressScree
 import ParentAIProgressReportScreen from '../screens/parent/ai-progress-report/ParentAIProgressReportScreen';
 import ParentSettingsScreen from '../screens/parent/settings/ParentSettingsScreen';
 import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';
-import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
+import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
 import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';

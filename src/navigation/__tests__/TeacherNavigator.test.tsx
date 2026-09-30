@@ -25,7 +25,7 @@ describe('TeacherNavigator — route wiring', () => {
 
   test('TeacherAnnouncements uses the shared Announcements screen, not a legacy copy', () => {
     expect(source).toMatch(/<Drawer\.Screen name="TeacherAnnouncements" component=\{AnnouncementsScreen\}/);
-    expect(source).toMatch(/features\/announcements\/components\/AnnouncementsScreen/);
+    expect(source).toMatch(/screens\/shared\/announcements\/AnnouncementsScreen/);
     expect(source).not.toMatch(/teacher-legacy\/TeacherAnnouncementsScreen/);
   });
 

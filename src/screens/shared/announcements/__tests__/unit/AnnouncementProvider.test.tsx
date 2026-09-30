@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen, waitFor, act, userEvent } from '@testing-library/react-native';
 import { Text, TouchableOpacity } from 'react-native';
 import { AnnouncementProvider, useAnnouncements } from '../../context/AnnouncementProvider';
-import * as api from '../../api/announcementsApi';
+import * as api from '../../services/announcementsApi';
 
-jest.mock('../../api/announcementsApi', () => ({
+jest.mock('../../services/announcementsApi', () => ({
   __esModule: true,
   fetchActiveAnnouncements: jest.fn(),
   dismissAnnouncement: jest.fn(),
@@ -12,7 +12,7 @@ jest.mock('../../api/announcementsApi', () => ({
 
 let mockUser: any = { email: 'a@x.com' };
 let mockAuthed = true;
-jest.mock('../../../../context/AuthContext', () => ({
+jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: mockUser, isAuthenticated: mockAuthed }),
 }));
 

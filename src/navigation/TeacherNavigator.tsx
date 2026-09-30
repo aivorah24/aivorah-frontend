@@ -15,14 +15,14 @@ import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChalle
 // Replaced with the real screen, backed by the extracted heatmap route in
 // aivorah-teacher-dashboard-service.
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
-import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
+import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
 import TeacherLearningPathsManageScreen from '../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen';
 import TeacherSubjectEditorScreen from '../screens/teacher/subject-paths/TeacherSubjectEditorScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
-import AnnouncementManagerScreen from '../features/announcements/components/AnnouncementManagerScreen';
+import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
 import TimetableScreen from '../features/timetable/components/TimetableScreen';

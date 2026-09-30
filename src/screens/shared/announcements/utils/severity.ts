@@ -5,8 +5,8 @@
  * shows severity (banner, list rows, filter chips, detail badge) reads from
  * here instead of hardcoding its own copy or colors.
  */
-import type { AppColors } from '../../../theme';
-import type { Announcement } from '../types/announcement.types';
+import type { AppColors } from '../../../../theme';
+import type { Announcement } from '../types';
 
 export const SEVERITY_ORDER: Announcement['severity'][] = ['critical', 'warning', 'info'];
 

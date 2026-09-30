@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
-import AnnouncementsScreen from '../components/AnnouncementsScreen';
-import * as api from '../api/announcementsApi';
+import AnnouncementsScreen from '../../AnnouncementsScreen';
+import * as api from '../../services/announcementsApi';
 
-jest.mock('../api/announcementsApi', () => ({
+jest.mock('../../services/announcementsApi', () => ({
   __esModule: true,
   fetchInbox: jest.fn(),
   markSeen: jest.fn(),
@@ -15,11 +15,11 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: any) => { require('react').useEffect(() => { cb(); }, []); },
 }));
 
-jest.mock('../../../context/AuthContext', () => ({
+jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'parent@x.com' } }),
 }));
 
-jest.mock('../../../context/ThemeContext', () => ({
+jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
       bgDark: '#0B0B0B', cardDark: '#141414', cardHover: '#1A1A1A', borderColor: 'rgba(245,243,238,0.14)',

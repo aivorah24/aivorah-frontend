@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useAuth } from '../../../context/AuthContext';
-import { fetchActiveAnnouncements, dismissAnnouncement } from '../api/announcementsApi';
-import { Announcement } from '../types/announcement.types';
+import { useAuth } from '../../../../context/AuthContext';
+import { fetchActiveAnnouncements, dismissAnnouncement } from '../services/announcementsApi';
+import { Announcement } from '../types';
 
 interface AnnouncementState {
   bannerAnnouncements: Announcement[];

@@ -23,11 +23,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { useResponsive } from '../../../hooks/useResponsive';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
-import { fetchInbox, markSeen } from '../api/announcementsApi';
-import { SEVERITY_LABEL, SEVERITY_ORDER, severityColor } from '../utils/severity';
-import { MarkdownBody, plainPreview } from '../utils/markdown';
-import { audienceLabel } from '../utils/audience';
-import { Announcement } from '../types/announcement.types';
+import { fetchInbox, markSeen } from './services/announcementsApi';
+import { SEVERITY_LABEL, SEVERITY_ORDER, severityColor } from './utils/severity';
+import { MarkdownBody, plainPreview } from './utils/markdown';
+import { audienceLabel } from './utils/audience';
+import { Announcement } from './types';
 
 type Filter = 'all' | 'unread' | Announcement['severity'];
 

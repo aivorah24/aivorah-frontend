@@ -15,7 +15,7 @@
  */
 import React from 'react';
 import { Text, View, Linking, StyleSheet, Platform } from 'react-native';
-import type { AppColors } from '../../../theme';
+import type { AppColors } from '../../../../theme';
 
 type Block =
   | { kind: 'heading'; text: string }

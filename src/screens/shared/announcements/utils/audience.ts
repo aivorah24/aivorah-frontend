@@ -3,7 +3,7 @@
  * metadata (audienceRoles + audienceSchoolName, empty = everyone) into a
  * user-facing label. Derived from real target data — never hardcoded.
  */
-import { Announcement } from '../types/announcement.types';
+import { Announcement } from '../types';
 
 const ROLE_LABEL: Record<string, string> = {
   parent: 'Parents',
