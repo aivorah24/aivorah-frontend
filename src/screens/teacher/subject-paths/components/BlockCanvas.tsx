@@ -5,6 +5,8 @@ import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
 import { LABELS, setAt, textFields } from '../../curriculum-learning-path/components/LearnBlockEditor';
 import { pickLessonImage } from './pickLessonImage';
+import VisualBlockEditor, { isVisualBlock } from './VisualBlockEditor';
+import { blockToVisual } from '../../../student/learning-paths/lesson-screen/utils/blockVisual';
 
 type Block = { type: string; [k: string]: any };
 
@@ -15,7 +17,9 @@ const INSERTS: { label: string; icon: any; make: () => Block | 'image' }[] = [
   { label: 'Activity', icon: 'edit-3', make: () => ({ type: 'activity', text: '' }) },
   { label: 'Tip', icon: 'info', make: () => ({ type: 'tip', text: '' }) },
   { label: 'Key terms', icon: 'book', make: () => ({ type: 'key_terms', items: [{ term: '', definition: '' }] }) },
-  { label: 'Table', icon: 'grid', make: () => ({ type: 'table', caption: '', headers: ['', ''], rows: [['', '']] }) },
+  { label: 'Table', icon: 'grid', make: () => ({ type: 'table', caption: '', headers: ['', ''], rows: [['', ''], ['', '']] }) },
+  { label: 'Columns', icon: 'columns', make: () => ({ type: 'visual', visual: { kind: 'compare', title: '', columns: [{ label: '', points: [''] }, { label: '', points: [''] }] } }) },
+  { label: 'Steps', icon: 'arrow-down-circle', make: () => ({ type: 'process', title: '', steps: ['', ''] }) },
   { label: 'Picture', icon: 'image', make: () => 'image' },
 ];
 
@@ -63,6 +67,7 @@ function InsertBar({ colors, busy, onInsert }: { colors: AppColors; busy: boolea
 }
 
 function BlockForm({ block, colors, onChange, onReplaceImage }: { block: Block; colors: AppColors; onChange: (b: Block) => void; onReplaceImage: () => void }) {
+  if (isVisualBlock(block)) return <VisualBlockEditor block={block} colors={colors} onChange={onChange} />;
   const input = { fontSize: 13.5, lineHeight: 20, color: colors.textMain, borderWidth: 1, borderColor: colors.borderColor, borderRadius: 8, padding: 8, backgroundColor: colors.bgDark } as const;
   const lineList = Array.isArray(block.items) && block.items.every((x: any) => typeof x === 'string');
   return (
@@ -90,16 +95,6 @@ function BlockForm({ block, colors, onChange, onReplaceImage }: { block: Block; 
         <TouchableOpacity onPress={() => onChange({ ...block, items: [...(block.items || []), { term: '', definition: '' }] })}>
           <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary }}>+ Add word</Text>
         </TouchableOpacity>
-      )}
-      {block.type === 'table' && (
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <TouchableOpacity onPress={() => onChange({ ...block, rows: [...(block.rows || []), (block.headers || []).map(() => '')] })}>
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary }}>+ Add row</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onChange({ ...block, headers: [...(block.headers || []), ''], rows: (block.rows || []).map((r: string[]) => [...r, '']) })}>
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary }}>+ Add column</Text>
-          </TouchableOpacity>
-        </View>
       )}
     </View>
   );
@@ -179,6 +174,11 @@ export default function BlockCanvas({ blocks, colors, onChange }: { blocks: Bloc
               ) : (
                 <TouchableOpacity testID={`block-${i}`} activeOpacity={0.8} onPress={() => setSelected(i)}>
                   <LearningBlocks blocks={[block]} colors={colors} />
+                  {isVisualBlock(block) && !blockToVisual(block) && (
+                    <Text style={{ fontSize: 12, color: colors.textMuted, padding: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderColor, borderRadius: 8 }}>
+                      {LABELS[block.type] || 'Diagram'}{block.title || block.caption || block.visual?.title ? ` — ${block.title || block.caption || block.visual?.title}` : ''} · click to fill it in (students see it once it has content)
+                    </Text>
+                  )}
                   {(block.type === 'image' || block.type === 'visual_representation') && !block.url && (
                     <Text style={{ fontSize: 12, color: colors.textMuted, padding: 8 }}>Picture — click to choose one</Text>
                   )}

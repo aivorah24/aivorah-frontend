@@ -9,7 +9,7 @@ export const HIDDEN_KEYS = new Set(['type', 'url', 'exampleType', 'synthetic', '
 export const LABELS: Record<string, string> = {
   overview: 'Overview', explanation: 'Explanation', key_terms: 'Key terms', key_points: 'Key points', example: 'Example',
   worked_example: 'Worked example', formula: 'Formula', process: 'Steps', comparison: 'Comparison', table: 'Table',
-  activity: 'Activity', tip: 'Tip', common_mistake: 'Common mistake', image: 'Picture',
+  activity: 'Activity', tip: 'Tip', common_mistake: 'Common mistake', image: 'Picture', visual: 'Diagram', timeline: 'Timeline', cause_and_effect: 'Cause and effect',
 };
 
 export function setAt(value: any, path: (string | number)[], next: string): any {
