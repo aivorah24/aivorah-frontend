@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../components/common/Header';
@@ -36,6 +36,21 @@ export default function TeacherSubjectEditorScreen({ route, navigation }: any) {
 
   const chapter = chapters.find((c) => c.editKey === selected?.chapterKey);
   const topic = chapter?.topics.find((t) => t.editKey === selected?.topicKey);
+
+  const [notice, setNotice] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(''), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
+  async function publish() {
+    const wasPublished = draft.status?.status === 'published';
+    setPublishing(true);
+    const ok = await draft.publish();
+    setPublishing(false);
+    if (ok) setNotice(wasPublished ? `Updates published — your ${grade} students now see the latest ${subject}.` : `Published — your ${grade} students now see your version of ${subject}.`);
+  }
 
   const s = draft.status;
   const statusText = draft.saving ? 'Saving…'
@@ -80,12 +95,19 @@ export default function TeacherSubjectEditorScreen({ route, navigation }: any) {
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s?.status === 'published' && !s.hasUnpublishedChanges && !draft.dirty ? colors.accentGreen : colors.accentYellow }} />
         <Text testID="edits-status" style={{ flex: 1, fontSize: 13, color: colors.textMuted }}>{statusText}</Text>
         {!!draft.error && <Text style={{ fontSize: 12.5, color: '#C0392B' }}>{draft.error}</Text>}
-        <TouchableOpacity testID="publish-subject" disabled={!canPublish} onPress={draft.publish}
+        <TouchableOpacity testID="publish-subject" disabled={!canPublish || publishing} onPress={publish}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.primary, opacity: canPublish ? 1 : 0.45 }}>
           <Feather name="send" size={14} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13.5 }}>{s?.status === 'published' ? 'Publish updates' : 'Publish to students'}</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13.5 }}>{publishing ? 'Publishing…' : s?.status === 'published' ? 'Publish updates' : 'Publish to students'}</Text>
         </TouchableOpacity>
       </View>
+      {!!notice && (
+        <View testID="publish-notice" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: colors.accentGreen + '1F', borderWidth: 1, borderColor: colors.accentGreen + '66' }}>
+          <Feather name="check-circle" size={18} color={colors.accentGreen} />
+          <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: colors.textMain }}>{notice}</Text>
+          <TouchableOpacity onPress={() => setNotice('')}><Feather name="x" size={16} color={colors.textMuted} /></TouchableOpacity>
+        </View>
+      )}
 
       {loadingDb || draft.loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />

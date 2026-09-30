@@ -59,8 +59,10 @@ export function useSubjectEditsDraft(scope: SubjectScope, base: any[]) {
     try {
       setStatus(await publishSubjectEdits(scope));
       setError('');
+      return true;
     } catch (e: any) {
       setError(e.message || 'Could not publish.');
+      return false;
     }
   }, [dirty, save, key]);
 
