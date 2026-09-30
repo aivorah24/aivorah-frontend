@@ -31,6 +31,7 @@ import PracticeTab from './components/PracticeTab';
 import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
 import { useStudentSubjectEdits } from '../subject-syllabus/hooks/useStudentSubjectEdits';
+import { useRefreshOnFocus } from '../subject-syllabus/hooks/useRefreshOnFocus';
 
 // A link without an edit key finds the teacher's lesson by topic name, when exactly one edited topic has that name.
 function lessonForTopicName(edits: any, name?: string) {
@@ -84,7 +85,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const editKey = route?.params?.editKey as string | undefined;
   const directEdits = route?.params?.lessonEdits;
   const wantsEdits = !directEdits && !embedded && (!!editKey || !!byName);
-  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: wantsEdits });
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: wantsEdits, refreshKey: useRefreshOnFocus(embedded ? null : navigation) });
   const lessonEdits = directEdits || (editKey ? subjectEdits?.topics?.[editKey] : lessonForTopicName(subjectEdits, byName?.topic));
   const waitingForEdits = wantsEdits && !editsLoaded;
 

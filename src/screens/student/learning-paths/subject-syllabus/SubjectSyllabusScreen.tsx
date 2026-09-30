@@ -28,6 +28,7 @@ import ChapterCard from './components/ChapterCard';
 import { useTeacherPaths } from '../teacher-learning-paths/hooks/useTeacherPaths';
 import { teacherChapters } from './teacherChapters';
 import { useStudentSubjectEdits } from './hooks/useStudentSubjectEdits';
+import { useRefreshOnFocus } from './hooks/useRefreshOnFocus';
 import { applySubjectEdits, lessonAsTeacherContent } from './subjectEdits';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -46,7 +47,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
 
   const { chapters: standardChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
   // The teacher's own version of this subject: renamed, reordered, hidden or added chapters/topics and edited lessons.
-  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject);
+  const refreshKey = useRefreshOnFocus(navigation);
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { refreshKey });
   const bookChapters = useMemo(
     () => (subjectEdits ? applySubjectEdits(standardChapters as any, subjectEdits) as unknown as SyllabusChapter[] : standardChapters),
     [standardChapters, subjectEdits],
