@@ -82,8 +82,11 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
           page: images?.payload?.pageRef ? String(images.payload.pageRef) : '',
           // Real source PDF → the "View in Book" right pane shows the actual
           // NCERT book (with its illustrations), same as the curated G6 topics.
-          pdfFile: p.pdfFile || undefined,
-          pdfPage: p.pdfFile ? (p.pdfPage || 1) : undefined,
+          // A teacher's uploaded book (bookUrl) takes the place of the standard book.
+          pdfFile: p.bookUrl ? (p.pdfFile || 'teacher-book.pdf') : (p.pdfFile || undefined),
+          pdfPage: p.pdfFile || p.bookUrl ? (p.pdfPage || 1) : undefined,
+          bookUrl: p.bookUrl || undefined,
+          bookTitle: p.bookTitle || undefined,
           // Exact storage path from the syllabus map, so the reader opens the
           // right book without the client re-deriving a folder name.
           bookPath: p.bookPath || undefined,

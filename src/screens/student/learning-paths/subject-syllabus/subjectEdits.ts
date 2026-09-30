@@ -14,11 +14,13 @@ export type LessonEdit = {
   pdfFile?: string;
   pdfPage?: number;
   bookPath?: string;
+  bookUrl?: string;
+  bookTitle?: string;
 };
 export type SubjectEdits = { chapters: EditChapter[]; topics: Record<string, LessonEdit> };
 
 export const EMPTY_EDITS: SubjectEdits = { chapters: [], topics: {} };
-export const LESSON_FIELDS_ORDER: (keyof LessonEdit)[] = ['whatYoullLearn', 'blocks', 'listenScript', 'listenParts', 'mathTutor', 'practiceQuiz', 'pdfFile', 'pdfPage', 'bookPath'];
+export const LESSON_FIELDS_ORDER: (keyof LessonEdit)[] = ['whatYoullLearn', 'blocks', 'listenScript', 'listenParts', 'mathTutor', 'practiceQuiz', 'pdfFile', 'pdfPage', 'bookPath', 'bookUrl', 'bookTitle'];
 
 type BaseTopic = { name: string; [k: string]: any };
 type BaseChapter = { title: string; topics: BaseTopic[]; pdfFile?: string | null; [k: string]: any };
@@ -166,5 +168,6 @@ export function lessonAsTeacherContent(lesson: LessonEdit | undefined) {
     listenParts: lesson?.listenParts || (lesson?.listenScript || []).map((s) => ({ heading: s.heading, text: s.text })),
     practiceQuiz: (lesson?.practiceQuiz || []).map((q) => ({ type: 'mcq' as const, question: q.question, options: q.options, correct: q.correctIndex, explanation: q.explanation || '' })),
     ...(lesson?.mathTutor ? { mathTutor: lesson.mathTutor } : {}),
+    ...(lesson?.bookUrl || lesson?.pdfFile ? { book: { pdfFile: lesson.pdfFile || '', bookPath: lesson.bookPath || null, pdfPage: lesson.pdfPage || 1, bookUrl: lesson.bookUrl, bookTitle: lesson.bookTitle } } : {}),
   };
 }

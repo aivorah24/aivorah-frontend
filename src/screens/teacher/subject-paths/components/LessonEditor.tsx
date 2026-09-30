@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { LessonEdit, BookQuizQuestion } from '../../../student/learning-paths/subject-syllabus/subjectEdits';
 import MathTutorEditor from '../../curriculum-learning-path/components/MathTutorEditor';
-import { getBookSections, type BookSectionOption } from '../../curriculum-learning-path/services/curriculumLearningPathService';
 import BlockCanvas from './BlockCanvas';
+import BookEditor from './BookEditor';
 
 type Tab = 'learn' | 'audio' | 'practice' | 'book';
 
@@ -105,50 +105,6 @@ function PracticeEditor({ quiz, colors, onChange }: { quiz: BookQuizQuestion[]; 
   );
 }
 
-function BookPicker({ lesson, grade, subject, colors, onChange }: { lesson: LessonEdit; grade: string; subject: string; colors: AppColors; onChange: (patch: Partial<LessonEdit>) => void }) {
-  const input = useInput(colors);
-  const [sections, setSections] = useState<BookSectionOption[] | null>(null);
-  const [query, setQuery] = useState('');
-  const [error, setError] = useState('');
-  useEffect(() => {
-    getBookSections(grade.replace(/\D/g, ''), subject).then((r) => setSections(r.sections)).catch((e) => { setSections([]); setError(e.message); });
-  }, [grade, subject]);
-  const q = query.trim().toLowerCase();
-  const shown = useMemo(() => (sections || []).filter((s) => !q || `${s.title} ${s.chapterTitle || ''}`.toLowerCase().includes(q)).slice(0, 40), [sections, q]);
-  const current = (sections || []).find((s) => s.pdfFile === lesson.pdfFile);
-  return (
-    <View style={{ gap: 10 }}>
-      <View style={{ padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.borderColor, gap: 6 }}>
-        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textMuted }}>BOOK SHOWN NEXT TO THE LESSON</Text>
-        <Text style={{ fontSize: 13.5, fontWeight: '700', color: colors.textMain }}>
-          {lesson.pdfFile ? `${current?.bookTitle || current?.chapterTitle || lesson.pdfFile}` : 'No book page'}
-        </Text>
-        {!!lesson.pdfFile && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 13, color: colors.textMuted }}>Opens at page</Text>
-            <TouchableOpacity testID="page-down" onPress={() => onChange({ pdfPage: Math.max(1, (lesson.pdfPage || 1) - 1) })}><Feather name="minus-circle" size={18} color={colors.primary} /></TouchableOpacity>
-            <Text testID="page-value" style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }}>{lesson.pdfPage || 1}</Text>
-            <TouchableOpacity testID="page-up" onPress={() => onChange({ pdfPage: (lesson.pdfPage || 1) + 1 })}><Feather name="plus-circle" size={18} color={colors.primary} /></TouchableOpacity>
-            <View style={{ flex: 1 }} />
-            <SmallLink label="Remove book" colors={colors} onPress={() => onChange({ pdfFile: undefined, pdfPage: undefined, bookPath: undefined })} />
-          </View>
-        )}
-      </View>
-      <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textMuted }}>CHANGE TO ANOTHER BOOK SECTION</Text>
-      <TextInput value={query} onChangeText={setQuery} placeholder="Search sections…" placeholderTextColor={colors.textMuted} style={input} />
-      {!sections ? <ActivityIndicator color={colors.primary} /> : !!error && !sections.length ? (
-        <Text style={{ fontSize: 12, color: colors.textMuted }}>{error}</Text>
-      ) : shown.map((s, i) => (
-        <TouchableOpacity key={`${s.pdfFile}-${s.title}-${i}`} testID={`book-section-${i}`} onPress={() => onChange({ pdfFile: s.pdfFile, pdfPage: s.page || 1, bookPath: s.bookPath || undefined })}
-          style={{ padding: 10, borderRadius: 8, borderWidth: 1, borderColor: s.pdfFile === lesson.pdfFile ? colors.primary : colors.borderColor }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMain }}>{s.title}</Text>
-          <Text style={{ fontSize: 11.5, color: colors.textMuted }}>Grade {s.grade} · {s.chapterTitle || s.bookTitle} · page {s.page}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
 // Every part of one topic's lesson, editable: objectives + Learn blocks, the Listen / AI Tutor script, Practice, the book.
 export default function LessonEditor({
   lesson, isMath, grade, subject, colors, onChange,
@@ -187,7 +143,7 @@ export default function LessonEditor({
         <ScriptEditor parts={(lesson[scriptField] as any[]) || []} colors={colors} onChange={(parts) => patch({ [scriptField]: parts } as Partial<LessonEdit>)} />
       ))}
       {tab === 'practice' && <PracticeEditor quiz={lesson.practiceQuiz || []} colors={colors} onChange={(practiceQuiz) => patch({ practiceQuiz })} />}
-      {tab === 'book' && <BookPicker lesson={lesson} grade={grade} subject={subject} colors={colors} onChange={patch} />}
+      {tab === 'book' && <BookEditor lesson={lesson} grade={grade} subject={subject} colors={colors} onChange={patch} />}
     </View>
   );
 }

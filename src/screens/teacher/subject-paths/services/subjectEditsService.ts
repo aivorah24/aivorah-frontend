@@ -49,3 +49,9 @@ export async function uploadLessonImage(file: { blob: Blob; name: string }): Pro
   form.append('image', file.blob, file.name);
   return parseOrThrow(await fetch(`${BASE}/images`, { method: 'POST', headers: await authHeaders(), body: form }));
 }
+
+export async function uploadLessonBook(file: { blob: Blob; name: string }): Promise<{ url: string; fileName: string }> {
+  const form = new FormData();
+  form.append('book', file.blob, file.name);
+  return parseOrThrow(await fetch(`${BASE}/books`, { method: 'POST', headers: await authHeaders(), body: form }));
+}
