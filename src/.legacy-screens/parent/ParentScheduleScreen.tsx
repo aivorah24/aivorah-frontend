@@ -141,6 +141,9 @@ interface ScheduleEvent {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+// Web keeps the header row in view with CSS sticky; the page's vertical ScrollView is its scroll container.
+const PINNED: any = Platform.OS === 'web' ? { position: 'sticky', top: 0 } : null;
+
 export default function ParentScheduleScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -331,6 +334,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   function nextWeek() { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }
 
   const horizScrollRef = useRef<ScrollView>(null);
+  const headerScrollRef = useRef<ScrollView>(null);
 
   // Scroll horizontally to show today's column (0-indexed day of week, Mon=0)
   function scrollToToday(cw: number) {
@@ -355,7 +359,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     }
   }, [weekBase, colWidth]);
   const gridHeight = TIMES.length * HOUR_HEIGHT;
-  const scheduleScroll = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, headerHeight: 56 });
+  const scheduleScroll = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, headerHeight: 56, pinnedHeader: Platform.OS === 'web' });
   const totalGridWidth = TIME_LABEL_WIDTH + colWidth * 7;
 
   return (
@@ -407,8 +411,8 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
             {/* ── Left: Week Calendar Grid ── */}
             <View style={styles.calendarContainer}>
               {/* Sticky time label column + scrollable day columns */}
-              <View style={{ flexDirection: 'row', height: 56 + allDayHeight + gridHeight }}>
-                {/* Time labels — sticky, outside horizontal scroll */}
+              {/* Pinned: dates and the all-day row stay at the top while the hours scroll under them (like Teams). */}
+              <View style={[{ flexDirection: 'row', zIndex: 5, backgroundColor: colors.bgDark }, PINNED]}>
                 <View style={{ width: TIME_LABEL_WIDTH }}>
                   {/* Spacer matching day header height with GMT label */}
                   <View style={[styles.timeColHeader, { justifyContent: 'flex-end', paddingBottom: 6, alignItems: 'center' }]}>
@@ -418,15 +422,9 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                   <View style={[styles.allDayGutter, { height: allDayHeight }]}>
                     <Text style={styles.allDayGutterText}>All{'\n'}day</Text>
                   </View>
-                  {TIMES.map((t) => (
-                    <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
-                      <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
-                    </View>
-                  ))}
                 </View>
-
-              <ScrollView ref={horizScrollRef} horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                <View style={{ width: colWidth * 7 }}>
+                <ScrollView ref={headerScrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                  <View style={{ width: colWidth * 7 }}>
                   {/* Day header row — inside scroll */}
                   <View style={[styles.dayHeaderRow, { marginLeft: 0 }]}>
                     {week.map((d) => {
@@ -443,13 +441,8 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                       );
                     })}
                   </View>
-                  {loading ? (
-                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                      <ActivityIndicator size="small" color={colors.accentYellow} />
-                      <Text style={styles.emptyText}>Loading schedule…</Text>
-                    </View>
-                  ) : (
-                    <>
+                    {!loading && (
+                      <>
                     {/* All-day row — deadline/challenge items (stored at 23:59) are excluded
                         from the hourly grid below since a 1-minute-tall block there would be
                         invisible; show them here instead. */}
@@ -479,6 +472,35 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                         );
                       })}
                     </View>
+                      </>
+                    )}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {loading ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                      <ActivityIndicator size="small" color={colors.accentYellow} />
+                      <Text style={styles.emptyText}>Loading schedule…</Text>
+                    </View>
+              ) : (
+              <View style={{ flexDirection: 'row', height: gridHeight }}>
+                <View style={{ width: TIME_LABEL_WIDTH }}>
+                  {TIMES.map((t) => (
+                    <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
+                      <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
+                    </View>
+                  ))}
+                </View>
+                <ScrollView
+                  ref={horizScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  onScroll={(e) => headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}
+                  scrollEventThrottle={16}
+                >
+                  <View style={{ width: colWidth * 7 }}>
                     <View style={{ flexDirection: 'row' }}>
                       {/* Day columns */}
                       {week.map((d) => {
@@ -592,11 +614,10 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
                         );
                       })}
                     </View>
-                    </>
-                  )}
-                </View>
-              </ScrollView>
-              </View>{/* end sticky row wrapper */}
+                  </View>
+                </ScrollView>
+              </View>
+              )}
 
 
               {/* Add event button */}

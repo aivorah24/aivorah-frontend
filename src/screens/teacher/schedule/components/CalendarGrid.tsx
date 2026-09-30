@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
@@ -35,18 +35,22 @@ interface Props {
   onDayHeaderPress?: (iso: string) => void;
 }
 
+// Web keeps the header row in view with CSS sticky; the page's vertical ScrollView is its scroll container.
+const PINNED: any = Platform.OS === 'web' ? { position: 'sticky', top: 0 } : null;
+
 export default function CalendarGrid({
   colors, gold, styles, week, todayISO, eventsMap, passesTagFilter,
   allDayHeight, colWidth, gridHeight, hScrollRef, onGridContentSizeChange, nowTime,
   students, dragPreviewTeacher, makeOnMouseDown, startDrag, wasDragRef,
   removeEvent, openModal, setSelectedEvent, onDayHeaderPress,
 }: Props) {
+  const headerScrollRef = useRef<ScrollView>(null);
   return (
     <>
       {/* ── Left: Week Calendar Grid ── */}
       <View style={styles.calendarContainer}>
-        <View style={{ flexDirection: 'row', height: 62 + allDayHeight + gridHeight }}>
-          {/* FIXED LEFT: time label column (never scrolls horizontally) */}
+        {/* Pinned: dates and the all-day row stay at the top while the hours scroll under them (like Teams). */}
+        <View style={[{ flexDirection: 'row', zIndex: 5, backgroundColor: colors.bgDark }, PINNED]}>
           <View style={{ width: TIME_LABEL_WIDTH, backgroundColor: colors.bgDark, zIndex: 2, overflow: 'hidden', borderRightWidth: 1, borderRightColor: colors.borderColor }}>
             {/* Spacer matching day header height with GMT label — Toddle-style: single line, left-aligned */}
             <View style={[styles.timeColHeader, { justifyContent: 'flex-end', paddingBottom: 6, paddingLeft: 6, alignItems: 'flex-start' }]}>
@@ -56,21 +60,8 @@ export default function CalendarGrid({
             <View style={[styles.allDayGutter, { height: allDayHeight }]}>
               <Text style={styles.allDayGutterText}>All day</Text>
             </View>
-            {TIMES.map((t) => (
-              <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
-                <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
-              </View>
-            ))}
           </View>
-
-          {/* SCROLLABLE RIGHT: day headers + columns */}
-          <ScrollView
-            ref={hScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ flex: 1 }}
-            onContentSizeChange={onGridContentSizeChange}
-          >
+          <ScrollView ref={headerScrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
             <View style={{ width: colWidth * 7 }}>
               {/* Day header row */}
               <View style={styles.dayHeaderRow}>
@@ -132,6 +123,30 @@ export default function CalendarGrid({
                 })}
               </View>
 
+            </View>
+          </ScrollView>
+        </View>
+
+        <View style={{ flexDirection: 'row', height: gridHeight }}>
+          <View style={{ width: TIME_LABEL_WIDTH, backgroundColor: colors.bgDark, zIndex: 2, overflow: 'hidden', borderRightWidth: 1, borderRightColor: colors.borderColor }}>
+            {TIMES.map((t) => (
+              <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
+                <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* The day columns scroll sideways; the pinned dates follow them. */}
+          <ScrollView
+            ref={hScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            onContentSizeChange={onGridContentSizeChange}
+            onScroll={(e) => headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}
+            scrollEventThrottle={16}
+          >
+            <View style={{ width: colWidth * 7 }}>
               {/* Day columns */}
               <View style={{ flexDirection: 'row' }}>
                 {week.map((d) => {

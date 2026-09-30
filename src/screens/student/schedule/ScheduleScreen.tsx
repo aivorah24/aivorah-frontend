@@ -94,7 +94,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
     );
     return Math.max(36, max * 26 + 10);
   }, [eventsMap, week, hideCompleted, filterType, enabledAssignmentTags, enabledEventTags]);
-  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT });
+  const { scrollRef: scheduleScrollRef, onGridLayout: onScheduleGridLayout, scrollToNow: scrollScheduleToNow } = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, pinnedHeader: Platform.OS === 'web' });
   useEffect(() => { scrollToNowRef.current = scrollScheduleToNow; });
 
   function handleEventPress(event: ScheduleEvent, [accent, fill, textCol]: [string, string, string]) {

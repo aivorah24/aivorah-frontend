@@ -5,9 +5,10 @@ import type { LayoutChangeEvent, ScrollView } from 'react-native';
 
 // `onGridLayout` goes on the view that holds the calendar, as a direct child of the page's ScrollView content, so
 // its y is where the grid starts on the page.
-// `headerHeight`: the calendar's day-header row above the "All day" row.
-export function useScheduleScroll({ ready, allDayHeight, hourHeight, headerHeight = 62, startHour = 0 }: {
-  ready: boolean; allDayHeight: number; hourHeight: number; headerHeight?: number; startHour?: number;
+// `headerHeight`: the calendar's day-header row above the "All day" row. With `pinnedHeader` those rows stay at the
+// top of the view, so the hours scroll up to just under them.
+export function useScheduleScroll({ ready, allDayHeight, hourHeight, headerHeight = 62, startHour = 0, pinnedHeader = false }: {
+  ready: boolean; allDayHeight: number; hourHeight: number; headerHeight?: number; startHour?: number; pinnedHeader?: boolean;
 }) {
   const scrollRef = useRef<ScrollView>(null);
   const gridTop = useRef<number | null>(null);
@@ -15,7 +16,7 @@ export function useScheduleScroll({ ready, allDayHeight, hourHeight, headerHeigh
 
   function scrollToHour(hour: number, animated = true) {
     if (gridTop.current == null) return;
-    const y = gridTop.current + headerHeight + allDayHeight + Math.max(0, hour - startHour) * hourHeight;
+    const y = gridTop.current + (pinnedHeader ? 0 : headerHeight + allDayHeight) + Math.max(0, hour - startHour) * hourHeight;
     scrollRef.current?.scrollTo({ y, animated });
   }
 

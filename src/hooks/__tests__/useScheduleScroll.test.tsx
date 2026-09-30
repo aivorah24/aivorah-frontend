@@ -4,8 +4,10 @@ import { useScheduleScroll } from '../useScheduleScroll';
 
 const scrollTo = jest.fn();
 
-function Probe({ ready, onApi }: { ready: boolean; onApi: (api: any) => void }) {
-  const api = useScheduleScroll({ ready, allDayHeight: 36, hourHeight: 56 });
+function Probe({ ready, onApi, pinnedHeader = false }: { ready: boolean; onApi: (api: any) => void; pinnedHeader?: boolean }) {
+  const api = useScheduleScroll({ ready, allDayHeight: 36, hourHeight: 56, pinnedHeader });
+  // Stand-in for the ScrollView the screen attaches.
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { (api.scrollRef as any).current = { scrollTo }; onApi(api); });
   return null;
 }
@@ -33,4 +35,11 @@ test('only opens once; the Today button scrolls to now again, smoothly', async (
   expect(scrollTo).toHaveBeenCalledTimes(1);
   await act(async () => { api.scrollToNow(); });
   expect(scrollTo).toHaveBeenLastCalledWith({ y: 62 + 36 + 17.5 * 56, animated: true });
+});
+
+test('with the date row pinned on top, the hours scroll up to just under it', async () => {
+  let api: any;
+  await render(<Probe ready pinnedHeader onApi={(a) => { api = a; }} />);
+  await act(async () => { api.onGridLayout({ nativeEvent: { layout: { y: 120 } } }); jest.runAllTimers(); });
+  expect(scrollTo).toHaveBeenCalledWith({ y: 120 + 17.5 * 56, animated: false });
 });
