@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import { type CBSE_G6_ENGLISH_SYLLABUS } from '../../../../../data/cbseG6EnglishSyllabus';
 
@@ -42,6 +42,8 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
   const byNameKey = byName ? `${byName.curriculum}|${byName.grade}|${byName.subject}|${byName.topic}` : undefined;
   const override = opts?.override;
   const overrideKey = override ? JSON.stringify(override) : '';
+  // Only a different topic shows the loading state; the teacher's newly published edits swap in place.
+  const shownTopic = useRef<string | null>(null);
 
   useEffect(() => {
     if (!active) {
@@ -51,7 +53,8 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
       return;
     }
     let cancelled = false;
-    setLoadingDbTopic(true);
+    const topicKey = `${topicId || ''}|${byNameKey || ''}`;
+    if (shownTopic.current !== topicKey) setLoadingDbTopic(true);
     const url = topicId
       ? `${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/topic/${topicId}/resources`
       : `${LEARNING_PATHS_SERVER_URL}/teacher/syllabus/topic-by-name/resources?${new URLSearchParams({
@@ -112,6 +115,7 @@ export function useDbTopic(topicId: string | undefined, topicNameParam: string |
             instructionalType: typeof p.instructionalType === 'string' ? p.instructionalType : undefined,
           },
         } as any);
+        shownTopic.current = topicKey;
         setLoadingDbTopic(false);
       })
       .catch(() => { if (!cancelled) { setContentReady(false); setLoadingDbTopic(false); } });
