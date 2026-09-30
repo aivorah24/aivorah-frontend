@@ -126,4 +126,12 @@ describe("the student's teacher's version of a lesson", () => {
     expect(screen.getByText(/Edited by my teacher/)).toBeTruthy();
     mockSubjectEdits = null;
   });
+
+  test('an old link without an edit key (topic name only) still opens the real lesson with the teacher version', async () => {
+    serve(english);
+    mockSubjectEdits = { chapters: [], topics: { 'pdf:x.pdf::the wit that won hearts': { blocks: [{ type: 'explanation', text: 'Found by name.' }] } } };
+    await render(<LessonScreen navigation={nav()} route={{ params: { subject: 'English', curriculum: 'CBSE', grade: 'Grade 8', chapterIndex: 0, topicIndex: 0, topicName: 'The Wit that Won Hearts', chapterTitle: 'x' } }} />);
+    await waitFor(() => expect(screen.getByText('Found by name.')).toBeTruthy());
+    mockSubjectEdits = null;
+  });
 });

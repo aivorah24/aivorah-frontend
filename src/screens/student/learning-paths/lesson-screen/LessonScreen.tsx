@@ -32,6 +32,14 @@ import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
 import { useStudentSubjectEdits } from '../subject-syllabus/hooks/useStudentSubjectEdits';
 
+// A link without an edit key finds the teacher's lesson by topic name, when exactly one edited topic has that name.
+function lessonForTopicName(edits: any, name?: string) {
+  if (!edits?.topics || !name) return undefined;
+  const suffix = `::${name.trim().toLowerCase()}`;
+  const keys = Object.keys(edits.topics).filter((k) => k.endsWith(suffix));
+  return keys.length === 1 ? edits.topics[keys[0]] : undefined;
+}
+
 function LessonShell({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
   return embedded
     ? <View testID="embedded-lesson" style={{ height: 760, borderRadius: 12, overflow: 'hidden' }}>{children}</View>
@@ -53,7 +61,10 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const chapterTitleParam = route?.params?.chapterTitle as string | undefined;
   // A real NCERT/Qdrant-only topic with no DB id (Bug #8, BUGS_AND_FIXES.md) —
   // resolved by curriculum+grade+subject+topic instead of topicId.
-  const byNameTopic = route?.params?.byNameTopic as string | undefined;
+  // A link that carries a topic name but no id or teacher content (e.g. one saved before book-section topics were
+  // opened by name) still resolves by that name rather than falling back to the old built-in lessons.
+  const byNameTopic = (route?.params?.byNameTopic
+    ?? (route?.params?.topicName && !route?.params?.topicId && !route?.params?.teacherContent ? route.params.topicName : undefined)) as string | undefined;
   const byName = !topicId && byNameTopic
     ? { curriculum, grade, subject, topic: byNameTopic }
     : undefined;
@@ -72,9 +83,10 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   // The teacher's own preview passes the edits in directly instead.
   const editKey = route?.params?.editKey as string | undefined;
   const directEdits = route?.params?.lessonEdits;
-  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: !!editKey && !directEdits && !embedded });
-  const lessonEdits = directEdits || (editKey ? subjectEdits?.topics?.[editKey] : undefined);
-  const waitingForEdits = !!editKey && !directEdits && !embedded && !editsLoaded;
+  const wantsEdits = !directEdits && !embedded && (!!editKey || !!byName);
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: wantsEdits });
+  const lessonEdits = directEdits || (editKey ? subjectEdits?.topics?.[editKey] : lessonForTopicName(subjectEdits, byName?.topic));
+  const waitingForEdits = wantsEdits && !editsLoaded;
 
   const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic: loadingFetchedTopic, contentReady: fetchedContentReady } =
     useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked && !waitingForEdits, override: lessonEdits });
