@@ -96,14 +96,11 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       });
       return;
     }
-    // Two different kinds of "real" (non-curated) topic share this list:
-    // a teacher-published one with a real syllabus_topics DB id, and a real
-    // NCERT/Qdrant topic with no DB row at all (kind: 'qdrant' — see Bug #8
-    // and its Bug #11 follow-up, BUGS_AND_FIXES.md). Sending a Qdrant topic's
-    // synthetic id ("qdrant:...") as `topicId` made LessonScreen fetch from
-    // the DB-id route instead of the byName route, which found nothing —
-    // "Content coming soon" for a topic that has real content in Qdrant.
-    const isQdrantTopic = isDbBacked && topic?.kind === 'qdrant';
+    // A topic with a real syllabus_topics id is fetched by id. Everything else from the server — Qdrant topics
+    // (kind 'qdrant', synthetic ids) and book sections (kind 'section', no id) — is fetched by name; sending
+    // neither left the lesson on the old built-in dataset. A topic the teacher renamed is looked up by its
+    // original name.
+    const isQdrantTopic = isDbBacked && (topic?.kind === 'qdrant' || !topic?.id);
     navigation.navigate('LessonScreen', {
       subject, curriculum, grade,
       chapterTitle: chapter.title,
@@ -113,8 +110,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       // resources from the DB instead of the static curated dataset.
       topicId: isDbBacked && !isQdrantTopic ? topic?.id : undefined,
       topicName: isDbBacked ? topic?.name : undefined,
-      byNameTopic: isQdrantTopic ? topic?.name : undefined,
-      ...(topic?.lessonEdit ? { lessonEdits: topic.lessonEdit } : {}),
+      byNameTopic: isQdrantTopic ? (topic?.baseName || topic?.name) : undefined,
+      ...(topic?.lessonEdit ? { editKey: topic.editKey } : {}),
     });
   }
 

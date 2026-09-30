@@ -49,7 +49,7 @@ export default function TopicCanvas({
   const [mode, setMode] = useState<'edit' | 'view'>('edit');
   const isMath = /math/i.test(subject);
   const topicId = topic.id && topic.kind !== 'qdrant' && topic.kind !== 'section' ? String(topic.id) : undefined;
-  const byName = !topic.added && !topicId ? { curriculum, grade, subject, topic: topic.name } : undefined;
+  const byName = !topic.added && !topicId ? { curriculum, grade, subject, topic: topic.baseName || topic.name } : undefined;
   const { rawPayload, loadingDbTopic } = useDbTopic(topicId, topic.name, byName, { enabled: !topic.added });
 
   const original = useMemo(() => lessonFrom(rawPayload), [rawPayload]);
@@ -58,7 +58,7 @@ export default function TopicCanvas({
 
   const viewParams = topic.added
     ? { teacherContent: lessonAsTeacherContent(lesson), topicName: topic.name }
-    : { topicId, byNameTopic: byName ? topic.name : undefined, topicName: topic.name, lessonEdits: topic.lessonEdit };
+    : { topicId, byNameTopic: byName ? byName.topic : undefined, topicName: topic.name, lessonEdits: topic.lessonEdit };
 
   return (
     <View style={{ gap: 14 }}>

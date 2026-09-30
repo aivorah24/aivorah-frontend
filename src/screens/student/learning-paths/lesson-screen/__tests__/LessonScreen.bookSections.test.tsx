@@ -9,6 +9,10 @@ import hindi from './fixtures/hindi-section.json';
 
 jest.setTimeout(30000);
 
+let mockSubjectEdits: any = null;
+jest.mock('../../subject-syllabus/hooks/useStudentSubjectEdits', () => ({
+  useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
+}));
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#F5F3EE', cardDark: '#FFFFFF', borderColor: '#DDD', textMain: '#0B0B0B', textMuted: '#666', textDim: '#999',
@@ -109,5 +113,17 @@ describe('built book sections, end to end through the real lesson tabs', () => {
     await tab(user, 'Practice');
     await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith('Quiz', expect.anything()));
     expect(navigation.navigate.mock.calls.find((c: any[]) => c[0] === 'Quiz')[1].practiceQuiz[0].question).toBe(p.practiceQuiz[0].question);
+  });
+});
+
+describe("the student's teacher's version of a lesson", () => {
+  test('is applied by its key, so it still shows after a page refresh', async () => {
+    serve(english);
+    mockSubjectEdits = { chapters: [], topics: { 'pdf:x.pdf::the wit that won hearts': { whatYoullLearn: ['Edited by my teacher'], blocks: [{ type: 'explanation', text: 'My teacher rewrote this part.' }] } } };
+    const r = route('English', 'The Wit that Won Hearts');
+    await render(<LessonScreen navigation={nav()} route={{ params: { ...r.params, editKey: 'pdf:x.pdf::the wit that won hearts' } }} />);
+    await waitFor(() => expect(screen.getByText('My teacher rewrote this part.')).toBeTruthy());
+    expect(screen.getByText(/Edited by my teacher/)).toBeTruthy();
+    mockSubjectEdits = null;
   });
 });

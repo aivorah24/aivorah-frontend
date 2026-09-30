@@ -10,6 +10,10 @@ import LessonScreen from '../LessonScreen';
 
 jest.setTimeout(15000);
 
+let mockSubjectEdits: any = null;
+jest.mock('../../subject-syllabus/hooks/useStudentSubjectEdits', () => ({
+  useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
+}));
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888', primary: '#fa0',

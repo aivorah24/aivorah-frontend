@@ -25,7 +25,7 @@ export const LESSON_FIELDS_ORDER: (keyof LessonEdit)[] = ['whatYoullLearn', 'blo
 type BaseTopic = { name: string; [k: string]: any };
 type BaseChapter = { title: string; topics: BaseTopic[]; pdfFile?: string | null; [k: string]: any };
 
-export type EditedTopic = BaseTopic & { editKey: string; hidden?: boolean; added?: boolean; renamed?: boolean; lessonEdit?: LessonEdit };
+export type EditedTopic = BaseTopic & { editKey: string; baseName?: string; hidden?: boolean; added?: boolean; renamed?: boolean; lessonEdit?: LessonEdit };
 export type EditedChapter = Omit<BaseChapter, 'topics'> & { editKey: string; hidden?: boolean; added?: boolean; renamed?: boolean; topics: EditedTopic[] };
 
 const lc = (s: string) => String(s || '').trim().toLowerCase();
@@ -80,6 +80,7 @@ export function applySubjectEdits(base: BaseChapter[], edits: SubjectEdits | nul
         ...(bt || { kind: 'teacher', page: '', readText: { intro: '', keyLearnings: [], body: [], activity: '', vocab: [] } }),
         name: t.name || bt?.name || 'New topic',
         editKey: t.key,
+        baseName: bt?.name,
         hidden: t.hidden,
         added: t.added,
         renamed: !!t.name && !!bt && t.name !== bt.name,

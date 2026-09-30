@@ -79,10 +79,22 @@ describe("SubjectSyllabusScreen — the teacher's version of the subject", () =>
     await user.type(screen.getByPlaceholderText('Search chapters or topics…'), 'Spot');
     await user.press(await screen.findByText(/Spotting patterns/));
     expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({
-      byNameTopic: 'Spotting patterns',
-      lessonEdits: { whatYoullLearn: ['See patterns around you'] },
+      byNameTopic: 'What is a pattern',
+      topicName: 'Spotting patterns',
+      editKey: 'pdf:a.pdf::what is a pattern',
     }));
   });
+});
+
+test("a book section (no id) opens its real lesson by name, not the old built-in one", async () => {
+  global.fetch = jest.fn().mockResolvedValue(jsonRes({
+    units: [{ unitNo: 1, title: 'The Wonderful World of Science', pdfFile: 'fecu101.pdf', topics: [{ name: 'The Scientific Method', kind: 'section', page: 5 }] }],
+  })) as any;
+  const nav = navProp();
+  const user = userEvent.setup();
+  await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Science' })} />);
+  await user.press(await screen.findByText(/The Scientific Method/));
+  expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', expect.objectContaining({ byNameTopic: 'The Scientific Method', topicId: undefined }));
 });
 
 describe('SubjectSyllabusScreen — states', () => {

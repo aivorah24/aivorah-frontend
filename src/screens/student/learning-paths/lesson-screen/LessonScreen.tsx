@@ -30,6 +30,7 @@ import ListenTab from './components/ListenTab';
 import PracticeTab from './components/PracticeTab';
 import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
+import { useStudentSubjectEdits } from '../subject-syllabus/hooks/useStudentSubjectEdits';
 
 function LessonShell({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
   return embedded
@@ -67,8 +68,17 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const isTeacherContentBacked = !!teacherContent;
   const teacherTopicName = route?.params?.topicName as string | undefined;
 
-  const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic, contentReady: fetchedContentReady } =
-    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked, override: route?.params?.lessonEdits });
+  // The student's teacher's edited version of this topic, by its key (a plain string, so it survives a page refresh).
+  // The teacher's own preview passes the edits in directly instead.
+  const editKey = route?.params?.editKey as string | undefined;
+  const directEdits = route?.params?.lessonEdits;
+  const { edits: subjectEdits, loaded: editsLoaded } = useStudentSubjectEdits(curriculum, grade, subject, { enabled: !!editKey && !directEdits && !embedded });
+  const lessonEdits = directEdits || (editKey ? subjectEdits?.topics?.[editKey] : undefined);
+  const waitingForEdits = !!editKey && !directEdits && !embedded && !editsLoaded;
+
+  const { dbTopic: fetchedDbTopic, rawPayload: fetchedRawPayload, loadingDbTopic: loadingFetchedTopic, contentReady: fetchedContentReady } =
+    useDbTopic(topicId, route?.params?.topicName ?? byNameTopic, byName, { enabled: !isTeacherContentBacked && !waitingForEdits, override: lessonEdits });
+  const loadingDbTopic = loadingFetchedTopic || waitingForEdits;
   const teacherDbTopic = useMemo(
     () => (isTeacherContentBacked ? adaptTeacherContentToTopic(teacherTopicName || '', teacherContent) : null),
     [isTeacherContentBacked, teacherContent, teacherTopicName]
@@ -151,7 +161,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
 
   usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
-    byNameTopic, chapterTitle: chapter?.title, teacherContent,
+    byNameTopic, chapterTitle: chapter?.title, teacherContent, editKey,
     bookQuiz: (rawPayload as any)?.practiceQuiz,
   }, contentReady);
 
