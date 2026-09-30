@@ -43,6 +43,7 @@ const STUDENT_NAV_ITEMS = [
     ] },
   { label: 'AI Coach',         icon: 'message-circle',screen: 'AICoach',           group: 'MENU',    premium: false },
   { label: 'Schedule',         icon: 'calendar',     screen: 'Schedule',           group: 'MENU',    premium: false },
+  { label: 'Announcements',    icon: 'volume-2',     screen: 'Announcements',      group: 'MENU',    premium: false },
   { label: 'The World & You',  icon: 'globe',        screen: 'WorldAndYou',        group: 'MENU',    premium: false },
   { label: 'My Classes',       icon: 'layers',       screen: 'MyClasses',          group: 'MENU',    premium: false },
   { label: 'Bedtime Stories',  icon: 'book',         screen: 'BhagavathaStories',  group: 'MENU',    premium: false },
@@ -73,11 +74,7 @@ const TEACHER_NAV_ITEMS = [
   // screen backed by a real extracted endpoint (see
   // aivorah-teacher-dashboard-service's /heatmap route), not the dummy
   // mock it was on 2026-08-28 when this whole group was removed.
-  // Manage Syllabus / Announcements remain removed — still not refactored,
-  // still served from src/.legacy-screens/teacher-legacy/. "Send
-  // Announcement" (AnnouncementManager) is a separate, already-refactored
-  // feature — kept.
-  { label: 'Student Progress', icon: 'bar-chart-2', screen: 'TeacherProgress', group: 'MANAGE' },
+  { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MANAGE' },
   { label: 'Send Announcement', icon: 'edit-3', screen: 'AnnouncementManager', group: 'MANAGE' },
   { label: 'Settings', icon: 'settings', screen: 'TeacherSettings', group: 'SYSTEM' },
 ];

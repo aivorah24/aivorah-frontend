@@ -23,15 +23,10 @@ describe('TeacherNavigator — route wiring', () => {
     expect(source).not.toMatch(/TeacherSyllabusImportScreen/);
   });
 
-  test('still registers the legacy TeacherAnnouncements route (not yet refactored)', () => {
-    expect(source).toMatch(/<Drawer\.Screen name="TeacherAnnouncements"/);
-    expect(source).toMatch(/@legacy\/teacher-legacy\/TeacherAnnouncementsScreen/);
-  });
-
-  test('legacy TeacherAnnouncementsScreen file still exists on disk', () => {
-    const fs = require('fs');
-    const path = require('path');
-    expect(fs.existsSync(path.join(__dirname, '../../.legacy-screens/teacher-legacy/TeacherAnnouncementsScreen.tsx'))).toBe(true);
+  test('TeacherAnnouncements uses the shared Announcements screen, not a legacy copy', () => {
+    expect(source).toMatch(/<Drawer\.Screen name="TeacherAnnouncements" component=\{AnnouncementsScreen\}/);
+    expect(source).toMatch(/features\/announcements\/components\/AnnouncementsScreen/);
+    expect(source).not.toMatch(/teacher-legacy\/TeacherAnnouncementsScreen/);
   });
 
   test('the new canonical screen file exists on disk', () => {

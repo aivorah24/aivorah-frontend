@@ -15,7 +15,7 @@ import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChalle
 // Replaced with the real screen, backed by the extracted heatmap route in
 // aivorah-teacher-dashboard-service.
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
-import TeacherAnnouncementsScreen from '@legacy/teacher-legacy/TeacherAnnouncementsScreen';
+import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
 import TeacherLearningPathsManageScreen from '../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen';
@@ -60,10 +60,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
-      {/* TeacherSyllabusImport removed — refactored to
-          TeacherCurriculumLearningPath (src/screens/teacher/curriculum-learning-path/).
-          TeacherAnnouncements still legacy, awaiting its own refactor pass. */}
-      <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} />
+      <Drawer.Screen name="TeacherAnnouncements" component={AnnouncementsScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherCurriculumLearningPath" component={TeacherCurriculumLearningPathScreen} />
       <Drawer.Screen name="TeacherClassLearningPaths" component={TeacherLearningPathsManageScreen} />

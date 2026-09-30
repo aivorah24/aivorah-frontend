@@ -11,6 +11,7 @@ import type { AppColors } from '../../theme';
 import { Feather } from '@expo/vector-icons';
 import PARENTAL_CONTROLS_SERVER_URL from '../../config/parentalControlsServerUrl';
 import { setStudentLocked } from '../../services/lockStatus';
+import AnnouncementBanner from '../../features/announcements/components/AnnouncementBanner';
 
 interface ScreenLayoutProps {
   children: React.ReactNode;
@@ -35,6 +36,16 @@ function formatHour(h: number) {
   if (h === 12) return '12:00 PM';
   return `${h - 12}:00 PM`;
 }
+
+// Where each persona reads announcements; the banner opens it.
+const ANNOUNCEMENTS_ROUTE: Record<string, string> = {
+  student: 'Announcements',
+  teacher: 'TeacherAnnouncements',
+  super_admin: 'TeacherAnnouncements',
+  parent: 'ParentAnnouncements',
+  school_admin: 'SchoolAdminAnnouncements',
+};
+const ANNOUNCEMENT_PAGES = new Set([...Object.values(ANNOUNCEMENTS_ROUTE), 'AnnouncementManager']);
 
 export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProps) {
   const { showPermanentSidebar } = useResponsive();
@@ -189,8 +200,18 @@ export default function ScreenLayout({ children, hideAIPanel }: ScreenLayoutProp
   // Before the first screen-time-status response lands, a student's dashboard
   // must stay hidden — otherwise a locked student sees their real dashboard for
   // a moment on every refresh, before the lock overlay has data to render.
+  // Unread announcements show as a banner at the top of every page for every persona, except on the announcement
+  // pages themselves.
+  const announcementsRoute = ANNOUNCEMENTS_ROUTE[user?.role ?? ''];
+  const showAnnouncementBanner = !!announcementsRoute && !ANNOUNCEMENT_PAGES.has(route.name);
   const content = (
     <View style={{ flex: 1 }}>
+      {showAnnouncementBanner && (
+        <AnnouncementBanner
+          onView={(id) => navigation.navigate(announcementsRoute, { openId: id })}
+          onViewAll={() => navigation.navigate(announcementsRoute)}
+        />
+      )}
       {isStudent && !controlsLoaded ? null : children}
     </View>
   );

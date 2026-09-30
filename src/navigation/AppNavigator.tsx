@@ -39,7 +39,7 @@ import ReadAloudScreen from '@legacy/student-legacy/ReadAloudScreen';
 import DailyHabitsScreen from '../screens/student/daily-habits/DailyHabitsScreen';
 import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
 import MessagesScreen from '../screens/shared/messages/MessagesScreen';
-import AnnouncementsScreen from '@legacy/student-legacy/AnnouncementsScreen';
+import AnnouncementsScreen from '../features/announcements/components/AnnouncementsScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
 
