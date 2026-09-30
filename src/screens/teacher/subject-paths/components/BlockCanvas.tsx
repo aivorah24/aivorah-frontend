@@ -75,8 +75,10 @@ function BlockForm({ block, colors, onChange, onReplaceImage }: { block: Block; 
       {(block.type === 'image' || block.type === 'visual_representation') && (
         <View style={{ gap: 6 }}>
           {!!block.url && <Image source={{ uri: block.url }} style={{ width: '100%', height: 180, borderRadius: 8 }} resizeMode="contain" />}
-          <TouchableOpacity testID="replace-image" onPress={onReplaceImage}>
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary }}>{block.url ? 'Replace picture' : 'Choose picture'}</Text>
+          <TouchableOpacity testID="replace-image" onPress={onReplaceImage}
+            style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.primary }}>
+            <Feather name="upload" size={14} color="#fff" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>{block.url ? 'Replace with another picture' : 'Choose a picture'}</Text>
           </TouchableOpacity>
         </View>
       )}
