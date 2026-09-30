@@ -173,7 +173,17 @@ export default function BlockCanvas({ blocks, colors, onChange }: { blocks: Bloc
                 </View>
               ) : (
                 <TouchableOpacity testID={`block-${i}`} activeOpacity={0.8} onPress={() => setSelected(i)}>
-                  <LearningBlocks blocks={[block]} colors={colors} />
+                  <View pointerEvents="none">
+                    <LearningBlocks blocks={[block]} colors={colors} />
+                  </View>
+                  <View style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 4 }}>
+                    <TouchableOpacity testID={`block-edit-${i}`} onPress={() => setSelected(i)} style={{ padding: 6, borderRadius: 8, backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor }}>
+                      <Feather name="edit-2" size={13} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity testID={`block-remove-${i}`} onPress={() => onChange(blocks.filter((_, k) => k !== i))} style={{ padding: 6, borderRadius: 8, backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor }}>
+                      <Feather name="trash-2" size={13} color="#C0392B" />
+                    </TouchableOpacity>
+                  </View>
                   {isVisualBlock(block) && !blockToVisual(block) && (
                     <Text style={{ fontSize: 12, color: colors.textMuted, padding: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderColor, borderRadius: 8 }}>
                       {LABELS[block.type] || 'Diagram'}{block.title || block.caption || block.visual?.title ? ` — ${block.title || block.caption || block.visual?.title}` : ''} · click to fill it in (students see it once it has content)
