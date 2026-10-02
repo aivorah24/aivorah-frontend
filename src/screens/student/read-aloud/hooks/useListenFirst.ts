@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { notify } from '../utils/notify';
 import { fetchSpeech } from '../services/readAloudApi';
 import type { Passage, WordTiming } from '../types';
 import { buildWordBoundaries, estimatedWordIndex, timedWordIndex } from '../utils/listenTiming';
@@ -51,7 +52,7 @@ export function useListenFirst(passage: Passage | null) {
     const p = passageRef.current;
     if (!hasSpeechSynthesis() || !p) {
       resetPlayback();
-      Alert.alert('Audio Unavailable', 'Text-to-speech is currently unavailable on this device.');
+      notify('Audio Unavailable', 'Text-to-speech is currently unavailable on this device.');
       return;
     }
     try {

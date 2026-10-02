@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { notify } from '../../utils/notify';
 import { act, renderHook } from '@testing-library/react-native';
 import { useListenFirst } from '../../hooks/useListenFirst';
 import * as api from '../../services/readAloudApi';
@@ -6,6 +7,7 @@ import type { Passage } from '../../types';
 
 jest.mock('../../../../../config/firebase', () => ({ auth: {} }));
 jest.mock('../../services/readAloudApi');
+jest.mock('../../utils/notify', () => ({ notify: jest.fn() }));
 const mockApi = api as jest.Mocked<typeof api>;
 
 const PASSAGE: Passage = { title: 'Sun', text: 'The sun heats water', topic: 'T', level: 'easy', wordCount: 4 };
@@ -43,7 +45,6 @@ beforeEach(() => {
   g.cancelAnimationFrame = jest.fn();
   speech.paused = false;
   speech.speaking = false;
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => restoreOS());
@@ -103,6 +104,6 @@ test('without speech support it tells the student', async () => {
   mockApi.fetchSpeech.mockResolvedValue({});
   const { result } = await renderHook(() => useListenFirst(PASSAGE));
   await act(async () => { await result.current.toggle(); });
-  expect(Alert.alert).toHaveBeenCalledWith('Audio Unavailable', expect.any(String));
+  expect(notify).toHaveBeenCalledWith('Audio Unavailable', expect.any(String));
   expect(result.current.isPlaying).toBe(false);
 });

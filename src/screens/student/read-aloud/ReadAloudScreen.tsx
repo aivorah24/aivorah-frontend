@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
@@ -28,6 +28,7 @@ export default function ReadAloudScreen() {
 
   const [passage, setPassage] = useState<Passage | null>(null);
   const [isCalibration, setIsCalibration] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
   const library = usePassageLibrary(grade);
   const listen = useListenFirst(passage);
   const session = useReadingSession({
@@ -40,13 +41,14 @@ export default function ReadAloudScreen() {
   });
 
   const openPassage = useCallback(async (title?: string) => {
+    setOpenError(null);
     try {
       const p = await library.loadPassage(title);
       session.reset();
       setIsCalibration(false);
       setPassage(p);
     } catch {
-      Alert.alert('Error', 'Could not load passage. Please try again.');
+      setOpenError('Could not load passage. Please try again.');
     }
   }, [library, session]);
 
@@ -105,6 +107,7 @@ export default function ReadAloudScreen() {
               onPick={openPassage}
               onRetry={library.reload}
               busy={library.loadingPassage}
+              openError={openError}
             />
           )}
         </ScrollView>

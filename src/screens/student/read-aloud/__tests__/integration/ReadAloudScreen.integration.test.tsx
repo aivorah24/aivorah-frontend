@@ -1,5 +1,4 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import ReadAloudScreen from '../../ReadAloudScreen';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
@@ -61,7 +60,6 @@ const readAloudCalls = () => (global.fetch as jest.Mock).mock.calls.filter(([u])
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('ReadAloudScreen — integration', () => {
@@ -127,7 +125,7 @@ describe('ReadAloudScreen — integration', () => {
     mockServer({ passageOk: false });
     await render(<ReadAloudScreen />);
     await fireEvent.press(await screen.findByText('Surprise Me!'));
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Error', 'Could not load passage. Please try again.'));
+    expect(await screen.findByText('Could not load passage. Please try again.')).toBeTruthy();
     expect(screen.getByText('Our Solar System')).toBeTruthy();
   });
 

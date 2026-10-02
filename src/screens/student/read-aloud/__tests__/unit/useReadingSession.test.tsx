@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { notify } from '../../utils/notify';
 import { act, renderHook } from '@testing-library/react-native';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import * as api from '../../services/readAloudApi';
@@ -6,6 +7,7 @@ import type { Passage } from '../../types';
 
 jest.mock('../../../../../config/firebase', () => ({ auth: {} }));
 jest.mock('../../services/readAloudApi');
+jest.mock('../../utils/notify', () => ({ notify: jest.fn() }));
 const mockApi = api as jest.Mocked<typeof api>;
 
 const PASSAGE: Passage = { title: 'Sun', text: 'The sun heats the water', topic: 'How the World Works', level: 'easy', wordCount: 5 };
@@ -85,7 +87,6 @@ beforeEach(() => {
     errors: [{ word: 'heats', position: 3, type: 'misread' }], feedback: 'Nice!', level: 'good', starsEarned: 50, lexile: 425, lexileChange: 25,
   });
   mockApi.saveLexile.mockResolvedValue({ lexile: 500 });
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -164,7 +165,7 @@ test('a blocked microphone explains and returns to the passage', async () => {
   g.navigator.mediaDevices.getUserMedia = jest.fn(async () => { throw new Error('denied'); });
   const { result } = await renderSession();
   await countdownToReading(result);
-  expect(Alert.alert).toHaveBeenCalledWith('Microphone Access', expect.any(String));
+  expect(notify).toHaveBeenCalledWith('Microphone Access', expect.any(String));
   expect(result.current.phase).toBe('idle');
 });
 
@@ -203,7 +204,7 @@ test('outside the browser, reading explains it is web-only', async () => {
   await act(async () => { result.current.startCountdown(); });
   await act(async () => { jest.advanceTimersByTime(2400); });
   await flush();
-  expect(Alert.alert).toHaveBeenCalledWith('Not Supported', expect.any(String));
+  expect(notify).toHaveBeenCalledWith('Not Supported', expect.any(String));
   expect(result.current.phase).toBe('idle');
   setWeb();
 });

@@ -22,9 +22,10 @@ interface Props {
   onPick: (title?: string) => void;
   onRetry: () => void;
   busy: boolean;
+  openError?: string | null;
 }
 
-export default function PassagePicker({ s, colors, lexile, passages, hasPassages, loading, error, filter, onFilter, onPick, onRetry, busy }: Props) {
+export default function PassagePicker({ s, colors, lexile, passages, hasPassages, loading, error, filter, onFilter, onPick, onRetry, busy, openError }: Props) {
   return (
     <View style={s.pickContainer}>
       <LinearGradient colors={['#9FB2A418', '#C3DCD810']} style={s.heroCard}>
@@ -110,6 +111,8 @@ export default function PassagePicker({ s, colors, lexile, passages, hasPassages
           })}
         </View>
       )}
+
+      {openError ? <Text style={s.centerMessageText} accessibilityRole="alert">{openError}</Text> : null}
 
       <TouchableOpacity
         style={[s.surpriseBtn, { borderColor: colors.accentYellow + '40' }]}

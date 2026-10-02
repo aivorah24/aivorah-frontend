@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { notify } from '../utils/notify';
 import {
   isVoskModelReady,
   isVoskSupported,
@@ -317,7 +318,7 @@ export function useReadingSession({ passage, grade, isCalibration, onCalibrated,
   const beginReading = useCallback(async () => {
     countdownTimerRef.current = null;
     if (Platform.OS !== 'web') {
-      Alert.alert('Not Supported', 'Read Aloud works in your web browser.');
+      notify('Not Supported', 'Read Aloud works in your web browser.');
       setPhase('idle');
       return;
     }
@@ -326,7 +327,7 @@ export function useReadingSession({ passage, grade, isCalibration, onCalibrated,
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
-        Alert.alert('Microphone Access', 'Please allow microphone access in your browser settings.');
+        notify('Microphone Access', 'Please allow microphone access in your browser settings.');
         setPhase('idle');
         return;
       }
