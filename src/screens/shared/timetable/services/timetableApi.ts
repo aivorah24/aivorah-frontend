@@ -1,4 +1,4 @@
-import { trRequest } from '../../../../services/timetableResourcesClient';
+import { trRequest, trPostFile } from '../../../../services/timetableResourcesClient';
 
 export interface PeriodDef {
   code: string;      // 'P0', 'P1', 'BRK', 'LUNCH', ...
@@ -64,6 +64,33 @@ export async function saveSlot(body: {
   subject?: string; room?: string; materialUrl?: string | null; materialName?: string | null; color?: string | null;
 }): Promise<void> {
   await trRequest('/timetable/slot', { method: 'PUT', body }, 'Failed to save the slot');
+}
+
+export interface ImportSlot {
+  day: string; periodCode: string; subject: string; room: string; teacherName?: string; teacherId: string | null;
+}
+
+export interface ImportedClass {
+  label: string;
+  homeroomTeacher: string;
+  match: { grade: string; section: string } | null;
+  matchReason: string | null;
+  canSave: boolean;
+  periodDefs: PeriodDef[];
+  slots: ImportSlot[];
+  warnings: string[];
+}
+
+export interface ImportResult { grade: string; section: string; ok: boolean; error?: string; periods?: number; slots?: number }
+
+// Reads every class timetable in a PDF; nothing is saved yet.
+export function previewTimetableImport(file: Blob, fileName: string): Promise<{ fileName: string; classes: ImportedClass[] }> {
+  return trPostFile('/timetable/import/preview', file, fileName, 'Could not read the timetable PDF');
+}
+
+// Replaces the periods and subjects of each confirmed class.
+export function commitTimetableImport(timetables: { grade: string; section: string; periodDefs: PeriodDef[]; slots: ImportSlot[] }[]): Promise<{ results: ImportResult[]; saved: number }> {
+  return trRequest('/timetable/import/commit', { method: 'POST', body: { timetables } }, 'Failed to save the timetables');
 }
 
 // 'HH:MM' (24h) → '8:25 am' style used in the cards/popup.

@@ -3,7 +3,7 @@
  * Class selector (from /classes/mine), the shared grid, the slot popup, a
  * setup action for template owners, and a web PDF/print export.
  */
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Platform, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +18,7 @@ import { useTimetableState } from './hooks/useTimetableState';
 import TimetableGrid from './components/TimetableGrid';
 import SlotDetailModal from './components/SlotDetailModal';
 import PeriodEditorModal from './components/PeriodEditorModal';
+import ImportTimetableModal from './components/ImportTimetableModal';
 
 export default function TimetableScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -41,6 +42,12 @@ export default function TimetableScreen({ navigation, route }: any) {
     loadClasses, loadTimetable, setupDefault, onSaveSlot, onSavePeriods, onClearSlot, downloadPdf,
     pickGrade, pickSection, pickProgramme,
   } = useTimetableState({ role: user?.role, school: user?.school, userName: user?.name, paramClass });
+
+  // Classes this user may replace from a PDF: every class for admins, homeroom classes for teachers.
+  const [showImport, setShowImport] = useState(false);
+  const importTargets = useMemo<TimetableClass[]>(() => (isAdmin
+    ? structure.flatMap((g) => (g.sections.length ? g.sections : ['']).map((sec) => ({ grade: g.name, section: sec, label: `${g.name}${sec ? ' ' + sec : ''}` })))
+    : classes.filter((c) => c.homeroom)), [isAdmin, structure, classes]);
 
   // Reload classes list and the current timetable every time the screen gains
   // focus — this ensures that a save by a teacher/admin in another session is
@@ -107,6 +114,12 @@ export default function TimetableScreen({ navigation, route }: any) {
                 );
               })}
             </ScrollView>
+          )}
+          {Platform.OS === 'web' && importTargets.length > 0 && (
+            <TouchableOpacity style={styles.downloadBtn} onPress={() => setShowImport(true)} accessibilityRole="button">
+              <Feather name="file-plus" size={14} color={colors.textHeading} />
+              <Text style={styles.downloadText}>Import PDF</Text>
+            </TouchableOpacity>
           )}
           {tt?.permissions.canManageTemplate && tt.periodDefs.length > 0 && (
             <TouchableOpacity style={styles.downloadBtn} onPress={() => setShowPeriods(true)} accessibilityRole="button">
@@ -183,6 +196,12 @@ export default function TimetableScreen({ navigation, route }: any) {
           onClear={onClearSlot}
         />
 
+        <ImportTimetableModal
+          visible={showImport}
+          onClose={() => setShowImport(false)}
+          targets={importTargets}
+          onSaved={() => { if (selected) loadTimetable(selected); }}
+        />
         <PeriodEditorModal
           visible={showPeriods}
           onClose={() => setShowPeriods(false)}
