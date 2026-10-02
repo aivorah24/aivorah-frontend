@@ -37,7 +37,7 @@ import TopicLessonScreen from '@legacy/student-legacy/TopicLessonScreen';
 import MathLessonScreen from '@legacy/student-legacy/MathLessonScreen';
 import BhagavathaStoriesScreen from '../screens/student/bedtime-stories/BhagavathaStoriesScreen';
 import StoryReaderScreen from '../screens/student/bedtime-stories/StoryReaderScreen';
-import ReadAloudScreen from '@legacy/student-legacy/ReadAloudScreen';
+import ReadAloudScreen from '../screens/student/read-aloud/ReadAloudScreen';
 import DailyHabitsScreen from '../screens/student/daily-habits/DailyHabitsScreen';
 import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
 import MessagesScreen from '../screens/shared/messages/MessagesScreen';
