@@ -4,7 +4,7 @@
  * so it matches each persona's look.
  */
 import React from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { EmailChange } from '../hooks/useEmailChange';
@@ -57,9 +57,27 @@ export default function ChangeEmailModal({ visible, onClose, onSignOut, userEmai
           {ec.step === 'done' ? (
             <>
               <Text style={styles.modalNote} testID={`${T}-done-message`}>{ec.doneMessage}</Text>
-              <TouchableOpacity style={[styles.modalSaveBtn, { marginTop: 12 }]} onPress={onSignOut} testID={`${T}-sign-in-again-button`}>
-                <Text style={styles.modalSaveText}>Sign in again</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+                <Pressable
+                  onPress={onSignOut}
+                  testID={`${T}-sign-in-again-button`}
+                  accessibilityRole="button"
+                  style={(state) => {
+                    const { pressed, hovered } = state as { pressed: boolean; hovered?: boolean };
+                    return {
+                      flexDirection: 'row', alignItems: 'center', gap: 6,
+                      paddingVertical: 9, paddingHorizontal: 16, borderRadius: 8,
+                      backgroundColor: colors.accentYellow,
+                      opacity: pressed ? 0.8 : hovered ? 0.92 : 1,
+                      transform: [{ translateY: hovered && !pressed ? -1 : 0 }],
+                      ...(hovered ? { shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } } : {}),
+                    };
+                  }}
+                >
+                  <Feather name="log-in" size={14} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', letterSpacing: 0.2 }}>Sign in again</Text>
+                </Pressable>
+              </View>
             </>
           ) : ec.isGoogleUser ? (
             <>
