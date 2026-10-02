@@ -15,6 +15,7 @@ import TeacherSettingsScreen from '../../TeacherSettingsScreen';
 
 const mockTriggerPoll = jest.fn();
 
+jest.mock('../../../../shared/account/services/googlePicker', () => ({ pickGoogleAccount: jest.fn() }));
 jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { email: 'teacher@school.com', name: 'Ms. Rao', roles: ['teacher'], school: 'Riverdale High', curriculum: 'IB PYP' },

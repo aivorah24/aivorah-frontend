@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import {
-  EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, signInWithPopup,
-} from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../../../../config/firebase';
 import * as api from '../services/accountApi';
+import { pickGoogleAccount } from '../services/googlePicker';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export type EmailChangeStep = 'form' | 'otp' | 'done';
@@ -92,13 +91,14 @@ export function useEmailChange({ email, name, isGoogleUser }: { email?: string; 
   async function switchGoogleAccount() {
     await run(async () => {
       try {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        const result = await signInWithPopup(auth, provider);
-        const picked = (result.user.email || '').toLowerCase();
+        // Picked on a separate sign-in, so the current session stays on this account.
+        const { email: picked, idToken } = await pickGoogleAccount();
         if (!picked) throw new Error('That Google account has no email address.');
         if (picked === current) throw new Error('That is the same Google account you already use. Pick a different one.');
-        const d = await api.changeEmailGoogle(current, await result.user.getIdToken());
+        if (await api.isEmailTaken(picked)) {
+          throw new Error(`${picked} is already registered with another Aivorah account. Pick a Google account that isn't used on Aivorah.`);
+        }
+        const d = await api.changeEmailGoogle(current, idToken);
         setDoneMessage(`Your account is now linked to ${d.newEmail || picked}. For security, please sign in again with your new Google account.`);
         setStep('done');
       } catch (e: any) {

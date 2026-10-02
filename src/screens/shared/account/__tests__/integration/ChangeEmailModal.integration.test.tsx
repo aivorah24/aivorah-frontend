@@ -4,13 +4,14 @@ import ChangeEmailModal from '../../components/ChangeEmailModal';
 import { useEmailChange } from '../../hooks/useEmailChange';
 import AUTH_SERVER_URL from '../../../../../config/authServerUrl';
 
-const mockSignInWithPopup = jest.fn();
+const mockPick = jest.fn();
+const mockMainSignIn = jest.fn();
 jest.mock('firebase/auth', () => ({
   EmailAuthProvider: { credential: jest.fn(() => 'cred') },
-  GoogleAuthProvider: jest.fn().mockImplementation(() => ({ setCustomParameters: jest.fn() })),
   reauthenticateWithCredential: jest.fn(async () => {}),
-  signInWithPopup: (...a: unknown[]) => mockSignInWithPopup(...a),
+  signInWithPopup: (...a: unknown[]) => mockMainSignIn(...a),
 }));
+jest.mock('../../services/googlePicker', () => ({ pickGoogleAccount: (...a: unknown[]) => mockPick(...a) }));
 jest.mock('../../../../../config/firebase', () => ({ auth: { currentUser: { email: 'old@gmail.com' } } }));
 
 const colors: any = { textDim: '#999', textMuted: '#888', accentRed: 'red', accentYellow: 'gold' };
@@ -53,7 +54,7 @@ test('validation errors show in the window', async () => {
 });
 
 test('Google account: only the Switch Google Account option; closing after success signs out', async () => {
-  mockSignInWithPopup.mockResolvedValue({ user: { email: 'new@gmail.com', getIdToken: async () => 'tok' } });
+  mockPick.mockResolvedValue({ email: 'new@gmail.com', idToken: 'tok' });
   const onSignOut = jest.fn();
   const onClose = jest.fn();
   await render(<Harness isGoogleUser onSignOut={onSignOut} onClose={onClose} />);
