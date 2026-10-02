@@ -232,7 +232,7 @@ const [editingName, setEditingName] = useState(false);
     <View style={styles.container}>
       <View style={styles.left}>
         {showBack ? (
-          <TouchableOpacity style={styles.menuBtn} onPress={handleBack}>
+          <TouchableOpacity style={styles.menuBtn} onPress={handleBack} accessibilityRole="button" accessibilityLabel="Go back">
             <Feather name="arrow-left" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         ) : isMobile && (
