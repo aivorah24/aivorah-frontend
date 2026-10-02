@@ -57,7 +57,7 @@ export default function ChangeEmailModal({ visible, onClose, onSignOut, userEmai
           {ec.step === 'done' ? (
             <>
               <Text style={styles.modalNote} testID={`${T}-done-message`}>{ec.doneMessage}</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
                 <Pressable
                   onPress={onSignOut}
                   testID={`${T}-sign-in-again-button`}
@@ -65,8 +65,8 @@ export default function ChangeEmailModal({ visible, onClose, onSignOut, userEmai
                   style={(state) => {
                     const { pressed, hovered } = state as { pressed: boolean; hovered?: boolean };
                     return {
-                      flexDirection: 'row', alignItems: 'center', gap: 6,
-                      paddingVertical: 9, paddingHorizontal: 16, borderRadius: 8,
+                      flexDirection: 'row', alignItems: 'center',
+                      paddingVertical: 9, paddingHorizontal: 22, borderRadius: 8,
                       backgroundColor: colors.accentYellow,
                       opacity: pressed ? 0.8 : hovered ? 0.92 : 1,
                       transform: [{ translateY: hovered && !pressed ? -1 : 0 }],
@@ -74,7 +74,6 @@ export default function ChangeEmailModal({ visible, onClose, onSignOut, userEmai
                     };
                   }}
                 >
-                  <Feather name="log-in" size={14} color="#fff" />
                   <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', letterSpacing: 0.2 }}>Sign in again</Text>
                 </Pressable>
               </View>
