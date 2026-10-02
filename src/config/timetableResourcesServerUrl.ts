@@ -1,0 +1,11 @@
+import { Platform } from 'react-native';
+
+// Timetable & Resources microservice (aivorah-timetable-resources-service).
+declare const __DEV__: boolean;
+
+const LIVE_SERVICE = 'https://aivorah-timetable-resources-service.onrender.com';
+
+const TIMETABLE_RESOURCES_SERVER_URL =
+  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3021' : LIVE_SERVICE;
+
+export default TIMETABLE_RESOURCES_SERVER_URL;

@@ -1,4 +1,4 @@
-import SCHOOL_ADMIN_SERVER_URL from '../../../../config/schoolAdminServerUrl';
+import { trRequest } from '../../../../services/timetableResourcesClient';
 
 export interface ResourceFolder {
   id: string; name: string; scope: string; author: string; updatedAt: string;
@@ -15,43 +15,25 @@ export interface ResourcesResponse {
   files: ResourceFile[];
 }
 
-export async function fetchResources(email: string, folderId?: string | null): Promise<ResourcesResponse> {
-  const q = new URLSearchParams({ email });
-  if (folderId) q.set('folderId', folderId);
-  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/resources?${q}`);
-  if (!res.ok) {
-    const d = await res.json().catch(() => ({}));
-    throw new Error(d?.error || 'Failed to load resources');
-  }
-  return res.json();
+export function fetchResources(folderId?: string | null): Promise<ResourcesResponse> {
+  const q = folderId ? `?${new URLSearchParams({ folderId })}` : '';
+  return trRequest<ResourcesResponse>(`/resources${q}`, {}, 'Failed to load resources');
 }
 
-export async function createFolder(body: { email: string; name: string; parentFolderId?: string | null; scope?: string }) {
-  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/resources/folder`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to create folder');
+export async function createFolder(body: { name: string; parentFolderId?: string | null; scope?: string }) {
+  await trRequest('/resources/folder', { method: 'POST', body }, 'Failed to create folder');
 }
 
-export async function addFile(body: { email: string; folderId?: string | null; title: string; fileUrl: string; fileType?: string; fileSize?: number; scope?: string }) {
-  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/resources/file`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to add file');
+export async function addFile(body: { folderId?: string | null; title: string; fileUrl: string; fileType?: string; fileSize?: number; scope?: string }) {
+  await trRequest('/resources/file', { method: 'POST', body }, 'Failed to add file');
 }
 
-export async function deleteFolder(email: string, id: string) {
-  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/resources/folder/${id}`, {
-    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
-  });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to delete folder');
+export async function deleteFolder(id: string) {
+  await trRequest(`/resources/folder/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'Failed to delete folder');
 }
 
-export async function deleteFile(email: string, id: string) {
-  const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/resources/file/${id}`, {
-    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
-  });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Failed to delete file');
+export async function deleteFile(id: string) {
+  await trRequest(`/resources/file/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'Failed to delete file');
 }
 
 // bytes → "13.55 MB" / "820 KB"

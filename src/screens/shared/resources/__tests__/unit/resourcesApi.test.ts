@@ -1,112 +1,47 @@
 import { fetchResources, createFolder, addFile, deleteFolder, deleteFile, fmtSize, fmtWhen } from '../../services/resourcesApi';
+import { trRequest } from '../../../../../services/timetableResourcesClient';
+
+jest.mock('../../../../../services/timetableResourcesClient', () => ({ trRequest: jest.fn() }));
+const mockRequest = trRequest as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRequest.mockResolvedValue({});
 });
 
-describe('fetchResources', () => {
-  test('builds the query string with just email when no folderId is given', async () => {
-    const payload = { canManage: true, scopeLabel: null, breadcrumb: [], folders: [], files: [] };
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => payload }) as any;
-
-    const result = await fetchResources('admin@x.com');
-
-    expect(result).toEqual(payload);
-    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
-    expect(url).toContain('email=admin%40x.com');
-    expect(url).not.toContain('folderId');
+describe('resources requests (no email sent; the server uses the sign-in)', () => {
+  test('fetchResources at the library root', async () => {
+    await fetchResources();
+    expect(mockRequest).toHaveBeenCalledWith('/resources', {}, 'Failed to load resources');
   });
 
-  test('includes folderId in the query when given', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any;
-    await fetchResources('admin@x.com', 'folder1');
-    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
-    expect(url).toContain('folderId=folder1');
+  test('fetchResources inside a folder', async () => {
+    await fetchResources('f 1');
+    expect(mockRequest.mock.calls[0][0]).toBe('/resources?folderId=f+1');
   });
 
-  test('a non-ok response throws the server error message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'No access' }) }) as any;
-    await expect(fetchResources('admin@x.com')).rejects.toThrow('No access');
+  test('createFolder POSTs', async () => {
+    const body = { name: 'Policies', parentFolderId: null, scope: 'school' };
+    await createFolder(body);
+    expect(mockRequest).toHaveBeenCalledWith('/resources/folder', { method: 'POST', body }, 'Failed to create folder');
   });
 
-  test('a non-ok response with no parseable body falls back to a generic message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => { throw new Error('bad json'); } }) as any;
-    await expect(fetchResources('admin@x.com')).rejects.toThrow('Failed to load resources');
-  });
-});
-
-describe('createFolder', () => {
-  test('POSTs the body and resolves on success', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any;
-    const body = { email: 'a@x.com', name: 'Handbooks', parentFolderId: null, scope: 'school' };
-
-    await expect(createFolder(body)).resolves.toBeUndefined();
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/resources/folder'),
-      expect.objectContaining({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    );
+  test('addFile POSTs', async () => {
+    const body = { folderId: 'f1', title: 'Doc.pdf', fileUrl: 'https://x/doc.pdf' };
+    await addFile(body);
+    expect(mockRequest).toHaveBeenCalledWith('/resources/file', { method: 'POST', body }, 'Failed to add file');
   });
 
-  test('a non-ok response throws the server error message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'Folder already exists' }) }) as any;
-    await expect(createFolder({ email: 'a@x.com', name: 'Handbooks' })).rejects.toThrow('Folder already exists');
+  test('deleteFolder and deleteFile encode the id', async () => {
+    await deleteFolder('a/b');
+    await deleteFile('c d');
+    expect(mockRequest).toHaveBeenNthCalledWith(1, '/resources/folder/a%2Fb', { method: 'DELETE' }, 'Failed to delete folder');
+    expect(mockRequest).toHaveBeenNthCalledWith(2, '/resources/file/c%20d', { method: 'DELETE' }, 'Failed to delete file');
   });
 
-  test('a non-ok response with no parseable body falls back to a generic message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => { throw new Error('bad json'); } }) as any;
-    await expect(createFolder({ email: 'a@x.com', name: 'Handbooks' })).rejects.toThrow('Failed to create folder');
-  });
-});
-
-describe('addFile', () => {
-  test('POSTs the body and resolves on success', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any;
-    const body = { email: 'a@x.com', folderId: 'f1', title: 'Doc.pdf', fileUrl: 'https://x/doc.pdf', fileType: 'pdf', fileSize: 100, scope: 'school' };
-
-    await expect(addFile(body)).resolves.toBeUndefined();
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/resources/file'),
-      expect.objectContaining({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    );
-  });
-
-  test('a non-ok response throws the server error message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'Upload rejected' }) }) as any;
-    await expect(addFile({ email: 'a@x.com', title: 'Doc.pdf', fileUrl: 'x' })).rejects.toThrow('Upload rejected');
-  });
-});
-
-describe('deleteFolder', () => {
-  test('DELETEs with the id in the URL and resolves on success', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any;
-    await expect(deleteFolder('a@x.com', 'f1')).resolves.toBeUndefined();
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/resources/folder/f1'),
-      expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ email: 'a@x.com' }) })
-    );
-  });
-
-  test('a non-ok response throws the server error message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'Not found' }) }) as any;
-    await expect(deleteFolder('a@x.com', 'f1')).rejects.toThrow('Not found');
-  });
-});
-
-describe('deleteFile', () => {
-  test('DELETEs with the id in the URL and resolves on success', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any;
-    await expect(deleteFile('a@x.com', 'file1')).resolves.toBeUndefined();
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/resources/file/file1'),
-      expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ email: 'a@x.com' }) })
-    );
-  });
-
-  test('a non-ok response throws the server error message', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'Not found' }) }) as any;
-    await expect(deleteFile('a@x.com', 'file1')).rejects.toThrow('Not found');
+  test('errors from the client reach the caller', async () => {
+    mockRequest.mockRejectedValueOnce(new Error('Only teachers and school admins can manage resources'));
+    await expect(createFolder({ name: 'X' })).rejects.toThrow('Only teachers and school admins can manage resources');
   });
 });
 

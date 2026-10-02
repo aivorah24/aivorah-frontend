@@ -13,7 +13,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
-import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import { fmtSize, fmtWhen } from './services/resourcesApi';
@@ -24,14 +23,12 @@ import PdfViewerModal from './components/PdfViewerModal';
 export default function ResourcesScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { user } = useAuth();
-  const email = user?.email || '';
 
   const {
     folderId, data, loading, error, search, setSearch, view, setView,
     showNewFolder, setShowNewFolder, newFolderName, setNewFolderName, busy, viewerDoc, setViewerDoc,
     load, openFolder, goCrumb, openFile, submitNewFolder, uploadFile, confirmDeleteFolder, confirmDeleteFile,
-  } = useResourcesState(email);
+  } = useResourcesState();
 
   useFocusEffect(useCallback(() => { load(folderId); }, [load, folderId]));
 

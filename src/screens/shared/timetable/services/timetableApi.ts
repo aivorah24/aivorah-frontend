@@ -1,4 +1,4 @@
-import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
+import { trRequest } from '../../../../services/timetableResourcesClient';
 
 export interface PeriodDef {
   code: string;      // 'P0', 'P1', 'BRK', 'LUNCH', ...
@@ -30,45 +30,40 @@ export interface Timetable {
   permissions: { canManageTemplate: boolean; canEditSlot: boolean };
 }
 
-export async function fetchTimetable(email: string, schoolId: string, grade: string, section: string): Promise<Timetable> {
-  const q = new URLSearchParams({ email, schoolId, grade, section: section || '' });
-  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable?${q}`);
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || 'Failed to load timetable');
-  }
-  return res.json();
+export interface TimetableClass {
+  grade: string;
+  section: string;
+  label: string;
+  homeroom?: boolean;
+  studentName?: string;
 }
 
-export async function saveTemplate(body: {
-  email: string; schoolId: string; grade: string; section: string; title?: string; periodDefs: PeriodDef[];
-}): Promise<void> {
-  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable/template`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || 'Failed to save the bell schedule');
-  }
+export interface StructureGrade { name: string; sections: string[] }
+
+export interface TimetableClasses {
+  classes: TimetableClass[];
+  grades: StructureGrade[];
+  curriculum: string | null;
+}
+
+export function fetchClasses(): Promise<TimetableClasses> {
+  return trRequest<TimetableClasses>('/timetable/classes', {}, 'Failed to load classes');
+}
+
+export function fetchTimetable(grade: string, section: string): Promise<Timetable> {
+  const q = new URLSearchParams({ grade, section: section || '' });
+  return trRequest<Timetable>(`/timetable?${q}`, {}, 'Failed to load timetable');
+}
+
+export async function saveTemplate(body: { grade: string; section: string; title?: string; periodDefs: PeriodDef[] }): Promise<void> {
+  await trRequest('/timetable/template', { method: 'PUT', body }, 'Failed to save the bell schedule');
 }
 
 export async function saveSlot(body: {
-  email: string; schoolId: string; grade: string; section: string;
-  day: string; periodCode: string;
-  subject?: string; room?: string; teacherId?: string | null;
-  materialUrl?: string | null; materialName?: string | null; color?: string | null;
+  grade: string; section: string; day: string; periodCode: string;
+  subject?: string; room?: string; materialUrl?: string | null; materialName?: string | null; color?: string | null;
 }): Promise<void> {
-  const res = await fetch(`${SCHEDULE_SERVER_URL}/timetable/slot`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || 'Failed to save the slot');
-  }
+  await trRequest('/timetable/slot', { method: 'PUT', body }, 'Failed to save the slot');
 }
 
 // 'HH:MM' (24h) → '8:25 am' style used in the cards/popup.

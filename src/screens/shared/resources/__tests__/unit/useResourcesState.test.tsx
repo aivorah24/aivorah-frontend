@@ -4,6 +4,10 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { useResourcesState } from '../../hooks/useResourcesState';
 import { fetchResources, createFolder, addFile, deleteFolder, deleteFile } from '../../services/resourcesApi';
+import { trUpload } from '../../../../../services/timetableResourcesClient';
+
+jest.mock('../../../../../services/timetableResourcesClient', () => ({ trUpload: jest.fn() }));
+const mockUpload = trUpload as jest.Mock;
 
 jest.mock('../../services/resourcesApi', () => ({
   fetchResources: jest.fn(), createFolder: jest.fn(), addFile: jest.fn(), deleteFolder: jest.fn(), deleteFile: jest.fn(),
@@ -23,14 +27,14 @@ const RESPONSE = {
 
 let hookRef: ReturnType<typeof useResourcesState>;
 
-function Harness({ email }: { email: string }) {
-  const h = useResourcesState(email);
+function Harness() {
+  const h = useResourcesState();
   hookRef = h;
   return <Text testID="loading">{String(h.loading)}</Text>;
 }
 
-async function renderHarness(email = 'admin@x.com') {
-  render(<Harness email={email} />);
+async function renderHarness() {
+  render(<Harness />);
   await waitFor(() => expect(hookRef).toBeDefined());
 }
 
@@ -60,12 +64,6 @@ describe('useResourcesState', () => {
     expect(hookRef.error).toBe('Failed to load resources');
     expect(hookRef.data).toBeNull();
     expect(hookRef.loading).toBe(false);
-  });
-
-  test('load does nothing without an email', async () => {
-    await renderHarness('');
-    await act(async () => hookRef.load(null));
-    expect(mockFetchResources).not.toHaveBeenCalled();
   });
 
   test('openFolder resets search and sets folderId', async () => {
@@ -145,7 +143,7 @@ describe('useResourcesState', () => {
   test('uploadFile on web creates a file input, uploads the selected file, and reloads', async () => {
     mockAddFile.mockResolvedValue(undefined);
     mockFetchResources.mockResolvedValue(RESPONSE);
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ url: 'https://cdn/doc.pdf', name: 'Doc.pdf', type: 'pdf', size: 500 }) }) as any;
+    mockUpload.mockResolvedValue({ url: 'https://cdn/doc.pdf', name: 'Doc.pdf', type: 'pdf', size: 500 });
 
     const fakeInput: any = { type: '', accept: '', onchange: null, files: null, click: jest.fn() };
     (global as any).document = { createElement: jest.fn().mockReturnValue(fakeInput) };
@@ -157,15 +155,15 @@ describe('useResourcesState', () => {
     fakeInput.files = [{ name: 'Doc.pdf', size: 500 }];
     await act(async () => fakeInput.onchange());
 
+    expect(mockUpload).toHaveBeenCalledWith(fakeInput.files[0], 'Doc.pdf');
     expect(mockAddFile).toHaveBeenCalledWith(expect.objectContaining({ title: 'Doc.pdf', fileUrl: 'https://cdn/doc.pdf', fileType: 'pdf' }));
     expect(mockFetchResources).toHaveBeenCalled();
     delete (global as any).document;
   });
 
-  test('uploadFile on web rejects a file over 25 MB before ever calling fetch', async () => {
+  test('uploadFile on web rejects a file over 25 MB before uploading', async () => {
     const fakeInput: any = { type: '', accept: '', onchange: null, files: null, click: jest.fn() };
     (global as any).document = { createElement: jest.fn().mockReturnValue(fakeInput) };
-    global.fetch = jest.fn();
     await renderHarness();
 
     hookRef.uploadFile();
@@ -173,7 +171,7 @@ describe('useResourcesState', () => {
     await act(async () => fakeInput.onchange());
 
     expect(hookRef.error).toBe('Files must be under 25 MB.');
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockUpload).not.toHaveBeenCalled();
     delete (global as any).document;
   });
 
@@ -187,7 +185,7 @@ describe('useResourcesState', () => {
     await act(async () => hookRef.confirmDeleteFolder(RESPONSE.folders[0]));
 
     expect(confirmMock).toHaveBeenCalledWith('Delete folder "Handbooks" and everything inside it?');
-    expect(mockDeleteFolder).toHaveBeenCalledWith('admin@x.com', 'f1');
+    expect(mockDeleteFolder).toHaveBeenCalledWith('f1');
     delete (global as any).window;
   });
 
@@ -229,7 +227,7 @@ describe('useResourcesState', () => {
 
     await act(async () => hookRef.confirmDeleteFile(RESPONSE.files[0]));
 
-    expect(mockDeleteFile).toHaveBeenCalledWith('admin@x.com', 'file1');
+    expect(mockDeleteFile).toHaveBeenCalledWith('file1');
     alertSpy.mockRestore();
   });
 });

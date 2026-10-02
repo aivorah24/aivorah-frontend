@@ -3,23 +3,22 @@ import { Platform } from 'react-native';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { useTimetableState } from '../../hooks/useTimetableState';
-import { fetchMyClasses } from '../../../../../features/classes/api/classesApi';
-import { fetchTimetable, saveSlot, saveTemplate } from '../../services/timetableApi';
+import { fetchClasses, fetchTimetable, saveSlot, saveTemplate } from '../../services/timetableApi';
 import { downloadTimetablePdf } from '../../utils/timetablePdf';
 
-jest.mock('../../../../../features/classes/api/classesApi', () => ({ fetchMyClasses: jest.fn() }));
 jest.mock('../../services/timetableApi', () => ({
-  fetchTimetable: jest.fn(), saveSlot: jest.fn(), saveTemplate: jest.fn(),
+  fetchClasses: jest.fn(), fetchTimetable: jest.fn(), saveSlot: jest.fn(), saveTemplate: jest.fn(),
 }));
 jest.mock('../../utils/timetablePdf', () => ({ downloadTimetablePdf: jest.fn() }));
 
-const mockFetchMyClasses = fetchMyClasses as jest.Mock;
+const mockFetchClasses = fetchClasses as jest.Mock;
 const mockFetchTimetable = fetchTimetable as jest.Mock;
 const mockSaveSlot = saveSlot as jest.Mock;
 const mockSaveTemplate = saveTemplate as jest.Mock;
 const mockDownloadPdf = downloadTimetablePdf as jest.Mock;
 
-const MY_CLASS = { grade: 'Grade 4', section: 'A', label: 'Grade 4 A', code: 'Grade4A', classTeacherEmail: null, classTeacherName: null, studentCount: 20 };
+const MY_CLASS = { grade: 'Grade 4', section: 'A', label: 'Grade 4 A', homeroom: true };
+const classes = (list: unknown[], grades: unknown[] = [], curriculum: string | null = null) => ({ classes: list, grades, curriculum });
 const TT = { grade: 'Grade 4', section: 'A', title: '', periodDefs: [{ code: 'P1', start: '08:50', end: '09:40', isBreak: false }], days: ['MON'], slots: [], permissions: { canManageTemplate: true, canEditSlot: true } };
 
 let hookRef: ReturnType<typeof useTimetableState>;
@@ -31,7 +30,7 @@ function Harness(params: Parameters<typeof useTimetableState>[0]) {
 }
 
 async function renderHarness(overrides: Partial<Parameters<typeof useTimetableState>[0]> = {}) {
-  const params = { email: 'admin@x.com', schoolId: 'school1', role: 'school_admin', school: 'Test School', userName: 'Admin User', paramClass: null, ...overrides };
+  const params = { role: 'school_admin', school: 'Test School', userName: 'Admin User', paramClass: null, ...overrides };
   render(<Harness {...params} />);
   await waitFor(() => expect(hookRef).toBeDefined());
   return params;
@@ -39,7 +38,7 @@ async function renderHarness(overrides: Partial<Parameters<typeof useTimetableSt
 
 beforeEach(() => {
   jest.clearAllMocks();
-  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ grades: [] }) }) as any;
+  mockFetchClasses.mockResolvedValue(classes([]));
 });
 
 describe('useTimetableState', () => {
@@ -54,25 +53,23 @@ describe('useTimetableState', () => {
     expect(hookRef.isAdmin).toBe(false);
   });
 
-  test('loadClasses (admin path) fetches the school structure and builds every grade+section as a class option', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true, json: async () => ({ grades: [{ name: 'Grade 4', sections: ['A', 'B'] }], curriculum: 'IB' }),
-    }) as any;
+  test('loadClasses (admin) keeps the grade picker and preselects the first class', async () => {
+    mockFetchClasses.mockResolvedValue(classes(
+      [{ grade: 'Grade 4', section: 'A', label: 'Grade 4 A' }, { grade: 'Grade 4', section: 'B', label: 'Grade 4 B' }],
+      [{ name: 'Grade 4', sections: ['A', 'B'] }], 'IB',
+    ));
     await renderHarness({ role: 'school_admin' });
 
     await act(async () => hookRef.loadClasses());
 
-    expect(hookRef.classes).toEqual([
-      expect.objectContaining({ grade: 'Grade 4', section: 'A' }),
-      expect.objectContaining({ grade: 'Grade 4', section: 'B' }),
-    ]);
+    expect(hookRef.classes).toHaveLength(2);
+    expect(hookRef.structure).toEqual([{ name: 'Grade 4', sections: ['A', 'B'] }]);
     expect(hookRef.selected).toEqual(expect.objectContaining({ grade: 'Grade 4', section: 'A' }));
     expect(hookRef.curriculum).toBe('IB');
-    expect(mockFetchMyClasses).not.toHaveBeenCalled();
   });
 
-  test('loadClasses (non-admin path) calls fetchMyClasses and preselects the first class', async () => {
-    mockFetchMyClasses.mockResolvedValue([MY_CLASS]);
+  test('loadClasses (teacher) preselects the first class (homeroom first from the server)', async () => {
+    mockFetchClasses.mockResolvedValue(classes([MY_CLASS]));
     await renderHarness({ role: 'teacher' });
 
     await act(async () => hookRef.loadClasses());
@@ -81,20 +78,8 @@ describe('useTimetableState', () => {
     expect(hookRef.selected).toEqual(MY_CLASS);
   });
 
-  test('loadClasses (non-admin) with zero classes clears loading instead of hanging (regression: bug found via live E2E)', async () => {
-    mockFetchMyClasses.mockResolvedValue([]);
+  test('loadClasses with zero classes clears loading instead of hanging', async () => {
     await renderHarness({ role: 'teacher' });
-
-    await act(async () => hookRef.loadClasses());
-
-    expect(hookRef.classes).toEqual([]);
-    expect(hookRef.selected).toBeNull();
-    expect(hookRef.loading).toBe(false);
-  });
-
-  test('loadClasses (admin) with zero grades in the school structure clears loading instead of hanging', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ grades: [] }) }) as any;
-    await renderHarness({ role: 'school_admin' });
 
     await act(async () => hookRef.loadClasses());
 
@@ -106,15 +91,22 @@ describe('useTimetableState', () => {
   test('loadClasses does nothing in param mode (a fixed single class)', async () => {
     await renderHarness({ role: 'teacher', paramClass: MY_CLASS });
     await act(async () => hookRef.loadClasses());
-    expect(mockFetchMyClasses).not.toHaveBeenCalled();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockFetchClasses).not.toHaveBeenCalled();
   });
 
-  test('loadClasses failure (non-admin) surfaces the error message', async () => {
-    mockFetchMyClasses.mockRejectedValue(new Error('Failed to load classes'));
+  test('loadClasses failure surfaces the error message', async () => {
+    mockFetchClasses.mockRejectedValue(new Error('Failed to load classes'));
     await renderHarness({ role: 'teacher' });
     await act(async () => hookRef.loadClasses());
     expect(hookRef.error).toBe('Failed to load classes');
+    expect(hookRef.loading).toBe(false);
+  });
+
+  test('loadTimetable asks for the class only (no email or school)', async () => {
+    mockFetchTimetable.mockResolvedValue(TT);
+    await renderHarness();
+    await act(async () => hookRef.loadTimetable(MY_CLASS));
+    expect(mockFetchTimetable).toHaveBeenCalledWith('Grade 4', 'A');
   });
 
   test('loadTimetable populates tt and clears loading', async () => {

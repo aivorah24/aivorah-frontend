@@ -1,0 +1,38 @@
+import { auth } from '../config/firebase';
+import TIMETABLE_RESOURCES_SERVER_URL from '../config/timetableResourcesServerUrl';
+
+async function authHeader(): Promise<Record<string, string>> {
+  // After a page refresh Firebase restores the sign-in a moment later.
+  await auth.authStateReady?.();
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error('Not signed in.');
+  return { Authorization: `Bearer ${idToken}` };
+}
+
+async function parseOrThrow<T>(res: Response, fallback: string): Promise<T> {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || fallback);
+  return data as T;
+}
+
+// JSON request to the Timetable & Resources service, signed in as the current user.
+export async function trRequest<T>(path: string, init: { method?: string; body?: unknown } = {}, fallbackError = 'Request failed'): Promise<T> {
+  const headers: Record<string, string> = { ...(await authHeader()) };
+  if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${TIMETABLE_RESOURCES_SERVER_URL}${path}`, {
+    method: init.method || 'GET',
+    headers,
+    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+  });
+  return parseOrThrow<T>(res, fallbackError);
+}
+
+export type UploadedFile = { url: string; name: string; size: number; type: string };
+
+// Uploads a PDF or picture (teachers and school admins).
+export async function trUpload(file: Blob, fileName: string): Promise<UploadedFile> {
+  const form = new FormData();
+  form.append('file', file, fileName);
+  const res = await fetch(`${TIMETABLE_RESOURCES_SERVER_URL}/uploads`, { method: 'POST', headers: await authHeader(), body: form });
+  return parseOrThrow<UploadedFile>(res, 'Upload failed');
+}

@@ -7,6 +7,7 @@ const mockDoc = {
   splitTextToSize: jest.fn((s: string) => [s]),
   addPage: jest.fn(), save: jest.fn(),
 };
+jest.mock('../../../../../services/timetableResourcesClient', () => ({ trRequest: jest.fn() }));
 jest.mock('jspdf', () => ({ jsPDF: jest.fn().mockImplementation(() => mockDoc) }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires

@@ -13,8 +13,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
-import { MyClass } from '../../../features/classes/api/classesApi';
-import { DAY_LABELS } from './services/timetableApi';
+import { DAY_LABELS, TimetableClass } from './services/timetableApi';
 import { useTimetableState } from './hooks/useTimetableState';
 import TimetableGrid from './components/TimetableGrid';
 import SlotDetailModal from './components/SlotDetailModal';
@@ -24,8 +23,6 @@ export default function TimetableScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
-  const email = user?.email || '';
-  const schoolId = user?.schoolId || '';
 
   // When opened for a specific class (e.g. from ClassDetail), show just that
   // class and hide the selector. Otherwise list the user's own classes.
@@ -33,8 +30,8 @@ export default function TimetableScreen({ navigation, route }: any) {
   const pSection: string = route?.params?.section || '';
   const pLabel: string | undefined = route?.params?.label;
   // Memoised on the primitive params: a new object each render re-runs the load effects forever.
-  const paramClass = useMemo<MyClass | null>(() => (pGrade
-    ? { grade: pGrade, section: pSection, label: pLabel || `${pGrade}${pSection ? ' ' + pSection : ''}`, code: `${pGrade}${pSection}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 }
+  const paramClass = useMemo<TimetableClass | null>(() => (pGrade
+    ? { grade: pGrade, section: pSection, label: pLabel || `${pGrade}${pSection ? ' ' + pSection : ''}` }
     : null), [pGrade, pSection, pLabel]);
 
   const {
@@ -43,7 +40,7 @@ export default function TimetableScreen({ navigation, route }: any) {
     classLabel, programmes, activeProgramme, gradesForSelector, sectionsForGrade,
     loadClasses, loadTimetable, setupDefault, onSaveSlot, onSavePeriods, onClearSlot, downloadPdf,
     pickGrade, pickSection, pickProgramme,
-  } = useTimetableState({ email, schoolId, role: user?.role, school: user?.school, userName: user?.name, paramClass });
+  } = useTimetableState({ role: user?.role, school: user?.school, userName: user?.name, paramClass });
 
   // Reload classes list and the current timetable every time the screen gains
   // focus — this ensures that a save by a teacher/admin in another session is
@@ -104,7 +101,7 @@ export default function TimetableScreen({ navigation, route }: any) {
               {classes.map((c) => {
                 const active = selected && c.grade === selected.grade && c.section === selected.section;
                 return (
-                  <TouchableOpacity key={c.code} style={[styles.classPill, active && styles.classPillActive]} onPress={() => setSelected(c)} accessibilityRole="button">
+                  <TouchableOpacity key={c.label} style={[styles.classPill, active && styles.classPillActive]} onPress={() => setSelected(c)} accessibilityRole="button">
                     <Text style={[styles.classPillText, active && styles.classPillTextActive]} numberOfLines={1}>{c.label}</Text>
                   </TouchableOpacity>
                 );

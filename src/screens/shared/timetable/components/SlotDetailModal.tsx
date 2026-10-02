@@ -12,7 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
-import SERVER_URL from '../../../../config/serverUrl';
+import { trUpload } from '../../../../services/timetableResourcesClient';
 import { PeriodDef, TimetableSlot, fmtTime, SUBJECT_PALETTE } from '../services/timetableApi';
 
 export interface SlotEdit {
@@ -76,11 +76,7 @@ export default function SlotDetailModal({
       if (file.size > 10 * 1024 * 1024) { setError('Files must be under 10 MB.'); return; }
       setUploading(true); setError('');
       try {
-        const form = new FormData();
-        form.append('file', file);
-        const res = await fetch(`${SERVER_URL}/messages/upload`, { method: 'POST', body: form });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.url) throw new Error(data?.error || 'Upload failed');
+        const data = await trUpload(file, file.name);
         setMaterialUrl(data.url); setMaterialName(data.name || file.name || 'material');
       } catch (e: any) {
         setError(e?.message || 'Could not attach the file');
