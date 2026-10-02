@@ -9,6 +9,7 @@ Platform.OS = 'web';
 const mockUpdateUser = jest.fn();
 const mockLogout = jest.fn();
 
+jest.mock('../../../../shared/account/services/googlePicker', () => ({ pickGoogleAccount: jest.fn() }));
 jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { email: 'parent@example.com', name: 'Jane Doe', location: 'Salem', authProvider: 'password' },

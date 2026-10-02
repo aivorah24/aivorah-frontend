@@ -10,6 +10,7 @@ import ConnectSchoolBanner from '../../../features/classes/components/ConnectSch
 import { getAvatarGradient, getAvatarIcon } from '../../../constants/avatarStyles';
 import { useTheme } from '../../../context/ThemeContext';
 import { useNotification } from '../../../context/NotificationContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useParentSettingsData } from './hooks/useParentSettingsData';
 import { useNotificationPrefs } from './hooks/useNotificationPrefs';
 import SectionHeader from './components/SectionHeader';
@@ -18,7 +19,8 @@ import NotificationsCard from './components/NotificationsCard';
 import AppearanceCard from './components/AppearanceCard';
 import NameModal from './components/NameModal';
 import LocationModal from './components/LocationModal';
-import EmailModal from './components/EmailModal';
+import ChangeEmailModal from '../../shared/account/components/ChangeEmailModal';
+import { useEmailChange } from '../../shared/account/hooks/useEmailChange';
 import PasswordModal from './components/PasswordModal';
 import SsoInfoModal from './components/SsoInfoModal';
 import DeleteAccountModal from './components/DeleteAccountModal';
@@ -39,6 +41,8 @@ export default function ParentSettingsScreen({ navigation }: any) {
   }
 
   const { user } = data;
+  const { logout } = useAuth();
+  const emailChange = useEmailChange({ email: user?.email, name: user?.name, isGoogleUser: data.isGoogleUser });
 
   return (
     <ScreenLayout>
@@ -78,7 +82,7 @@ export default function ParentSettingsScreen({ navigation }: any) {
                 <View style={styles.divider} />
                 <FieldRow label="Display Name" sub={user?.name || '—'} btnLabel="Change" onPress={() => data.openModal('name')} styles={styles} />
                 <View style={styles.divider} />
-                <FieldRow label="Email Address" sub={user?.email || '—'} btnLabel="Change" onPress={() => data.openModal('email')} styles={styles} />
+                <FieldRow label="Email Address" sub={user?.email || '—'} btnLabel="Change" onPress={() => { emailChange.reset(); data.openModal('email'); }} styles={styles} />
                 <View style={styles.divider} />
                 <FieldRow label="Location" sub={user?.location || 'Not set'} btnLabel="Update" onPress={() => data.openModal('location')} styles={styles} />
               </View>
@@ -130,7 +134,15 @@ export default function ParentSettingsScreen({ navigation }: any) {
       </View>
 
       <NameModal visible={data.activeModal === 'name'} data={data} styles={styles} colors={colors} />
-      <EmailModal visible={data.activeModal === 'email'} data={data} styles={styles} colors={colors} />
+      <ChangeEmailModal
+        visible={data.activeModal === 'email'}
+        onClose={data.closeModal}
+        onSignOut={() => { data.closeModal(); logout(); }}
+        userEmail={user?.email}
+        emailChange={emailChange}
+        styles={styles}
+        colors={colors}
+      />
       <SsoInfoModal
         visible={data.activeModal === 'ssoInfo' || (data.activeModal === 'password' && !data.isPasswordUser)}
         onClose={data.closeModal}
