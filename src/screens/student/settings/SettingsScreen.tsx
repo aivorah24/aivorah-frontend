@@ -17,7 +17,7 @@ import { SectionHeader } from './components/shared';
 import { useProfilePhoto } from './hooks/useProfilePhoto';
 import { useNotificationPrefs } from './hooks/useNotificationPrefs';
 import { useProfileFields } from './hooks/useProfileFields';
-import { useEmailChange } from './hooks/useEmailChange';
+import { useEmailChange } from '../../shared/account/hooks/useEmailChange';
 import { usePasswordChange } from './hooks/usePasswordChange';
 import { useRecoveryEmail } from './hooks/useRecoveryEmail';
 import { useDeleteAccount } from './hooks/useDeleteAccount';
@@ -27,7 +27,7 @@ import AppearanceCard from './components/AppearanceCard';
 import SecurityCard from './components/SecurityCard';
 import NotificationsCard from './components/NotificationsCard';
 import NameModal from './components/NameModal';
-import EmailModal from './components/EmailModal';
+import ChangeEmailModal from '../../shared/account/components/ChangeEmailModal';
 import PasswordModal from './components/PasswordModal';
 import SSOInfoModal from './components/SSOInfoModal';
 import RecoveryModal from './components/RecoveryModal';
@@ -60,7 +60,7 @@ export default function SettingsScreen({ navigation, route }: any) {
 
   const photo = useProfilePhoto(user?.email, (user as any)?.photoUrl ?? null, updateUser);
   const profileFields = useProfileFields(user, updateUser, closeModal);
-  const emailChange = useEmailChange(user, isGoogleUser, isPasswordUser, closeModal, logout);
+  const emailChange = useEmailChange({ email: user?.email, name: user?.name, isGoogleUser });
   const passwordChange = usePasswordChange(user, updateUser, closeModal);
   const recoveryEmail = useRecoveryEmail(user?.email, closeModal);
   const deleteAccount = useDeleteAccount(isPasswordUser, isGoogleUser, logout);
@@ -68,7 +68,7 @@ export default function SettingsScreen({ navigation, route }: any) {
 
   function openModal(type: ModalType) {
     profileFields.resetForm();
-    emailChange.resetForm();
+    emailChange.reset();
     passwordChange.resetForm();
     recoveryEmail.resetForm();
     setActiveModal(type);
@@ -184,25 +184,12 @@ export default function SettingsScreen({ navigation, route }: any) {
         styles={styles}
       />
 
-      <EmailModal
+      <ChangeEmailModal
         visible={activeModal === 'email'}
         onClose={closeModal}
+        onSignOut={() => { closeModal(); logout(); }}
         userEmail={user?.email}
-        isGoogleUser={isGoogleUser}
-        emailStep={emailChange.emailStep}
-        setEmailStep={emailChange.setEmailStep}
-        newEmail={emailChange.newEmail}
-        setNewEmail={emailChange.setNewEmail}
-        emailPassword={emailChange.emailPassword}
-        setEmailPassword={emailChange.setEmailPassword}
-        emailOtp={emailChange.emailOtp}
-        setEmailOtp={emailChange.setEmailOtp}
-        emailError={emailChange.emailError}
-        modalLoading={emailChange.modalLoading}
-        onSendOtp={emailChange.handleSendEmailOtp}
-        onVerifyOtp={emailChange.handleVerifyEmailOtp}
-        onResendOtp={emailChange.handleResendEmailOtp}
-        onSwitchGoogleAccount={emailChange.handleSwitchGoogleAccount}
+        emailChange={emailChange}
         colors={colors}
         styles={styles}
       />

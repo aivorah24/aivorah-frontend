@@ -22,7 +22,8 @@ import { useTeacherPreferences } from './hooks/useTeacherPreferences';
 import { useProfilePhoto } from './hooks/useProfilePhoto';
 import { useBrandingLogos } from './hooks/useBrandingLogos';
 import { useProfileFields } from './hooks/useProfileFields';
-import { useEmailChange } from './hooks/useEmailChange';
+import { useEmailChange } from '../../shared/account/hooks/useEmailChange';
+import ChangeEmailModal from '../../shared/account/components/ChangeEmailModal';
 import { usePasswordChange } from './hooks/usePasswordChange';
 import { useDeleteAccount } from './hooks/useDeleteAccount';
 import { useParentProfile } from './hooks/useParentProfile';
@@ -94,10 +95,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   // Edit modals
   const [activeModal,   setActiveModal]   = useState<ModalType>(null);
   const [newName,       setNewName]       = useState(user?.name || '');
-  const [newEmail,      setNewEmail]      = useState('');
-  const [emailPassword, setEmailPassword] = useState('');
-  const [emailStep,     setEmailStep]     = useState<'form' | 'otp'>('form');
-  const [emailOtp,      setEmailOtp]      = useState('');
   const [currentPw,     setCurrentPw]    = useState('');
   const [newPw,         setNewPw]        = useState('');
   const [confirmPw,     setConfirmPw]    = useState('');
@@ -155,73 +152,35 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   // reading each hook's OWN live state (same non-stale reasoning as the
   // delete-account hook above) instead of a separate mirrored copy.
   const profileFields = useProfileFields(user?.email, updateUser);
-  const emailChangeHook = useEmailChange(user?.email, user?.name, isPasswordUser, isGoogleUser);
+  const emailChange = useEmailChange({ email: user?.email, name: user?.name, isGoogleUser });
   const passwordChangeHook = usePasswordChange();
 
   const modalLoading =
     activeModal === 'name' || activeModal === 'school' || activeModal === 'curriculum' ? profileFields.saving :
-    activeModal === 'email' ? emailChangeHook.loading :
+    activeModal === 'email' ? emailChange.loading :
     activeModal === 'password' ? passwordChangeHook.saving :
     false;
   const modalError =
     activeModal === 'name' || activeModal === 'school' || activeModal === 'curriculum' ? profileFields.error :
-    activeModal === 'email' ? emailChangeHook.error :
+    activeModal === 'email' ? emailChange.error :
     activeModal === 'password' ? passwordChangeHook.error :
     '';
   function setModalError(message: string) {
     profileFields.setError(message);
-    emailChangeHook.setError(message);
     passwordChangeHook.setError(message);
   }
 
   function openModal(type: ModalType) {
     setNewName(user?.name || '');
-    setNewEmail(''); setEmailPassword('');
     setCurrentPw(''); setNewPw(''); setConfirmPw('');
     setNewSchool(user?.school || '');
     setEditEntries(teachesToEntries());
     setOpenDropdown(null);
-    emailChangeHook.reset();
+    emailChange.reset();
     setModalError('');
     setActiveModal(type);
   }
   function closeModal() { setActiveModal(null); setModalError(''); }
-
-  // Google-SSO "change email" = migrate the account onto a DIFFERENT Google
-  // account the teacher owns (same flow as the student settings). No typed email
-  // or OTP: they prove ownership via a Google popup and the server moves all data
-  // onto it (POST /user/change-email-google). Editing the Firebase top-level email
-  // for a Google account (the old path) corrupts it — this is the correct fix.
-  //
-  // All 6 handlers below are now thin wrappers around the extracted hooks
-  // (useProfileFields/useEmailChange/usePasswordChange, see comment above) —
-  // logic + its own tests live there; these just bridge hook calls to the
-  // existing modal JSX (closeModal/setFeedback/setLogoutAfterFeedback etc.).
-  async function handleSendEmailOtp() {
-    await emailChangeHook.sendOtp(newEmail, emailPassword);
-  }
-
-  async function handleVerifyEmailOtp() {
-    const result = await emailChangeHook.verifyOtp(newEmail, emailOtp);
-    if (!result.ok) return;
-    closeModal();
-    setLogoutAfterFeedback(true);
-    setFeedback({
-      title: 'Email Updated',
-      message: `Your email has been changed to ${result.newEmail}. For security, please sign in again with your new email.`,
-    });
-  }
-
-  async function handleSwitchGoogleAccount() {
-    const result = await emailChangeHook.switchGoogleAccount();
-    if (!result.ok) return;
-    closeModal();
-    setLogoutAfterFeedback(true);
-    setFeedback({
-      title: 'Email Updated',
-      message: `Your account is now linked to ${result.newEmail}. For security, please sign in again with your new Google account.`,
-    });
-  }
 
   async function handleSaveName() {
     const ok = await profileFields.saveName(newName);
@@ -475,91 +434,15 @@ export default function TeacherSettingsScreen({ navigation }: any) {
 
       {/* Change Email Modal — two steps: (1) confirm identity + enter new email,
           (2) verify the code we email to the NEW address before committing. */}
-      <AppModal visible={activeModal === 'email'} title="Change Email Address" onClose={closeModal} styles={styles} colors={colors}>
-        {isGoogleUser ? (
-          <>
-            <Text style={styles.modalNote}>
-              Your account signs in with Google, so its email is your Google account. To use a different
-              address, switch to another Google account you own — we&apos;ll move your account and all its data
-              onto it. You&apos;ll pick the account in a Google window.
-            </Text>
-            <View style={[styles.modalInput, { opacity: 0.7 }]}>
-              <Feather name="mail" size={15} color={colors.textDim} />
-              <Text style={[styles.modalTextInput, { color: colors.textDim }]} numberOfLines={1}>{user?.email}</Text>
-            </View>
-            {modalError ? <Text style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
-            <ModalButtons
-              onCancel={closeModal}
-              onSave={handleSwitchGoogleAccount}
-              loading={modalLoading} saveLabel="Switch Google Account" styles={styles}
-            />
-          </>
-        ) : emailStep === 'form' ? (
-          <>
-            <Text style={styles.modalNote}>
-              Enter your new email and current password to confirm.
-            </Text>
-            <Text style={styles.modalFieldLabel}>New Email</Text>
-            <View style={styles.modalInput}>
-              <Feather name="mail" size={15} color={colors.textDim} />
-              <TextInput
-                style={styles.modalTextInput} value={newEmail} onChangeText={setNewEmail}
-                placeholder="new@example.com" placeholderTextColor={colors.textDim}
-                keyboardType="email-address" autoCapitalize="none" autoFocus
-              />
-            </View>
-            <Text style={styles.modalFieldLabel}>Current Password</Text>
-            <View style={styles.modalInput}>
-              <Feather name="lock" size={15} color={colors.textDim} />
-              <TextInput
-                style={styles.modalTextInput} value={emailPassword} onChangeText={setEmailPassword}
-                placeholder="••••••••" placeholderTextColor={colors.textDim} secureTextEntry
-              />
-            </View>
-            {modalError ? <Text style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
-           <ModalButtons
-             onCancel={closeModal}
-             onSave={handleSendEmailOtp}
-             loading={modalLoading}
-             saveLabel={isGoogleUser ? 'Confirm with Google' : 'Send Verification Code'}
-             styles={styles}
-            />
-          </>
-        ) : (
-          <>
-            <Text style={styles.modalNote}>
-              We sent a 6-digit code to <Text style={{ fontWeight: '700' }}>{newEmail.trim()}</Text>. Enter it below to confirm the change.
-            </Text>
-            <Text style={styles.modalFieldLabel}>Verification Code</Text>
-            <View style={styles.modalInput}>
-              <Feather name="shield" size={15} color={colors.textDim} />
-              <TextInput
-                style={styles.modalTextInput} value={emailOtp} onChangeText={setEmailOtp}
-                placeholder="123456" placeholderTextColor={colors.textDim}
-                keyboardType="number-pad" maxLength={6} autoFocus
-              />
-            </View>
-            <TouchableOpacity
-              disabled={modalLoading}
-              onPress={async () => {
-                const result = await emailChangeHook.resendOtp(newEmail);
-                if (result.ok) setFeedback({ title: 'Code Resent', message: result.message! });
-              }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.accentYellow, marginTop: 4 }}>Resend code</Text>
-            </TouchableOpacity>
-            {modalError ? <Text style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
-        <ModalButtons
-          onCancel={() => setEmailStep('form')}
-          cancelLabel="Back"
-          onSave={handleVerifyEmailOtp}
-          loading={modalLoading}
-          saveLabel="Verify & Update Email"
-          styles={styles}
-        />
-          </>
-        )}
-      </AppModal>
+      <ChangeEmailModal
+        visible={activeModal === 'email'}
+        onClose={closeModal}
+        onSignOut={() => { closeModal(); logout(); }}
+        userEmail={user?.email}
+        emailChange={emailChange}
+        styles={styles}
+        colors={colors}
+      />
 
       {/* Google SSO Info Modal */}
       <AppModal visible={activeModal === 'ssoInfo' || (activeModal === 'password' && !isPasswordUser)} title="Google Sign-In Account" onClose={closeModal} styles={styles} colors={colors}>

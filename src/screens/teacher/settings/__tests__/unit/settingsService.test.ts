@@ -8,10 +8,6 @@ import {
   fetchBrandingLogos,
   uploadBrandingLogo,
   patchProfile,
-  checkEmailTaken,
-  sendEmailOtp,
-  changeEmail,
-  changeEmailGoogle,
   deleteAccount,
   addRole,
   createChildStudent,
@@ -109,67 +105,6 @@ describe('patchProfile', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'email required' }) });
     const result = await patchProfile({ email: '' });
     expect(result).toEqual({ error: 'email required' });
-  });
-});
-
-describe('checkEmailTaken', () => {
-  test('a real existing account -> true', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ role: 'teacher' }) });
-    const result = await checkEmailTaken('taken@a.com');
-    expect(global.fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/role?email=taken%40a.com`);
-    expect(result).toBe(true);
-  });
-
-  test('no real account for that email -> false', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'User not found' }) });
-    expect(await checkEmailTaken('free@a.com')).toBe(false);
-  });
-});
-
-describe('sendEmailOtp', () => {
-  test('sends a real POST to the migrated auth service with the email and name', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
-    await sendEmailOtp('new@a.com', 'Ms. Rao');
-    expect(global.fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/email-otp/send`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'new@a.com', name: 'Ms. Rao' }),
-    });
-  });
-
-  test('a real server error surfaces the error message, not a thrown exception', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Please enter a valid email address.' }) });
-    const result = await sendEmailOtp('not-an-email');
-    expect(result.error).toBe('Please enter a valid email address.');
-  });
-});
-
-describe('changeEmail', () => {
-  test('a real successful rename sends currentEmail/newEmail/otp and returns the updated user', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, user: { email: 'new@a.com' } }) });
-    const result = await changeEmail('old@a.com', 'new@a.com', '123456');
-    expect(global.fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/change-email`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentEmail: 'old@a.com', newEmail: 'new@a.com', otp: '123456' }),
-    });
-    expect(result.user.email).toBe('new@a.com');
-  });
-
-  test('a real Google-SSO refusal surfaces the special error code', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Google-linked', code: 'GOOGLE_SSO_EMAIL_IMMUTABLE' }) });
-    const result = await changeEmail('old@a.com', 'new@a.com', '123456');
-    expect(result.code).toBe('GOOGLE_SSO_EMAIL_IMMUTABLE');
-  });
-});
-
-describe('changeEmailGoogle', () => {
-  test('sends a real POST with currentEmail/idToken', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, newEmail: 'new@gmail.com' }) });
-    const result = await changeEmailGoogle('old@a.com', 'fake-id-token');
-    expect(global.fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/change-email-google`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentEmail: 'old@a.com', idToken: 'fake-id-token' }),
-    });
-    expect(result.newEmail).toBe('new@gmail.com');
   });
 });
 

@@ -39,53 +39,6 @@ describe('settingsService', () => {
     });
   });
 
-  describe('isEmailTaken', () => {
-    it('returns true when auth-service /user/role responds ok', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true });
-      expect(await settingsService.isEmailTaken('taken@test.com')).toBe(true);
-    });
-
-    it('returns false when auth-service /user/role 404s', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false });
-      expect(await settingsService.isEmailTaken('free@test.com')).toBe(false);
-    });
-  });
-
-  describe('sendEmailOtp', () => {
-    it('POSTs to auth-service /user/email-otp/send', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValue({}) });
-      await settingsService.sendEmailOtp('new@test.com', 'Jane');
-      expect(fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/email-otp/send`, expect.any(Object));
-    });
-
-    it('throws the server error on failure', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: jest.fn().mockResolvedValueOnce({ error: 'send failed' }) });
-      await expect(settingsService.sendEmailOtp('new@test.com')).rejects.toThrow('send failed');
-    });
-  });
-
-  describe('changeEmail', () => {
-    it('POSTs to auth-service /user/change-email', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValue({}) });
-      await settingsService.changeEmail('old@test.com', 'new@test.com', '123456');
-      expect(fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/change-email`, expect.any(Object));
-    });
-
-    it('throws the server error on failure', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: jest.fn().mockResolvedValueOnce({ error: 'bad otp' }) });
-      await expect(settingsService.changeEmail('old@test.com', 'new@test.com', '000000')).rejects.toThrow('bad otp');
-    });
-  });
-
-  describe('changeEmailGoogle', () => {
-    it('POSTs to auth-service /user/change-email-google and returns the payload', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({ newEmail: 'new@gmail.com' }) });
-      const res = await settingsService.changeEmailGoogle('old@gmail.com', 'token');
-      expect(fetch).toHaveBeenCalledWith(`${AUTH_SERVER_URL}/user/change-email-google`, expect.any(Object));
-      expect(res).toEqual({ newEmail: 'new@gmail.com' });
-    });
-  });
-
   describe('deleteAccount', () => {
     it('DELETEs to auth-service /user/delete-account', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({ ok: true });

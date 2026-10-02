@@ -71,11 +71,10 @@ jest.mock('../hooks/useProfileFields', () => ({ useProfileFields: () => ({
   newLocation: '', setNewLocation: jest.fn(), locationLoading: false, handleSaveLocation: jest.fn(),
   resetForm: mockResetForm,
 }) }));
-jest.mock('../hooks/useEmailChange', () => ({ useEmailChange: () => ({
-  newEmail: '', setNewEmail: jest.fn(), emailPassword: '', setEmailPassword: jest.fn(), emailError: '',
-  emailStep: 'form', setEmailStep: jest.fn(), emailOtp: '', setEmailOtp: jest.fn(), modalLoading: false,
-  handleSendEmailOtp: jest.fn(), handleVerifyEmailOtp: jest.fn(), handleResendEmailOtp: jest.fn(), handleSwitchGoogleAccount: jest.fn(),
-  resetForm: mockResetForm,
+jest.mock('../../../shared/account/hooks/useEmailChange', () => ({ useEmailChange: () => ({
+  step: 'form', newEmail: '', setNewEmail: jest.fn(), password: '', setPassword: jest.fn(), otp: '', setOtp: jest.fn(),
+  error: '', info: '', loading: false, doneMessage: '', isGoogleUser: false,
+  reset: mockResetForm, backToForm: jest.fn(), sendOtp: jest.fn(), resendOtp: jest.fn(), verifyOtp: jest.fn(), switchGoogleAccount: jest.fn(),
 }) }));
 jest.mock('../hooks/usePasswordChange', () => ({ usePasswordChange: () => ({
   currentPassword: '', setCurrentPassword: jest.fn(), newPassword: '', setNewPassword: jest.fn(),

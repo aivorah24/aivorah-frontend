@@ -27,44 +27,6 @@ export async function uploadPhoto(userEmail: string, base64: string, mimeType: s
   return url;
 }
 
-export async function isEmailTaken(email: string): Promise<boolean> {
-  const res = await fetch(`${AUTH_SERVER_URL}/user/role?email=${encodeURIComponent(email)}`);
-  return res.ok;
-}
-
-// email-otp/change-email/delete-account already live on aivorah-auth-service
-// (ported from the monolith 2026-08-27, routes/account.js) - not a new repoint.
-export async function sendEmailOtp(email: string, name?: string): Promise<void> {
-  const res = await fetch(`${AUTH_SERVER_URL}/user/email-otp/send`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name }),
-  });
-  const d = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(d.error || 'Could not send the verification code.');
-}
-
-export async function changeEmail(currentEmail: string | undefined, newEmail: string, otp: string): Promise<void> {
-  const res = await fetch(`${AUTH_SERVER_URL}/user/change-email`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ currentEmail, newEmail, otp }),
-  });
-  const d = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(d.error || 'Could not update your email.');
-}
-
-export async function changeEmailGoogle(currentEmail: string, idToken: string): Promise<{ newEmail?: string }> {
-  const res = await fetch(`${AUTH_SERVER_URL}/user/change-email-google`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ currentEmail, idToken }),
-  });
-  const d = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(d.error || 'Could not switch your Google account.');
-  return d;
-}
-
 export async function deleteAccount(email: string): Promise<void> {
   await fetch(`${AUTH_SERVER_URL}/user/delete-account`, {
     method: 'DELETE',
