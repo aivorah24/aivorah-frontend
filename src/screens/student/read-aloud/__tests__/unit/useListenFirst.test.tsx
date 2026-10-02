@@ -62,7 +62,7 @@ test('plays the narration, then pauses, resumes and stops', async () => {
 
   await act(async () => { result.current.toggle(); });
   expect(result.current.isPaused).toBe(true);
-  FakeAudio.last.currentTime = 1;
+  // Pausing before the first word has played must still resume (currentTime is 0).
   await act(async () => { result.current.toggle(); });
   expect(result.current.isPlaying).toBe(true);
 

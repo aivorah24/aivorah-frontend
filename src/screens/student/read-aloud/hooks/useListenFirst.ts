@@ -88,7 +88,7 @@ export function useListenFirst(passage: Passage | null) {
       return true;
     }
     const audio = audioRef.current;
-    if (audio && audio.paused && audio.currentTime > 0) {
+    if (audio && audio.paused && !audio.ended) {
       audio.play();
       setIsPaused(false);
       setIsPlaying(true);
