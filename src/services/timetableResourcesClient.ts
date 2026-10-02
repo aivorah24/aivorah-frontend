@@ -29,10 +29,15 @@ export async function trRequest<T>(path: string, init: { method?: string; body?:
 
 export type UploadedFile = { url: string; name: string; size: number; type: string };
 
-// Uploads a PDF or picture (teachers and school admins).
-export async function trUpload(file: Blob, fileName: string): Promise<UploadedFile> {
+// Posts one file (multipart "file") to the service, signed in as the current user.
+export async function trPostFile<T>(path: string, file: Blob, fileName: string, fallbackError: string): Promise<T> {
   const form = new FormData();
   form.append('file', file, fileName);
-  const res = await fetch(`${TIMETABLE_RESOURCES_SERVER_URL}/uploads`, { method: 'POST', headers: await authHeader(), body: form });
-  return parseOrThrow<UploadedFile>(res, 'Upload failed');
+  const res = await fetch(`${TIMETABLE_RESOURCES_SERVER_URL}${path}`, { method: 'POST', headers: await authHeader(), body: form });
+  return parseOrThrow<T>(res, fallbackError);
+}
+
+// Uploads a PDF or picture (teachers and school admins).
+export function trUpload(file: Blob, fileName: string): Promise<UploadedFile> {
+  return trPostFile<UploadedFile>('/uploads', file, fileName, 'Upload failed');
 }
