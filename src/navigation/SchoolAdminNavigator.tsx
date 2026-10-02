@@ -33,6 +33,8 @@ import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
 import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
+import TimetableScreen from '../features/timetable/components/TimetableScreen';
+import ResourcesScreen from '../features/resources/components/ResourcesScreen';
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
@@ -58,6 +60,8 @@ export type SchoolAdminDrawerParamList = {
   TeacherHelp: undefined;
   Messages: undefined;
   Channels: undefined;
+  Timetable: undefined;
+  Resources: undefined;
 };
 
 const Drawer = createDrawerNavigator<SchoolAdminDrawerParamList>();
@@ -120,6 +124,8 @@ export default function SchoolAdminNavigator() {
       <Drawer.Screen name="TeacherHelp" component={HelpSupportScreen} />
       <Drawer.Screen name="Channels" component={ChannelsScreen} />
       <Drawer.Screen name="Messages" component={SchoolAdminMessagesScreen} />
+      <Drawer.Screen name="Timetable" component={TimetableScreen} />
+      <Drawer.Screen name="Resources" component={ResourcesScreen} />
     </Drawer.Navigator>
   );
 }

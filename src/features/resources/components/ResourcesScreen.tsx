@@ -63,7 +63,7 @@ export default function ResourcesScreen({ navigation }: any) {
             ))}
           </ScrollView>
           <View style={styles.toolRight}>
-            <TouchableOpacity style={styles.viewToggle} onPress={() => setView(view === 'list' ? 'grid' : 'list')} accessibilityRole="button">
+            <TouchableOpacity style={styles.viewToggle} onPress={() => setView(view === 'list' ? 'grid' : 'list')} accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Grid view' : 'List view'}>
               <Feather name={view === 'list' ? 'grid' : 'list'} size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </View>

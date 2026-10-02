@@ -29,9 +29,13 @@ export default function TimetableScreen({ navigation, route }: any) {
 
   // When opened for a specific class (e.g. from ClassDetail), show just that
   // class and hide the selector. Otherwise list the user's own classes.
-  const paramClass: MyClass | null = route?.params?.grade
-    ? { grade: route.params.grade, section: route.params.section || '', label: route.params.label || `${route.params.grade}${route.params.section ? ' ' + route.params.section : ''}`, code: `${route.params.grade}${route.params.section || ''}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 }
-    : null;
+  const pGrade: string | undefined = route?.params?.grade;
+  const pSection: string = route?.params?.section || '';
+  const pLabel: string | undefined = route?.params?.label;
+  // Memoised on the primitive params: a new object each render re-runs the load effects forever.
+  const paramClass = useMemo<MyClass | null>(() => (pGrade
+    ? { grade: pGrade, section: pSection, label: pLabel || `${pGrade}${pSection ? ' ' + pSection : ''}`, code: `${pGrade}${pSection}`, classTeacherEmail: null, classTeacherName: null, studentCount: 0 }
+    : null), [pGrade, pSection, pLabel]);
 
   const {
     classes, selected, setSelected, tt, loading, error, modal, setModal, showPeriods, setShowPeriods,
