@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { hasReadAloudStories } from '../../screens/student/read-aloud/utils/gradeAccess';
 import {
   View,
   Text,
@@ -42,6 +43,7 @@ const STUDENT_NAV_ITEMS = [
   { label: 'The World & You', icon: 'globe', screen: 'WorldAndYou', group: 'MENU' },
   { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
   { label: 'Daily Habits', icon: 'sun', screen: 'DailyHabits', group: 'MENU' },
+  { label: 'Read Aloud', icon: 'mic', screen: 'ReadAloud', group: 'MENU' },
   { label: 'My Classes', icon: 'layers', screen: 'MyClasses', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'Assignments', group: 'FOCUS', premium: false },
   { label: 'Challenges', icon: 'target', screen: 'Challenges', group: 'FOCUS', premium: false },
@@ -183,7 +185,8 @@ export default function DrawerContent(props: any) {
   const MOBILE_TEACHER_SCREENS = ['TeacherDashboard', 'TeacherStudents', 'TeacherAttendance', 'TeacherAssignments', 'TeacherSchedule', 'TeacherProgress', 'TeacherMessages', 'TeacherSettings', 'TeacherHelp'];
   const MOBILE_PARENT_SCREENS  = ['ParentDashboard', 'ParentMyKids', 'ParentDailyTasks', 'ParentSchedule', 'ParentProgress', 'ParentMessages', 'ParentControls', 'ParentSettings', 'ParentHelp'];
   const mobileAllow = Platform.OS !== 'web' ? (isTeacher ? MOBILE_TEACHER_SCREENS : isParent ? MOBILE_PARENT_SCREENS : null) : null;
-  const NAV_ITEMS = mobileAllow ? NAV_ITEMS_BASE.filter((i) => mobileAllow.includes(i.screen)) : NAV_ITEMS_BASE;
+  const NAV_ITEMS = (mobileAllow ? NAV_ITEMS_BASE.filter((i) => mobileAllow.includes(i.screen)) : NAV_ITEMS_BASE)
+    .filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
   const groups = (isSuperAdmin || isTeacher) ? ['MENU', 'TEACHING DEVELOPMENT', 'SYSTEM'] : isSchoolAdmin ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : isParent ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
   const { unreadCount, unreadAssignments, unreadChallenges } = useNotification();
   const { bannerAnnouncements } = useAnnouncements();

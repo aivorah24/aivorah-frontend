@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { hasReadAloudStories } from '../../screens/student/read-aloud/utils/gradeAccess';
 import {
   View,
   Text,
@@ -50,6 +51,7 @@ const STUDENT_NAV_ITEMS = [
   { label: 'My Classes',       icon: 'layers',       screen: 'MyClasses',          group: 'MENU',    premium: false },
   { label: 'Bedtime Stories',  icon: 'book',         screen: 'BhagavathaStories',  group: 'MENU',    premium: false },
   { label: 'Daily Habits',     icon: 'sun',          screen: 'DailyHabits',        group: 'MENU',    premium: false },
+  { label: 'Read Aloud',       icon: 'mic',          screen: 'ReadAloud',          group: 'MENU',    premium: false },
   { label: 'Assignments',      icon: 'check-square', screen: 'Assignments',        group: 'FOCUS',   premium: false },
   { label: 'Challenges',       icon: 'target',       screen: 'Challenges',         group: 'FOCUS',   premium: false },
   { label: 'Leaderboard',      icon: 'award',        screen: 'Leaderboard',        group: 'FOCUS',   premium: false },
@@ -231,9 +233,9 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   // are school-scoped, so B2C teachers (no school) have no audience for it — hide it
   // rather than route to the "not assigned to a school" dead-end.
   const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
-  const NAV_ITEMS = (!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
+  const NAV_ITEMS = ((!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
-    : NAV_ITEMS_ROLE;
+    : NAV_ITEMS_ROLE).filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
   const groups = (role === 'super_admin' || role === 'teacher') ? ['MENU', 'MANAGE', 'SYSTEM'] : role === 'school_admin' ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : role === 'parent' ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
   const { colors, themeMode, setThemeMode } = useTheme();
   const { unreadCount, unreadAssignments, unreadChallenges } = useNotification();
