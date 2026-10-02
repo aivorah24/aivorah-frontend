@@ -33,8 +33,8 @@ import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
 import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
-import TimetableScreen from '../features/timetable/components/TimetableScreen';
-import ResourcesScreen from '../features/resources/components/ResourcesScreen';
+import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
+import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
