@@ -8,7 +8,6 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '../../../../config/firebase';
-import SERVER_URL from '../../../../config/serverUrl';
 import AUTH_SERVER_URL from '../../../../config/authServerUrl';
 
 export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser: boolean, closeModal: () => void, logout: () => void) {
@@ -64,7 +63,7 @@ export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser:
           await reauthenticateWithPopup(fu, new GoogleAuthProvider());
         }
       }
-      const res = await fetch(`${SERVER_URL}/user/email-otp/send`, {
+      const res = await fetch(`${AUTH_SERVER_URL}/user/email-otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name: user?.name }),
@@ -93,7 +92,7 @@ export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser:
     setModalLoading(true);
     try {
       const changedTo = newEmail.trim().toLowerCase();
-      const res = await fetch(`${SERVER_URL}/user/change-email`, {
+      const res = await fetch(`${AUTH_SERVER_URL}/user/change-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentEmail: user?.email, newEmail: changedTo, otp: emailOtp.trim() }),
@@ -118,7 +117,7 @@ export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser:
   async function handleResendEmailOtp() {
     setEmailError('');
     try {
-      const res = await fetch(`${SERVER_URL}/user/email-otp/send`, {
+      const res = await fetch(`${AUTH_SERVER_URL}/user/email-otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: newEmail.trim().toLowerCase(), name: user?.name }),
@@ -150,7 +149,7 @@ export function useEmailChange(user: any, isGoogleUser: boolean, isPasswordUser:
       if (gEmail === currentEmail) throw new Error('That is the same Google account you already use. Pick a different one.');
 
       const idToken = await result.user.getIdToken();
-      const res = await fetch(`${SERVER_URL}/user/change-email-google`, {
+      const res = await fetch(`${AUTH_SERVER_URL}/user/change-email-google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentEmail, idToken }),
