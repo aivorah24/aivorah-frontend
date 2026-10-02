@@ -10,6 +10,8 @@ import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import LearningPathsScreen from '../screens/student/learning-paths/LearningPathsScreen';
 import AICoachScreen from '../screens/student/ai-coach/AICoachScreen';
 import ScheduleScreen from '../screens/student/schedule/ScheduleScreen';
+import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
+import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
 import AssignmentsScreen from '../screens/student/assignments/AssignmentsScreen';
 import ChallengesScreen from '../screens/student/challenges/ChallengesScreen';
 import LeaderboardScreen from '../screens/student/leaderboard/LeaderboardScreen';
@@ -74,6 +76,8 @@ export default function AppNavigator() {
       <Drawer.Screen name="LearningPaths" component={LearningPathsScreen} />
       <Drawer.Screen name="AICoach" component={AICoachScreen} />
       <Drawer.Screen name="Schedule" component={ScheduleScreen} />
+      <Drawer.Screen name="Timetable" component={TimetableScreen} />
+      <Drawer.Screen name="Resources" component={ResourcesScreen} />
       <Drawer.Screen name="Assignments" component={AssignmentsScreen} />
       <Drawer.Screen name="Challenges" component={ChallengesScreen} />
       <Drawer.Screen name="Leaderboard" component={LeaderboardScreen} />

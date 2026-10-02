@@ -13,8 +13,8 @@ import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherSt
 import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
 import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
 import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
-import TimetableScreen from '../features/timetable/components/TimetableScreen';
-import ResourcesScreen from '../features/resources/components/ResourcesScreen';
+import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
+import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
 
 export type SuperAdminDrawerParamList = {

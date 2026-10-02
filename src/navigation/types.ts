@@ -14,6 +14,8 @@ export type DrawerParamList = {
   LearningPaths: undefined;
   AICoach: undefined;
   Schedule: undefined;
+  Timetable: { grade?: string; section?: string; label?: string } | undefined;
+  Resources: undefined;
   Assignments: undefined;
   Challenges: undefined;
   Leaderboard: undefined;

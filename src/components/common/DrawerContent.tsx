@@ -36,6 +36,8 @@ const STUDENT_NAV_ITEMS = [
   { label: 'My Learning Paths', icon: 'book-open', screen: 'LearningPaths', group: 'MENU' },
   { label: 'AI Coach', icon: 'message-circle', screen: 'AICoach', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'Schedule', group: 'MENU' },
+  { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
+  { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Announcements', icon: 'volume-2', screen: 'Announcements', group: 'MENU' },
   { label: 'The World & You', icon: 'globe', screen: 'WorldAndYou', group: 'MENU' },
   { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
@@ -56,6 +58,8 @@ const PARENT_NAV_ITEMS = [
   { label: 'My Kids',          icon: 'users',        screen: 'ParentMyKids',      group: 'MENU' },
   { label: 'Daily Tasks',      icon: 'check-square', screen: 'ParentDailyTasks',  group: 'MENU' },
   { label: 'Schedule',         icon: 'calendar',     screen: 'ParentSchedule',    group: 'MENU' },
+  { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
+  { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Messages',         icon: 'message-square', screen: 'ParentMessages',  group: 'MENU' },
   { label: 'Announcements',    icon: 'volume-2',     screen: 'ParentAnnouncements', group: 'MENU' },
   { label: 'Learning',         icon: 'book-open',    screen: 'ParentLearning',    group: 'CHILDREN' },
@@ -75,6 +79,8 @@ const TEACHER_NAV_ITEMS = [
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MENU' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
+  { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
+  { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Messages', icon: 'message-square', screen: 'TeacherMessages', group: 'MENU' },
   { label: 'Announcements', icon: 'volume-2', screen: 'TeacherAnnouncements', group: 'MENU' },
   { label: 'Send Announcement', icon: 'edit-3', screen: 'AnnouncementManager', group: 'MENU' },
@@ -104,6 +110,8 @@ const SUPER_ADMIN_NAV_ITEMS = [
   { label: 'Staff Subjects',    icon: 'book-open',      screen: 'StaffSubjectMapping', group: 'MENU' },
   { label: 'Content Review',    icon: 'clipboard',      screen: 'ContentReviewDashboard', group: 'MENU' },
   { label: 'Schedule',          icon: 'calendar',       screen: 'TeacherSchedule',     group: 'MENU' },
+  { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
+  { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Student Progress',  icon: 'bar-chart-2',    screen: 'TeacherProgress',     group: 'MENU' },
   { label: 'Messages',          icon: 'message-square', screen: 'TeacherMessages',     group: 'MENU' },
   { label: 'Announcement Manager', icon: 'edit-3',      screen: 'AnnouncementManager', group: 'MENU' },
@@ -116,10 +124,12 @@ const SCHOOL_ADMIN_NAV_ITEMS: { label: string; icon: string; screen: string; gro
   { label: 'Students',           icon: 'users',         screen: 'SchoolAdminStudents',      group: 'STUDENT MANAGEMENT' },
   { label: 'Grades & Sections',  icon: 'list',          screen: 'SchoolAdminGradesSections', group: 'ACADEMIC STRUCTURE' },
   { label: 'Classes',            icon: 'layers',        screen: 'SchoolAdminClasses',       group: 'ACADEMIC STRUCTURE' },
+  { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'ACADEMIC STRUCTURE' },
   { label: 'Teachers',           icon: 'user',          screen: 'SchoolAdminTeachers',      group: 'PEOPLE' },
   { label: 'Parents',            icon: 'heart',         screen: 'SchoolAdminParents',       group: 'PEOPLE' },
   { label: 'Messages',           icon: 'message-square', screen: 'Messages',                group: 'COMMUNICATION' },
   { label: 'Announcements',      icon: 'edit-3',        screen: 'AnnouncementManager',      group: 'COMMUNICATION' },
+  { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'COMMUNICATION' },
   { label: 'Import History',     icon: 'clock',         screen: 'SchoolAdminImportHistory', group: 'ADMINISTRATION' },
   { label: 'Workspace Settings', icon: 'settings',      screen: 'SchoolAdminSettings',      group: 'ADMINISTRATION' },
   { label: 'Help & Support',     icon: 'help-circle',   screen: 'TeacherHelp',              group: 'SUPPORT' },
@@ -162,7 +172,7 @@ export default function DrawerContent(props: any) {
   // instead of routing to an error screen. Admin roles are always school-bound,
   // so this only applies to student/teacher/parent.
   const isB2B = !!user?.schoolId;
-  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'AnnouncementManager'];
+  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
   const NAV_ITEMS_BASE = (!isB2B && (isTeacher || isParent || (!isSuperAdmin && !isSchoolAdmin)))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE;
