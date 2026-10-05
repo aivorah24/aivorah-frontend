@@ -18,6 +18,7 @@ export default function ReadTab({
   styles,
   onZoomImage,
   onReadFullBook,
+  onReachedEnd,
 }: {
   topic: any;
   rawPayload: any;
@@ -27,11 +28,29 @@ export default function ReadTab({
   styles: ReturnType<typeof makeStyles>;
   onZoomImage: (img: { uri: string; caption?: string }) => void;
   onReadFullBook: () => void;
+  // Called once the student has scrolled to the end of the lesson (or it fits without scrolling).
+  onReachedEnd?: () => void;
 }) {
   const hasRealPdf = Platform.OS === 'web' && !!topic.pdfFile && !!topic.pdfPage;
+  const viewH = React.useRef(0);
+  const reachedEnd = (offset: number, contentH: number, layoutH: number) => {
+    if (onReachedEnd && contentH > 0 && offset + layoutH >= contentH - 40) onReachedEnd();
+  };
   return (
     <View style={styles.dualPane}>
-      <ScrollView style={hasRealPdf ? styles.leftPane : styles.leftPaneFull} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        testID="learn-scroll"
+        style={hasRealPdf ? styles.leftPane : styles.leftPaneFull}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={200}
+        onLayout={(e) => { viewH.current = e.nativeEvent.layout.height; }}
+        onContentSizeChange={(_w, h) => reachedEnd(0, h, viewH.current)}
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          reachedEnd(contentOffset.y, contentSize.height, layoutMeasurement.height);
+        }}
+      >
         <View style={styles.paneLabel}>
           <Feather name="book-open" size={12} color={colors.primary} />
           <Text style={[styles.paneLabelText, { color: colors.textMuted }]}>Learn with Aivorah — simplified</Text>

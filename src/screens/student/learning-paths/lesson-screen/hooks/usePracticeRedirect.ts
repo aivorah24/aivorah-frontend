@@ -30,9 +30,12 @@ export function usePracticeRedirect(
     bookQuiz?: any[];
   },
   contentReady: boolean = true,
+  locked: boolean = false,
 ) {
   useEffect(() => {
     if (mode !== 'practice' || !topic) return;
+    // Not learned yet: stay on the Practice tab, which explains how to unlock it.
+    if (locked) return;
     // No real content for this topic — stay on 'practice' so LessonScreen's
     // ComingSoonPane renders instantly instead of navigating into a Quiz
     // screen that would spin on "Preparing your practice test…" generating
@@ -63,5 +66,5 @@ export function usePracticeRedirect(
         editKey: params.editKey,
       },
     });
-  }, [mode, topic, contentReady]);
+  }, [mode, topic, contentReady, locked]);
 }

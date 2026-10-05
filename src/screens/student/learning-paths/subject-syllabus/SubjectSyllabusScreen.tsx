@@ -216,6 +216,9 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
               <Text style={[styles.progressSub, { color: colors.textMuted }]}>
                 {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {totalTopicsCount} {isUnitShaped ? 'chapters' : 'topics'} total
               </Text>
+              <Text testID="completion-rule" style={[styles.progressSub, { color: colors.textMuted, marginTop: 4 }]}>
+                A topic is done when you finish Learn or Listen, then pass its Practice test (60% or more).
+              </Text>
             </View>
           </View>
 

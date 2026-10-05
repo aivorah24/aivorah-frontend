@@ -26,6 +26,7 @@ export interface SubjectData {
   unitCount?: number;    // chapters if present, else distinct units from topics
   units?: string[];      // chapter/unit names
   books?: string[];      // textbook names for this subject (e.g. "Poorvi")
+  chapters?: { unitNo?: number; title?: string }[]; // CBSE/NCERT chapter list from the server
 }
 
 export type CurriculumTopic = {

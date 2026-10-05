@@ -15,6 +15,7 @@ import { NO_CONTENT_GRADES } from './constants';
 import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
+import { useSubjectTopics } from './hooks/useSubjectTopics';
 import SubjectCard from './components/SubjectCard';
 import { useTeacherPaths } from './teacher-learning-paths/hooks/useTeacherPaths';
 import { mergeTeacherSubjects } from './mergeTeacherSubjects';
@@ -42,13 +43,14 @@ export default function LearningPathsScreen({ navigation }: any) {
   // Teacher-published units count as chapters of their subject; a subject the curriculum has no card for (IB has
   // no standard syllabus) gets its own card built from them.
   const { paths: teacherPaths } = useTeacherPaths(grade);
-  const subjects = useMemo(
+  const mergedSubjects = useMemo(
     () => mergeTeacherSubjects(courseSubjects, teacherPaths, grade),
     [courseSubjects, teacherPaths, grade],
   );
   const blockedSubjects = useBlockedSubjects(user?.email);
 
   const completedSet = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
+  const subjects = useSubjectTopics(mergedSubjects, curriculum, grade, completedSet.size > 0);
 
   const cardWidth = (isMobile ? '100%' : '48.7%') as `${number}%`;
 

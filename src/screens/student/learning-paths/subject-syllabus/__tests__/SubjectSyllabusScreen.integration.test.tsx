@@ -113,6 +113,12 @@ describe('SubjectSyllabusScreen — states', () => {
     expect(screen.getAllByText(/Chapter \d/).length).toBeGreaterThan(0);
   });
 
+  test('tells the student when a topic counts as done', async () => {
+    await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp()} />);
+    await waitFor(() => expect(screen.getByTestId('completion-rule')).toBeTruthy());
+    expect(screen.getByTestId('completion-rule').props.children).toMatch(/finish Learn or Listen, then pass its Practice test \(60% or more\)/);
+  });
+
   test('shows a real "being processed" empty state for a subject/grade with no curated or published content', async () => {
     await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp({ subject: 'Mathematics', curriculum: 'IB PYP', grade: 'Grade 4' })} />);
 
