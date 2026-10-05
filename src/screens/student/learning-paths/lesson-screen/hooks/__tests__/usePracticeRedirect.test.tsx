@@ -114,4 +114,21 @@ describe('usePracticeRedirect', () => {
     const call = (globalThis as any).__navigate.mock.calls[0][1];
     expect(call.passageText).toBeUndefined();
   });
+
+  test('while the topic is still locked, Practice does not open the quiz', async () => {
+    function LockedHarness() {
+      const [m, setM] = React.useState<Mode>('practice');
+      const navigate = React.useMemo(() => jest.fn(), []);
+      React.useEffect(() => { (globalThis as any).__navigate = navigate; }, [navigate]);
+      usePracticeRedirect(m, setM, { name: 'Fables', readText: { intro: 'x', body: [] } }, { navigate }, {
+        grade: 'Grade 6', subject: 'English', curriculum: 'CBSE', topicId: 't1', chapterIndex: 0, topicIndex: 1,
+        byNameTopic: undefined, chapterTitle: 'Fables',
+      }, true, true);
+      return <Text testID="mode">{m}</Text>;
+    }
+    await render(<LockedHarness />);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByTestId('mode').props.children).toBe('practice');
+    expect((globalThis as any).__navigate).not.toHaveBeenCalled();
+  });
 });

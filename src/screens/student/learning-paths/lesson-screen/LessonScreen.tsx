@@ -11,6 +11,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
+import { useAuth } from '../../../../context/AuthContext';
 import Header from '../../../../components/common/Header';
 import ScreenLayout from '../../../../components/common/ScreenLayout';
 import ImageZoomModal from '../../../../components/common/ImageZoomModal';
@@ -20,6 +21,7 @@ import { makeStyles } from './styles';
 import type { Mode, ListenStep } from './types';
 import { useDbTopic } from './hooks/useDbTopic';
 import { useNarration } from './hooks/useNarration';
+import { useTopicUnlock } from './hooks/useTopicUnlock';
 import { usePracticeRedirect } from './hooks/usePracticeRedirect';
 import { adaptTeacherContentToTopic, type TeacherTopicContent } from './utils/adaptTeacherContent';
 import { buildReasoningListen } from './utils/listenFromBlocks';
@@ -172,11 +174,18 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
 
   const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang);
 
+  // Practice unlocks once the topic is learned: Learn read to the end, or every Listen part heard.
+  const { user } = useAuth() || ({} as any);
+  const { unlocked, markLearned } = useTopicUnlock(user?.email, `${curriculum}|${grade}|${subject}`, topic?.name);
+  const practiceLocked = !embedded && !unlocked;
+  const listenDone = listenSteps.length > 0 && listenSteps.every((_s, i) => narration.completedSteps?.has(i));
+  useEffect(() => { if (listenDone) markLearned(); }, [listenDone, markLearned]);
+
   usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
     byNameTopic, chapterTitle: chapter?.title, teacherContent, editKey,
     bookQuiz: (rawPayload as any)?.practiceQuiz,
-  }, contentReady);
+  }, contentReady, practiceLocked);
 
   // Reset all per-lesson UI/narration state whenever the mode or the lesson
   // itself changes, so switching topics never leaves stale playback/answer
@@ -228,7 +237,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
     { key: 'read', label: 'Learn', icon: 'book-open' },
     { key: 'listen', label: isMath ? 'AI Tutor' : 'Listen', icon: isMath ? 'cpu' : 'headphones' },
     { key: 'ask', label: 'Ask Aivorah', icon: 'message-circle' },
-    { key: 'practice', label: 'Practice', icon: 'check-square' },
+    { key: 'practice', label: 'Practice', icon: practiceLocked ? 'lock' : 'check-square' },
   ].filter((t) => !(embedded && t.key === 'ask')) as { key: Mode; label: string; icon: any }[];
 
   return (
@@ -289,6 +298,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
                 styles={styles}
                 onZoomImage={setZoomImage}
                 onReadFullBook={() => setFullBookView(true)}
+                onReachedEnd={markLearned}
               />
             )}
 
@@ -360,6 +370,8 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
                     colors={colors}
                     styles={styles}
                     navigation={navigation}
+                    locked={practiceLocked}
+                    onGoTo={setMode}
                   />
                 )}
               </ScrollView>

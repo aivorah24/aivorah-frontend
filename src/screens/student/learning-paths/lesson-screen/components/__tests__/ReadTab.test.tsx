@@ -94,4 +94,18 @@ describe('ReadTab', () => {
     expect(screen.getByText('AI-generated try-this-yourself.')).toBeTruthy();
     expect(screen.queryByText('Old-path activity text.')).toBeNull();
   });
+
+  test('scrolling to the end of Learn reports that the topic has been read', async () => {
+    const { fireEvent } = require('@testing-library/react-native');
+    const onReachedEnd = jest.fn();
+    await render(
+      <ReadTab topic={baseTopic({ intro: 'A long lesson.' })} rawPayload={null} grade="Grade 7" subject="Science"
+        colors={colors} styles={styles} onZoomImage={noop} onReadFullBook={noop} onReachedEnd={onReachedEnd} />
+    );
+    const scroller = screen.getByTestId('learn-scroll');
+    fireEvent.scroll(scroller, { nativeEvent: { contentOffset: { y: 100 }, contentSize: { height: 2000 }, layoutMeasurement: { height: 600 } } });
+    expect(onReachedEnd).not.toHaveBeenCalled();
+    fireEvent.scroll(scroller, { nativeEvent: { contentOffset: { y: 1390 }, contentSize: { height: 2000 }, layoutMeasurement: { height: 600 } } });
+    expect(onReachedEnd).toHaveBeenCalled();
+  });
 });

@@ -13,6 +13,13 @@ let mockSubjectEdits: any = null;
 jest.mock('../../subject-syllabus/hooks/useStudentSubjectEdits', () => ({
   useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
 }));
+jest.mock('../../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { email: 's@a.com' } }) }));
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// The topic has already been learned (Learn read to the end / Listen heard), so Practice is unlocked.
+const unlockPractice = () => jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async (k: string) => (k.startsWith('@lp_learned_') ? '1' : null));
+afterEach(() => jest.restoreAllMocks());
+beforeEach(() => AsyncStorage.clear());
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#F5F3EE', cardDark: '#FFFFFF', borderColor: '#DDD', textMain: '#0B0B0B', textMuted: '#666', textDim: '#999',
@@ -57,6 +64,7 @@ const tab = async (user: any, label: string) => user.press((await screen.findAll
 
 describe('built book sections, end to end through the real lesson tabs', () => {
   test('English piece: Learn lesson, Listen scenes with a visual, Practice quiz from the book', async () => {
+    unlockPractice();
     serve(english);
     const user = userEvent.setup();
     const navigation = nav();
@@ -98,6 +106,7 @@ describe('built book sections, end to end through the real lesson tabs', () => {
   });
 
   test('Hindi unit: Hindi Learn, Hindi Listen with a visual, Hindi quiz', async () => {
+    unlockPractice();
     serve(hindi);
     const user = userEvent.setup();
     const p = payloadOf(hindi);

@@ -14,6 +14,13 @@ let mockSubjectEdits: any = null;
 jest.mock('../../subject-syllabus/hooks/useStudentSubjectEdits', () => ({
   useStudentSubjectEdits: () => ({ edits: mockSubjectEdits, loaded: true }),
 }));
+jest.mock('../../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { email: 's@a.com' } }) }));
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// The topic has already been learned (Learn read to the end / Listen heard), so Practice is unlocked.
+const unlockPractice = () => jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async (k: string) => (k.startsWith('@lp_learned_') ? '1' : null));
+afterEach(() => jest.restoreAllMocks());
+beforeEach(() => AsyncStorage.clear());
 jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
     bgDark: '#000', cardDark: '#111', borderColor: '#333', textMain: '#fff', textMuted: '#888', primary: '#fa0',
@@ -112,6 +119,7 @@ describe('LessonScreen — tab switching', () => {
   });
 
   test('switching to the real Practice tab immediately redirects to the Quiz screen', async () => {
+    unlockPractice();
     const nav = navProp();
     const user = userEvent.setup();
     await render(<LessonScreen navigation={nav} route={routeProp()} />);
@@ -120,6 +128,20 @@ describe('LessonScreen — tab switching', () => {
     await user.press(screen.getByText('Practice'));
 
     await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith('Quiz', expect.any(Object)));
+  });
+
+  test('a topic not learned yet keeps Practice locked: no quiz, the locked Practice card shows instead', async () => {
+    const getItem = jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async () => null);
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<LessonScreen navigation={nav} route={routeProp()} />);
+    await waitFor(() => expect(screen.getByTestId('read-tab')).toBeTruthy());
+
+    await user.press(screen.getByText('Practice'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(nav.navigate).not.toHaveBeenCalledWith('Quiz', expect.anything());
+    expect(screen.getByTestId('practice-tab')).toBeTruthy();
+    expect(getItem).toHaveBeenCalledWith(expect.stringContaining('@lp_learned_s@a.com_'));
   });
 });
 
@@ -166,6 +188,7 @@ describe('LessonScreen — teacher-published learning path content', () => {
   });
 
   test('Practice redirects to Quiz carrying teacherContent in returnParams, so returning from the quiz can re-resolve the topic', async () => {
+    unlockPractice();
     const nav = navProp();
     const user = userEvent.setup();
     await render(<LessonScreen navigation={nav} route={routeProp({

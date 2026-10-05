@@ -28,7 +28,7 @@ export default function SubjectCard({
   // Founder feedback: a raw topic tally (e.g. "1906 topics") reads as overwhelming.
   // Show the curriculum's real chapter count (CBSE), else the unit count derived
   // from the topics (IB PYP). The server is the source of both.
-  const chapterCount = data.chapterCount ?? 0;
+  const chapterCount = data.chapterCount ?? data.chapters?.length ?? 0;
   const unitCount = data.unitCount ?? new Set(data.topics.map((t) => t.unit).filter(Boolean)).size;
   const countLabel =
     chapterCount > 0 ? `${chapterCount} ${chapterCount === 1 ? 'chapter' : 'chapters'}`

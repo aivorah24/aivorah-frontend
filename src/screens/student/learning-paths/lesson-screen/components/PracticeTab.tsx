@@ -15,6 +15,8 @@ export default function PracticeTab({
   colors,
   styles,
   navigation,
+  locked = false,
+  onGoTo,
 }: {
   topic: any;
   grade: string;
@@ -26,7 +28,36 @@ export default function PracticeTab({
   colors: AppColors;
   styles: ReturnType<typeof makeStyles>;
   navigation: any;
+  locked?: boolean;
+  onGoTo?: (mode: 'read' | 'listen') => void;
 }) {
+  if (locked) {
+    return (
+      <View style={[styles.card, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <Feather name="lock" size={16} color={colors.textMuted} />
+          <Text style={[styles.introText, { color: colors.textMain }]}>Practice — {topic.name}</Text>
+        </View>
+        <Text style={[styles.bodyText, { color: colors.textMuted }]}>
+          Practice unlocks after you read Learn to the end, or listen to the whole lesson.
+        </Text>
+        <Text style={[styles.bodyText, { color: colors.textMuted, marginBottom: 16 }]}>
+          The topic is marked done when you pass this Practice test (60% or more).
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity style={[styles.practiceBtn, { backgroundColor: colors.accentGreen }]} onPress={() => onGoTo?.('read')} activeOpacity={0.85}>
+            <Feather name="book-open" size={15} color="#fff" />
+            <Text style={styles.practiceBtnText}>Go to Learn</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.practiceBtn, { backgroundColor: colors.accentGreen }]} onPress={() => onGoTo?.('listen')} activeOpacity={0.85}>
+            <Feather name="headphones" size={15} color="#fff" />
+            <Text style={styles.practiceBtnText}>Go to Listen</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.card, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
       <Text style={[styles.introText, { color: colors.textMain }]}>Practice — {topic.name}</Text>

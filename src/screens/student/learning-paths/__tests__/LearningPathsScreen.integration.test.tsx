@@ -46,8 +46,9 @@ function navProp() {
 // a screen-time-status fetch — both hit the same global.fetch mock as
 // useSubjects. Route by URL so each hook gets its own controllable response
 // instead of one test's intent leaking into another hook's call.
-function mockFetchByUrl(handlers: { subjects?: () => Promise<any>; blocked?: () => Promise<any> }) {
+function mockFetchByUrl(handlers: { subjects?: () => Promise<any>; blocked?: () => Promise<any>; syllabus?: (url: string) => Promise<any> }) {
   global.fetch = jest.fn((url: string) => {
+    if (String(url).includes('/teacher/syllabus/current') && handlers.syllabus) return handlers.syllabus(String(url));
     if (String(url).includes('/curriculum/subjects') && handlers.subjects) return handlers.subjects();
     if (String(url).includes('/parent/screen-time-status') && handlers.blocked) return handlers.blocked();
     if (String(url).includes('/student/learning-paths')) return Promise.resolve({ ok: true, json: async () => ({ learningPaths: [] }) });
@@ -227,5 +228,24 @@ describe('LearningPathsScreen', () => {
     expect(screen.getAllByText('0%').length).toBeGreaterThanOrEqual(1);
     // Subject exists but has zero completed topics -> "0 of 1" in progress, not omitted.
     expect(screen.getByText('0/1 subjects in progress')).toBeTruthy();
+  });
+
+  test('a CBSE subject card counts the topics the student has completed, from its syllabus', async () => {
+    mockUser = { name: 'A Student', email: 'a@a.com', curriculum: 'CBSE', grade: 'Grade 3' };
+    mockCompletedTopics = ['Fun with Friends', 'Colours'];
+    mockFetchByUrl({
+      subjects: () => Promise.resolve({ ok: true, json: async () => ({ subjects: [
+        { subject: 'English', topicCount: 2, topics: [], chapters: [{ unitNo: 1, title: 'Colours' }, { unitNo: 2, title: 'Badal and Moti' }] },
+      ] }) }),
+      syllabus: () => Promise.resolve({ ok: true, json: async () => ({ units: [
+        { unitNo: 1, title: 'Colours', topics: [{ id: '1', name: 'Fun with Friends' }, { id: '2', name: 'Colours' }, { id: '3', name: 'Let us learn' }] },
+        { unitNo: 2, title: 'Badal and Moti', topics: [{ id: '4', name: 'Badal' }] },
+      ] }) }),
+    });
+    await render(<LearningPathsScreen navigation={navProp()} />);
+    expect(await screen.findByText('2 completed')).toBeTruthy();
+    expect(screen.getByText('2 chapters')).toBeTruthy();
+    expect(screen.getAllByText('50%')).toHaveLength(2); // the card and the overall ring
+    mockCompletedTopics = [];
   });
 });
