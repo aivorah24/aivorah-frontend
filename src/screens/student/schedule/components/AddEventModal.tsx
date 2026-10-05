@@ -110,8 +110,8 @@ export default function AddEventModal({
             </TouchableOpacity>
             {!isAllDay && (
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, zIndex: 100 }}>
-                <TimePicker label="Start time" value={newStartTime} onChange={onStartTimeChange} />
-                <TimePicker label="End time" value={newEndTime} onChange={setNewEndTime} minTime={newStartTime} />
+                <TimePicker label="Start time" value={newStartTime} onChange={onStartTimeChange} placement="top" />
+                <TimePicker label="End time" value={newEndTime} onChange={setNewEndTime} minTime={newStartTime} placement="top" />
               </View>
             )}
           </ScrollView>
