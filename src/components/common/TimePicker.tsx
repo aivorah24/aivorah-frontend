@@ -24,12 +24,14 @@ interface Props {
   value: string;           // 24h "HH:MM"
   onChange: (v: string) => void;
   minTime?: string;        // 24h — hide slots before this
+  placement?: 'bottom' | 'top'; // 'top' when the picker sits at the bottom of a clipping ScrollView
 }
 
-export default function TimePicker({ label, value, onChange, minTime }: Props) {
+export default function TimePicker({ label, value, onChange, minTime, placement = 'bottom' }: Props) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<View>(null);
+  const listRef = useRef<ScrollView>(null);
 
   const slots = minTime
     ? ALL_SLOTS.filter(s => s > minTime)
@@ -39,19 +41,18 @@ export default function TimePicker({ label, value, onChange, minTime }: Props) {
   useEffect(() => {
     if (!open || Platform.OS !== 'web') return;
     const handler = (e: MouseEvent) => {
-      const el = (containerRef.current as any);
-      const domEl = el?._nativeTag ? document.querySelector(`[data-timepicker="${label}"]`) : null;
+      // react-native-web refs are the DOM nodes themselves
+      const domEl = containerRef.current as unknown as HTMLElement | null;
       if (domEl && !domEl.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open, label]);
+  }, [open]);
 
   return (
     <View style={{ flex: 1 }}>
       <Text style={[s.label, { color: colors.textMuted }]}>{label}</Text>
-      {/* @ts-ignore */}
-      <View ref={containerRef} data-timepicker={label} style={{ position: 'relative' }}>
+      <View ref={containerRef} style={{ position: 'relative' }}>
         <TouchableOpacity
           style={[s.field, { backgroundColor: colors.cardDark, borderColor: open ? colors.accentYellow : colors.borderColor }]}
           onPress={() => setOpen(o => !o)}
@@ -64,13 +65,13 @@ export default function TimePicker({ label, value, onChange, minTime }: Props) {
         {open && (
           <View style={[s.dropdown, { backgroundColor: colors.cardDark, borderColor: colors.borderColor,
             // @ts-ignore
-            zIndex: 9999, position: 'absolute', top: '100%', left: 0, right: 0,
+            zIndex: 9999, position: 'absolute', left: 0, right: 0,
+            ...(placement === 'top' ? { bottom: '100%', marginBottom: 4 } : { top: '100%', marginTop: 4 }),
           }]}>
             <ScrollView
+              ref={listRef}
               style={{ maxHeight: 220 }}
               showsVerticalScrollIndicator={false}
-              // scroll selected item into view on open
-              onLayout={() => {}}
             >
               {slots.map(slot => {
                 const selected = slot === value;
@@ -79,6 +80,9 @@ export default function TimePicker({ label, value, onChange, minTime }: Props) {
                     key={slot}
                     style={[s.option, selected && { backgroundColor: colors.accentYellow + '22' }]}
                     onPress={() => { onChange(slot); setOpen(false); }}
+                    onLayout={selected
+                      ? e => listRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 80), animated: false })
+                      : undefined}
                     activeOpacity={0.7}
                   >
                     <Text style={[s.optionText, { color: selected ? colors.accentYellow : colors.textMain },
@@ -103,7 +107,7 @@ const s = StyleSheet.create({
                paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1 },
   fieldText: { fontSize: 14, fontWeight: '500' },
   chevron:   { fontSize: 10, marginLeft: 8 },
-  dropdown:  { borderWidth: 1, borderRadius: 8, marginTop: 4,
+  dropdown:  { borderWidth: 1, borderRadius: 8,
                // @ts-ignore
                boxShadow: '0 4px 16px rgba(0,0,0,0.4)' },
   option:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
