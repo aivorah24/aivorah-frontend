@@ -25,6 +25,8 @@ function Harness() {
       <TouchableOpacity testID="speak1" onPress={() => speakMessage(1, 'Hello world')}><Text>speak1</Text></TouchableOpacity>
       <TouchableOpacity testID="speak2" onPress={() => speakMessage(2, 'Second message')}><Text>speak2</Text></TouchableOpacity>
       <TouchableOpacity testID="stop" onPress={() => stopSpeaking()}><Text>stop</Text></TouchableOpacity>
+      <TouchableOpacity testID="speakHindi" onPress={() => speakMessage(3, 'पानी क्या है?')}><Text>hi</Text></TouchableOpacity>
+      <TouchableOpacity testID="speakMixed" onPress={() => speakMessage(4, 'Water in Hindi is पानी.')}><Text>mix</Text></TouchableOpacity>
     </>
   );
 }
@@ -109,5 +111,28 @@ describe('useTextToSpeech', () => {
 
     const utterance = mockSpeak.mock.calls[0][0];
     expect(utterance.voice).toBe(femaleVoice);
+  });
+
+  test('a Hindi answer is read by a Hindi voice, not the English one', async () => {
+    const hindiVoice = { lang: 'hi-IN', name: 'Google हिन्दी' };
+    mockGetVoices.mockReturnValue([{ lang: 'en-US', name: 'Microsoft Zira' }, hindiVoice]);
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await user.press(screen.getByTestId('speakHindi'));
+
+    expect(mockSpeak).toHaveBeenCalledTimes(1);
+    const u = mockSpeak.mock.calls[0][0];
+    expect(u.text).toBe('पानी क्या है?');
+    expect(u.lang).toBe('hi-IN');
+    expect(u.voice).toBe(hindiVoice);
+  });
+
+  test('a mixed English + Hindi answer reads each part in its own language', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await user.press(screen.getByTestId('speakMixed'));
+
+    const parts = mockSpeak.mock.calls.map((c) => [c[0].text, c[0].lang]);
+    expect(parts).toEqual([['Water in Hindi is', 'en-IN'], ['पानी.', 'hi-IN']]);
   });
 });

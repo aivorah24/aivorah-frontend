@@ -76,13 +76,12 @@ export default function ListenTab({
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,
-    toggleListenPlay, repeatStep, goToListenStep, playListenStep, skipBy, changePlaybackRate,
+    toggleListenPlay, repeatStep, goToListenStep, playListenStep, changePlaybackRate,
   } = narration;
 
   const step = currentListenStep;
   const sentences = listenSentences;
   const curSentenceIdx = sentenceIdx;
-  const lineCount = Math.max(1, sentences.length);
   void clockTick;
   // The clue card stays lit until a later line triggers the next one.
   let cardAtLine: number | null = null;
@@ -217,7 +216,7 @@ export default function ListenTab({
                             <HighlightedWords
                               tokens={wordTokens(s.sentence)}
                               wordIndex={wordIdx}
-                              active={listenPlaying}
+                              active={listenPlaying || !!narration.paused}
                               accent={colors.accentGreen}
                               textMain={colors.textMain}
                               textMuted={colors.textMuted}
@@ -259,7 +258,7 @@ export default function ListenTab({
                       <HighlightedWords
                         tokens={wordTokens(s.sentence)}
                         wordIndex={wordIdx}
-                        active={listenPlaying}
+                        active={listenPlaying || !!narration.paused}
                         accent={colors.accentGreen}
                         textMain={colors.textMain}
                         textMuted={colors.textMuted}
@@ -344,32 +343,35 @@ export default function ListenTab({
 
           {/* ── Player (Science/English/etc — full audiobook transport) ── */}
           {!isMath && (
-          <View style={[styles.card, { borderColor: colors.borderColor, backgroundColor: colors.cardDark, marginTop: 16 }]}>
-            <View style={styles.playerTimeRow}>
-              <Text style={[styles.playerTimeText, { color: colors.textMuted }]}>Line {Math.min(sentenceIdx + 1, lineCount)} of {lineCount}</Text>
-              <Text style={[styles.playerTimeText, { color: colors.textMuted }]}>{listenPlaying ? 'Reading…' : 'Paused'}</Text>
-            </View>
-
-            <View style={[styles.playerRow, { marginTop: 14 }]}>
-              <TouchableOpacity style={styles.skipBtn} onPress={() => skipBy(-10)} activeOpacity={0.7} disabled={sentenceIdx === 0}>
-                <Feather name="skip-back" size={20} color={sentenceIdx === 0 ? colors.borderColor : colors.textMuted} />
-                <Text style={[styles.skipBtnLabel, { color: colors.textMuted }]}>Line</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.playBtn, { backgroundColor: colors.accentGreen }]} onPress={toggleListenPlay} activeOpacity={0.85}>
+          <View style={[styles.card, styles.playerBar, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+              <TouchableOpacity
+                style={[styles.playBtn, { backgroundColor: colors.accentGreen }]}
+                onPress={toggleListenPlay}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={listenPlaying ? 'Pause' : 'Play'}
+              >
                 <Feather name={listenPlaying ? 'pause' : 'play'} size={18} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipBtn} onPress={() => skipBy(10)} activeOpacity={0.7} disabled={sentenceIdx >= lineCount - 1}>
-                <Feather name="skip-forward" size={20} color={sentenceIdx >= lineCount - 1 ? colors.borderColor : colors.textMuted} />
-                <Text style={[styles.skipBtnLabel, { color: colors.textMuted }]}>Line</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.skipBtn} onPress={repeatStep} activeOpacity={0.7}>
-                <Feather name="rotate-ccw" size={18} color={colors.textMuted} />
-                <Text style={[styles.skipBtnLabel, { color: colors.textMuted }]}>Repeat</Text>
+              <Text style={[styles.playerStatus, { color: colors.textMuted }]}>{listenPlaying ? 'Reading aloud…' : 'Tap to listen'}</Text>
+              <TouchableOpacity
+                style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
+                onPress={repeatStep}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Repeat"
+              >
+                <Feather name="rotate-ccw" size={16} color={colors.textMuted} />
               </TouchableOpacity>
               <View style={styles.speedBtn}>
-                <TouchableOpacity onPress={() => setSpeedMenuOpen(v => !v)} activeOpacity={0.7}>
-                  <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 13 }}>{playbackRate}x</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>Speed</Text>
+                <TouchableOpacity
+                  style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
+                  onPress={() => setSpeedMenuOpen(v => !v)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reading speed"
+                >
+                  <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 12.5 }}>{playbackRate}x</Text>
                 </TouchableOpacity>
                 {speedMenuOpen && (
                   <View style={[styles.speedMenu, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
@@ -389,7 +391,6 @@ export default function ListenTab({
                   </View>
                 )}
               </View>
-            </View>
           </View>
           )}
 

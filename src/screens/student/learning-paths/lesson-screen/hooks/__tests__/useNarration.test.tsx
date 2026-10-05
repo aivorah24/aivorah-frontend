@@ -173,9 +173,23 @@ describe('useNarration — play script', () => {
     expect(screen.getByTestId('lines').props.children).toBe('Narrator|King');
 
     await user.press(screen.getByTestId('play'));
-    jest.advanceTimersByTime(3000);
+    jest.advanceTimersByTime(2000);
     await waitFor(() => expect(screen.getByTestId('step').props.children).toBe(1));
     expect(screen.getByTestId('lines').props.children).toBe('Har Datt');
+
+    jest.useRealTimers();
+  });
+
+  test('when the whole play has been read, it goes back to the first scene for the next Play', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(<PlayHarness />);
+    await user.press(screen.getByTestId('play'));
+    jest.advanceTimersByTime(2000);
+    await waitFor(() => expect(screen.getByTestId('step').props.children).toBe(1));
+    jest.advanceTimersByTime(3000);
+    await waitFor(() => expect(screen.getByTestId('step').props.children).toBe(0));
+    expect(screen.getByTestId('lines').props.children).toBe('Narrator|King');
 
     jest.useRealTimers();
   });

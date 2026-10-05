@@ -32,7 +32,7 @@ const FUNCTION_WORDS = new Set([
 
 // Estimate spoken duration weight for a token (word + trailing spaces/punctuation).
 // Returns a float: 1.0 ≈ average content word, lower = shorter, higher = longer + pause.
-function wordWeight(token: string): number {
+export function wordWeight(token: string): number {
   const clean = token.toLowerCase().replace(/[^a-z]/g, '');
   // Count vowel groups as syllable estimate, with silent-e correction
   const vowelGroups = clean.match(/[aeiou]+/g);

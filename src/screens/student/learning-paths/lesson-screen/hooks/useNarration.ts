@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { speakWithBoundary, playClip, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
 import { profileFor } from '../utils/playVoices';
-import { splitWords, buildBoundaries } from '../../../../../utils/wordTiming';
+import { splitWords, buildBoundaries, wordWeight } from '../../../../../utils/wordTiming';
 import type { ListenStep, PlayLine } from '../types';
 
 export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { line?: PlayLine };
@@ -13,12 +13,21 @@ export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { 
 // exact (we drive it), seeking maps to whole lines, and pauses fall only at
 // punctuation — no robotic word-by-word gaps. `sentenceIdx` is the single
 // source of truth for which line is active.
+// A play step is spoken one character line at a time; anything else one sentence at a time.
+function sentencesFor(step: ListenStep | undefined): NarrationLine[] {
+  if (!step) return [];
+  if (step.lines?.length) return step.lines.map((line) => ({ sentence: line.text, start: 0, end: line.text.length, line }));
+  return sentencesWithOffsets(step.text);
+}
+
 export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: string) {
   const [listenStep, setListenStep] = useState(0);
   const [listenPlaying, setListenPlaying] = useState(false);
   const [sentenceIdx, setSentenceIdx] = useState(0);
   const [wordIdx, setWordIdx] = useState(0);
+  const [paused, setPaused] = useState(false); // stopped mid-line by the student; the word stays lit
   const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lineGuardRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [clockTick, setClockTick] = useState(0);
@@ -37,24 +46,18 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
   const leftScrollRef = useRef<any>(null);
 
   const currentListenStep = listenSteps[listenStep];
-  // A play step is spoken one character line at a time; anything else one sentence at a time.
-  const listenSentences: NarrationLine[] = useMemo(() => {
-    if (!currentListenStep) return [];
-    if (currentListenStep.lines?.length) {
-      return currentListenStep.lines.map((line) => ({ sentence: line.text, start: 0, end: line.text.length, line }));
-    }
-    return sentencesWithOffsets(currentListenStep.text);
-  }, [currentListenStep]);
+  const listenSentences: NarrationLine[] = useMemo(() => sentencesFor(currentListenStep), [currentListenStep]);
   useEffect(() => { listenSentencesRef.current = listenSentences; }, [listenSentences]);
   const listenStepRef = useRef(0);
   useEffect(() => { listenStepRef.current = listenStep; }, [listenStep]);
 
-  // Speak sentence `idx` of the current step, then chain to the next.
-  function speakFromSentence(idx: number) {
+  // Speak sentence `idx` of the current step (from word `fromWord`, after a pause), then chain to the next.
+  function speakFromSentence(idx: number, fromWord = 0) {
     const sents = listenSentencesRef.current;
     if (!sents.length) return;
     const clamped = Math.max(0, Math.min(sents.length - 1, idx));
     const seq = ++playSeqRef.current; // start a fresh sequence
+    setPaused(false);
     setSentenceIdx(clamped);
     setListenPlaying(true);
     const speakIdx = (i: number) => {
@@ -68,15 +71,27 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
           setTimeout(() => { if (seq === playSeqRef.current) playListenStep(stepNow + 1); }, 900);
           return;
         }
+        // Finished: the next Play starts again from the top (a play script from its first scene).
+        clearWordTimer();
         setListenPlaying(false);
+        setSentenceIdx(0);
+        setWordIdx(0);
+        if (sents[0]?.line && sents[0].line.speaker !== 'Tutor' && stepNow > 0) {
+          setListenStep(0);
+          listenStepRef.current = 0;
+          listenSentencesRef.current = sentencesFor(listenSteps[0]);
+        }
+        leftScrollRef.current?.scrollTo?.({ y: 0, animated: true });
         return;
       }
       setSentenceIdx(i);
       const line = sents[i].line;
-      const text = sents[i].sentence.trim();
-      const follow = followWords(text, seq);
+      const follow = followWords(sents[i].sentence.trim(), seq, i === clamped ? fromWord : 0);
+      const text = follow.spoken;
+      let advanced = false;
       const next = () => {
-        if (seq !== playSeqRef.current) return;
+        if (seq !== playSeqRef.current || advanced) return;
+        advanced = true;
         clearWordTimer();
         // Poem cadence: a short breath between lines; a play pauses for the change of speaker.
         const gap = line ? (line.stage ? 500 : 350) : isPoemRef.current ? 450 : 0;
@@ -85,50 +100,68 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
       };
       const browserVoice = () => speakWithBoundary(
         text,
-        follow,
+        follow.onWord,
         next,
         playbackRateRef.current,
         { ...(line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : {}), ...(langRef.current && langRef.current !== 'en' ? { lang: langRef.current } : {}) },
+        follow.onStart,
       );
+      // Safety net: if the voice never reports the end of this line, move on anyway.
+      const guard = setTimeout(() => { if (!advanced && seq === playSeqRef.current) { stopSpeaking(); next(); } }, follow.estMs * 3 + 8000);
+      lineGuardRef.current = guard;
       // A recorded, acted line plays as-is; if it cannot play, the browser voice reads it instead.
-      if (!(line?.audio && playClip(line.audio, playbackRateRef.current, next, () => { if (seq === playSeqRef.current) browserVoice(); }))) browserVoice();
+      if (line?.audio && playClip(line.audio, playbackRateRef.current, next, () => { if (seq === playSeqRef.current) browserVoice(); })) follow.onStart();
+      else browserVoice();
     };
     speakIdx(clamped);
   }
 
   function clearWordTimer() {
     if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null; }
+    if (lineGuardRef.current) { clearTimeout(lineGuardRef.current); lineGuardRef.current = null; }
   }
 
-  // Word-by-word highlight (same weighting as the bedtime-story reader). The voice's word
-  // boundaries drive it; voices that send none fall back to an estimate of where the speech is.
-  function followWords(text: string, seq: number) {
+  // Word-by-word highlight (same weighting as the bedtime-story reader). Nothing lights up until
+  // the voice actually starts (browser voices can take 1-2s). The voice's word boundaries drive it;
+  // voices that send none fall back to a weighted estimate counted from the start of speech.
+  function followWords(text: string, seq: number, fromWord = 0) {
     clearWordTimer();
-    const tokens = splitWords(text);
+    const all = splitWords(text);
+    const from = Math.min(Math.max(0, fromWord), all.length - 1);
+    const tokens = all.slice(from);
     const starts: number[] = [];
     let at = 0;
     for (const t of tokens) { starts.push(at); at += t.length; }
     const bounds = buildBoundaries(tokens);
-    const estMs = tokens.length * 400 / (playbackRateRef.current || 1);
-    const t0 = Date.now();
+    const estMs = tokens.reduce((a, t) => a + wordWeight(t), 0) * 220 / (playbackRateRef.current || 1);
     let fromVoice = false;
-    setWordIdx(0);
-    wordTimerRef.current = setInterval(() => {
-      if (seq !== playSeqRef.current || fromVoice) { clearWordTimer(); return; }
-      const ratio = (Date.now() - t0) / estMs;
-      const found = bounds.findIndex((b) => ratio < b);
-      setWordIdx(found === -1 ? tokens.length - 1 : found);
-    }, 100);
-    return (charIndex: number) => {
+    let started = false;
+    setWordIdx(from > 0 ? from : -1);
+    const onStart = () => {
+      if (seq !== playSeqRef.current || started) return;
+      started = true;
+      setWordIdx(from);
+      const t0 = Date.now();
+      wordTimerRef.current = setInterval(() => {
+        if (seq !== playSeqRef.current || fromVoice) { if (wordTimerRef.current) clearInterval(wordTimerRef.current); wordTimerRef.current = null; return; }
+        const ratio = (Date.now() - t0) / estMs;
+        const found = bounds.findIndex((b) => ratio < b);
+        setWordIdx(from + (found === -1 ? tokens.length - 1 : found));
+      }, 100);
+    };
+    const onWord = (charIndex: number) => {
       if (seq !== playSeqRef.current) return;
+      started = true;
       fromVoice = true;
       let idx = 0;
       while (idx + 1 < starts.length && starts[idx + 1] <= charIndex) idx += 1;
-      setWordIdx(idx);
+      setWordIdx(from + idx);
     };
+    return { spoken: tokens.join('').trim(), estMs, onStart, onWord };
   }
 
   function stopNarration() {
+    setPaused(false);
     clearWordTimer();
     playSeqRef.current++; // invalidate any pending onEnd
     stopSpeaking();
@@ -140,16 +173,20 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     stopNarration();
     setListenStep(i);
     setSentenceIdx(0);
+    setWordIdx(0);
     setVisitedSteps(prev => new Set(prev).add(i));
-    // let the new step's sentences settle into the ref before speaking
-    setTimeout(() => speakFromSentence(0), 0);
+    // Load the new step's lines now: waiting for the re-render let a quick start read the previous step again.
+    listenSentencesRef.current = sentencesFor(listenSteps[i]);
+    listenStepRef.current = i;
+    speakFromSentence(0);
   }
 
   function toggleListenPlay() {
     if (listenPlaying) {
       stopNarration(); // clean pause — no desync
+      setPaused(true);
     } else {
-      speakFromSentence(sentenceIdx); // resume from current line
+      speakFromSentence(sentenceIdx, Math.max(0, wordIdx)); // carry on from the paused word
     }
   }
 
@@ -164,6 +201,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     stopNarration();
     setListenStep(i);
     setSentenceIdx(0);
+    setWordIdx(0);
     setVisitedSteps(prev => new Set(prev).add(i));
     onNavigate?.();
   }
@@ -176,13 +214,13 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     if (!sents.length) return;
     const target = Math.max(0, Math.min(sents.length - 1, sentenceIdx + (deltaSec < 0 ? -1 : 1)));
     if (listenPlaying) speakFromSentence(target);
-    else setSentenceIdx(target);
+    else { setSentenceIdx(target); setWordIdx(0); }
   }
 
   function changePlaybackRate(nextRate: number) {
     setPlaybackRate(nextRate);
     playbackRateRef.current = nextRate;
-    if (listenPlaying) speakFromSentence(sentenceIdx); // restart current line at new rate
+    if (listenPlaying) speakFromSentence(sentenceIdx, Math.max(0, wordIdx)); // carry on at the new rate
   }
 
   function resetNarration() {
@@ -191,6 +229,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     setListenPlaying(false);
     setListenStep(0);
     setSentenceIdx(0);
+    setWordIdx(0);
     setVisitedSteps(new Set([0]));
     setCompletedSteps(new Set());
   }
@@ -218,7 +257,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
   useEffect(() => () => { playSeqRef.current++; clearWordTimer(); stopSpeaking(); }, []);
 
   return {
-    listenStep, listenPlaying, sentenceIdx, wordIdx, visitedSteps, completedSteps, clockTick,
+    listenStep, listenPlaying, paused, sentenceIdx, wordIdx, visitedSteps, completedSteps, clockTick,
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,
