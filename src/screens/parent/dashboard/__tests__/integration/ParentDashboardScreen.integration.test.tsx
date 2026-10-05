@@ -4,6 +4,10 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent, userEvent } from '@testing-library/react-native';
 import ParentDashboardScreen from '../../ParentDashboardScreen';
+jest.mock('../../../../../config/firebase', () => ({
+  auth: { authStateReady: jest.fn().mockResolvedValue(undefined), currentUser: { getIdToken: jest.fn().mockResolvedValue('tok') } },
+}));
+
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),

@@ -7,6 +7,7 @@ import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
 import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
+import TeacherAttendanceScreen from '../screens/teacher/attendance/TeacherAttendanceScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
@@ -23,6 +24,7 @@ export type SuperAdminDrawerParamList = {
   TeacherAssignments: undefined;
   TeacherChallenges: undefined;
   TeacherSchedule: undefined;
+  TeacherAttendance: { grade?: string; section?: string; date?: string } | undefined;
   TeacherProgress: undefined;
   TeacherSettings: undefined;
   TeacherMessages: undefined;
@@ -61,6 +63,7 @@ export default function SuperAdminNavigator() {
       <Drawer.Screen name="TeacherAssignments" component={TeacherAssignmentsScreen} />
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
+      <Drawer.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />
       <Drawer.Screen name="TeacherMessages" component={TeacherMessagesScreen} />

@@ -25,7 +25,7 @@ import ClassDetailScreen from '../features/classes/components/ClassDetailScreen'
 import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
 import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
-import ParentAttendanceScreen from '@legacy/parent/ParentAttendanceScreen';
+import ParentAttendanceScreen from '../screens/parent/attendance/ParentAttendanceScreen';
 import ParentControlsScreen from '../screens/parent/parental-controls/ParentControlsScreen';
 import ParentLearningScreen from '../screens/parent/learning/ParentLearningScreen';
 import ParentHelpScreen from '../screens/parent/help-center/ParentHelpScreen';

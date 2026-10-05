@@ -1,6 +1,7 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import type { ChildData } from '../types';
+import { fetchStudentAttendanceSummary } from '../../../../services/attendanceClient';
 
 export function mapChild(c: any): ChildData {
   return {
@@ -53,7 +54,7 @@ export async function fetchAssignments(childId: string) {
   return res.json();
 }
 
-export async function fetchAttendanceSummary(childId: string) {
-  const res = await fetch(`${SERVER_URL}/attendance/student/${childId}/summary`);
-  return res.json();
+// aivorah-attendance-service (signed in); ratePct is null when nothing has been marked yet.
+export function fetchAttendanceSummary(childId: string) {
+  return fetchStudentAttendanceSummary(childId);
 }

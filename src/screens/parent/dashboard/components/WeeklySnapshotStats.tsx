@@ -93,9 +93,15 @@ export default function WeeklySnapshotStats({
               </View>
               <View>
                 <Text style={[s.sectionTitle, { fontSize: 15 }]}>Attendance Record</Text>
-                <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textDim }}>
-                  Overall attendance: <Text style={{ color: colors.accentYellow, fontWeight: '700' }}>{attendanceSummary.summary.ratePct}%</Text>
-                </Text>
+                {attendanceSummary.summary.ratePct === null || attendanceSummary.summary.ratePct === undefined ? (
+                  <Text testID="dashboard-attendance-empty" style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textDim }}>
+                    No attendance recorded yet
+                  </Text>
+                ) : (
+                  <Text style={{ fontFamily: fonts.serif, fontSize: 12, color: colors.textDim }}>
+                    Overall attendance: <Text style={{ color: colors.accentYellow, fontWeight: '700' }}>{attendanceSummary.summary.ratePct}%</Text>
+                  </Text>
+                )}
               </View>
             </View>
             <TouchableOpacity

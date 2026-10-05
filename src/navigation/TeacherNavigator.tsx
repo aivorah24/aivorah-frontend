@@ -8,6 +8,7 @@ import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
 import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
 import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
+import TeacherAttendanceScreen from '../screens/teacher/attendance/TeacherAttendanceScreen';
 import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
 import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
 // Bug tracker / Student Progress work-order (2026-08-29): the legacy screen
@@ -59,6 +60,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherAssignments" component={TeacherAssignmentsScreen} />
       <Drawer.Screen name="TeacherChallenges" component={TeacherChallengesScreen} />
       <Drawer.Screen name="TeacherSchedule" component={TeacherScheduleScreen} />
+      <Drawer.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
       <Drawer.Screen name="TeacherAnnouncements" component={AnnouncementsScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />

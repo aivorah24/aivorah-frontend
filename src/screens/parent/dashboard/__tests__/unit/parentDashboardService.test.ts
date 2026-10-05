@@ -2,6 +2,10 @@ import {
   mapChild, fetchChildren, fetchCredentials, fetchAIReport,
   fetchWeeklyActivity, fetchAssignments, fetchAttendanceSummary,
 } from '../../services/parentDashboardService';
+jest.mock('../../../../../config/firebase', () => ({
+  auth: { authStateReady: jest.fn().mockResolvedValue(undefined), currentUser: { getIdToken: jest.fn().mockResolvedValue('tok') } },
+}));
+
 
 function rawChild(overrides: Record<string, any> = {}) {
   return {
@@ -89,8 +93,12 @@ describe('fetchWeeklyActivity / fetchAssignments / fetchAttendanceSummary — re
     expect(await fetchAssignments('c1')).toEqual([]);
   });
 
-  test('fetchAttendanceSummary returns the real parsed body', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ json: async () => ({ summary: {} }) }) as any;
-    expect(await fetchAttendanceSummary('c1')).toEqual({ summary: {} });
+  test('fetchAttendanceSummary reads the attendance service, signed in, and keeps a null rate', async () => {
+    const body = { summary: { present: 0, absent: 0, late: 0, total: 0, ratePct: null }, history: [] };
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => body }) as any;
+    expect(await fetchAttendanceSummary('c1')).toEqual(body);
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toMatch(/aivorah-attendance-service.*\/attendance\/student\/c1\/summary$|localhost:3022\/attendance\/student\/c1\/summary$/);
+    expect(init.headers.Authorization).toBe('Bearer tok');
   });
 });

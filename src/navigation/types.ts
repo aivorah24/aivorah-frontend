@@ -98,7 +98,7 @@ export type TeacherDrawerParamList = {
   AnnouncementManager: { openComposer?: boolean; statusTab?: 'all' | 'published' | 'scheduled' | 'draft' | 'archived' } | undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
-  TeacherAttendance: undefined;
+  TeacherAttendance: { grade?: string; section?: string; date?: string } | undefined;
   Timetable: undefined;
   Resources: undefined;
   Channels: undefined;
