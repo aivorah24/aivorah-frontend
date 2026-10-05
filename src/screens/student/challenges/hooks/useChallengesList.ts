@@ -4,6 +4,9 @@ import SERVER_URL from '../../../../config/challengesServerUrl';
 import { fetchWithRetry } from '../../../../utils/fetchWithRetry';
 import type { Challenge } from '../types';
 
+// Started by the student from Available, not given by a teacher/parent.
+const isSelfStarted = (c: Challenge) => c.assignedByRole === 'student';
+
 export function useChallengesList({
   grade,
   curriculum,
@@ -83,14 +86,16 @@ export function useChallengesList({
 
   const filtered = useMemo(() => {
     if (activeTab === 'Available')  return challenges.filter(c => c.status === 'available');
-    if (activeTab === 'Assigned')   return challenges.filter(c => c.status === 'assigned');
+    if (activeTab === 'Assigned')   return challenges.filter(c => c.status === 'assigned' && !isSelfStarted(c));
+    if (activeTab === 'In Progress') return challenges.filter(c => c.status === 'assigned' && isSelfStarted(c));
     if (activeTab === 'Completed')  return challenges.filter(c => c.status === 'completed');
     return challenges;
   }, [challenges, activeTab]);
 
   const counts = useMemo(() => ({
     available:  challenges.filter(c => c.status === 'available').length,
-    assigned:   challenges.filter(c => c.status === 'assigned').length,
+    assigned:   challenges.filter(c => c.status === 'assigned' && !isSelfStarted(c)).length,
+    inProgress: challenges.filter(c => c.status === 'assigned' && isSelfStarted(c)).length,
     completed:  challenges.filter(c => c.status === 'completed').length,
   }), [challenges]);
 

@@ -6,7 +6,7 @@ import { TABS } from '../constants';
 interface Props {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  counts: { available: number; assigned: number; completed: number };
+  counts: { available: number; assigned: number; inProgress: number; completed: number };
   styles: any;
   colors: AppColors;
 }
@@ -15,7 +15,8 @@ export default function ChallengeTabs({ activeTab, setActiveTab, counts, styles,
   return (
     <View style={styles.tabRow}>
       {TABS.map(tab => {
-        const count = tab === 'Available' ? counts.available : tab === 'Assigned' ? counts.assigned : counts.completed;
+        const count = tab === 'Available' ? counts.available : tab === 'Assigned' ? counts.assigned
+          : tab === 'In Progress' ? counts.inProgress : counts.completed;
         return (
           <TouchableOpacity
             key={tab}
