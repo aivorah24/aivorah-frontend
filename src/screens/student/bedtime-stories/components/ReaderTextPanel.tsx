@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import HighlightedWords from '../../../../components/common/HighlightedWords';
 
 interface Props {
   sceneIcon: string;
@@ -44,25 +45,15 @@ export default function ReaderTextPanel({
                   <View style={[styles.paraDividerLine, { backgroundColor: pastelAccent + '33' }]} />
                 </View>
               )}
-              <Text style={styles.storyText}>
-                {para.map(({ token, gi }, li) => {
-                  const isCurrent = isHighlightActive && gi === wordIndex;
-                  const isPast    = gi < wordIndex;
-                  const display   = li === para.length - 1 ? token.replace(/\s+$/, '') : token;
-                  return (
-                    <Text
-                      key={gi}
-                      style={{
-                        color:           isCurrent ? pastelAccent : isPast ? textMuted : textMain,
-                        fontWeight:      isCurrent ? '700' : '400',
-                        backgroundColor: isCurrent ? pastelAccent + '30' : 'transparent',
-                      }}
-                    >
-                      {display}
-                    </Text>
-                  );
-                })}
-              </Text>
+              <HighlightedWords
+                tokens={para}
+                wordIndex={wordIndex}
+                active={isHighlightActive}
+                accent={pastelAccent}
+                textMain={textMain}
+                textMuted={textMuted}
+                style={styles.storyText}
+              />
             </React.Fragment>
           ))}
         </View>
