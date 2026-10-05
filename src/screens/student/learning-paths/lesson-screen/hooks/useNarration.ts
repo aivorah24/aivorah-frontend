@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { speakWithBoundary, playClip, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
 import { profileFor } from '../utils/playVoices';
+import { splitWords, buildBoundaries } from '../../../../../utils/wordTiming';
 import type { ListenStep, PlayLine } from '../types';
 
 export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { line?: PlayLine };
@@ -16,6 +17,8 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
   const [listenStep, setListenStep] = useState(0);
   const [listenPlaying, setListenPlaying] = useState(false);
   const [sentenceIdx, setSentenceIdx] = useState(0);
+  const [wordIdx, setWordIdx] = useState(0);
+  const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [clockTick, setClockTick] = useState(0);
@@ -70,16 +73,19 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
       }
       setSentenceIdx(i);
       const line = sents[i].line;
+      const text = sents[i].sentence.trim();
+      const follow = followWords(text, seq);
       const next = () => {
         if (seq !== playSeqRef.current) return;
+        clearWordTimer();
         // Poem cadence: a short breath between lines; a play pauses for the change of speaker.
         const gap = line ? (line.stage ? 500 : 350) : isPoemRef.current ? 450 : 0;
         if (gap) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, gap);
         else speakIdx(i + 1);
       };
       const browserVoice = () => speakWithBoundary(
-        sents[i].sentence.trim(),
-        () => {}, // highlight is line-level, not word-level
+        text,
+        follow,
         next,
         playbackRateRef.current,
         { ...(line ? profileFor(line.speaker, line.stage ? undefined : line.direction) : {}), ...(langRef.current && langRef.current !== 'en' ? { lang: langRef.current } : {}) },
@@ -90,7 +96,40 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     speakIdx(clamped);
   }
 
+  function clearWordTimer() {
+    if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null; }
+  }
+
+  // Word-by-word highlight (same weighting as the bedtime-story reader). The voice's word
+  // boundaries drive it; voices that send none fall back to an estimate of where the speech is.
+  function followWords(text: string, seq: number) {
+    clearWordTimer();
+    const tokens = splitWords(text);
+    const starts: number[] = [];
+    let at = 0;
+    for (const t of tokens) { starts.push(at); at += t.length; }
+    const bounds = buildBoundaries(tokens);
+    const estMs = tokens.length * 400 / (playbackRateRef.current || 1);
+    const t0 = Date.now();
+    let fromVoice = false;
+    setWordIdx(0);
+    wordTimerRef.current = setInterval(() => {
+      if (seq !== playSeqRef.current || fromVoice) { clearWordTimer(); return; }
+      const ratio = (Date.now() - t0) / estMs;
+      const found = bounds.findIndex((b) => ratio < b);
+      setWordIdx(found === -1 ? tokens.length - 1 : found);
+    }, 100);
+    return (charIndex: number) => {
+      if (seq !== playSeqRef.current) return;
+      fromVoice = true;
+      let idx = 0;
+      while (idx + 1 < starts.length && starts[idx + 1] <= charIndex) idx += 1;
+      setWordIdx(idx);
+    };
+  }
+
   function stopNarration() {
+    clearWordTimer();
     playSeqRef.current++; // invalidate any pending onEnd
     stopSpeaking();
     setListenPlaying(false);
@@ -176,10 +215,10 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     leftScrollRef.current?.scrollTo?.({ y: target, animated: true });
   }, [sentenceIdx, listenPlaying]);
 
-  useEffect(() => () => { playSeqRef.current++; stopSpeaking(); }, []);
+  useEffect(() => () => { playSeqRef.current++; clearWordTimer(); stopSpeaking(); }, []);
 
   return {
-    listenStep, listenPlaying, sentenceIdx, visitedSteps, completedSteps, clockTick,
+    listenStep, listenPlaying, sentenceIdx, wordIdx, visitedSteps, completedSteps, clockTick,
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,

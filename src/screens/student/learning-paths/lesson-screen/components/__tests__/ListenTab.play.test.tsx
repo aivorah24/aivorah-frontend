@@ -69,3 +69,53 @@ describe('ListenTab play script', () => {
     expect(screen.queryByText('Previous')).toBeNull();
   });
 });
+
+describe('ListenTab word-by-word highlight', () => {
+  function renderProse(wordIdx: number) {
+    const sentences = [{ sentence: 'Rivers carry water.', start: 0, end: 19 }, { sentence: 'Fish live there.', start: 20, end: 36 }];
+    const narration: any = {
+      listenStep: 0, listenPlaying: true, sentenceIdx: 0, wordIdx, visitedSteps: new Set([0]), clockTick: 0,
+      playbackRate: 1, speedMenuOpen: false, setSpeedMenuOpen: jest.fn(),
+      currentListenStep: { text: 'Rivers carry water. Fish live there.' }, listenSentences: sentences,
+      sentenceYRef: { current: [] }, leftScrollRef: { current: null }, completedSteps: new Set(),
+      toggleListenPlay: jest.fn(), repeatStep: jest.fn(), goToListenStep: jest.fn(), playListenStep: jest.fn(), skipBy: jest.fn(), changePlaybackRate: jest.fn(),
+    };
+    return render(
+      <ListenTab
+        topic={{ name: 'Rivers', pdfFile: 'x.pdf', pdfPage: 1, readText: {} }}
+        isMath={false} listenSteps={[{ text: 'Rivers carry water. Fish live there.' } as any]} grade="Grade 7" subject="Science"
+        colors={colors} styles={styles} narration={narration} fontLarge={false} setFontLarge={jest.fn()}
+        vocab={[]} vocabIndex={0} setVocabIndex={jest.fn()} pauseAnswer={null} setPauseAnswer={jest.fn()}
+        whyOpen={false} setWhyOpen={jest.fn()} explainOpen={false} setExplainOpen={jest.fn()}
+        hintOpen={false} setHintOpen={jest.fn()} exampleOpen={false} setExampleOpen={jest.fn()}
+        setMode={jest.fn()} setZoomImage={jest.fn()}
+      />,
+    );
+  }
+  const flat = (el: any) => Object.assign({}, ...[].concat(el.props.style).flat(Infinity).filter(Boolean));
+
+  test('only the word being read is highlighted, not the whole line', async () => {
+    await renderProse(1);
+    const current = screen.getByText('carry ');
+    expect(flat(current).fontWeight).toBe('700');
+    expect(flat(screen.getByText('Rivers ')).fontWeight).not.toBe('700');
+    const line = current.parent?.parent as any;
+    expect(flat(line).backgroundColor ?? 'transparent').toBe('transparent');
+  });
+
+  test('the line player keeps Previous line, Play, Next line and Repeat, without the progress bar', async () => {
+    await renderProse(0);
+    expect(screen.getAllByText('Line').length).toBe(2);
+    expect(screen.getByText('Repeat')).toBeTruthy();
+    const lefts: string[] = [];
+    const walk = (n: any) => {
+      if (!n || typeof n !== 'object') return;
+      if (Array.isArray(n)) { n.forEach(walk); return; }
+      const left = n.props?.style ? flat(n).left : undefined;
+      if (typeof left === 'string' && left.endsWith('%')) lefts.push(left);
+      walk(n.children);
+    };
+    walk(screen.toJSON());
+    expect(lefts).toEqual([]);
+  });
+});

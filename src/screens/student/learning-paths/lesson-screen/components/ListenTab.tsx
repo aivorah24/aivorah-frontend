@@ -9,12 +9,16 @@ import ColumnSubtraction from './ColumnSubtraction';
 import { makeStyles } from '../styles';
 import type { Mode } from '../types';
 import type { ReasoningListen } from '../utils/listenFromBlocks';
+import HighlightedWords from '../../../../../components/common/HighlightedWords';
+import { splitWords } from '../../../../../utils/wordTiming';
 import ListenVisualBoard from './ListenVisualBoard';
 import MathBoard, { IntroBoard } from './MathBoard';
 import { ExampleTabs, TutorControls } from './TutorControls';
 import TutorSteps from './TutorSteps';
 
 const PLAYBACK_RATES = [0.6, 0.78, 1.0, 1.25];
+
+const wordTokens = (text: string) => splitWords(text.trim()).map((token, gi) => ({ token, gi }));
 
 export default function ListenTab({
   topic,
@@ -68,7 +72,7 @@ export default function ListenTab({
   setZoomImage: (img: { uri: string; caption?: string } | null) => void;
 }) {
   const {
-    listenStep, listenPlaying, sentenceIdx, clockTick,
+    listenStep, listenPlaying, sentenceIdx, wordIdx, clockTick,
     playbackRate, speedMenuOpen, setSpeedMenuOpen,
     currentListenStep, listenSentences,
     sentenceYRef, leftScrollRef,
@@ -78,11 +82,7 @@ export default function ListenTab({
   const step = currentListenStep;
   const sentences = listenSentences;
   const curSentenceIdx = sentenceIdx;
-  // Progress is line-based now (reliable), not a wall-clock guess: the
-  // current line out of the step's lines. A completed line counts as
-  // done; the active line counts as half so the bar always moves.
   const lineCount = Math.max(1, sentences.length);
-  const lineProgress = Math.min(100, ((sentenceIdx + (listenPlaying ? 0.5 : 1)) / lineCount) * 100);
   void clockTick;
   // The clue card stays lit until a later line triggers the next one.
   let cardAtLine: number | null = null;
@@ -213,16 +213,28 @@ export default function ListenTab({
                           {!!line?.direction && !line.stage && (
                             <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
                           )}
-                          <Text
-                            style={[
-                              styles.listenBodyText,
-                              fontLarge && styles.listenBodyTextLarge,
-                              line?.stage && { fontStyle: 'italic' },
-                              { color: active ? colors.textMain : colors.textMuted, backgroundColor: active ? colors.accentGreen + '20' : 'transparent', opacity: current ? 1 : 0.75 },
-                            ]}
-                          >
-                            {line?.stage ? `(${s.sentence})` : s.sentence}
-                          </Text>
+                          {active && !line?.stage ? (
+                            <HighlightedWords
+                              tokens={wordTokens(s.sentence)}
+                              wordIndex={wordIdx}
+                              active={listenPlaying}
+                              accent={colors.accentGreen}
+                              textMain={colors.textMain}
+                              textMuted={colors.textMuted}
+                              style={[styles.listenBodyText, fontLarge && styles.listenBodyTextLarge]}
+                            />
+                          ) : (
+                            <Text
+                              style={[
+                                styles.listenBodyText,
+                                fontLarge && styles.listenBodyTextLarge,
+                                line?.stage && { fontStyle: 'italic' },
+                                { color: active ? colors.textMain : colors.textMuted, opacity: current ? 1 : 0.75 },
+                              ]}
+                            >
+                              {line?.stage ? `(${s.sentence})` : s.sentence}
+                            </Text>
+                          )}
                         </View>
                       );
                     })}
@@ -243,19 +255,28 @@ export default function ListenTab({
                     {!!line?.direction && !line.stage && (
                       <Text style={[styles.playDirection, { color: colors.textMuted }]}>({line.direction})</Text>
                     )}
-                    <Text
-                      style={[
-                        styles.listenBodyText,
-                        fontLarge && styles.listenBodyTextLarge,
-                        line?.stage && { fontStyle: 'italic' },
-                        {
-                          color: active ? colors.textMain : colors.textMuted,
-                          backgroundColor: active ? colors.accentGreen + '20' : 'transparent',
-                        },
-                      ]}
-                    >
-                      {line?.stage ? `(${s.sentence})` : s.sentence}
-                    </Text>
+                    {active && !line?.stage ? (
+                      <HighlightedWords
+                        tokens={wordTokens(s.sentence)}
+                        wordIndex={wordIdx}
+                        active={listenPlaying}
+                        accent={colors.accentGreen}
+                        textMain={colors.textMain}
+                        textMuted={colors.textMuted}
+                        style={[styles.listenBodyText, fontLarge && styles.listenBodyTextLarge]}
+                      />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.listenBodyText,
+                          fontLarge && styles.listenBodyTextLarge,
+                          line?.stage && { fontStyle: 'italic' },
+                          { color: active ? colors.textMain : colors.textMuted },
+                        ]}
+                      >
+                        {line?.stage ? `(${s.sentence})` : s.sentence}
+                      </Text>
+                    )}
                   </View>
                 );
               })}
@@ -327,10 +348,6 @@ export default function ListenTab({
             <View style={styles.playerTimeRow}>
               <Text style={[styles.playerTimeText, { color: colors.textMuted }]}>Line {Math.min(sentenceIdx + 1, lineCount)} of {lineCount}</Text>
               <Text style={[styles.playerTimeText, { color: colors.textMuted }]}>{listenPlaying ? 'Reading…' : 'Paused'}</Text>
-            </View>
-            <View style={[styles.listenProgressTrack, { backgroundColor: colors.textDim + '35' }]}>
-              <View style={[styles.listenProgressFill, { backgroundColor: colors.accentGreen, width: `${lineProgress}%` }]} />
-              <View style={[styles.progressThumb, { left: `${lineProgress}%`, backgroundColor: colors.accentGreen }]} />
             </View>
 
             <View style={[styles.playerRow, { marginTop: 14 }]}>
