@@ -4,6 +4,9 @@ import { Platform } from 'react-native';
 // the word currently being read (karaoke-style), and calls onEnd when done.
 export type VoiceProfile = { gender?: 'f' | 'm'; pitch?: number; rate?: number; lang?: string };
 
+// Chrome can garbage-collect an utterance mid-speech and never fire onend; keep a reference.
+let speaking: SpeechSynthesisUtterance | null = null;
+
 const FEMALE_VOICES = [/aria/i, /jenny/i, /michelle/i, /zira/i, /samantha/i, /karen/i, /moira/i, /female/i];
 const MALE_VOICES = [/guy/i, /ryan/i, /davis/i, /david/i, /mark/i, /alex/i, /daniel/i, /george/i, /male/i];
 
@@ -13,6 +16,7 @@ export function speakWithBoundary(
   onEnd: () => void,
   rate: number = 0.78,
   profile?: VoiceProfile,
+  onStart?: () => void,
 ): void {
   if (Platform.OS !== 'web' || !(window as any).speechSynthesis) { onEnd(); return; }
   const synth = (window as any).speechSynthesis as SpeechSynthesis;
@@ -53,7 +57,9 @@ export function speakWithBoundary(
   if (!pick && !profile?.lang) pick = voices.find(v => /en[-_]US/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
   if (pick) utter.voice = pick;
   utter.onboundary = (e: any) => { if (e.name === 'word' || e.charIndex !== undefined) onWordBoundary(e.charIndex ?? 0); };
-  utter.onend = () => onEnd();
+  speaking = utter;
+  utter.onstart = () => onStart?.();
+  utter.onend = () => { if (speaking === utter) speaking = null; onEnd(); };
   utter.onerror = () => onEnd();
   synth.speak(utter);
 }

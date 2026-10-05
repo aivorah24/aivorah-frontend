@@ -136,14 +136,17 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   activityText: { fontSize: 13.5, lineHeight: 20 },
 
   playerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28, position: 'relative' },
-  speedBtn: { position: 'absolute', right: 0, alignItems: 'center' },
+  speedBtn: { position: 'relative', alignItems: 'center' },
+  playerBar: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 10 },
+  playerStatus: { flex: 1, fontSize: 13, fontWeight: '600' },
+  playerIconBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   speedMenu: {
     position: 'absolute', bottom: 34, right: 0, minWidth: 80,
     borderWidth: 1, borderRadius: radius.md, paddingVertical: 4,
     elevation: 8, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6,
   },
   speedMenuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 12 },
-  playBtn: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  playBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   skipBtn: { alignItems: 'center', justifyContent: 'center' },
   skipBtnLabel: { fontSize: 9, fontWeight: '700', marginTop: -4 },
 

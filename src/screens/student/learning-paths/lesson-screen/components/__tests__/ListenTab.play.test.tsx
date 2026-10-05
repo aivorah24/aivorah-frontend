@@ -71,10 +71,10 @@ describe('ListenTab play script', () => {
 });
 
 describe('ListenTab word-by-word highlight', () => {
-  function renderProse(wordIdx: number) {
+  function renderProse(wordIdx: number, playing = true, paused = false) {
     const sentences = [{ sentence: 'Rivers carry water.', start: 0, end: 19 }, { sentence: 'Fish live there.', start: 20, end: 36 }];
     const narration: any = {
-      listenStep: 0, listenPlaying: true, sentenceIdx: 0, wordIdx, visitedSteps: new Set([0]), clockTick: 0,
+      listenStep: 0, listenPlaying: playing, paused, sentenceIdx: 0, wordIdx, visitedSteps: new Set([0]), clockTick: 0,
       playbackRate: 1, speedMenuOpen: false, setSpeedMenuOpen: jest.fn(),
       currentListenStep: { text: 'Rivers carry water. Fish live there.' }, listenSentences: sentences,
       sentenceYRef: { current: [] }, leftScrollRef: { current: null }, completedSteps: new Set(),
@@ -103,10 +103,14 @@ describe('ListenTab word-by-word highlight', () => {
     expect(flat(line).backgroundColor ?? 'transparent').toBe('transparent');
   });
 
-  test('the line player keeps Previous line, Play, Next line and Repeat, without the progress bar', async () => {
+  test('the player is just Play/Pause, Repeat and Speed - no line buttons, counter or progress bar', async () => {
     await renderProse(0);
-    expect(screen.getAllByText('Line').length).toBe(2);
-    expect(screen.getByText('Repeat')).toBeTruthy();
+    expect(screen.queryByText('Line')).toBeNull();
+    expect(screen.queryByText(/^Line \d+ of \d+$/)).toBeNull();
+    expect(screen.getByLabelText('Pause')).toBeTruthy();
+    expect(screen.getByText('Reading aloud…')).toBeTruthy();
+    expect(screen.getByLabelText('Repeat')).toBeTruthy();
+    expect(screen.getByText('1x')).toBeTruthy();
     const lefts: string[] = [];
     const walk = (n: any) => {
       if (!n || typeof n !== 'object') return;
@@ -117,5 +121,15 @@ describe('ListenTab word-by-word highlight', () => {
     };
     walk(screen.toJSON());
     expect(lefts).toEqual([]);
+  });
+
+  test('when paused, the word it stopped on stays highlighted', async () => {
+    await renderProse(1, false, true);
+    expect(flat(screen.getByText('carry ')).fontWeight).toBe('700');
+  });
+
+  test('before playing (not paused), no word is highlighted', async () => {
+    await renderProse(0, false, false);
+    expect(flat(screen.getByText('Rivers ')).fontWeight).not.toBe('700');
   });
 });
