@@ -7,16 +7,22 @@ jest.setTimeout(15000);
 const styles: any = new Proxy({}, { get: () => ({}) });
 const colors: any = { borderColor: '#333', textDim: '#666' };
 
-function counts(overrides: Partial<{ available: number; assigned: number; completed: number }> = {}) {
-  return { available: 0, assigned: 0, completed: 0, ...overrides };
+function counts(overrides: Partial<{ available: number; assigned: number; inProgress: number; completed: number }> = {}) {
+  return { available: 0, assigned: 0, inProgress: 0, completed: 0, ...overrides };
 }
 
 describe('ChallengeTabs — rendering all tabs', () => {
-  test('renders Available, Assigned, and Completed tabs', async () => {
+  test('renders Available, Assigned, In Progress, and Completed tabs', async () => {
     await render(<ChallengeTabs activeTab="Available" setActiveTab={jest.fn()} counts={counts()} styles={styles} colors={colors} />);
     expect(screen.getByText('Available')).toBeTruthy();
     expect(screen.getByText('Assigned')).toBeTruthy();
+    expect(screen.getByText('In Progress')).toBeTruthy();
     expect(screen.getByText('Completed')).toBeTruthy();
+  });
+
+  test('In Progress shows its own count', async () => {
+    await render(<ChallengeTabs activeTab="Available" setActiveTab={jest.fn()} counts={counts({ inProgress: 2 })} styles={styles} colors={colors} />);
+    expect(screen.getByText('2')).toBeTruthy();
   });
 });
 

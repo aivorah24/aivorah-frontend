@@ -1,4 +1,4 @@
-export const TABS = ['Available', 'Assigned', 'Completed'];
+export const TABS = ['Available', 'Assigned', 'In Progress', 'Completed'];
 
 // imageUrl is served directly from server (cloudinary_urls.json) — no URL construction needed
 

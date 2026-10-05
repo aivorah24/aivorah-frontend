@@ -24,6 +24,9 @@ function Harness({ studentId = 's1', initialTab = undefined, refreshProfile = je
       <Text testID="availableCount">{hook.counts.available}</Text>
       <Text testID="assignedCount">{hook.counts.assigned}</Text>
       <Text testID="completedCount">{hook.counts.completed}</Text>
+      <Text testID="inProgressCount">{hook.counts.inProgress}</Text>
+      <Text testID="filteredIds">{hook.filtered.map((c: any) => c.id).join(',')}</Text>
+      <TouchableOpacity testID="setInProgress" onPress={() => hook.setActiveTab('In Progress')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setAssigned" onPress={() => hook.setActiveTab('Assigned')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setCompleted" onPress={() => hook.setActiveTab('Completed')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="refresh" onPress={() => hook.fetchChallenges(true)}><Text>x</Text></TouchableOpacity>
@@ -237,5 +240,38 @@ describe('useChallengesList — refresh behavior', () => {
 
     await waitFor(() => expect(refreshProfile).toHaveBeenCalled());
     expect(screen.getByTestId('loading').props.children).toBe('false');
+  });
+});
+
+describe('useChallengesList — self-started vs assigned', () => {
+  const list = [
+    { id: 'self', status: 'assigned', assignedByRole: 'student' },
+    { id: 'teacher', status: 'assigned', assignedByRole: 'teacher' },
+    { id: 'parent', status: 'assigned', assignedByRole: 'parent' },
+    { id: 'legacy', status: 'assigned', assignedByRole: null },
+  ];
+
+  beforeEach(() => {
+    global.fetch = jest.fn((url: string) =>
+      url.includes('/challenges?') ? jsonRes(list) : jsonRes([])) as any;
+  });
+
+  test('a challenge the student started themselves is not counted as Assigned', async () => {
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(screen.getByTestId('assignedCount').props.children).toBe(3);
+    expect(screen.getByTestId('inProgressCount').props.children).toBe(1);
+
+    const user = userEvent.setup();
+    await user.press(screen.getByTestId('setAssigned'));
+    expect(screen.getByTestId('filteredIds').props.children).toBe('teacher,parent,legacy');
+  });
+
+  test('the In Progress tab lists only self-started challenges', async () => {
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    const user = userEvent.setup();
+    await user.press(screen.getByTestId('setInProgress'));
+    expect(screen.getByTestId('filteredIds').props.children).toBe('self');
   });
 });

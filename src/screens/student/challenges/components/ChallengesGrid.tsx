@@ -25,11 +25,14 @@ export default function ChallengesGrid({ loading, filtered, activeTab, onStart, 
         <Feather name="target" size={36} color={colors.textDim} />
         <Text style={styles.emptyTitle}>
           {activeTab === 'Assigned' ? 'No assigned challenges yet' :
+           activeTab === 'In Progress' ? 'No challenges in progress' :
            activeTab === 'Completed' ? 'No completed challenges yet' :
            'No challenges available'}
         </Text>
         <Text style={styles.emptyText}>
-          {activeTab === 'Assigned' ? 'Ask your teacher or parent to assign a challenge' : 'Pull down to refresh'}
+          {activeTab === 'Assigned' ? 'Ask your teacher or parent to assign a challenge' :
+           activeTab === 'In Progress' ? 'Challenges you start will appear here until completed' :
+           'Pull down to refresh'}
         </Text>
       </View>
     );
