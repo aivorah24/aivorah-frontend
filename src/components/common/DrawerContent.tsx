@@ -60,6 +60,7 @@ const PARENT_NAV_ITEMS = [
   { label: 'My Kids',          icon: 'users',        screen: 'ParentMyKids',      group: 'MENU' },
   { label: 'Daily Tasks',      icon: 'check-square', screen: 'ParentDailyTasks',  group: 'MENU' },
   { label: 'Schedule',         icon: 'calendar',     screen: 'ParentSchedule',    group: 'MENU' },
+  { label: 'Attendance',       icon: 'clipboard',    screen: 'ParentAttendance',  group: 'MENU' },
   { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Messages',         icon: 'message-square', screen: 'ParentMessages',  group: 'MENU' },

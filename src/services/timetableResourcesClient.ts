@@ -1,13 +1,5 @@
-import { auth } from '../config/firebase';
 import TIMETABLE_RESOURCES_SERVER_URL from '../config/timetableResourcesServerUrl';
-
-async function authHeader(): Promise<Record<string, string>> {
-  // After a page refresh Firebase restores the sign-in a moment later.
-  await auth.authStateReady?.();
-  const idToken = await auth.currentUser?.getIdToken();
-  if (!idToken) throw new Error('Not signed in.');
-  return { Authorization: `Bearer ${idToken}` };
-}
+import { authHeader } from './authHeader';
 
 async function parseOrThrow<T>(res: Response, fallback: string): Promise<T> {
   const data = await res.json().catch(() => ({}));

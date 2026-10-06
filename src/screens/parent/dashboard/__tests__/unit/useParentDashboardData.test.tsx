@@ -2,6 +2,10 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { useParentDashboardData } from '../../hooks/useParentDashboardData';
+jest.mock('../../../../../config/firebase', () => ({
+  auth: { authStateReady: jest.fn().mockResolvedValue(undefined), currentUser: { getIdToken: jest.fn().mockResolvedValue('tok') } },
+}));
+
 
 function jsonRes(data: any) {
   return Promise.resolve({ ok: true, json: async () => data });

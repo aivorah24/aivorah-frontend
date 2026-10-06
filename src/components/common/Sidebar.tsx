@@ -91,6 +91,7 @@ const PARENT_NAV_ITEMS = [
   { label: 'My Kids',           icon: 'users',          screen: 'ParentMyKids',       group: 'MENU',     premium: false },
   { label: 'Daily Tasks',       icon: 'check-square',   screen: 'ParentDailyTasks',   group: 'MENU',     premium: false },
   { label: 'Schedule',          icon: 'calendar',       screen: 'ParentSchedule',     group: 'MENU',     premium: false },
+  { label: 'Attendance',        icon: 'clipboard',      screen: 'ParentAttendance',   group: 'MENU',     premium: false },
   { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU', premium: false },
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU', premium: false },
   { label: 'Learning',          icon: 'book-open',      screen: 'ParentLearning',     group: 'CHILDREN', premium: false },
