@@ -1,7 +1,8 @@
 import type { AttendanceStatus, RosterStudent } from '../../../../services/attendanceClient';
 
-export function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
+// The teacher's local calendar day (toISOString is UTC, which is still "yesterday" in India before 5:30 am).
+export function todayISO(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 export function isValidISODate(value: string): boolean {

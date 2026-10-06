@@ -42,6 +42,7 @@ export default function StudentRow({ student, last, onMark, styles, colors }: {
               accessibilityRole="button"
               accessibilityLabel={`${b.label}: ${student.name}`}
               accessibilityState={{ selected: on }}
+              aria-selected={on}
             >
               <Feather name={b.icon} size={13} color={on ? b.color : colors.textDim} />
               <Text style={[styles.attendanceBtnLabel, on && { color: b.color, fontWeight: '700' }]}>{b.label}</Text>

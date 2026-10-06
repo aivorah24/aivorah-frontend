@@ -1,4 +1,4 @@
-import { attendanceStats, classKey, isValidISODate, recordsOf, toggleStatus } from '../../utils/attendanceUtils';
+import { attendanceStats, classKey, isValidISODate, recordsOf, toggleStatus, todayISO } from '../../utils/attendanceUtils';
 
 const roster: any[] = [
   { id: 'a', name: 'A', status: 'present' },
@@ -30,5 +30,15 @@ describe('attendanceUtils', () => {
 
   test('class key matches the chip testID shape', () => {
     expect(classKey({ grade: 'Grade 5', section: 'E2E-ATT' })).toBe('Grade 5-E2E-ATT');
+  });
+});
+
+describe('todayISO', () => {
+  test('uses the local calendar day, not UTC (India before 5:30 am is still the same day locally)', () => {
+    const early = new Date(2026, 9, 6, 2, 15); // 6 Oct 2026, 02:15 local
+    expect(todayISO(early)).toBe('2026-10-06');
+  });
+  test('pads month and day', () => {
+    expect(todayISO(new Date(2026, 0, 5, 12))).toBe('2026-01-05');
   });
 });
