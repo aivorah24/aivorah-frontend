@@ -30,9 +30,12 @@ function Harness({ exploreTopic }: { exploreTopic: () => void }) {
       <Text testID="lastRole">{hook.messages[hook.messages.length - 1]?.role ?? ''}</Text>
       <Text testID="lastIsError">{String(hook.messages[hook.messages.length - 1]?.isError)}</Text>
       <Text testID="showFeedback">{String(hook.showFeedback)}</Text>
+      <Text testID="showClearConfirm">{String(hook.showClearConfirm)}</Text>
       <TouchableOpacity testID="sendHello" onPress={() => hook.sendMessage('Hello')}><Text>send</Text></TouchableOpacity>
       <TouchableOpacity testID="submitFeedback" onPress={() => hook.submitFeedback(3)}><Text>feedback</Text></TouchableOpacity>
       <TouchableOpacity testID="clearChat" onPress={() => hook.clearChat()}><Text>clear</Text></TouchableOpacity>
+      <TouchableOpacity testID="confirmClearChat" onPress={() => hook.confirmClearChat()}><Text>confirm clear</Text></TouchableOpacity>
+      <TouchableOpacity testID="cancelClearChat" onPress={() => hook.cancelClearChat()}><Text>cancel clear</Text></TouchableOpacity>
     </>
   );
 }
@@ -143,12 +146,12 @@ describe('useAICoachChat — submitFeedback', () => {
 });
 
 describe('useAICoachChat — clearChat', () => {
-  test('resets to the single welcome message once the user confirms the "Clear" alert button', async () => {
+  // Alert.alert is a documented no-op on React Native Web, so clearChat no
+  // longer calls it directly - it flips showClearConfirm, and the screen
+  // renders a real (cross-platform) modal wired to confirmClearChat/
+  // cancelClearChat. These tests exercise that state machine directly.
+  test('clearChat opens the confirmation instead of clearing immediately', async () => {
     mockAskAIMentorStream.mockResolvedValueOnce({ answer: 'answer', sources: [], images: [] });
-    const { Alert } = require('react-native');
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title: any, _msg: any, buttons: any) => {
-      buttons.find((b: any) => b.text === 'Clear')?.onPress?.();
-    });
     const user = userEvent.setup();
     await render(<Harness exploreTopic={() => {}} />);
     await user.press(screen.getByTestId('sendHello'));
@@ -156,22 +159,35 @@ describe('useAICoachChat — clearChat', () => {
 
     await user.press(screen.getByTestId('clearChat'));
 
-    await waitFor(() => expect(screen.getByTestId('messageCount').props.children).toBe(1));
-    alertSpy.mockRestore();
+    expect(screen.getByTestId('showClearConfirm').props.children).toBe('true');
+    expect(screen.getByTestId('messageCount').props.children).toBe(3);
   });
 
-  test('dismissing the alert (Cancel) leaves the conversation untouched', async () => {
+  test('confirmClearChat resets to the single welcome message and closes the confirmation', async () => {
     mockAskAIMentorStream.mockResolvedValueOnce({ answer: 'answer', sources: [], images: [] });
-    const { Alert } = require('react-native');
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {}); // never invokes any button
     const user = userEvent.setup();
     await render(<Harness exploreTopic={() => {}} />);
     await user.press(screen.getByTestId('sendHello'));
     await waitFor(() => expect(screen.getByTestId('messageCount').props.children).toBe(3));
-
     await user.press(screen.getByTestId('clearChat'));
 
+    await user.press(screen.getByTestId('confirmClearChat'));
+
+    expect(screen.getByTestId('messageCount').props.children).toBe(1);
+    expect(screen.getByTestId('showClearConfirm').props.children).toBe('false');
+  });
+
+  test('cancelClearChat leaves the conversation untouched and closes the confirmation', async () => {
+    mockAskAIMentorStream.mockResolvedValueOnce({ answer: 'answer', sources: [], images: [] });
+    const user = userEvent.setup();
+    await render(<Harness exploreTopic={() => {}} />);
+    await user.press(screen.getByTestId('sendHello'));
+    await waitFor(() => expect(screen.getByTestId('messageCount').props.children).toBe(3));
+    await user.press(screen.getByTestId('clearChat'));
+
+    await user.press(screen.getByTestId('cancelClearChat'));
+
     expect(screen.getByTestId('messageCount').props.children).toBe(3);
-    alertSpy.mockRestore();
+    expect(screen.getByTestId('showClearConfirm').props.children).toBe('false');
   });
 });
