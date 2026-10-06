@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { Challenge } from '../types';
 import ChallengeCard from './ChallengeCard';
+import { useSlowLoadMessage } from '../../../../hooks/useSlowLoadMessage';
 
 interface Props {
   loading: boolean;
@@ -15,8 +16,19 @@ interface Props {
 }
 
 export default function ChallengesGrid({ loading, filtered, activeTab, onStart, styles, colors }: Props) {
+  const slowLoad = useSlowLoadMessage(loading);
+
   if (loading) {
-    return <ActivityIndicator color={colors.accentYellow} style={{ marginTop: 40 }} />;
+    return (
+      <View style={{ marginTop: 40, alignItems: 'center' }}>
+        <ActivityIndicator color={colors.accentYellow} />
+        {slowLoad && (
+          <Text style={{ marginTop: 14, fontSize: 13, color: colors.textDim, textAlign: 'center', paddingHorizontal: 24 }}>
+            Still waking up the server — this can take up to a minute on the first load.
+          </Text>
+        )}
+      </View>
+    );
   }
 
   if (filtered.length === 0) {
@@ -25,14 +37,11 @@ export default function ChallengesGrid({ loading, filtered, activeTab, onStart, 
         <Feather name="target" size={36} color={colors.textDim} />
         <Text style={styles.emptyTitle}>
           {activeTab === 'Assigned' ? 'No assigned challenges yet' :
-           activeTab === 'In Progress' ? 'No challenges in progress' :
            activeTab === 'Completed' ? 'No completed challenges yet' :
            'No challenges available'}
         </Text>
         <Text style={styles.emptyText}>
-          {activeTab === 'Assigned' ? 'Ask your teacher or parent to assign a challenge' :
-           activeTab === 'In Progress' ? 'Challenges you start will appear here until completed' :
-           'Pull down to refresh'}
+          {activeTab === 'Assigned' ? 'Ask your teacher or parent to assign a challenge' : 'Pull down to refresh'}
         </Text>
       </View>
     );
