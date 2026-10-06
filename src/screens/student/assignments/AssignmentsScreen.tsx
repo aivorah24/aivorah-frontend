@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
+import { useSlowLoadMessage } from '../../../hooks/useSlowLoadMessage';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 
@@ -36,11 +37,18 @@ export default function AssignmentsScreen({ navigation, route }: any) {
     studentId,
   } = useAssignments(highlightId, navigation);
 
+  const slowLoad = useSlowLoadMessage(loading);
+
   if (loading) {
     return (
       <ScreenLayout>
         <View testID="assignments-loading" style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
           <ActivityIndicator size="large" color={colors.accentYellow} />
+          {slowLoad && (
+            <Text style={{ marginTop: 14, fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 24 }}>
+              Still waking up the server — this can take up to a minute on the first load.
+            </Text>
+          )}
         </View>
       </ScreenLayout>
     );
