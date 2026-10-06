@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, Animated } from 'react-native';
+import { Animated } from 'react-native';
 import { askAIMentorStream, type ChatHistoryTurn } from '../../../../services/aiMentorApi';
 import SERVER_URL from '../../../../config/aiCoachServerUrl';
 import type { Message } from '../types';
@@ -38,6 +38,7 @@ export function useAICoachChat({
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
   const [feedbackAnim] = useState(new Animated.Value(0));
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const aiResponseCount = useRef(0);
 
   async function sendMessage(text?: string) {
@@ -124,11 +125,25 @@ export function useAICoachChat({
     Animated.timing(feedbackAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => setShowFeedback(false));
   }
 
+  // Alert.alert is a documented no-op on React Native Web - the confirmation
+  // never appeared and Clear Chat silently did nothing there. Route through
+  // real state + a modal (rendered by the screen) instead, so it works on
+  // every platform, not just native.
   function clearChat() {
-    Alert.alert('Clear Chat', 'Start a new conversation?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: () => { setMessages(INITIAL_MESSAGES); aiResponseCount.current = 0; setFeedbackDone(false); setShowFeedback(false); feedbackAnim.setValue(0); } },
-    ]);
+    setShowClearConfirm(true);
+  }
+
+  function cancelClearChat() {
+    setShowClearConfirm(false);
+  }
+
+  function confirmClearChat() {
+    setMessages(INITIAL_MESSAGES);
+    aiResponseCount.current = 0;
+    setFeedbackDone(false);
+    setShowFeedback(false);
+    feedbackAnim.setValue(0);
+    setShowClearConfirm(false);
   }
 
   return {
@@ -143,5 +158,8 @@ export function useAICoachChat({
     submitFeedback,
     dismissFeedback,
     clearChat,
+    showClearConfirm,
+    cancelClearChat,
+    confirmClearChat,
   };
 }
