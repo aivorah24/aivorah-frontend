@@ -132,6 +132,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.title = 'Aivorah';
 }
 
+// html/body have no background by default (white). React Navigation's drawer
+// scene view repaints its own themed background on every mount, so switching
+// sidebar items showed a one-frame white flash through the gap. Match the
+// app's dark background at the document level so there's nothing to flash to.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const bgFix = document.createElement('style');
+  bgFix.textContent = `html, body, #root { background-color: #0B0B0B; }`;
+  document.head.appendChild(bgFix);
+}
+
 // ── Aivorah global font: Plus Jakarta Sans ──
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   // App font — same as landing page for brand consistency
