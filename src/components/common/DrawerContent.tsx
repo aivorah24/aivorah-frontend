@@ -45,7 +45,6 @@ const STUDENT_NAV_ITEMS = [
   { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
   { label: 'Daily Habits', icon: 'sun', screen: 'DailyHabits', group: 'MENU' },
   { label: 'Read Aloud', icon: 'mic', screen: 'ReadAloud', group: 'MENU' },
-  { label: 'My Classes', icon: 'layers', screen: 'MyClasses', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'Assignments', group: 'FOCUS', premium: false },
   { label: 'Challenges', icon: 'target', screen: 'Challenges', group: 'FOCUS', premium: false },
   { label: 'Leaderboard', icon: 'award', screen: 'Leaderboard', group: 'FOCUS' },
@@ -78,7 +77,6 @@ const PARENT_NAV_ITEMS = [
 const TEACHER_NAV_ITEMS = [
   { label: 'Dashboard', icon: 'grid', screen: 'TeacherDashboard', group: 'MENU' },
   { label: 'Students', icon: 'users', screen: 'TeacherStudents', group: 'MENU' },
-  { label: 'My Classes', icon: 'layers', screen: 'MyClasses', group: 'MENU' },
   { label: 'Attendance', icon: 'clipboard', screen: 'TeacherAttendance', group: 'MENU' },
   { label: 'Assignments', icon: 'check-square', screen: 'TeacherAssignments', group: 'MENU' },
   { label: 'Challenges', icon: 'target', screen: 'TeacherChallenges', group: 'MENU' },
@@ -176,7 +174,7 @@ export default function DrawerContent(props: any) {
   // instead of routing to an error screen. Admin roles are always school-bound,
   // so this only applies to student/teacher/parent.
   const isB2B = !!user?.schoolId;
-  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
+  const SCHOOL_ONLY_SCREENS = ['TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
   const NAV_ITEMS_BASE = (!isB2B && (isTeacher || isParent || (!isSuperAdmin && !isSchoolAdmin)))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE;
