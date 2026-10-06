@@ -45,6 +45,7 @@ export type DrawerParamList = {
   Subscription: undefined;
   Messages: undefined;
   Announcements: { openId?: string } | undefined;
+  StudentAttendance: undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
   MathLesson: undefined;

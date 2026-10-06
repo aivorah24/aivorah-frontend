@@ -37,6 +37,7 @@ const STUDENT_NAV_ITEMS = [
   { label: 'My Learning Paths', icon: 'book-open', screen: 'LearningPaths', group: 'MENU' },
   { label: 'AI Coach', icon: 'message-circle', screen: 'AICoach', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'Schedule', group: 'MENU' },
+  { label: 'Attendance', icon: 'clipboard', screen: 'StudentAttendance', group: 'MENU' },
   { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Announcements', icon: 'volume-2', screen: 'Announcements', group: 'MENU' },
@@ -175,7 +176,7 @@ export default function DrawerContent(props: any) {
   // instead of routing to an error screen. Admin roles are always school-bound,
   // so this only applies to student/teacher/parent.
   const isB2B = !!user?.schoolId;
-  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
+  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
   const NAV_ITEMS_BASE = (!isB2B && (isTeacher || isParent || (!isSuperAdmin && !isSchoolAdmin)))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE;
