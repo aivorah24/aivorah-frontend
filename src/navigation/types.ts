@@ -45,6 +45,7 @@ export type DrawerParamList = {
   Subscription: undefined;
   Messages: undefined;
   Announcements: { openId?: string } | undefined;
+  PlatformOverview: undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
   MathLesson: undefined;
@@ -69,6 +70,7 @@ export type ParentDrawerParamList = {
   ParentDailyTasks: undefined;
   ParentSubscription: undefined;
   ParentAnnouncements: { openId?: string } | undefined;
+  PlatformOverview: undefined;
   ParentAttendance: { childId?: string } | undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;
@@ -95,6 +97,7 @@ export type TeacherDrawerParamList = {
   TeacherMessages: undefined;
   ProjectDetails: undefined;
   TeacherAnnouncements: { openId?: string } | undefined;
+  PlatformOverview: undefined;
   AnnouncementManager: { openComposer?: boolean; statusTab?: 'all' | 'published' | 'scheduled' | 'draft' | 'archived' } | undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;

@@ -518,16 +518,16 @@ const [editingName, setEditingName] = useState(false);
           </TouchableOpacity>
         </Modal>
 
-        {/* Admin Panel — only for whitelisted emails */}
+        {/* Admin Panel — only for whitelisted emails. Not a persona — this is
+            reachable from whichever persona the admin's account actually has
+            (their real role is often student/teacher, not a dedicated admin
+            role), same as this button already worked across every persona
+            before. Now opens the real in-app PlatformOverview screen instead
+            of the monolith's static admin-panel.html in a new tab. */}
         {user?.email && ADMIN_EMAILS.has(user.email.toLowerCase().trim()) && (
           <TouchableOpacity
             style={[styles.iconBtn, { borderColor: colors.accentYellow, backgroundColor: colors.accentYellow + '18' }]}
-            onPress={() => {
-              const email = encodeURIComponent(user.email || '');
-              if (Platform.OS === 'web') {
-                (window as any).open(`${SERVER_URL}/admin/panel?email=${email}`, '_blank');
-              }
-            }}
+            onPress={() => navigation.navigate('PlatformOverview')}
             activeOpacity={0.7}
           >
             <Feather name="shield" size={16} color={colors.accentYellow} />
