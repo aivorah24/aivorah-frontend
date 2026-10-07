@@ -44,6 +44,7 @@ import MessagesScreen from '../screens/shared/messages/MessagesScreen';
 import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
+import StudentAttendanceScreen from '../screens/student/attendance/StudentAttendanceScreen';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -108,6 +109,7 @@ export default function AppNavigator() {
       <Drawer.Screen name="Subscription" component={SubscriptionScreen} />
       <Drawer.Screen name="Messages" component={MessagesScreen} />
       <Drawer.Screen name="Announcements" component={AnnouncementsScreen} />
+      <Drawer.Screen name="StudentAttendance" component={StudentAttendanceScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
     </Drawer.Navigator>

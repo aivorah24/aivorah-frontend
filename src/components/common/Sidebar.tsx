@@ -44,6 +44,7 @@ const STUDENT_NAV_ITEMS = [
     ] },
   { label: 'AI Coach',         icon: 'message-circle',screen: 'AICoach',           group: 'MENU',    premium: false },
   { label: 'Schedule',         icon: 'calendar',     screen: 'Schedule',           group: 'MENU',    premium: false },
+  { label: 'Attendance',       icon: 'clipboard',    screen: 'StudentAttendance',  group: 'MENU',    premium: false },
   { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU', premium: false },
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU', premium: false },
   { label: 'Announcements',    icon: 'volume-2',     screen: 'Announcements',      group: 'MENU',    premium: false },
@@ -233,7 +234,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   // 'AnnouncementManager' (Send Announcement) is B2B-only: a teacher's announcements
   // are school-scoped, so B2C teachers (no school) have no audience for it — hide it
   // rather than route to the "not assigned to a school" dead-end.
-  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
+  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
   const NAV_ITEMS = ((!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE).filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
