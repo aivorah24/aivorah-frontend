@@ -56,6 +56,11 @@ const LINKING_SCREENS = {
   Subscription: 'subscription',
   Announcements: 'announcements',
   MyClasses: 'my-classes',
+  // Same path AdminLoginScreen is served at while signed out — once signed
+  // in, the existing restore-from-URL effect below resolves this and lands
+  // the admin account straight on Platform Overview instead of their
+  // persona's normal dashboard.
+  PlatformOverview: 'admin-login',
   ClassDetail: 'my-classes/class',
   // Teacher screens
   TeacherDashboard: 'teacher/dashboard',
@@ -192,6 +197,7 @@ import ParentNavigator from './src/navigation/ParentNavigator';
 import LandingScreen from './src/screens/auth/LandingScreen';
 import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
+import AdminLoginScreen from './src/screens/admin/login/AdminLoginScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import OnboardingDemo from './src/screens/onboarding/OnboardingDemo';
 import OnboardingStudentBoxes from './src/screens/onboarding/OnboardingStudentBoxes';
@@ -855,8 +861,18 @@ function RootNavigator() {
     typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/reset-password');
 
+  // Dedicated admin sign-in entry point (see AdminLoginScreen) — only
+  // relevant while signed out; once signed in, the allowed account reaches
+  // the same destination via the Header's shield icon instead.
+  const isAdminLoginPath =
+    !isAuthenticated &&
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/admin-login');
+
   if (isVerifySuccessPath) return <VerifySuccessPage onComplete={() => setVerifyDone(true)} />;
   if (isResetPasswordPath) return <ResetPasswordScreen />;
+  if (isAdminLoginPath) return <AdminLoginScreen />;
 
   // Demo mode — access via ?demo=onboarding-student, ?demo=onboarding-teacher,
   // or ?demo=onboarding-parent to preview the new "boxes" onboarding screens
