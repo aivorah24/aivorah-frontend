@@ -22,6 +22,7 @@ import type { AppColors } from '../../../theme';
 import { useGradesSections } from './hooks/useGradesSections';
 import GradeRow from './components/GradeRow';
 import GradesSectionsPromptModal from './components/GradesSectionsPromptModal';
+import { AssignTeacherModal } from '../classes/components/AssignTeacherModal';
 
 export default function SchoolAdminGradesSectionsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -32,6 +33,8 @@ export default function SchoolAdminGradesSectionsScreen({ navigation }: any) {
     grades, loading, error, showArchived, setShowArchived,
     prompt, promptValue, setPromptValue, promptError, promptBusy,
     load, openPrompt, closePrompt, submitPrompt, toggleArchiveGrade,
+    assignFor, assignSearch, setAssignSearch, assignBusy, assignError, assignTeachers,
+    closeAssignTeacher, assignTeacherNow,
   } = useGradesSections(user?.email);
 
   useFocusEffect(React.useCallback(() => { load(); }, [load]));
@@ -101,6 +104,18 @@ export default function SchoolAdminGradesSectionsScreen({ navigation }: any) {
         colors={colors}
         onClose={closePrompt}
         onSubmit={submitPrompt}
+      />
+
+      <AssignTeacherModal
+        colors={colors}
+        pickerFor={assignFor}
+        pickerSearch={assignSearch}
+        onSearchChange={setAssignSearch}
+        pickerBusy={assignBusy}
+        pickerError={assignError}
+        pickerTeachers={assignTeachers}
+        onClose={closeAssignTeacher}
+        onAssign={assignTeacherNow}
       />
     </ScreenLayout>
   );

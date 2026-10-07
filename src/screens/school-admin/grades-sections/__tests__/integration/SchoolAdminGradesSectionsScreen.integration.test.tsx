@@ -152,11 +152,17 @@ describe('SchoolAdminGradesSectionsScreen — integration', () => {
     await user.press(addButtons[addButtons.length - 1]);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenLastCalledWith(
+      expect(global.fetch).toHaveBeenCalledWith(
         `${SERVER_URL}/school-admin/grades/Grade%206/sections?adminEmail=admin%40school.test`,
         expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'C' }) })
       );
     });
+    // Right after adding, the "assign a class teacher now" prompt opens —
+    // Attendance and other class-teacher-gated features have nothing to
+    // show until this is done, so it's offered immediately rather than
+    // left as an easy-to-forget separate trip to the Classes screen.
+    expect(await screen.findByText('Assign Class Teacher')).toBeTruthy();
+    expect(screen.getByText('Grade 6 · Section C')).toBeTruthy();
   });
 
   test('Rename: pre-fills current name, shows cascade hint, and submits a PATCH', async () => {
