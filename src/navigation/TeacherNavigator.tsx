@@ -17,6 +17,7 @@ import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChalle
 // aivorah-teacher-dashboard-service.
 import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
 import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
+import PlatformOverviewScreen from '../screens/admin/overview/PlatformOverviewScreen';
 import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
 import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
 import TeacherLearningPathsManageScreen from '../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen';
@@ -63,6 +64,7 @@ export default function TeacherNavigator() {
       <Drawer.Screen name="TeacherAttendance" component={TeacherAttendanceScreen} />
       <Drawer.Screen name="TeacherProgress" component={TeacherProgressScreen} />
       <Drawer.Screen name="TeacherAnnouncements" component={AnnouncementsScreen} />
+      <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
       <Drawer.Screen name="TeacherLearningPaths" component={TeacherLearningPathsScreen} />
       <Drawer.Screen name="TeacherCurriculumLearningPath" component={TeacherCurriculumLearningPathScreen} />
       <Drawer.Screen name="TeacherClassLearningPaths" component={TeacherLearningPathsManageScreen} />

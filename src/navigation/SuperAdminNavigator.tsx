@@ -17,8 +17,10 @@ import AnnouncementManagerScreen from '../screens/shared/announcements/Announcem
 import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
 import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
 import ChannelsScreen from '../features/channels/components/ChannelsScreen';
+import PlatformOverviewScreen from '../screens/admin/overview/PlatformOverviewScreen';
 
 export type SuperAdminDrawerParamList = {
+  PlatformOverview: undefined;
   TeacherDashboard: undefined;
   TeacherStudents: undefined;
   TeacherAssignments: undefined;
@@ -58,6 +60,7 @@ export default function SuperAdminNavigator() {
         animationEnabled: false,
       } as any}
     >
+      <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
       <Drawer.Screen name="TeacherDashboard" component={TeacherDashboardScreen} />
       <Drawer.Screen name="TeacherStudents" component={TeacherStudentsScreen} />
       <Drawer.Screen name="TeacherAssignments" component={TeacherAssignmentsScreen} />

@@ -19,6 +19,7 @@ import ParentAIProgressReportScreen from '../screens/parent/ai-progress-report/P
 import ParentSettingsScreen from '../screens/parent/settings/ParentSettingsScreen';
 import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';
 import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
+import PlatformOverviewScreen from '../screens/admin/overview/PlatformOverviewScreen';
 import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
@@ -68,6 +69,7 @@ export default function ParentNavigator() {
       <Drawer.Screen name="ParentSettings" component={ParentSettingsScreen} />
       <Drawer.Screen name="ParentMessages" component={ParentMessagesScreen} />
       <Drawer.Screen name="ParentAnnouncements" component={AnnouncementsScreen} />
+      <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
       <Drawer.Screen name="ParentAttendance" component={ParentAttendanceScreen} />
       <Drawer.Screen name="ParentControls" component={ParentControlsScreen} />
       <Drawer.Screen name="ParentLearning" component={ParentLearningScreen} />

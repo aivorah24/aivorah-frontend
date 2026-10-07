@@ -11,6 +11,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
+import PlatformOverviewScreen from '../screens/admin/overview/PlatformOverviewScreen';
 import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
 import SchoolAdminPeopleScreen from '../screens/school-admin/people/SchoolAdminPeopleScreen';
 import SchoolAdminStudentsScreen from '../screens/school-admin/students/SchoolAdminStudentsScreen';
@@ -55,6 +56,7 @@ export type SchoolAdminDrawerParamList = {
   SchoolAdminImportHistory: { title?: string; icon?: string; description?: string } | undefined;
   AnnouncementManager: { openComposer?: boolean; statusTab?: 'all' | 'published' | 'scheduled' | 'draft' | 'archived' } | undefined;
   SchoolAdminAnnouncements: { openId?: string } | undefined;
+  PlatformOverview: undefined;
   SchoolAdminSettings: undefined;
   TeacherSettings: undefined;
   TeacherHelp: undefined;
@@ -118,6 +120,7 @@ export default function SchoolAdminNavigator() {
         component={SchoolAdminImportHistoryScreen}
       />
       <Drawer.Screen name="AnnouncementManager" component={AnnouncementManagerScreen} />
+      <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
       <Drawer.Screen name="SchoolAdminAnnouncements" component={AnnouncementsScreen} />
       <Drawer.Screen name="SchoolAdminSettings" component={SchoolAdminSettingsScreen} />
       <Drawer.Screen name="TeacherSettings" component={TeacherSettingsScreen} />

@@ -44,6 +44,7 @@ import MessagesScreen from '../screens/shared/messages/MessagesScreen';
 import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
 import MyClassesScreen from '../features/classes/components/MyClassesScreen';
 import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
+import PlatformOverviewScreen from '../screens/admin/overview/PlatformOverviewScreen';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -108,6 +109,12 @@ export default function AppNavigator() {
       <Drawer.Screen name="Subscription" component={SubscriptionScreen} />
       <Drawer.Screen name="Messages" component={MessagesScreen} />
       <Drawer.Screen name="Announcements" component={AnnouncementsScreen} />
+      {/* Not a sidebar item — reachable only via the Header's shield icon
+          (ADMIN_EMAILS allowlist, same gate as before). Registered here
+          because this persona is what the admin accounts' real role
+          actually is today (e.g. role:'student'), not a dedicated admin
+          persona. */}
+      <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
     </Drawer.Navigator>
