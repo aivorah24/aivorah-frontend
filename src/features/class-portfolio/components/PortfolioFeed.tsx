@@ -27,7 +27,7 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
   useEffect(() => {
     if (classTeacherEmailProp || !email || !grade) return;
     let cancelled = false;
-    fetchMyClasses(email).then(classes => {
+    fetchMyClasses().then(classes => {
       if (cancelled) return;
       const match = classes.find(c => c.grade === grade && c.section === section);
       if (match?.classTeacherEmail) {
