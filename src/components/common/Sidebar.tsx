@@ -49,6 +49,7 @@ const STUDENT_NAV_ITEMS = [
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU', premium: false },
   { label: 'Announcements',    icon: 'volume-2',     screen: 'Announcements',      group: 'MENU',    premium: false },
   { label: 'The World & You',  icon: 'globe',        screen: 'WorldAndYou',        group: 'MENU',    premium: false },
+  { label: 'My Classes',       icon: 'layers',       screen: 'MyClasses',          group: 'MENU',    premium: false },
   { label: 'Bedtime Stories',  icon: 'book',         screen: 'BhagavathaStories',  group: 'MENU',    premium: false },
   { label: 'Daily Habits',     icon: 'sun',          screen: 'DailyHabits',        group: 'MENU',    premium: false },
   { label: 'Read Aloud',       icon: 'mic',          screen: 'ReadAloud',          group: 'MENU',    premium: false },
@@ -65,6 +66,7 @@ const STUDENT_NAV_ITEMS = [
 const TEACHER_NAV_ITEMS = [
   { label: 'Dashboard', icon: 'grid', screen: 'TeacherDashboard', group: 'MENU' },
   { label: 'Students', icon: 'users', screen: 'TeacherStudents', group: 'MENU' },
+  { label: 'My Classes', icon: 'layers', screen: 'MyClasses', group: 'MENU' },
   { label: 'Attendance', icon: 'clipboard', screen: 'TeacherAttendance', group: 'MENU' },
   { label: 'Schedule', icon: 'calendar', screen: 'TeacherSchedule', group: 'MENU' },
   { label: 'Timetable', icon: 'columns', screen: 'Timetable', group: 'MENU' },
@@ -232,7 +234,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   // 'AnnouncementManager' (Send Announcement) is B2B-only: a teacher's announcements
   // are school-scoped, so B2C teachers (no school) have no audience for it — hide it
   // rather than route to the "not assigned to a school" dead-end.
-  const SCHOOL_ONLY_SCREENS = ['TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
+  const SCHOOL_ONLY_SCREENS = ['MyClasses', 'TeacherAttendance', 'ParentAttendance', 'StudentAttendance', 'AnnouncementManager', 'Timetable', 'Resources'];
   const NAV_ITEMS = ((!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE).filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
