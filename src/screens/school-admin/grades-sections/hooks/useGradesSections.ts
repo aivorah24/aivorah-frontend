@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { GradeRow, PromptState } from '../types';
 import {
   fetchGradesSections,
@@ -7,6 +7,8 @@ import {
   renameGrade as renameGradeApi,
   archiveGrade as archiveGradeApi,
 } from '../services/schoolAdminGradesSectionsService';
+import { schoolAdminClassesService, type ClassRow, type TeacherOption } from '../../classes/services/schoolAdminClassesService';
+import { rankPickerTeachers } from '../../classes/utils/classesSorting';
 
 export function useGradesSections(userEmail: string | undefined | null) {
   const [grades, setGrades] = useState<GradeRow[]>([]);
@@ -18,6 +20,16 @@ export function useGradesSections(userEmail: string | undefined | null) {
   const [promptValue, setPromptValue] = useState('');
   const [promptError, setPromptError] = useState('');
   const [promptBusy, setPromptBusy] = useState(false);
+
+  // Right after a brand-new section is added, offer to assign its class
+  // teacher immediately — Attendance (and other class-teacher-gated
+  // features) silently has nothing to show until someone does this, and it
+  // used to be an easy-to-forget separate trip to the Classes screen.
+  const [assignFor, setAssignFor] = useState<ClassRow | null>(null);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [assignError, setAssignError] = useState('');
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 
   const load = useCallback(async () => {
     if (!userEmail) return;
@@ -54,6 +66,7 @@ export function useGradesSections(userEmail: string | undefined | null) {
     setPromptError('');
     try {
       let updated: GradeRow[];
+      const wasAddSection = prompt.kind === 'addSection';
       if (prompt.kind === 'addGrade') {
         updated = await addGradeApi(userEmail, name);
       } else if (prompt.kind === 'addSection') {
@@ -62,13 +75,47 @@ export function useGradesSections(userEmail: string | undefined | null) {
         updated = await renameGradeApi(userEmail, prompt.grade, name);
       }
       setGrades(updated);
+      const newGrade = wasAddSection ? (prompt as { kind: 'addSection'; grade: string }).grade : '';
       closePrompt();
+      if (wasAddSection) openAssignTeacher(newGrade, name);
     } catch (err: any) {
       setPromptError(err.message || 'Something went wrong. Check your connection.');
     } finally {
       setPromptBusy(false);
     }
   }
+
+  // Minimal ClassRow for a just-created section — 0 students, no teacher yet
+  // (AssignTeacherModal/rankPickerTeachers only read grade/section/
+  // classTeacherEmail, so this is enough to drive it without a round trip).
+  async function openAssignTeacher(grade: string, section: string) {
+    setAssignFor({ grade, section, studentCount: 0, classTeacherEmail: null, classTeacherName: null });
+    setAssignSearch('');
+    setAssignError('');
+    if (userEmail && teachers.length === 0) {
+      try { setTeachers(await schoolAdminClassesService.getTeachers(userEmail)); } catch { setTeachers([]); }
+    }
+  }
+
+  function closeAssignTeacher() {
+    setAssignFor(null);
+  }
+
+  async function assignTeacherNow(teacherEmail: string | null) {
+    if (!userEmail || !assignFor) return;
+    setAssignBusy(true);
+    setAssignError('');
+    try {
+      await schoolAdminClassesService.assignClassTeacher(assignFor.grade, assignFor.section, userEmail, teacherEmail);
+      setAssignFor(null);
+    } catch (err: any) {
+      setAssignError(err.message || 'Failed to assign class teacher. Check your connection.');
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
+  const assignTeachers = useMemo(() => rankPickerTeachers(teachers, assignFor, assignSearch), [teachers, assignFor, assignSearch]);
 
   async function toggleArchiveGrade(grade: GradeRow) {
     if (!userEmail) return;
@@ -96,5 +143,13 @@ export function useGradesSections(userEmail: string | undefined | null) {
     closePrompt,
     submitPrompt,
     toggleArchiveGrade,
+    assignFor,
+    assignSearch,
+    setAssignSearch,
+    assignBusy,
+    assignError,
+    assignTeachers,
+    closeAssignTeacher,
+    assignTeacherNow,
   };
 }
