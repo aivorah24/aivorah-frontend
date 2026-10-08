@@ -24,6 +24,7 @@ import { roleLabel } from '../../constants/roleLabels';
 import { SwitchProfile } from './SwitchProfile';
 import { useFocusEffect } from '@react-navigation/native';
 import SCHOOL_ADMIN_SERVER_URL from '../../config/schoolAdminServerUrl';
+import { isAdminEmail } from '../../constants/adminEmails';
 
 function schoolInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -104,6 +105,13 @@ const THEME_OPTIONS: { id: ThemeMode; icon: string; label: string }[] = [
   { id: 'auto', icon: 'monitor', label: 'Auto' },
 ];
 
+const ADMIN_NAV_ITEMS = [
+  { label: 'Platform Overview', icon: 'bar-chart-2', screen: 'PlatformOverview', group: 'MENU' },
+  { label: 'Map to Teacher', icon: 'users', screen: 'MapToTeacher', group: 'MENU' },
+  { label: 'Bulk Import', icon: 'upload-cloud', screen: 'BulkImport', group: 'MENU' },
+  { label: 'LLM Usage', icon: 'cpu', screen: 'LlmUsage', group: 'MENU' },
+];
+
 const SUPER_ADMIN_NAV_ITEMS = [
   { label: 'Dashboard',         icon: 'grid',           screen: 'TeacherDashboard',    group: 'MENU' },
   { label: 'Student Manager',   icon: 'users',          screen: 'SuperAdminStudents',  group: 'MENU' },
@@ -147,6 +155,7 @@ export default function DrawerContent(props: any) {
   const { colors, themeMode, setThemeMode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  const isAdmin = isAdminEmail(user?.email);
   const isSuperAdmin = user?.role === 'super_admin';
   const isSchoolAdmin = user?.role === 'school_admin';
   const [schoolName, setSchoolName] = useState<string | null>(null);
@@ -168,7 +177,7 @@ export default function DrawerContent(props: any) {
   }, [isSchoolAdmin, user]));
   const isTeacher = user?.role === 'teacher';
   const isParent = user?.role === 'parent';
-  const NAV_ITEMS_ROLE = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : isSchoolAdmin ? SCHOOL_ADMIN_NAV_ITEMS : isTeacher ? TEACHER_NAV_ITEMS : isParent ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
+  const NAV_ITEMS_ROLE = isAdmin ? ADMIN_NAV_ITEMS : isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : isSchoolAdmin ? SCHOOL_ADMIN_NAV_ITEMS : isTeacher ? TEACHER_NAV_ITEMS : isParent ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
 
   // ── B2C vs B2B: hide school-only features for independent (self-registered)
   // accounts. A user with no schoolId isn't linked to a school org, so class
@@ -189,7 +198,7 @@ export default function DrawerContent(props: any) {
   const mobileAllow = Platform.OS !== 'web' ? (isTeacher ? MOBILE_TEACHER_SCREENS : isParent ? MOBILE_PARENT_SCREENS : null) : null;
   const NAV_ITEMS = (mobileAllow ? NAV_ITEMS_BASE.filter((i) => mobileAllow.includes(i.screen)) : NAV_ITEMS_BASE)
     .filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
-  const groups = (isSuperAdmin || isTeacher) ? ['MENU', 'TEACHING DEVELOPMENT', 'SYSTEM'] : isSchoolAdmin ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : isParent ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
+  const groups = isAdmin ? ['MENU'] : (isSuperAdmin || isTeacher) ? ['MENU', 'TEACHING DEVELOPMENT', 'SYSTEM'] : isSchoolAdmin ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : isParent ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
   const { unreadCount, unreadAssignments, unreadChallenges } = useNotification();
   const { bannerAnnouncements } = useAnnouncements();
   const unreadAnnouncements = bannerAnnouncements.length;
@@ -339,7 +348,7 @@ export default function DrawerContent(props: any) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
-              <Text style={styles.userRole}>{roleLabel(user.role)}</Text>
+              <Text style={styles.userRole}>{isAdmin ? 'Aivorah Admin' : roleLabel(user.role)}</Text>
             </View>
           </View>
         )}

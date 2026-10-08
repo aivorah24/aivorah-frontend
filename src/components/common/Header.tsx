@@ -25,9 +25,8 @@ import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
+import { isAdminEmail } from '../../constants/adminEmails';
 import { roleLabel } from '../../constants/roleLabels';
-
-const ADMIN_EMAILS = new Set(['kannansaimohan2003@gmail.com', 'preddy6678@gmail.com']);
 
 function formatNotifTime(iso: string): string {
   try {
@@ -258,7 +257,7 @@ const [editingName, setEditingName] = useState(false);
                   user.role === 'student' && styles.roleBadgeTextStudent,
                   (user.role === 'school_admin' || user.role === 'super_admin') && styles.roleBadgeTextAdmin,
                 ]}>
-                  {roleLabel(user.role)}
+                  {isAdminEmail(user.email) ? 'Admin' : roleLabel(user.role)}
                 </Text>
               </View>
             )}
@@ -517,22 +516,6 @@ const [editingName, setEditingName] = useState(false);
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
-
-        {/* Admin Panel — only for whitelisted emails */}
-        {user?.email && ADMIN_EMAILS.has(user.email.toLowerCase().trim()) && (
-          <TouchableOpacity
-            style={[styles.iconBtn, { borderColor: colors.accentYellow, backgroundColor: colors.accentYellow + '18' }]}
-            onPress={() => {
-              const email = encodeURIComponent(user.email || '');
-              if (Platform.OS === 'web') {
-                (window as any).open(`${SERVER_URL}/admin/panel?email=${email}`, '_blank');
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Feather name="shield" size={16} color={colors.accentYellow} />
-          </TouchableOpacity>
-        )}
 
         {/* Profile avatar button */}
         <TouchableOpacity

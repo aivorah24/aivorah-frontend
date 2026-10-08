@@ -23,6 +23,7 @@ import { getAvatarGradient, getAvatarIcon } from '../../constants/avatarStyles';
 import { roleLabel } from '../../constants/roleLabels';
 import { useFocusEffect } from '@react-navigation/native';
 import SCHOOL_ADMIN_SERVER_URL from '../../config/schoolAdminServerUrl';
+import { isAdminEmail } from '../../constants/adminEmails';
 import { SwitchProfile } from './SwitchProfile';
 
 const STUDENT_NAV_ITEMS = [
@@ -119,6 +120,13 @@ interface SidebarProps {
   onNavigate: (screen: string, params?: Record<string, any>) => void;
 }
 
+const ADMIN_NAV_ITEMS = [
+  { label: 'Platform Overview', icon: 'bar-chart-2', screen: 'PlatformOverview', group: 'MENU' },
+  { label: 'Map to Teacher', icon: 'users', screen: 'MapToTeacher', group: 'MENU' },
+  { label: 'Bulk Import', icon: 'upload-cloud', screen: 'BulkImport', group: 'MENU' },
+  { label: 'LLM Usage', icon: 'cpu', screen: 'LlmUsage', group: 'MENU' },
+];
+
 const SUPER_ADMIN_NAV_ITEMS = [
   { label: 'Dashboard',          icon: 'grid',         screen: 'TeacherDashboard',   group: 'MENU'    },
   { label: 'Students',           icon: 'users',        screen: 'TeacherStudents',    group: 'MENU'    },
@@ -204,6 +212,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     });
   }
   const role = user?.role;
+  const isAdmin = isAdminEmail(user?.email);
 
   // School branding card (school_admin only): fetch the school's real name so
   // the sidebar header matches the mobile drawer and the design.
@@ -226,7 +235,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     return () => { cancelled = true; };
   }, [isSchoolAdmin, user]));
 
-  const NAV_ITEMS_ROLE = role === 'super_admin' ? SUPER_ADMIN_NAV_ITEMS : role === 'school_admin' ? SCHOOL_ADMIN_NAV_ITEMS : role === 'teacher' ? TEACHER_NAV_ITEMS : role === 'parent' ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
+  const NAV_ITEMS_ROLE = isAdmin ? ADMIN_NAV_ITEMS : role === 'super_admin' ? SUPER_ADMIN_NAV_ITEMS : role === 'school_admin' ? SCHOOL_ADMIN_NAV_ITEMS : role === 'teacher' ? TEACHER_NAV_ITEMS : role === 'parent' ? PARENT_NAV_ITEMS : STUDENT_NAV_ITEMS;
   // B2C vs B2B: independent (no schoolId) student/teacher/parent accounts don't
   // belong to a school org, so hide school-only features (class rosters,
   // attendance) rather than routing them to a dead-end. Mirrors DrawerContent.tsx.
@@ -238,7 +247,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const NAV_ITEMS = ((!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE).filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
-  const groups = (role === 'super_admin' || role === 'teacher') ? ['MENU', 'MANAGE', 'SYSTEM'] : role === 'school_admin' ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : role === 'parent' ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
+  const groups = isAdmin ? ['MENU'] : (role === 'super_admin' || role === 'teacher') ? ['MENU', 'MANAGE', 'SYSTEM'] : role === 'school_admin' ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : role === 'parent' ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
   const { colors, themeMode, setThemeMode } = useTheme();
   const { unreadCount, unreadAssignments, unreadChallenges } = useNotification();
   const { bannerAnnouncements } = useAnnouncements();
@@ -400,6 +409,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
 
         {user && (
           <TouchableOpacity style={[styles.userRow, collapsed && styles.userRowCollapsed]} activeOpacity={0.75} onPress={() => {
+            if (isAdmin) return; // no dedicated profile screen for this persona — their underlying role's Profile screen isn't registered in AdminNavigator
             if (role === 'school_admin') return onNavigate('SchoolAdminSettings');
             if (role === 'super_admin') return; // no dedicated profile screen for this role
             const profileScreen = role === 'parent' ? 'ParentProfile' : 'Profile';
@@ -424,10 +434,10 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
             <View style={{ flex: 1 }}>
               <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
               <View style={styles.userMetaRow}>
-                <Text style={styles.userRole}>{roleLabel(user.role)}</Text>
+                <Text style={styles.userRole}>{isAdmin ? 'Aivorah Admin' : roleLabel(user.role)}</Text>
                 {/* PRO/FREE is a consumer subscription-plan badge — meaningless
                     for admin identities, so it's hidden for those roles. */}
-                {role !== 'school_admin' && role !== 'super_admin' && (
+                {!isAdmin && role !== 'school_admin' && role !== 'super_admin' && (
                   <View style={[
                     styles.planBadge,
                     (user as any).isPro

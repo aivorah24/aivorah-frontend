@@ -56,6 +56,7 @@ const LINKING_SCREENS = {
   Subscription: 'subscription',
   Announcements: 'announcements',
   MyClasses: 'my-classes',
+  PlatformOverview: 'admin-login',
   ClassDetail: 'my-classes/class',
   // Teacher screens
   TeacherDashboard: 'teacher/dashboard',
@@ -189,6 +190,9 @@ import TeacherNavigator from './src/navigation/TeacherNavigator';
 import SuperAdminNavigator from './src/navigation/SuperAdminNavigator';
 import SchoolAdminNavigator from './src/navigation/SchoolAdminNavigator';
 import ParentNavigator from './src/navigation/ParentNavigator';
+import AdminNavigator from './src/navigation/AdminNavigator';
+import AdminLoginScreen from './src/screens/aivorah-admin/login/AdminLoginScreen';
+import { isAdminEmail } from './src/constants/adminEmails';
 import LandingScreen from './src/screens/auth/LandingScreen';
 import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
@@ -855,8 +859,18 @@ function RootNavigator() {
     typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/reset-password');
 
+  // Dedicated Aivorah Admin sign-in -- only relevant while signed out; once
+  // signed in, isAdminEmail(user?.email) further below routes straight to
+  // AdminNavigator regardless of this path.
+  const isAdminLoginPath =
+    !isAuthenticated &&
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/admin-login');
+
   if (isVerifySuccessPath) return <VerifySuccessPage onComplete={() => setVerifyDone(true)} />;
   if (isResetPasswordPath) return <ResetPasswordScreen />;
+  if (isAdminLoginPath) return <AdminLoginScreen />;
 
   // Demo mode — access via ?demo=onboarding-student, ?demo=onboarding-teacher,
   // or ?demo=onboarding-parent to preview the new "boxes" onboarding screens
@@ -920,6 +934,15 @@ function RootNavigator() {
   if (needsEmailVerification) {
     console.log('[Auth] Verification required, showing VerifyEmailScreen');
     return <VerifyEmailScreen />;
+  }
+
+  // Aivorah Admin -- a real, separate persona gated by email (ADMIN_EMAILS),
+  // not by users.role. Takes priority over the normal role routing below:
+  // an allowed email always lands here, whatever their underlying role is
+  // (the known admin accounts are role:'student' in the DB today -- there is
+  // no dedicated admin role to route on).
+  if (isAdminEmail(user?.email)) {
+    return <AdminNavigator key="admin" />;
   }
 
   // Onboarding gate — skip for demo/test accounts AND admin roles. The
