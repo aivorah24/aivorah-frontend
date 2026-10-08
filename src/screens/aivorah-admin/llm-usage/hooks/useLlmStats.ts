@@ -23,6 +23,7 @@ export function useLlmStats() {
   // Re-fetch whenever the day-range changes — the screen's useFocusEffect
   // only re-runs on focus, not on every local state change, so switching
   // the day tab needs its own trigger here rather than relying on that.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load() setting loading/error synchronously is the intended fetch-on-mount-and-on-days-change pattern this hook's tests depend on
   useEffect(() => { load(); }, [load]);
 
   return { days, setDays, data, loading, error, load };
