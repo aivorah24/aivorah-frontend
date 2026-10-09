@@ -415,7 +415,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
-        const autoDueEvents = feed.filter(i => i.type === 'event' && i.autoDue && i.srcType !== 'challenge').length;
+        const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(assignUnread);
         setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread) + (allowChallenge ? challengeEventCount : 0));
         setUnreadEvents(eventUnread + (allowAssign ? autoDueEvents : 0));

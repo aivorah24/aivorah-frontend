@@ -224,6 +224,27 @@ describe('scheduled calendar events (V2 event_scheduled)', () => {
     await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('e2'));
   });
 
+  test('an older server without autoDue: legacy events stay visible and counted (nothing lost)', async () => {
+    legacySummary.notificationItems = legacySummary.notificationItems.map((i: any) => { const { autoDue, ...rest } = i; return rest; });
+    await mount();
+    expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
+    expect(screen.getByTestId('counts')).toHaveTextContent(/e:3/);
+  });
+
+  test('with V2 on, a newly arrived legacy due reminder still toasts', async () => {
+    await mount();
+    legacySummary.notificationItems = [...legacySummary.notificationItems,
+      { ...legacyDueEvent, id: 'evt_due2', createdAt: '2026-09-25T12:00:00Z' }];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('evt_due2'));
+  });
+
+  test('mark all read clears the event count', async () => {
+    await mount();
+    await fireEvent.press(screen.getByTestId('read-all'));
+    await waitFor(() => expect(screen.getByTestId('counts')).toHaveTextContent(/e:0/));
+  });
+
   test('V2 unavailable → legacy event items are shown as before', async () => {
     mockApi.fetchNotifications.mockRejectedValue(new NotificationsUnavailableError('401'));
     mockApi.fetchUnreadCount.mockRejectedValue(new NotificationsUnavailableError('401'));

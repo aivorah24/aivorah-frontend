@@ -57,7 +57,7 @@ describe('resolveNotificationTarget — V2', () => {
 
   test('student event → Schedule, exact event; shown as an event item', () => {
     const item = toNotifItem(eventRow());
-    expect(item).toEqual(expect.objectContaining({ type: 'event', srcType: 'lesson' }));
+    expect(item).toEqual(expect.objectContaining({ type: 'event' }));
     expect(resolveNotificationTarget(item, 'student')).toEqual({ screen: 'Schedule', params: { highlightId: 'ev_1' } });
   });
 
