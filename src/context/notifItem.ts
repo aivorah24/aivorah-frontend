@@ -9,6 +9,9 @@ export interface NotifItem {
   // A challenge's due-date event has srcType 'challenge' so it can be gated under the
   // Challenge Updates toggle rather than Assignment Alerts.
   srcType?: string | null;
+  // Legacy 'event' items: true for due reminders auto-created with an assignment/challenge.
+  // Any other event is owned by V2 'event_scheduled' once the V2 feed is active.
+  autoDue?: boolean;
   title: string;
   subtitle: string;
   senderName: string;
@@ -26,11 +29,24 @@ export function isAssignmentType(n: V2Notification) {
   return n.type === 'assignment_assigned' || n.type === 'assignment_due';
 }
 
+export function isEventType(n: V2Notification) {
+  return n.type === 'event_scheduled';
+}
+
+// Legacy items that the V2 feed replaces when it is active.
+export function isV2OwnedLegacy(i: NotifItem) {
+  return i.type === 'assignment' || i.type === 'quiz' || i.type === 'challenge' || (i.type === 'event' && !i.autoDue);
+}
+
 export function toNotifItem(n: V2Notification): NotifItem {
   const isAssignment = isAssignmentType(n);
+  const type: NotifItem['type'] = isEventType(n)
+    ? 'event'
+    : isAssignment ? (n.data?.assignmentType === 'quiz' ? 'quiz' : 'assignment') : 'challenge';
   return {
     id: n.id,
-    type: isAssignment ? (n.data?.assignmentType === 'quiz' ? 'quiz' : 'assignment') : 'challenge',
+    type,
+    srcType: isEventType(n) ? n.data?.eventType ?? null : undefined,
     title: n.title,
     subtitle: n.body || '',
     senderName: '',

@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, toNotifItem, isAssignmentType } from './notifItem';
+import { NotifItem, toNotifItem, isAssignmentType, isEventType, isV2OwnedLegacy } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -85,8 +85,6 @@ const NOTIFICATIONS_V2_ENABLED = process.env.EXPO_PUBLIC_NOTIFICATIONS_V2 !== 'f
 // services clearing it on completion) removes it.
 const V2_PAGE_SIZE = 20;
 const V2_UNREAD_SCAN = 50;
-// Legacy types that V2 replaces; the rest (message/event/task/portfolio) still come from the legacy summary.
-const V2_OWNED_TYPES: NotifItem['type'][] = ['assignment', 'quiz', 'challenge'];
 
 function mergeById(first: V2Notification[], rest: V2Notification[]) {
   const seen = new Set(first.map(n => n.id));
@@ -210,7 +208,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const withLocalReads = (n: V2Notification) =>
       !n.readAt && localReads.has(n.id) ? { ...n, readAt: localReads.get(n.id)! } : n;
     const v2 = mergeById(v2FirstPage, v2Older).map(withLocalReads).filter(n => !n.readAt).map(toNotifItem);
-    const others = legacyItems.filter(i => !V2_OWNED_TYPES.includes(i.type));
+    const others = legacyItems.filter(i => !isV2OwnedLegacy(i));
     const ts = (i: NotifItem) => Date.parse(i.createdAt) || 0;
     return [...v2, ...others].sort((a, b) => ts(b) - ts(a) || (b.id < a.id ? -1 : 1));
   }, [v2Active, v2FirstPage, v2Older, legacyItems, localReads]);
@@ -371,7 +369,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
       const v2On = !!v2;
 
-      const legacyFreshPool = v2On ? feed.filter(i => !V2_OWNED_TYPES.includes(i.type)) : feed;
+      const legacyFreshPool = v2On ? feed.filter(i => !isV2OwnedLegacy(i)) : feed;
       let fresh = baseline && !markReadInFlight.current ? legacyFreshPool.filter(i => ts(i) > watermarkRef.current) : [];
       watermarkRef.current = Math.max(watermarkRef.current, ...feed.map(ts));
 
@@ -389,7 +387,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         v2BaselineRef.current = true;
       }
 
-      const countTriggers = v2On ? (newMsg || newEvent) : (newMsg || newAssign || newChallenge || newEvent);
+      // With V2 on, new events arrive as V2 rows or fresh legacy due reminders, both already in `fresh`.
+      const countTriggers = v2On ? newMsg : (newMsg || newAssign || newChallenge || newEvent);
       if (!silent && (fresh.length > 0 || countTriggers)) {
         playNotificationSound();
         if (newMsg && latest) setLatestNotif(latest);
@@ -415,8 +414,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const stillUnread = v2!.unread.filter(n => !locallyReadRef.current.has(n.id));
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
+        const eventUnread = stillUnread.filter(isEventType).length;
+        const autoDueEvents = feed.filter(i => i.type === 'event' && i.autoDue && i.srcType !== 'challenge').length;
         setUnreadAssignments(assignUnread);
-        setUnreadChallenges(Math.max(0, total - assignUnread) + (allowChallenge ? challengeEventCount : 0));
+        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread) + (allowChallenge ? challengeEventCount : 0));
+        setUnreadEvents(eventUnread + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);
         setV2Active(true);
@@ -632,6 +634,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!known || known.readAt || locallyReadRef.current.has(id)) return;
     locallyReadRef.current.set(id, new Date().toISOString());
     if (isAssignmentType(known)) setUnreadAssignments(c => Math.max(0, c - 1));
+    else if (isEventType(known)) setUnreadEvents(c => Math.max(0, c - 1));
     else setUnreadChallenges(c => Math.max(0, c - 1));
     syncLocalReads();
     try {
@@ -650,6 +653,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       mergeById(v2FirstPage, v2Older).forEach(n => { if (!n.readAt) locallyReadRef.current.set(n.id, now); });
       setUnreadAssignments(0);
       setUnreadChallenges(0);
+      setUnreadEvents(0);
       syncLocalReads();
       await markAllNotificationsRead().catch(err => { if (__DEV__) console.warn('[NotifCtx] read-all failed:', err); });
     }

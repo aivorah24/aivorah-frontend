@@ -49,6 +49,22 @@ describe('resolveNotificationTarget — V2', () => {
   test('due types route like their assigned counterparts', () => {
     expect(resolveNotificationTarget(toNotifItem(v2({ type: 'challenge_due' })), 'student')?.screen).toBe('Challenges');
   });
+
+  const eventRow = (o: Partial<V2Notification> = {}) => v2({
+    type: 'event_scheduled', entityType: 'schedule_event', entityId: 'ev_1',
+    data: { eventId: 'ev_1', eventType: 'lesson' }, ...o,
+  });
+
+  test('student event → Schedule, exact event; shown as an event item', () => {
+    const item = toNotifItem(eventRow());
+    expect(item).toEqual(expect.objectContaining({ type: 'event', srcType: 'lesson' }));
+    expect(resolveNotificationTarget(item, 'student')).toEqual({ screen: 'Schedule', params: { highlightId: 'ev_1' } });
+  });
+
+  test('parent event → ParentSchedule for that child', () => {
+    expect(resolveNotificationTarget(toNotifItem(eventRow({ childId: 'kid-1' })), 'parent'))
+      .toEqual({ screen: 'ParentSchedule', params: { childId: 'kid-1', highlightId: 'ev_1' } });
+  });
 });
 
 describe('resolveNotificationTarget — legacy items keep their existing routes', () => {
