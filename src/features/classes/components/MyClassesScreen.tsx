@@ -36,7 +36,7 @@ export default function MyClassesScreen({ navigation }: any) {
     setLoading(true);
     setError('');
     try {
-      setClasses(await fetchMyClasses(email));
+      setClasses(await fetchMyClasses());
     } catch (e: any) {
       setError(e?.message || 'Failed to load classes');
     } finally {
