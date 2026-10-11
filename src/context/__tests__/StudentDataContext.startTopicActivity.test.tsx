@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 describe('StudentDataContext — startTopicActivity (B001/B002/B003 fix)', () => {
-  test('Not Started -> In Progress: first open records the topic as started and awards explore XP once', async () => {
+  test('Not Started -> In Progress: first open records the topic as started without awarding XP', async () => {
     const user = userEvent.setup();
     await render(<StudentDataProvider><Harness /></StudentDataProvider>);
     await waitFor(() => expect(screen.getByTestId('explored')).toHaveTextContent('0'));
@@ -49,7 +49,7 @@ describe('StudentDataContext — startTopicActivity (B001/B002/B003 fix)', () =>
 
     await waitFor(() => expect(screen.getByTestId('started')).toHaveTextContent('Fractions'));
     expect(screen.getByTestId('explored')).toHaveTextContent('1');
-    expect(screen.getByTestId('xp')).toHaveTextContent('25');
+    expect(screen.getByTestId('xp')).toHaveTextContent('0'); // no XP until started topics persist server-side
     expect(screen.getByTestId('isInProgress')).toHaveTextContent('true'); // In Progress
   });
 
@@ -65,7 +65,7 @@ describe('StudentDataContext — startTopicActivity (B001/B002/B003 fix)', () =>
     await user.press(screen.getByTestId('start'));
 
     expect(screen.getByTestId('explored')).toHaveTextContent('1');
-    expect(screen.getByTestId('xp')).toHaveTextContent('25');
+    expect(screen.getByTestId('xp')).toHaveTextContent('0'); // no XP until started topics persist server-side
     expect(screen.getByTestId('started')).toHaveTextContent('Fractions'); // not duplicated in the list
   });
 
@@ -78,7 +78,7 @@ describe('StudentDataContext — startTopicActivity (B001/B002/B003 fix)', () =>
 
     await waitFor(() => expect(screen.getByTestId('started')).toHaveTextContent('Fractions'));
     expect(screen.getByTestId('explored')).toHaveTextContent('1');
-    expect(screen.getByTestId('xp')).toHaveTextContent('25');
+    expect(screen.getByTestId('xp')).toHaveTextContent('0'); // no XP until started topics persist server-side
     expect(screen.getByTestId('started')).toHaveTextContent('Fractions'); // not duplicated
   });
 

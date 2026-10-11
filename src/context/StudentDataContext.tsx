@@ -354,11 +354,9 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
     // new. startedTopicsRef is mutated synchronously as the primary guard;
     // the check against `prev` inside the setStats updater is a second,
     // belt-and-suspenders guard against any other source of duplicate calls
-    // (e.g. a stats reconciliation racing in between). XP/explore-count are
-    // awarded atomically in the same setStats call as the startedTopics
-    // write — not via a separate exploreTopic() call — so there is exactly
-    // one state update per invocation and no stale-prev window between two
-    // writes.
+    // (e.g. a stats reconciliation racing in between).
+    // No XP here: startedTopics isn't persisted server-side yet, so it resets on
+    // every reload and an XP award would repeat each time the topic is reopened.
     if (startedTopicsRef.current.has(topic) || stats.completedTopics.includes(topic)) {
       setStats(prev => ({ ...prev, lastActiveDate: todayISO() }));
       return;
@@ -368,14 +366,10 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       if (prev.startedTopics.includes(topic) || prev.completedTopics.includes(topic)) {
         return { ...prev, lastActiveDate: todayISO() };
       }
-      const newXP = prev.xpPoints + 25;
       return {
         ...prev,
         startedTopics:  [...prev.startedTopics, topic],
         topicsExplored: prev.topicsExplored + 1,
-        xpPoints:       newXP,
-        level:          computeLevel(newXP),
-        todayXP:        prev.todayXP + 25,
         lastActiveDate: todayISO(),
       };
     });
