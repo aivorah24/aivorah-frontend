@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
 // in the legacy VideoLessonScreen's session timer.
 export interface LessonActivityDeps {
   startTopicActivity: (topic: string) => void;
-  recordStudyTime: (mins: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
+  recordStudySeconds: (seconds: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
 }
 
 export function useLessonActivityTracking(
@@ -19,7 +19,7 @@ export function useLessonActivityTracking(
     contentReady: boolean;
     enabled: boolean; // false for embedded/teacher-preview rendering
   },
-  { startTopicActivity, recordStudyTime }: LessonActivityDeps
+  { startTopicActivity, recordStudySeconds }: LessonActivityDeps
 ) {
   // Marks the topic "In Progress" exactly once per topic per mount of this
   // provider's session (startTopicActivity itself guards against repeat
@@ -31,35 +31,34 @@ export function useLessonActivityTracking(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, contentReady, topicName, mode]);
 
-  // Credits whole minutes only while actually on Read or Listen with content
-  // loaded — not while a spinner is showing, not on Practice/Ask (those have
-  // their own signals: quiz completion, chat sends).
+  // Counts time only while on Read or Listen with content loaded — not while a
+  // spinner is showing, not on Practice/Ask (those have their own signals).
   const sessionStartRef = useRef<number | null>(null);
-  const trackedMinutesRef = useRef(0);
+  const trackedSecondsRef = useRef(0);
   const isTracking = enabled && contentReady && (mode === 'read' || mode === 'listen');
 
   useEffect(() => {
     if (!isTracking) return;
 
-    function flushWholeMinutes() {
+    function flush() {
       if (sessionStartRef.current == null) return;
-      const elapsedWholeMinutes = Math.floor((Date.now() - sessionStartRef.current) / 60000);
-      const delta = elapsedWholeMinutes - trackedMinutesRef.current;
+      const elapsedSeconds = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+      const delta = elapsedSeconds - trackedSecondsRef.current;
       if (delta > 0) {
-        recordStudyTime(delta, 'learningPath', subject);
-        trackedMinutesRef.current += delta;
+        recordStudySeconds(delta, 'learningPath', subject);
+        trackedSecondsRef.current += delta;
       }
     }
 
     sessionStartRef.current = Date.now();
-    trackedMinutesRef.current = 0;
-    const interval = setInterval(flushWholeMinutes, 15000);
+    trackedSecondsRef.current = 0;
+    const interval = setInterval(flush, 15000);
 
     return () => {
       clearInterval(interval);
-      flushWholeMinutes();
+      flush();
       sessionStartRef.current = null;
-      trackedMinutesRef.current = 0;
+      trackedSecondsRef.current = 0;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTracking, subject]);

@@ -21,7 +21,7 @@ jest.mock('../../../../../context/AuthContext', () => ({
 }));
 
 jest.mock('../../../../../context/StudentDataContext', () => ({
-  useStudentData: () => ({ studentId: 'real-resolved-student-id', completeLesson: jest.fn(), addXP: jest.fn(), recordStudyTime: jest.fn() }),
+  useStudentData: () => ({ studentId: 'real-resolved-student-id', completeLesson: jest.fn(), addXP: jest.fn(), recordStudySeconds: jest.fn() }),
 }));
 
 jest.mock('../../../../../components/common/ScreenLayout', () => {

@@ -74,8 +74,12 @@ interface StudentDataContextType {
   completeLesson:    (topic: string, subject?: string, grade?: string, curriculum?: string) => void;
   completeChallenge: (xpAwarded?: number) => void;
   completeAssignment:() => void;
-  recordStudyTime:   (minutes: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
+  recordStudyTime:   (minutes: number, source?: StudySource, subject?: string) => void;
+  // Carries sub-minute remainders forward so short sessions still add up.
+  recordStudySeconds: (seconds: number, source?: StudySource, subject?: string) => void;
 }
+
+export type StudySource = 'learningPath' | 'assignment' | 'challenge' | 'other';
 
 // ─────────────────────────────────────────────────────────
 // Defaults
@@ -180,6 +184,7 @@ const StudentDataContext = createContext<StudentDataContextType>({
   completeChallenge: () => {},
   completeAssignment:() => {},
   recordStudyTime:   () => {},
+  recordStudySeconds: () => {},
 });
 
 // ─────────────────────────────────────────────────────────
@@ -297,7 +302,19 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   // (learningPath / assignment / challenge), which the teacher dashboard uses
   // to report time spent per activity stream, not just an aggregate total.
 
-  function recordStudyTime(mins: number, source: 'learningPath' | 'assignment' | 'challenge' | 'other' = 'other', subject?: string) {
+  const pendingStudySecondsRef = useRef<Record<string, number>>({});
+  useEffect(() => { pendingStudySecondsRef.current = {}; }, [studentId]);
+
+  function recordStudySeconds(seconds: number, source: StudySource = 'other', subject?: string) {
+    if (!(seconds > 0)) return;
+    const key = `${source}|${subject ?? ''}`;
+    const total = (pendingStudySecondsRef.current[key] ?? 0) + seconds;
+    const mins = Math.floor(total / 60);
+    pendingStudySecondsRef.current[key] = total - mins * 60;
+    if (mins > 0) recordStudyTime(mins, source, subject);
+  }
+
+  function recordStudyTime(mins: number, source: StudySource = 'other', subject?: string) {
     setStats(prev => ({
       ...prev,
       studyTimeMinutes:    prev.studyTimeMinutes    + mins,
@@ -417,7 +434,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, startTopicActivity, completeLesson, completeChallenge, completeAssignment, recordStudyTime }}>
+    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, startTopicActivity, completeLesson, completeChallenge, completeAssignment, recordStudyTime, recordStudySeconds }}>
       {children}
     </StudentDataContext.Provider>
   );

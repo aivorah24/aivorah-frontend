@@ -27,10 +27,10 @@ jest.mock('../../../../../context/ThemeContext', () => ({
   }, isDark: false }),
 }));
 // Avoids pulling in the real AuthContext/firebase chain for this screen-level
-// test — activity tracking (startTopicActivity/recordStudyTime) has its own
+// test — activity tracking (startTopicActivity/recordStudySeconds) has its own
 // dedicated unit tests (useLessonActivityTracking.test.ts).
 jest.mock('../../../../../context/StudentDataContext', () => ({
-  useStudentData: () => ({ startTopicActivity: jest.fn(), recordStudyTime: jest.fn() }),
+  useStudentData: () => ({ startTopicActivity: jest.fn(), recordStudySeconds: jest.fn() }),
 }));
 jest.mock('../../../../../components/common/Header', () => {
   const { View, Text } = require('react-native');

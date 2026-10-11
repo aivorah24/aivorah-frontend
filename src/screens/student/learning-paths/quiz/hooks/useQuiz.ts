@@ -3,7 +3,7 @@ import { Alert, BackHandler, Platform } from 'react-native';
 import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
-import { computeCappedQuizMinutes } from '../../../../../services/studyTime';
+import { computeCappedQuizSeconds } from '../../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound } from '../utils';
 import type { Question, QuizPhase } from '../types';
 
@@ -17,9 +17,9 @@ export function useQuiz(params: {
   navigation: any;
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
-  recordStudyTime: (mins: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
+  recordStudySeconds: (seconds: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
 }) {
-  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudyTime } = params;
+  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds } = params;
 
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -182,8 +182,7 @@ export function useQuiz(params: {
     // per-question times (each capped), not raw quiz-start-to-now wall-clock
     // time — a question left open/backgrounded for hours must not leak that
     // idle gap into recorded study time.
-    const quizMinutes = computeCappedQuizMinutes(perQuestionResultsRef.current);
-    if (quizMinutes > 0) recordStudyTime(quizMinutes, 'learningPath', subject);
+    recordStudySeconds(computeCappedQuizSeconds(perQuestionResultsRef.current), 'learningPath', subject);
 
     // Sound effect based on score tier
     playSound(pct >= 80 ? 'gold' : pct >= 60 ? 'silver' : 'bronze');

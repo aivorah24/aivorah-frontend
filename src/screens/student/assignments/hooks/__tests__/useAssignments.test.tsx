@@ -12,10 +12,10 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: any) => { focusEffectCb = cb; },
 }));
 
-const mockRecordStudyTime = jest.fn();
+const mockRecordStudySeconds = jest.fn();
 let mockStudentId = 's1';
 jest.mock('../../../../../context/StudentDataContext', () => ({
-  useStudentData: () => ({ studentId: mockStudentId, recordStudyTime: mockRecordStudyTime }),
+  useStudentData: () => ({ studentId: mockStudentId, recordStudySeconds: mockRecordStudySeconds }),
 }));
 
 const mockClearUnreadAssignments = jest.fn();

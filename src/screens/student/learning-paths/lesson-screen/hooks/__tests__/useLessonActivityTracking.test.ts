@@ -2,14 +2,14 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useLessonActivityTracking } from '../useLessonActivityTracking';
 
 // B001/B002/B003 regression coverage: the active LessonScreen's Learn/Listen
-// tabs previously called neither startTopicActivity nor recordStudyTime at
+// tabs previously called neither startTopicActivity nor recordStudySeconds at
 // all (the root cause confirmed by the RCA) — these tests pin the fix.
 describe('useLessonActivityTracking', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
   function deps() {
-    return { startTopicActivity: jest.fn(), recordStudyTime: jest.fn() };
+    return { startTopicActivity: jest.fn(), recordStudySeconds: jest.fn() };
   }
 
   test('B002: marks the topic started exactly once when Read content is ready', async () => {
@@ -53,36 +53,30 @@ describe('useLessonActivityTracking', () => {
     expect(d.startTopicActivity).not.toHaveBeenCalled();
   });
 
-  test('B001: credits whole minutes of study time while on Read, without double-counting', async () => {
+  test('B001: credits seconds while on Read every 15s tick, without double-counting', async () => {
     const d = deps();
     await renderHook(() => useLessonActivityTracking(
       { topicName: 'Fractions', subject: 'Math', mode: 'read', contentReady: true, enabled: true }, d
     ));
 
-    await act(async () => { jest.advanceTimersByTime(60000); }); // 1 minute
-    expect(d.recordStudyTime).toHaveBeenCalledTimes(1);
-    expect(d.recordStudyTime).toHaveBeenCalledWith(1, 'learningPath', 'Math');
+    await act(async () => { jest.advanceTimersByTime(15000); });
+    expect(d.recordStudySeconds).toHaveBeenCalledWith(15, 'learningPath', 'Math');
 
-    await act(async () => { jest.advanceTimersByTime(60000); }); // another minute
-    expect(d.recordStudyTime).toHaveBeenCalledTimes(2);
-    expect(d.recordStudyTime).toHaveBeenNthCalledWith(2, 1, 'learningPath', 'Math');
-
-    // Total credited across both flushes is 2 minutes, not re-sent as 1+2=3
-    // (the classic double-counting bug the RCA explicitly called out).
-    const totalCredited = d.recordStudyTime.mock.calls.reduce((sum: number, c: any[]) => sum + c[0], 0);
-    expect(totalCredited).toBe(2);
+    await act(async () => { jest.advanceTimersByTime(105000); }); // total 2 minutes
+    // Each tick sends only the new delta, so the sum is 120s, not cumulative re-sends.
+    const total = d.recordStudySeconds.mock.calls.reduce((sum: number, c: any[]) => sum + c[0], 0);
+    expect(total).toBe(120);
+    expect(d.recordStudySeconds.mock.calls.every((c: any[]) => c[0] === 15)).toBe(true);
   });
 
-  test('flushes any remaining partial minute on unmount', async () => {
+  test('a session shorter than a minute is still credited on unmount (was lost to whole-minute flooring)', async () => {
     const d = deps();
     const { unmount } = await renderHook(() => useLessonActivityTracking(
       { topicName: 'Fractions', subject: 'Math', mode: 'listen', contentReady: true, enabled: true }, d
     ));
-    await act(async () => { jest.advanceTimersByTime(90000); }); // 1.5 minutes -> 1 whole minute flushed by interval
-    expect(d.recordStudyTime).toHaveBeenCalledTimes(1);
-    await act(async () => { jest.advanceTimersByTime(45000); }); // another 45s -> total 2m15s, no new interval tick yet
-    unmount();
-    // Unmount flush should credit the 2nd whole minute that accrued since the last tick.
-    expect(d.recordStudyTime).toHaveBeenCalledTimes(2);
+    await act(async () => { jest.advanceTimersByTime(40000); }); // 2 ticks = 30s, +10s pending
+    await unmount();
+    const total = d.recordStudySeconds.mock.calls.reduce((sum: number, c: any[]) => sum + c[0], 0);
+    expect(total).toBe(40);
   });
 });

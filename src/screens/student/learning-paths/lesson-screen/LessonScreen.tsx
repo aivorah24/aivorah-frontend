@@ -182,10 +182,10 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const practiceLocked = !embedded && !unlocked;
   const listenDone = listenSteps.length > 0 && listenSteps.every((_s, i) => narration.completedSteps?.has(i));
   useEffect(() => { if (listenDone) markLearned(); }, [listenDone, markLearned]);
-  const { startTopicActivity, recordStudyTime } = useStudentData();
+  const { startTopicActivity, recordStudySeconds } = useStudentData();
   useLessonActivityTracking(
     { topicName: topic?.name, subject, mode, contentReady, enabled: !embedded },
-    { startTopicActivity, recordStudyTime }
+    { startTopicActivity, recordStudySeconds }
   );
 
   usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {

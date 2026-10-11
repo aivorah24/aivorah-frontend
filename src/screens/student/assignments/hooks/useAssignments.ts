@@ -130,7 +130,7 @@ async function hydrateQuizQuestions(item: Assignment): Promise<QuizQuestion[]> {
 
 export function useAssignments(highlightId: string | undefined, navigation: any) {
   const [activeFilter, setActiveFilter] = useState('All');
-  const { studentId, recordStudyTime } = useStudentData();
+  const { studentId, recordStudySeconds } = useStudentData();
   const { clearUnreadAssignments } = useNotification();
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -164,8 +164,7 @@ export function useAssignments(highlightId: string | undefined, navigation: any)
     if (!activeAssignment) return;
     assignmentSessionStartRef.current = Date.now();
     return () => {
-      const elapsedMinutes = Math.floor((Date.now() - assignmentSessionStartRef.current) / 60000);
-      if (elapsedMinutes > 0) recordStudyTime(elapsedMinutes, 'assignment');
+      recordStudySeconds(Math.floor((Date.now() - assignmentSessionStartRef.current) / 1000), 'assignment');
       assignmentSessionStartRef.current = 0;
     };
   }, [activeAssignment]);

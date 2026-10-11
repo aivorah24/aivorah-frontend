@@ -11,20 +11,6 @@ export interface DayActivity {
   topicsCompleted: number;
 }
 
-export interface CurriculumTopic {
-  grade: string;
-  subject: string;
-  unit: string;
-  topic: string;
-}
-
-export interface CurriculumData {
-  grades: string[];
-  topics: CurriculumTopic[];
-  grouped: Record<string, Record<string, { topic: string; unit: string }[]>>;
-  totalTopics: number;
-}
-
 export interface SubjectStat {
   name: string;
   total: number;
@@ -39,4 +25,5 @@ export interface Achievement {
   icon: FeatherName;
   color: string;
   unlocked: boolean;
+  hint?: string;
 }

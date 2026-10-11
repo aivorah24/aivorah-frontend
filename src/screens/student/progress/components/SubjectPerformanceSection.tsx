@@ -30,7 +30,7 @@ export function SubjectPerformanceSection({ styles, subjectStats, navigation }: 
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${s.pct}%` as any, backgroundColor: s.color }]} />
               </View>
-              <Text style={styles.subjectMeta}>{s.done} / {s.total} topics</Text>
+              <Text style={styles.subjectMeta}>{s.done} / {s.total} chapters</Text>
             </TouchableOpacity>
           ))}
         </View>
