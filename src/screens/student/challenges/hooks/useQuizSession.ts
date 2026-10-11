@@ -10,14 +10,14 @@ export function useQuizSession({
   grade,
   userEmail,
   completeChallenge,
-  recordStudyTime,
+  recordStudySeconds,
   onChallengeCompleted,
 }: {
   studentId: string | undefined;
   grade: string;
   userEmail: string | undefined;
   completeChallenge: (xpAwarded?: number) => void;
-  recordStudyTime: (minutes: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
+  recordStudySeconds: (seconds: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
   onChallengeCompleted: (challengeId: string, score: number, xpAwarded: number) => void;
 }) {
   const [quizVisible, setQuizVisible] = useState(false);
@@ -33,17 +33,17 @@ export function useQuizSession({
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Time actually spent attempting a challenge quiz — counted as real "Study Time",
-  // same pattern as TopicLessonScreen (flush whole minutes, not "screen was open").
+  // flushed in seconds; the context carries sub-minute remainders.
   const sessionStartRef = useRef<number>(0);
-  const trackedMinutesRef = useRef(0);
+  const trackedSecondsRef = useRef(0);
 
   function flushStudyTime() {
     if (!sessionStartRef.current) return;
-    const elapsedWholeMinutes = Math.floor((Date.now() - sessionStartRef.current) / 60000);
-    const delta = elapsedWholeMinutes - trackedMinutesRef.current;
+    const elapsedSeconds = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+    const delta = elapsedSeconds - trackedSecondsRef.current;
     if (delta > 0) {
-      recordStudyTime(delta, 'challenge');
-      trackedMinutesRef.current += delta;
+      recordStudySeconds(delta, 'challenge');
+      trackedSecondsRef.current += delta;
     }
   }
 
@@ -58,7 +58,7 @@ export function useQuizSession({
     setQuizLoading(true);
     setQuizVisible(true);
     sessionStartRef.current = Date.now();
-    trackedMinutesRef.current = 0;
+    trackedSecondsRef.current = 0;
 
     try {
       // Auto-assign if not yet assigned

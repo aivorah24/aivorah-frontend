@@ -13,19 +13,34 @@ export function AchievementsGrid({ styles, colors, achievements }: {
     <>
       <View style={styles.cardHeader}>
         <Text style={styles.sectionTitle}>Achievements</Text>
-        <Text style={[styles.seeAll, { color: '#8A8358' }]}>{unlockedCount}/{achievements.length} unlocked</Text>
+        <Text style={[styles.seeAll, { color: '#C9A24E' }]}>{unlockedCount}/{achievements.length} unlocked</Text>
       </View>
       <View style={styles.achieveGrid}>
         {achievements.map((a) => (
-          <View key={a.label} style={[styles.achieveCard, !a.unlocked && styles.achieveCardLocked]}>
-            <View style={[styles.achieveIcon, {
-              backgroundColor: a.unlocked ? a.color + '18' : 'rgba(255,255,255,0.03)',
-              borderColor:     a.unlocked ? a.color + '40' : 'rgba(255,255,255,0.06)',
-            }]}>
-              <Feather name={a.icon} size={22} color={a.unlocked ? a.color : colors.textDim} />
+          <View
+            key={a.label}
+            testID={a.unlocked ? 'achievement-unlocked' : 'achievement-locked'}
+            style={[
+              styles.achieveCard,
+              a.unlocked
+                ? { backgroundColor: a.color + '14', borderColor: a.color + '66', shadowColor: a.color, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 2 } }
+                : styles.achieveCardLocked,
+            ]}
+          >
+            <View style={[styles.achieveIcon, a.unlocked
+              ? { backgroundColor: a.color, borderColor: a.color }
+              : { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.borderColor }]}>
+              <Feather name={a.unlocked ? a.icon : 'lock'} size={22} color={a.unlocked ? '#FFFFFF' : colors.textDim} />
             </View>
             <Text style={[styles.achieveLabel, !a.unlocked && { color: colors.textDim }]}>{a.label}</Text>
-            {!a.unlocked && <Text style={styles.lockedText}>Locked</Text>}
+            {a.unlocked ? (
+              <View style={[styles.unlockedBadge, { backgroundColor: a.color + '22' }]}>
+                <Feather name="check" size={10} color={a.color} />
+                <Text style={[styles.unlockedBadgeText, { color: a.color }]}>Unlocked</Text>
+              </View>
+            ) : (
+              <Text style={styles.lockedText}>{a.hint ?? 'Locked'}</Text>
+            )}
           </View>
         ))}
       </View>

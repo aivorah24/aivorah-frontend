@@ -44,6 +44,15 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { stats: studentStats } = useStudentData();
   const completedSet = useMemo(() => new Set(studentStats.completedTopics ?? []), [studentStats.completedTopics]);
+  // B002: a chapter is "started" once any of its topics has been opened
+  // (Learn/Listen) or completed — previously this screen only counted
+  // completed topics here, so opening a lesson without finishing a quiz
+  // never moved this counter, same gap already fixed on the Dashboard's
+  // Performance bars (performanceStats.ts's computeAllBarTopics).
+  const startedSet = useMemo(
+    () => new Set([...(studentStats.startedTopics ?? []), ...(studentStats.completedTopics ?? [])]),
+    [studentStats.startedTopics, studentStats.completedTopics]
+  );
 
   const { chapters: standardChapters, isDbBacked, loadingDb, loadError } = useSyllabusChapters(curriculum, grade, subject);
   // The teacher's own version of this subject: renamed, reordered, hidden or added chapters/topics and edited lessons.
@@ -137,7 +146,7 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   const overallPct = totalTopicsCount
     ? Math.round((chapters.reduce((s, c) => s + c.topics.filter(t => completedSet.has(t.name)).length, 0) / totalTopicsCount) * 100)
     : 0;
-  const startedChapters = chapters.filter(c => c.topics.some(t => completedSet.has(t.name))).length;
+  const startedChapters = chapters.filter(c => c.topics.some(t => startedSet.has(t.name))).length;
 
   if (loadingDb || !editsLoaded) {
     return (
@@ -215,9 +224,6 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
               </Text>
               <Text style={[styles.progressSub, { color: colors.textMuted }]}>
                 {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {totalTopicsCount} {isUnitShaped ? 'chapters' : 'topics'} total
-              </Text>
-              <Text testID="completion-rule" style={[styles.progressSub, { color: colors.textMuted, marginTop: 4 }]}>
-                A topic is done when you finish Learn or Listen, then pass its Practice test (60% or more).
               </Text>
             </View>
           </View>

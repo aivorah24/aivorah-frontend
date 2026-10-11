@@ -12,6 +12,10 @@ interface ChapterRow {
   color: string;
   icon: React.ComponentProps<typeof Feather>['name'];
   chapterNo: number;
+  // B002: real status from allBarTopics (mastered/inProgress), looked up by
+  // subject+title in DashboardScreen — previously this row always rendered
+  // a hardcoded "Not Started" pill regardless of actual activity.
+  status?: 'mastered' | 'inProgress' | 'notStarted';
 }
 
 interface LearningPathCardProps {
@@ -118,8 +122,10 @@ export function LearningPathCard({
                 <Text style={[styles.lessonMeta, { color: colors.textMuted }]}>{item.subject} · Chapter {item.chapterNo}</Text>
               </View>
               <View style={styles.lessonRight}>
-                <View style={[styles.stagePill, { backgroundColor: subtleBg, borderColor: cardBorder }]}>
-                  <Text style={[styles.stagePillTxt, { color: colors.textDim }]}>Not Started</Text>
+                <View style={[styles.stagePill, { backgroundColor: subtleBg, borderColor: item.status === 'mastered' ? BRAND.gold : item.status === 'inProgress' ? BRAND.teal : cardBorder }]}>
+                  <Text style={[styles.stagePillTxt, { color: item.status === 'mastered' ? BRAND.gold : item.status === 'inProgress' ? BRAND.teal : colors.textDim }]}>
+                    {item.status === 'mastered' ? 'Mastered' : item.status === 'inProgress' ? 'In Progress' : 'Not Started'}
+                  </Text>
                 </View>
                 <View style={[styles.lessonCta, { backgroundColor: item.color + '12', borderColor: item.color + '35' }]}>
                   <Text style={[styles.lessonCtaTxt, { color: item.color }]}>Start</Text>

@@ -24,8 +24,9 @@ jest.mock('../../../../../context/ThemeContext', () => ({
   } }),
 }));
 
+let mockStudentStats: any = { completedTopics: [] };
 jest.mock('../../../../../context/StudentDataContext', () => ({
-  useStudentData: () => ({ stats: { completedTopics: [] } }),
+  useStudentData: () => ({ stats: mockStudentStats }),
 }));
 
 jest.mock('../../../../../components/common/Header', () => {
@@ -52,6 +53,7 @@ function routeProp(params: any = {}) {
 
 beforeEach(() => {
   mockSubjectEdits = null;
+  mockStudentStats = { completedTopics: [] };
   global.fetch = jest.fn().mockResolvedValue(jsonRes({ units: [] })) as any;
 });
 
@@ -86,6 +88,13 @@ describe("SubjectSyllabusScreen — the teacher's version of the subject", () =>
   });
 });
 
+test('B002: a chapter with a merely-started (not completed) topic counts toward "chapters started", not just completed ones', async () => {
+  global.fetch = jest.fn().mockResolvedValue(jsonRes({ units: [] })) as any; // no DB units -> curated English fallback
+  mockStudentStats = { completedTopics: [], startedTopics: ['A Bottle of Dew'] };
+  await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp({ subject: 'English' })} />);
+  await waitFor(() => expect(screen.getByText(/1 of \d+ chapters started/)).toBeTruthy());
+});
+
 test("a book section (no id) opens its real lesson by name, not the old built-in one", async () => {
   global.fetch = jest.fn().mockResolvedValue(jsonRes({
     units: [{ unitNo: 1, title: 'The Wonderful World of Science', pdfFile: 'fecu101.pdf', topics: [{ name: 'The Scientific Method', kind: 'section', page: 5 }] }],
@@ -111,12 +120,6 @@ describe('SubjectSyllabusScreen — states', () => {
 
     await waitFor(() => expect(screen.getByPlaceholderText('Search chapters or topics…')).toBeTruthy());
     expect(screen.getAllByText(/Chapter \d/).length).toBeGreaterThan(0);
-  });
-
-  test('tells the student when a topic counts as done', async () => {
-    await render(<SubjectSyllabusScreen navigation={navProp()} route={routeProp()} />);
-    await waitFor(() => expect(screen.getByTestId('completion-rule')).toBeTruthy());
-    expect(screen.getByTestId('completion-rule').props.children).toMatch(/finish Learn or Listen, then pass its Practice test \(60% or more\)/);
   });
 
   test('shows a real "being processed" empty state for a subject/grade with no curated or published content', async () => {

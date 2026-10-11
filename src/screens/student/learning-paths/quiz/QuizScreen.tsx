@@ -28,14 +28,19 @@ export default function QuizScreen({ navigation, route }: any) {
   };
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { completeLesson, addXP, recordStudyTime } = useStudentData();
+  const { studentId, completeLesson, addXP, recordStudySeconds } = useStudentData();
   const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const accent = colors.accentYellow;
 
   const quiz = useQuiz({
     topic, grade, subject, curriculum, passageText, topicId, practiceQuiz,
-    userEmail: user?.email, userRole: user?.role, userId: user?.id,
-    navigation, completeLesson, addXP, recordStudyTime,
+    // B004 fix: track-attempt needs the real resolved student id
+    // (StudentDataContext.studentId, from POST /user/sync), not AuthContext's
+    // user.id — that field is never populated on the real user object, which
+    // silently skipped every attempt POST (score/XP still showed correctly
+    // via completeLesson(), which already used the right id).
+    userEmail: user?.email, userRole: user?.role, studentId,
+    navigation, completeLesson, addXP, recordStudySeconds,
   });
 
   // ── Loading ────────────────────────────────────────────────────

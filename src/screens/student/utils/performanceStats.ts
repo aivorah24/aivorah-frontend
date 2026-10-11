@@ -3,6 +3,7 @@
 // behavior change.
 
 import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
+import { isTopicMastered, isPassingScore } from './masteryRules';
 
 export interface PerfTopicData {
   avgScore: number | null;
@@ -47,10 +48,10 @@ export function computeAvgScore(realTopicPerf: RealTopicPerf[], perfDataAvgScore
     : 0;
 }
 
-// % of attempted quizzes scoring >= 60%.
+// % of attempted quizzes scoring >= PASS_THRESHOLD.
 export function computeConsistency(realTopicPerf: RealTopicPerf[]): number {
   if (!realTopicPerf.length) return 0;
-  return Math.round((realTopicPerf.filter(t => t.pct >= 60).length / realTopicPerf.length) * 100);
+  return Math.round((realTopicPerf.filter(t => isPassingScore(t.pct)).length / realTopicPerf.length) * 100);
 }
 
 // Days active this week, capped at 7.
@@ -74,31 +75,94 @@ export interface BarTopic {
   pct: number;
   hasData: boolean;
   mastered: boolean;
+  // B002 fix: true when at least one topic in this chapter has been opened
+  // (Learn/Listen) via startTopicActivity but the chapter isn't mastered yet
+  // — distinguishes "touched, no score" from "never opened". Never true for
+  // a mastered chapter (mastered takes precedence in the UI).
+  inProgress: boolean;
 }
 
 // One bar per real textbook chapter/unit. Where a curated syllabus exists for
 // this subject/grade, chapters get real attributed scores from perfData;
 // chapters with no curated mapping yet show 0%/no-data — honest, not fabricated.
+// `startedTopics` (B002) is frontend-local only (StudentDataContext,
+// AsyncStorage-backed) — not synced server-side, so this signal does not
+// carry across devices/sessions beyond existing local persistence.
 export function computeAllBarTopics(
   subjectChapters: SubjectChapters[],
   isIBPYP: boolean,
   studentGrade: string,
   perfData: PerfData,
-  completedSet: Set<string>
+  completedSet: Set<string>,
+  startedTopics: Set<string> = new Set()
 ): BarTopic[] {
   const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
   return subjectChapters.flatMap(({ subject, chapters }) => {
     const curated = getSubjectSyllabus(curriculumLabel, studentGrade, subject);
     return chapters.map(unit => {
       const curatedChapter = curated.find(ch => ch.title === unit);
-      if (!curatedChapter) return { label: unit, fullLabel: unit, subject, pct: 0, hasData: false, mastered: false };
+      if (!curatedChapter) return { label: unit, fullLabel: unit, subject, pct: 0, hasData: false, mastered: false, inProgress: false };
       const scored = curatedChapter.topics.map(t => perfData.topics[t.name]?.avgScore ?? 0).filter(n => n > 0);
       const hasData = scored.length > 0 || curatedChapter.topics.some(t => (perfData.topics[t.name]?.sessions ?? 0) > 0);
       const pct = scored.length ? Math.round(scored.reduce((s, n) => s + n, 0) / scored.length) : 0;
-      const mastered = curatedChapter.topics.every(t => completedSet.has(t.name) || (perfData.topics[t.name]?.avgScore ?? 0) >= 80);
-      return { label: unit, fullLabel: unit, subject, pct, hasData, mastered };
+      const mastered = curatedChapter.topics.every(t => isTopicMastered(t.name, completedSet, perfData.topics[t.name]?.avgScore));
+      // B002: the exact-string-match hypothesis was investigated and ruled
+      // out live — startedTopics never had any entries to compare by the
+      // time this ran, because startedTopics is frontend-local only
+      // (StudentDataContext) with no backing DB column. Every full
+      // GET /student/:id (which happens on any hard navigation/reload/
+      // re-login, not just account switches) replaces the in-memory stats
+      // with the server's shape via `{ ...ZERO_STATS, ...data }`, and the
+      // server response can never contain startedTopics — so it collapses
+      // back to [] well before this function ever sees it. A real fix needs
+      // a `started_topics text[]` column on leaderboard-service's
+      // student_stats table (mirroring completed_topics) plus wiring it
+      // through normalise()/updateStudentStats() — out of frontend-only
+      // scope; needs separate approval for the schema change.
+      const inProgress = !mastered && curatedChapter.topics.some(t => startedTopics.has(t.name) || completedSet.has(t.name));
+      return { label: unit, fullLabel: unit, subject, pct, hasData, mastered, inProgress };
     });
   });
+}
+
+export interface LessonCandidate {
+  topic: string;
+  subject: string;
+  progress: number;
+  [key: string]: unknown;
+}
+
+// Continue Learning's chapter pick. B003 fix: a real quiz attempt
+// (perfData[...].lastActivity) still wins when present — that's a stronger,
+// more specific signal than merely opening a topic. But when NO candidate
+// has quiz activity, the old code fell through to `candidates[0]` — the
+// first chapter in the list, regardless of what the student actually did —
+// which is the exact B003 symptom (opening/exploring a topic never changed
+// Continue Learning). Now, in that case, a topic the student has opened via
+// Learn/Listen (`startedTopics`, frontend-local only — see note on
+// computeAllBarTopics) is preferred over the blind first-in-list fallback.
+// A topic that's already fully completed is deliberately NOT preferred here
+// over a still-in-progress started topic — "continue" should point at
+// unfinished work, not something already done.
+export function selectFeaturedLesson<T extends LessonCandidate>(
+  candidates: T[],
+  perfData: PerfData,
+  startedTopics: Set<string> = new Set(),
+  completedTopics: Set<string> = new Set()
+): T | undefined {
+  const withActivity = candidates
+    .filter(l => (perfData.topics[l.topic] as { lastActivity?: string } | undefined)?.lastActivity)
+    .sort((a, b) => {
+      const ta = (perfData.topics[a.topic] as { lastActivity?: string } | undefined)?.lastActivity ?? '';
+      const tb = (perfData.topics[b.topic] as { lastActivity?: string } | undefined)?.lastActivity ?? '';
+      return tb.localeCompare(ta); // most recent first
+    });
+  if (withActivity[0]) return withActivity[0];
+
+  const startedNotCompleted = candidates.find(l => startedTopics.has(l.topic) && !completedTopics.has(l.topic));
+  if (startedNotCompleted) return startedNotCompleted;
+
+  return candidates.find(l => l.progress > 0) ?? candidates[0];
 }
 
 // Subject chips for the Learning Path section — from subjectChapters (the
@@ -115,23 +179,21 @@ export function computeLessonSubjects(subjectChapters: SubjectChapters[], recent
     : subjects;
 }
 
-// Mastered chapters — estimated per subject as (completed topics / total topics
-// in that subject) x that subject's real chapter count, since individual
-// topics aren't tagged with which chapter they belong to yet. A genuine
-// progress-based estimate, not tied to any specific named chapter.
+// Mastered chapters — the aggregate headline count. B004 fix: this used to
+// be a separate proportional estimate ((completed topics / total topics in
+// subject) x chapter count) that disagreed with the per-chapter `mastered`
+// flag below it on the same screen (computeAllBarTopics), since the two used
+// different rules. Now both read the SAME authoritative predicate
+// (isTopicMastered, every topic in the chapter required) via
+// computeAllBarTopics itself, so the headline count and the bars it
+// summarizes can never diverge again.
 export function computeMasteredTopics(
   subjectChapters: SubjectChapters[],
-  curriculum: { topics: CurriculumTopic[] } | null | undefined,
+  isIBPYP: boolean,
+  studentGrade: string,
+  perfData: PerfData,
   completedSet: Set<string>
 ): number {
-  if (!curriculum) return 0;
-  let total = 0;
-  subjectChapters.forEach(({ subject, chapters }) => {
-    if (!chapters.length) return;
-    const subjectTopics = curriculum.topics.filter(t => t.subject === subject);
-    if (!subjectTopics.length) return;
-    const completedInSubject = subjectTopics.filter(t => completedSet.has(t.topic)).length;
-    total += Math.floor((completedInSubject / subjectTopics.length) * chapters.length);
-  });
-  return total;
+  return computeAllBarTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet)
+    .filter(b => b.mastered).length;
 }

@@ -14,13 +14,13 @@ export function CompletedTopicsSection({ styles, colors, completedSet, navigatio
       <View style={styles.cardHeader}>
         <Text style={styles.sectionTitle}>Completed Topics</Text>
         <TouchableOpacity onPress={() => navigation.navigate('LearningPaths')} activeOpacity={0.7}>
-          <Text style={[styles.seeAll, { color: colors.accentGreen }]}>See all →</Text>
+          <Text style={[styles.seeAll, { color: colors.accentYellow }]}>See all →</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.topicsList}>
         {[...completedSet].slice(0, 6).map(topic => (
           <View key={topic} style={styles.topicChip}>
-            <Feather name="check-circle" size={13} color="#7E9A86" />
+            <Feather name="check-circle" size={13} color="#C9A24E" />
             <Text style={styles.topicChipText} numberOfLines={1}>{topic}</Text>
           </View>
         ))}

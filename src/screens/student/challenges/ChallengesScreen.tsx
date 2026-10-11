@@ -22,7 +22,7 @@ export default function ChallengesScreen({ navigation, route }: any) {
   const initialTab = route?.params?.tab;
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { stats, studentId, completeChallenge, recordStudyTime } = useStudentData();
+  const { stats, studentId, completeChallenge, recordStudySeconds } = useStudentData();
   const { user, refreshProfile } = useAuth();
 
   const grade = user?.grade || 'Grade 3';
@@ -46,7 +46,7 @@ export default function ChallengesScreen({ navigation, route }: any) {
     grade,
     userEmail: user?.email,
     completeChallenge,
-    recordStudyTime,
+    recordStudySeconds,
     onChallengeCompleted: (challengeId, score, xpAwarded) => {
       setChallenges(prev => prev.map(c =>
         c.id === challengeId ? { ...c, status: 'completed', score, xpAwarded } : c
