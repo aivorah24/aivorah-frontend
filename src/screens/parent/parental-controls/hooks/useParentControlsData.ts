@@ -19,6 +19,7 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ctrl, setCtrl] = useState<Controls>(DEFAULT_CONTROLS);
+  const [error, setError] = useState<string | null>(null);
 
   const isInitialLoadRef = useRef(true);
   const skipAutoSaveRef = useRef(false);
@@ -88,9 +89,15 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
           skipAutoSaveRef.current = true;
           setCtrl(prev => ({ ...prev, todayUsageMinutes: data.todayUsageMinutes ?? prev.todayUsageMinutes, weeklyUsageMinutes: data.weeklyUsageMinutes ?? prev.weeklyUsageMinutes }));
         }
-        if (isInitial) { setLoading(false); isInitialLoadRef.current = false; }
+        if (isInitial) { setLoading(false); isInitialLoadRef.current = false; setError(null); }
       })
-      .catch(() => { if (isInitial) { setLoading(false); isInitialLoadRef.current = false; } });
+      .catch(() => {
+        if (isInitial) {
+          setLoading(false);
+          isInitialLoadRef.current = false;
+          setError("Couldn't load this child's current settings. Changes may not save — please try again later.");
+        }
+      });
   }, [selectedChild, parentEmail]);
 
   useEffect(() => {
@@ -118,21 +125,20 @@ export function useParentControlsData(parentEmail: string, onSaved: () => void) 
   const saveSettings = useCallback(async () => {
     if (!selectedChild || !parentEmail) return null;
     setSaving(true);
+    let failure: string | null = null;
     try {
       const data = await saveScreenTime(parentEmail, selectedChild.id, ctrl);
-      if (data.success) {
-        onSaved();
-      } else {
-        return data.error || 'Failed to save';
-      }
+      if (data.success) onSaved();
+      else failure = data.error || 'Failed to save';
     } catch {
-      return 'Could not save settings. Please try again.';
+      failure = 'Could not save settings. Please try again.';
     } finally {
       setSaving(false);
     }
-    return null;
+    setError(failure);
+    return failure;
   }, [selectedChild, parentEmail, ctrl, onSaved]);
   useEffect(() => { saveSettingsRef.current = saveSettings; }, [saveSettings]);
 
-  return { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings };
+  return { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings, error };
 }

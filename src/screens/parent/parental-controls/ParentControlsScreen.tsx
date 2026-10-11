@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Svg, { Circle } from 'react-native-svg';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, ActivityIndicator, Alert, Animated,
+  Switch, ActivityIndicator, Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,15 +43,13 @@ export default function ParentControlsScreen(_props: any) {
 
   useEffect(() => () => toastAnimRef.current?.stop(), []);
 
-  const { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings } =
+  const { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings, error } =
     useParentControlsData(parentEmail, showToast);
 
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
-  const onSave = async () => {
-    const error = await saveSettings();
-    if (error) Alert.alert('Error', error);
-  };
+  // Errors render inline: Alert.alert is a no-op on web.
+  const onSave = () => { saveSettings(); };
 
   const toggleSubject = (subject: string) => {
     const blocked = ctrl.blockedSubjects.includes(subject)
@@ -269,6 +267,13 @@ export default function ParentControlsScreen(_props: any) {
                 </ControlRow>
               </View>
 
+              {error && (
+                <View testID="parental-controls-error" style={s.errorBanner}>
+                  <Feather name="alert-circle" size={15} color="#B3261E" />
+                  <Text style={s.errorText}>{error}</Text>
+                </View>
+              )}
+
               <Animated.View style={[s.toast, { opacity: toastOpacity }]}>
                 <Feather name="check-circle" size={15} color="#fff" />
                 <Text style={{ color: '#fff', fontFamily: fonts.serif, fontSize: 13, fontWeight: '600' }}>Settings saved</Text>
@@ -365,5 +370,7 @@ const makeStyles = (c: AppColors, _isDark: boolean) => StyleSheet.create({
   fieldRow: { flexDirection: 'row', gap: 10 },
   fieldHalf: { flex: 1 },
   saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 24, borderRadius: 999, marginTop: 4, alignSelf: 'center' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#B3261E14', borderColor: '#B3261E55', borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 10 },
+  errorText: { flex: 1, color: '#B3261E', fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '600' },
   toast: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: c.accentYellow, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, marginBottom: 8 },
 });

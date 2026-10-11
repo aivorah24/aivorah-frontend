@@ -137,3 +137,49 @@ describe('ParentControlsScreen Integration', () => {
     expect(await screen.findByText('USAGE OVERVIEW — SECOND KID')).toBeTruthy();
   });
 });
+
+describe('ParentControlsScreen — server failures are visible (parental controls RCA)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('a failed Save shows an on-screen error (Alert.alert is a no-op on web)', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CHILD]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ isEnabled: false });
+    (parentControlsService.saveScreenTime as jest.Mock).mockResolvedValue({ success: false, error: "Couldn't reach parental controls. Please try again." });
+
+    await renderScreen();
+    await waitFor(() => expect(parentControlsService.fetchScreenTime).toHaveBeenCalled());
+
+    await act(async () => { fireEvent.press(await screen.findByText('Save All Settings')); });
+
+    expect(await screen.findByTestId('parental-controls-error')).toBeTruthy();
+    expect(screen.getByText("Couldn't reach parental controls. Please try again.")).toBeTruthy();
+  });
+
+  it('a failed initial load shows an error instead of silently showing defaults as real settings', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CHILD]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockRejectedValue(new Error('GET screen-time -> 404'));
+
+    await renderScreen();
+
+    expect(await screen.findByTestId('parental-controls-error')).toBeTruthy();
+    expect(screen.getByText(/couldn't load/i)).toBeTruthy();
+  });
+
+  it('a successful save clears a previous error', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CHILD]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ isEnabled: false });
+    (parentControlsService.saveScreenTime as jest.Mock)
+      .mockResolvedValueOnce({ success: false, error: 'boom' })
+      .mockResolvedValueOnce({ success: true });
+
+    await renderScreen();
+    await waitFor(() => expect(parentControlsService.fetchScreenTime).toHaveBeenCalled());
+    const save = await screen.findByText('Save All Settings');
+
+    await act(async () => { fireEvent.press(save); });
+    expect(await screen.findByText('boom')).toBeTruthy();
+
+    await act(async () => { fireEvent.press(screen.getByText('Save All Settings')); });
+    await waitFor(() => expect(screen.queryByTestId('parental-controls-error')).toBeNull());
+  });
+});

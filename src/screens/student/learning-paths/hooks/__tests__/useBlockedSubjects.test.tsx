@@ -53,3 +53,14 @@ describe('useBlockedSubjects', () => {
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/parent/screen-time-status/a%2Btest%40a.com'));
   });
 });
+
+describe('useBlockedSubjects — data source (parental controls RCA)', () => {
+  test('reads from the parental-controls service the parent saves to, not the monolith', async () => {
+    const PARENTAL_CONTROLS_SERVER_URL = require('../../../../../config/parentalControlsServerUrl').default;
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => ({ hasLimit: false }) });
+
+    await render(<Harness email="kid@test.com" />);
+
+    expect(global.fetch).toHaveBeenCalledWith(`${PARENTAL_CONTROLS_SERVER_URL}/parent/screen-time-status/kid%40test.com`);
+  });
+});
