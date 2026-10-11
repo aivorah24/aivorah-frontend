@@ -3,7 +3,7 @@ import { Alert, BackHandler, Platform } from 'react-native';
 import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
-import { computeCappedQuizMinutes } from '../../../../../services/studyTime';
+import { computeCappedQuizSeconds } from '../../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound } from '../utils';
 import type { Question, QuizPhase } from '../types';
 
@@ -13,13 +13,13 @@ export function useQuiz(params: {
   // Teacher-authored practice questions (Phase 2/4) — when present, skip
   // /ibpyp/quiz generation and use these directly.
   practiceQuiz?: any[];
-  userEmail?: string; userRole?: string; userId?: string;
+  userEmail?: string; userRole?: string; studentId?: string;
   navigation: any;
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
-  recordStudyTime: (mins: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
+  recordStudySeconds: (seconds: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
 }) {
-  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, userId, navigation, completeLesson, addXP, recordStudyTime } = params;
+  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds } = params;
 
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -142,11 +142,11 @@ export function useQuiz(params: {
     }).catch(() => {});
 
     // Issue #121 — detailed attempt tracking
-    if (userId) {
+    if (studentId) {
       fetch(`${LEADERBOARD_SERVICE_URL}/student/track-attempt`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentId: userId,
+          studentId,
           topic, subject, grade, curriculum,
           totalQuestions: questions.length,
           correctAnswers: finalScore,
@@ -156,6 +156,12 @@ export function useQuiz(params: {
           attemptNumber,
         }),
       }).catch(() => {});
+    } else if (__DEV__) {
+      // B004: this should be unreachable once logged in (studentId resolves
+      // before a quiz is reachable) — if it fires, tracking was silently
+      // skipped, same failure mode as the original bug. Surface it instead
+      // of swallowing it quietly.
+      console.warn('[useQuiz] track-attempt skipped: no studentId resolved yet');
     }
 
     // Bug #22 ("XP inconsistent between pages"): this used to ALSO call
@@ -176,8 +182,7 @@ export function useQuiz(params: {
     // per-question times (each capped), not raw quiz-start-to-now wall-clock
     // time — a question left open/backgrounded for hours must not leak that
     // idle gap into recorded study time.
-    const quizMinutes = computeCappedQuizMinutes(perQuestionResultsRef.current);
-    if (quizMinutes > 0) recordStudyTime(quizMinutes, 'learningPath', subject);
+    recordStudySeconds(computeCappedQuizSeconds(perQuestionResultsRef.current), 'learningPath', subject);
 
     // Sound effect based on score tier
     playSound(pct >= 80 ? 'gold' : pct >= 60 ? 'silver' : 'bronze');

@@ -5,13 +5,14 @@ import { RingProgress } from './RingProgress';
 import { formatStudyTime } from '../../../../context/StudentDataContext';
 
 export function ProgressHero({
-  styles, overallPct, completedCount, totalTopics, currentStreak, level, xpPoints,
+  styles, overallPct, completedCount, masteredChapters, totalChapters, currentStreak, level, xpPoints,
   studyTimeMinutes, xpCurrent, xpNeeded, xpProgress,
 }: {
   styles: any;
   overallPct: number;
   completedCount: number;
-  totalTopics: number;
+  masteredChapters: number;
+  totalChapters: number;
   currentStreak: number;
   level: number;
   xpPoints: number;
@@ -24,7 +25,7 @@ export function ProgressHero({
     <View style={styles.heroBanner}>
       <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
         <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-          <RingProgress progress={overallPct / 100} color="#9FB2A4" size={100} strokeWidth={9} />
+          <RingProgress progress={overallPct / 100} color="#C9A24E" size={100} strokeWidth={9} />
           <View style={StyleSheet.absoluteFill as any} pointerEvents="none">
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={styles.heroPct}>{overallPct}%</Text>
@@ -35,7 +36,11 @@ export function ProgressHero({
       </View>
       <View style={styles.heroText}>
         <Text style={styles.heroTitle}>
-          {overallPct === 0
+          {/* overallPct (mastery %) can be 0 even with real progress (completed
+              topics, study time) — a mastered chapter needs every topic in it,
+              so base the greeting on whether the student has actually done
+              anything yet, not just on mastery reaching 0%. */}
+          {completedCount === 0 && studyTimeMinutes === 0
             ? 'Ready to start learning!'
             : overallPct < 50
             ? 'Great start, keep going!'
@@ -44,7 +49,7 @@ export function ProgressHero({
             : 'Outstanding work!'}
         </Text>
         <Text style={styles.heroSub}>
-          {completedCount} of {totalTopics} topics completed · {currentStreak}-day streak · Level {level}
+          {totalChapters > 0 ? `${masteredChapters} of ${totalChapters} chapters mastered · ` : ''}{currentStreak}-day streak · Level {level}
         </Text>
       </View>
       {/* XP bar */}

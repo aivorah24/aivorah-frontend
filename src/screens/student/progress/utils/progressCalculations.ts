@@ -1,5 +1,6 @@
 import { SUBJECT_CONFIG, SUBJECT_ACCENT_COLOR, ACHIEVEMENT_DEFS } from '../constants';
-import type { CurriculumData, CurriculumTopic, SubjectStat, Achievement } from '../types';
+import type { SubjectStat, Achievement } from '../types';
+import type { BarTopic } from '../../utils/performanceStats';
 
 export function subjectColor(s: string): string {
   return SUBJECT_CONFIG[s]?.color ?? SUBJECT_ACCENT_COLOR;
@@ -9,43 +10,18 @@ export function subjectIcon(s: string) {
   return SUBJECT_CONFIG[s]?.icon ?? 'book-open';
 }
 
-// Same shapes DashboardScreen builds from the same endpoints, kept in sync so
-// Subject Performance here matches what Dashboard shows.
-export function parseNCERTCurriculum(data: any, grade: string): CurriculumData {
-  const chs: { topic: string; unit?: string }[] = data.chapters || [];
-  const topics: CurriculumTopic[] = chs.map(ch => ({ grade, subject: 'Mathematics', unit: ch.unit || 'General', topic: ch.topic }));
-  const grouped: CurriculumData['grouped'] = { [grade]: { Mathematics: topics.map(t => ({ topic: t.topic, unit: t.unit })) } };
-  return { grades: [grade], topics, grouped, totalTopics: topics.length };
-}
-
-export function parseIBPYPCurriculum(data: any): CurriculumData {
-  const rawTopics: { grade: string; subject: string; unit: string; topic: string }[] = data.topics || [];
-  const topics: CurriculumTopic[] = rawTopics.map(t => ({ grade: t.grade, subject: t.subject, unit: t.unit || 'General', topic: t.topic }));
-  const grouped: CurriculumData['grouped'] = {};
-  topics.forEach(t => {
-    if (!grouped[t.grade]) grouped[t.grade] = {};
-    if (!grouped[t.grade][t.subject]) grouped[t.grade][t.subject] = [];
-    grouped[t.grade][t.subject].push({ topic: t.topic, unit: t.unit });
-  });
-  const grades = [...new Set(topics.map(t => t.grade))].sort();
-  return { grades, topics, grouped, totalTopics: data.totalTopics || topics.length };
-}
-
 export function computeOverallPct(completedCount: number, totalTopics: number): number {
   return totalTopics > 0 ? Math.min(100, Math.round((completedCount / totalTopics) * 100)) : 0;
 }
 
-// Subject performance: % of topics completed per subject.
-export function computeSubjectStats(curriculum: CurriculumData | null, completedSet: Set<string>): SubjectStat[] {
-  if (!curriculum) return [];
+// Per-subject chapters mastered, from the same chapter list the Dashboard uses.
+export function computeSubjectStats(chapters: BarTopic[] | null): SubjectStat[] {
+  if (!chapters) return [];
   const result: { name: string; total: number; done: number }[] = [];
-  for (const grade of curriculum.grades) {
-    for (const [subject, topics] of Object.entries(curriculum.grouped[grade] ?? {})) {
-      const existing = result.find(r => r.name === subject);
-      const done = topics.filter(t => completedSet.has(t.topic)).length;
-      if (existing) { existing.total += topics.length; existing.done += done; }
-      else result.push({ name: subject, total: topics.length, done });
-    }
+  for (const ch of chapters) {
+    const existing = result.find(r => r.name === ch.subject);
+    if (existing) { existing.total += 1; existing.done += ch.mastered ? 1 : 0; }
+    else result.push({ name: ch.subject, total: 1, done: ch.mastered ? 1 : 0 });
   }
   return result.map(r => ({
     name: r.name,
@@ -72,20 +48,25 @@ interface AchievementStats {
 // Achievements — unlocked based on real milestones. Order/labels/thresholds
 // match the original inline list exactly.
 export function computeAchievements(stats: AchievementStats, completedCount: number): Achievement[] {
-  const unlockedByKey: Record<string, boolean> = {
-    streak: stats.currentStreak >= 1,
-    firstTopic: completedCount >= 1,
-    topics5: completedCount >= 5,
-    topics10: completedCount >= 10,
-    xp500: stats.xpPoints >= 500,
-    hour1: stats.studyTimeMinutes >= 60,
-    level2: stats.level >= 2,
-    challenge1: stats.challengesCompleted >= 1,
+  const progressByKey: Record<string, { current: number; target: number; unit: string }> = {
+    streak:     { current: stats.currentStreak,       target: 1,   unit: 'day' },
+    firstTopic: { current: completedCount,            target: 1,   unit: 'topic' },
+    topics5:    { current: completedCount,            target: 5,   unit: 'topics' },
+    topics10:   { current: completedCount,            target: 10,  unit: 'topics' },
+    xp500:      { current: stats.xpPoints,            target: 500, unit: 'XP' },
+    hour1:      { current: stats.studyTimeMinutes,    target: 60,  unit: 'min' },
+    level2:     { current: stats.level,               target: 2,   unit: 'level' },
+    challenge1: { current: stats.challengesCompleted, target: 1,   unit: 'challenge' },
   };
-  return ACHIEVEMENT_DEFS.map(def => ({
-    label: def.label(stats.currentStreak),
-    icon: def.icon,
-    color: def.color,
-    unlocked: unlockedByKey[def.key],
-  }));
+  return ACHIEVEMENT_DEFS.map(def => {
+    const p = progressByKey[def.key];
+    const unlocked = p.current >= p.target;
+    return {
+      label: def.label(stats.currentStreak),
+      icon: def.icon,
+      color: def.color,
+      unlocked,
+      hint: unlocked ? undefined : `${Math.max(0, p.current)} / ${p.target} ${p.unit}`,
+    };
+  });
 }
