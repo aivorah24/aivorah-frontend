@@ -33,7 +33,7 @@ function mockFetchRoutes(overrides: Record<string, any> = {}) {
   }) as any;
 }
 
-function Harness({ questions, userId, practiceQuiz }: { questions?: any; userId?: string; practiceQuiz?: any[] } = {}) {
+function Harness({ questions, studentId, practiceQuiz }: { questions?: any; studentId?: string; practiceQuiz?: any[] } = {}) {
   const completeLesson = React.useMemo(() => jest.fn(), []);
   const addXP = React.useMemo(() => jest.fn(), []);
   const recordStudyTime = React.useMemo(() => jest.fn(), []);
@@ -44,7 +44,11 @@ function Harness({ questions, userId, practiceQuiz }: { questions?: any; userId?
 
   const h = useQuiz({
     topic: 'Topic', grade: 'Grade 6', subject: 'English', curriculum: 'CBSE',
-    userEmail: 'a@a.com', userRole: 'student', userId, practiceQuiz,
+    // Default here matches the REAL StudentDataContext.studentId shape (a
+    // resolved id string) — distinct from AuthContext's user.id, which the
+    // real app never populates (B004's root cause). studentId is explicitly
+    // undefined-able per-test to cover that missing case.
+    userEmail: 'a@a.com', userRole: 'student', studentId, practiceQuiz,
     navigation,
     completeLesson,
     addXP,
@@ -240,6 +244,57 @@ describe('useQuiz — navigation between questions', () => {
     await user.press(screen.getByTestId('goPrev'));
 
     expect(screen.getByTestId('currentQ').props.children).toBe(0);
+  });
+
+  // B004 regression — RCA: track-attempt was gated on AuthContext's user.id,
+  // which the real app never populates (only StudentDataContext.studentId is
+  // ever resolved). The attempt POST silently never fired; completeLesson()
+  // still ran (it already used the correct id), so XP/score looked fine
+  // while topic_attempts stayed empty. Fix: use the resolved studentId.
+  test('a real finished quiz sends track-attempt with the resolved studentId, not a user.id-shaped field', async () => {
+    const user = userEvent.setup();
+    await render(<Harness studentId="real-resolved-student-id" />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect')); // Q1 -> Q2
+    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> finish
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+
+    const trackAttemptCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/student/track-attempt'));
+    expect(trackAttemptCall).toBeDefined();
+    const body = JSON.parse(trackAttemptCall![1].body);
+    expect(body.studentId).toBe('real-resolved-student-id');
+  });
+
+  test('a missing studentId at finish time does not send track-attempt and does not throw', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const user = userEvent.setup();
+    await render(<Harness studentId={undefined} />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+
+    const trackAttemptCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/student/track-attempt'));
+    expect(trackAttemptCall).toBeUndefined();
+    // completeLesson/XP must still work — tracking being skipped must not
+    // block the rest of the real finish-quiz behavior.
+    expect((globalThis as any).__lastMocks.completeLesson).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  test('a real finished quiz sends exactly one track-attempt call, never duplicated', async () => {
+    const user = userEvent.setup();
+    await render(<Harness studentId="real-resolved-student-id" />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+
+    const trackAttemptCalls = (global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/student/track-attempt'));
+    expect(trackAttemptCalls.length).toBe(1);
   });
 
   test('goPrev restores a real previously-answered MCQ in a locked review state', async () => {
