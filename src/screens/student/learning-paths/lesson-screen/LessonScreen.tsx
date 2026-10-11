@@ -34,6 +34,8 @@ import FullBookOverlay from './components/FullBookOverlay';
 import ComingSoonPane from './components/ComingSoonPane';
 import { useStudentSubjectEdits } from '../subject-syllabus/hooks/useStudentSubjectEdits';
 import { useRefreshOnFocus } from '../subject-syllabus/hooks/useRefreshOnFocus';
+import { useStudentData } from '../../../../context/StudentDataContext';
+import { useLessonActivityTracking } from './hooks/useLessonActivityTracking';
 
 // A link without an edit key finds the teacher's lesson by topic name, when exactly one edited topic has that name.
 function lessonForTopicName(edits: any, name?: string) {
@@ -180,6 +182,11 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   const practiceLocked = !embedded && !unlocked;
   const listenDone = listenSteps.length > 0 && listenSteps.every((_s, i) => narration.completedSteps?.has(i));
   useEffect(() => { if (listenDone) markLearned(); }, [listenDone, markLearned]);
+  const { startTopicActivity, recordStudyTime } = useStudentData();
+  useLessonActivityTracking(
+    { topicName: topic?.name, subject, mode, contentReady, enabled: !embedded },
+    { startTopicActivity, recordStudyTime }
+  );
 
   usePracticeRedirect(embedded ? 'read' : mode, setMode, topic, navigation, {
     grade, subject, curriculum, topicId, chapterIndex, topicIndex,
