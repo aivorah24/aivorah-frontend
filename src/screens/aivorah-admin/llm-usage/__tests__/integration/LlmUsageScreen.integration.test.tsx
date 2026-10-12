@@ -14,8 +14,8 @@ jest.mock('../../../../../components/common/Header', () => {
 });
 jest.mock('../../../../../components/common/ScreenLayout', () => ({ __esModule: true, default: ({ children }: any) => children }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => children ?? null }));
-jest.mock('../../services/llmStatsService', () => ({ fetchLlmStats: jest.fn() }));
-import { fetchLlmStats } from '../../services/llmStatsService';
+jest.mock('../../services/llmStatsService', () => ({ fetchLlmStats: jest.fn(), fetchLlmInsights: jest.fn() }));
+import { fetchLlmStats, fetchLlmInsights } from '../../services/llmStatsService';
 
 const DAYS = ['2026-10-04', '2026-10-05', '2026-10-06'];
 const STATS = {
@@ -44,7 +44,31 @@ const EMPTY_STATS = {
 };
 
 describe('LlmUsageScreen', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (fetchLlmInsights as jest.Mock).mockResolvedValue({ text: 'Rule text', source: 'summary', model: null, generatedAt: '', cached: false });
+  });
+
+  test('insights banner shows the AI paragraph with an AI-GENERATED tag', async () => {
+    (fetchLlmStats as jest.Mock).mockImplementation(async () => STATS);
+    (fetchLlmInsights as jest.Mock).mockResolvedValue({ text: 'GPT-OSS drives 89% of spend.', source: 'ai', model: 'gemini-test', generatedAt: '', cached: false });
+    await render(<LlmUsageScreen navigation={{}} />);
+    const banner = within(await screen.findByTestId('llm-insight'));
+    expect(await banner.findByText('GPT-OSS drives 89% of spend.')).toBeTruthy();
+    expect(banner.getByTestId('llm-insight-tag').props.children).toBe('AI-GENERATED');
+    expect(fetchLlmInsights).toHaveBeenCalledWith(30);
+  });
+
+  test('insights banner silently keeps the local summary when the insights call fails', async () => {
+    (fetchLlmStats as jest.Mock).mockImplementation(async () => STATS);
+    (fetchLlmInsights as jest.Mock).mockRejectedValue(new Error('down'));
+    await render(<LlmUsageScreen navigation={{}} />);
+    const banner = within(await screen.findByTestId('llm-insight'));
+    await waitFor(() => expect(banner.queryByTestId('llm-insight-loading')).toBeNull());
+    expect(banner.getByText(/AI Coach made 100% of 19 calls/)).toBeTruthy();
+    expect(banner.getByTestId('llm-insight-tag').props.children).toBe('SUMMARY');
+    expect(screen.queryByText('down')).toBeNull();
+  });
 
   test('KPI tiles show totals with the change vs the previous window, plus models table, legend and recent activity', async () => {
     (fetchLlmStats as jest.Mock).mockImplementation(async () => STATS);

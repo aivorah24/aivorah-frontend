@@ -26,3 +26,11 @@ export interface LlmStats {
   feedback: { total: number; avg: number | null; counts: Record<string, number>; recent: unknown[] };
   recent: LlmRecent[];
 }
+
+export interface LlmInsights {
+  text: string;
+  source: 'ai' | 'summary';
+  model: string | null;
+  generatedAt: string;
+  cached: boolean;
+}

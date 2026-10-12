@@ -33,7 +33,7 @@ export function makeStyles(c: AppColors) {
     clearText: { fontSize: 13, fontWeight: '600', color: c.textMuted, paddingHorizontal: 6 },
 
     card: { backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: 20, padding: 24 },
-    cardTitle: { fontSize: 17, fontWeight: '800', color: c.textMain },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: c.textMain },
     cardSub: { fontSize: 12.5, color: c.textDim, marginTop: 4, marginBottom: 16 },
 
     table: { minWidth: 960, flexGrow: 1, borderWidth: 1, borderColor: c.borderColor, borderRadius: 14, overflow: 'hidden' },

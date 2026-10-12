@@ -9,6 +9,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { csvEscape, downloadCsv } from '../../../utils/spreadsheet';
 import { makeStyles } from './styles';
 import { useLlmStats } from './hooks/useLlmStats';
+import { useLlmInsights } from './hooks/useLlmInsights';
 import { AreaChart, AreaSpark, BarChart, Donut, Sparkline, type ChartInk } from './components/charts';
 import { fmtCost, fmtInt, fmtCompact, fmtDay, fmtMs, fmtTime, delta } from './utils/format';
 import type { LlmStats } from './types';
@@ -38,6 +39,9 @@ export default function LlmUsageScreen({ navigation }: any) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const ink: ChartInk = { text: colors.textMain, muted: colors.textDim, grid: colors.borderColor, surface: colors.cardDark };
   const { days, setDays, data, loading, error, load } = useLlmStats();
+  const { insights, loading: insightsLoading } = useLlmInsights(days);
+  // Failed or rule-based insights fall back to the local summary silently.
+  const aiInsight = insights?.source === 'ai' && insights.text ? insights.text : null;
   const scrollRef = useRef<ScrollView>(null);
   const tableY = useRef(0);
 
@@ -136,9 +140,10 @@ export default function LlmUsageScreen({ navigation }: any) {
               <View style={{ flex: 1, minWidth: 240 }}>
                 <View style={styles.insightHead}>
                   <Text style={styles.insightTitle}>Insights</Text>
-                  <Text style={styles.insightTag}>SUMMARY</Text>
+                  <Text style={styles.insightTag} testID="llm-insight-tag">{aiInsight ? 'AI-GENERATED' : 'SUMMARY'}</Text>
+                  {insightsLoading && <ActivityIndicator testID="llm-insight-loading" size="small" color={colors.textDim} />}
                 </View>
-                <Text style={styles.insightText}>{insightText(data)}</Text>
+                <Text style={styles.insightText}>{aiInsight || insightText(data)}</Text>
               </View>
               {s.totalCalls > 0 && (
                 <TouchableOpacity testID="llm-insight-details" style={styles.ghostBtn} onPress={() => scrollRef.current?.scrollTo({ y: tableY.current, animated: true })}>

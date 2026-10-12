@@ -151,7 +151,7 @@ function BlockBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: a
   return (
     <>
       <View>
-        <Text style={[s.eyebrow, { color: colors.accentRed }]}>{blocking ? 'BLOCK ACCOUNT' : 'RESTORE ACCESS'}</Text>
+        <Text style={[s.eyebrow, { color: tone }]}>{blocking ? 'BLOCK ACCOUNT' : 'RESTORE ACCESS'}</Text>
         <Text style={s.title}>{blocking ? 'Block' : 'Unblock'} {user.name || user.email}?</Text>
       </View>
       <Text style={s.body}>
@@ -164,7 +164,7 @@ function BlockBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: a
           <SelectField testID="users-block-reason" label="Reason" value={reason} options={BLOCK_REASONS} onChange={setReason} minWidth={0} />
           <TouchableOpacity testID="users-block-signout" style={s.checkRow} onPress={() => setSignOut((v) => !v)}>
             <View style={[s.check, signOut && { backgroundColor: colors.accentYellow, borderColor: colors.accentYellow }]}>
-              {signOut && <Feather name="check" size={12} color="#FFFFFF" />}
+              {signOut && <Feather name="check" size={12} color={colors.cardDark} />}
             </View>
             <Text style={s.checkText}>Sign out of all devices immediately</Text>
           </TouchableOpacity>
@@ -173,7 +173,7 @@ function BlockBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: a
       {!!error && <Text style={s.error} testID="users-block-error">{error}</Text>}
       <View style={s.actions}>
         <TouchableOpacity testID="users-block-confirm" style={[s.primaryBtn, { backgroundColor: tone }]} onPress={confirm} disabled={busy}>
-          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[s.primaryBtnText, { color: '#FFFFFF' }]}>{blocking ? 'Block user' : 'Unblock user'}</Text>}
+          {busy ? <ActivityIndicator color={colors.cardDark} /> : <Text style={[s.primaryBtnText, { color: colors.cardDark }]}>{blocking ? 'Block user' : 'Unblock user'}</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={s.cancelBtn} onPress={onClose}><Text style={s.cancelText}>Cancel</Text></TouchableOpacity>
       </View>

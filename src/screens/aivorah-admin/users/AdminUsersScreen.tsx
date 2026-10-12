@@ -33,7 +33,7 @@ export function lastActiveLabel(iso: string | null, now = Date.now()): string {
 function Checkbox({ on, s, colors }: { on: boolean; s: any; colors: any }) {
   return (
     <View style={[s.check, on && { backgroundColor: colors.accentYellow, borderColor: colors.accentYellow }]}>
-      {on && <Feather name="check" size={12} color="#FFFFFF" />}
+      {on && <Feather name="check" size={12} color={colors.cardDark} />}
     </View>
   );
 }
