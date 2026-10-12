@@ -1,6 +1,7 @@
 import { formatStudyTime, formatRelativeTime, median, todayISO } from './dashboardHelpers';
 import { ACTIVITY_ICON } from '../constants';
 import type { InsightTile, RecentActivityItem } from '../types';
+import { resolveStudentStatus } from '../../../../utils/studentStatus';
 
 // Pure computation of every derived stat/tile the Teacher Dashboard renders,
 // extracted verbatim from TeacherDashboardScreen so the screen only calls this
@@ -10,7 +11,7 @@ import type { InsightTile, RecentActivityItem } from '../types';
 export function buildDashboardStats(students: any[], insights: any, activityFeed: any[], gold: string) {
   const today = todayISO();
   const totalStudents = students.length;
-  const allNeedsAttention = students.filter(s => s.needsAttention);
+  const allNeedsAttention = students.filter(s => resolveStudentStatus(s) === 'needs_attention');
   const needsAttentionStudents = allNeedsAttention.slice(0, 3); // show max 3 in dashboard card
   const activeToday = students.filter(s => s.lastActive === today).length;
   const avgProgress = totalStudents > 0
@@ -75,9 +76,9 @@ export function buildDashboardStats(students: any[], insights: any, activityFeed
     {
       icon: 'book-open', color: gold,
       stat: `${allNeedsAttention.length}`,
-      label: 'Struggling',
+      label: 'Needs Attention',
       title: 'Need Support',
-      body: `${allNeedsAttention.length} student${allNeedsAttention.length !== 1 ? 's' : ''} need focused review.`,
+      body: `${allNeedsAttention.length} student${allNeedsAttention.length !== 1 ? 's' : ''} not active for 7+ days.`,
       screen: 'TeacherStudents', params: { initialTab: 'Needs Attention' },
     },
     {
@@ -207,13 +208,13 @@ export function buildDashboardStats(students: any[], insights: any, activityFeed
   }));
 
   const aiActionTitle = allNeedsAttention.length > 0
-    ? `Review struggling students (${allNeedsAttention.length} flagged)`
+    ? `Re-engage inactive students (${allNeedsAttention.length} flagged)`
     : avgProgress > 0
       ? `Class at ${avgProgress}% — keep pushing!`
       : 'Set up your first assignment to get started';
 
   const aiActionBody = allNeedsAttention.length > 0
-    ? `${needsAttentionStudents[0]?.name?.split(' ')[0] || 'A student'} and others have low progress. Schedule dedicated study hours or assign a practice task to support them.`
+    ? `${needsAttentionStudents[0]?.name?.split(' ')[0] || 'A student'} and others haven't been active for 7+ days. Send a reminder or assign a short practice task to bring them back.`
     : `Median study time is ${formatStudyTime(medianStudyMins)} per student. Assign a chapter task or quiz to keep them engaged.`;
 
   return {

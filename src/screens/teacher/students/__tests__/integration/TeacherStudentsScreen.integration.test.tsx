@@ -5,7 +5,7 @@
 // themselves, only the network layer). Same pattern as
 // teacher/dashboard/__tests__/integration/TeacherDashboardScreen.integration.test.tsx.
 import React from 'react';
-import { render, screen, waitFor, userEvent, act } from '@testing-library/react-native';
+import { render, screen, waitFor, userEvent, act, within } from '@testing-library/react-native';
 import TeacherStudentsScreen from '../../TeacherStudentsScreen';
 
 jest.mock('../../../../../config/firebase', () => ({ options: {} }));
@@ -121,6 +121,19 @@ describe('TeacherStudentsScreen integration', () => {
     await user.press(screen.getByTestId('teacher-students-tab-needs-attention'));
     await waitFor(() => expect(screen.queryByText('Aarav Kapoor')).toBeNull());
     expect(screen.getByText('Bela Rao')).toBeTruthy();
+  });
+
+  test('each card shows its status tag: a day-1 student is Getting Started, an inactive one Needs Attention', async () => {
+    const dayOne = { ...STUDENT_A, createdAt: new Date().toISOString(), status: 'getting_started' };
+    global.fetch = jest.fn((url: string, opts?: any) =>
+      url.includes('/student/by-teacher/')
+        ? Promise.resolve({ ok: true, json: async () => [dayOne, { ...STUDENT_B, status: 'needs_attention' }] })
+        : jsonRes(url, opts)) as any;
+    await render(<TeacherStudentsScreen navigation={navigation} route={{}} />);
+    await waitFor(() => expect(screen.getByText('Aarav Kapoor')).toBeTruthy());
+
+    expect(within(screen.getByTestId('teacher-students-status-s1')).getByText('Getting Started')).toBeTruthy();
+    expect(within(screen.getByTestId('teacher-students-status-s2')).getByText('Needs Attention')).toBeTruthy();
   });
 
   test('tapping the remove icon calls DELETE and removes the student from the roster', async () => {

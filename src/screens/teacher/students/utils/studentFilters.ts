@@ -1,5 +1,6 @@
 import { DEMO_STUDENTS, INACTIVE_DAYS } from '../constants';
 import type { Student, StudentStats, Teaches } from '../types';
+import { resolveStudentStatus } from '../../../../utils/studentStatus';
 
 // A student counts as "inactive" only if they have ALREADY engaged at least
 // once (a real last-active date) and haven't returned in 3+ days. A freshly
@@ -30,7 +31,7 @@ export function filterStudents(
     const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase());
     const matchTab =
       activeTab === 'All'             ? true :
-      activeTab === 'Needs Attention' ? s.needsAttention :
+      activeTab === 'Needs Attention' ? resolveStudentStatus(s) === 'needs_attention' :
       activeTab === 'Active Today'    ? s.lastActive?.startsWith(todayISO) :
       activeTab === 'Inactive'        ? isInactiveStudent(s) :
       activeTab === 'Streak Risk'     ? (s.currentStreak || 0) === 1 :
@@ -48,8 +49,8 @@ export function buildGradeTabs(students: Student[]): string[] {
 export function computeStats(students: Student[], todayISO: string): StudentStats {
   return {
     total: students.length,
-    onTrack: students.filter(s => !s.needsAttention).length,
-    attention: students.filter(s => s.needsAttention).length,
+    onTrack: students.filter(s => ['on_track', 'excelling'].includes(resolveStudentStatus(s))).length,
+    attention: students.filter(s => resolveStudentStatus(s) === 'needs_attention').length,
     activeToday: students.filter(s => s.lastActive?.startsWith(todayISO)).length,
     inactive: students.filter(isInactiveStudent).length,
     streakRisk: students.filter(s => (s.currentStreak || 0) === 1).length,

@@ -1,3 +1,5 @@
+import type { StudentStatus } from '../../../utils/studentStatus';
+
 export interface ChildData {
   id: string;
   name: string;
@@ -5,7 +7,8 @@ export interface ChildData {
   curriculum?: string;
   school?: string;
   totalTopics?: number;
-  status: 'on_track' | 'needs_attention' | 'getting_started';
+  status: StudentStatus;
+  lastActive?: string | null;
   xpPoints: number;
   completedTopics: string[];
   currentStreak: number;

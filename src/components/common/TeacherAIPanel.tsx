@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { spacing, radius } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
+import { resolveStudentStatus, STATUS_META } from '../../utils/studentStatus';
 
 const P = {
   rose:  '#BAA467',
@@ -155,7 +156,7 @@ export default function TeacherAIPanel() {
     `${(s.completedTopics || []).length} topics done [${(s.completedTopics || []).join(', ') || 'none'}], ` +
     `${s.currentStreak || 0}-day streak, ${s.assignmentsDone || 0} assignments, ` +
     `last active: ${s.lastActive ? new Date(s.lastActive).toDateString() : 'never'}, ` +
-    `${s.needsAttention ? 'NEEDS ATTENTION' : 'on track'}`
+    `status: ${STATUS_META[resolveStudentStatus(s)].label}`
   ).join('\n');
 
   const { start: startMic, stop: stopMic } = useSpeechRecognition(
