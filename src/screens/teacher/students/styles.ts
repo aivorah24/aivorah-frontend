@@ -72,23 +72,6 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   cardInfo: { flex: 1 },
   studentName: { fontSize: 15, fontWeight: '700', color: c.textMain },
   studentMeta: { fontSize: 12, color: c.textMuted, marginTop: 2 },
-  attentionBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#B8797E18', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#B8797E40',
-  },
-  onTrackBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#5A8A7018', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#5A8A7040',
-  },
-  gettingStartedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#9A7B2E18', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#9A7B2E40',
-  },
-  badgeText: { fontSize: 10, fontWeight: '700' },
-
   progressWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   progressBarBg: { flex: 1, height: 6, backgroundColor: c.borderColor, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },

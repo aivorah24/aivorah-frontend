@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { childStudentStatus, STATUS_META } from '../../../../utils/studentStatus';
 
 export function formatStudyTime(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -15,11 +16,7 @@ export function ChildCard({ child, colors, styles, navigation, onRemove, onEdit,
   const progressPct = totalTopics > 0
     ? Math.round(((child.completedTopics?.length ?? 0) / totalTopics) * 100)
     : 0;
-  const isNewStudent = (child.xpPoints ?? 0) === 0 && (child.studyTime ?? 0) === 0 && progressPct === 0;
-  const hasActivity = (child.xpPoints ?? 0) > 0 || (child.studyTime ?? 0) > 0 || progressPct > 0;
-  const isOnTrack = hasActivity && (child.currentStreak ?? 0) >= 1;
-  const badgeColor = !hasActivity ? colors.accentYellow : isOnTrack ? colors.accentGreen : colors.accentYellow;
-  const badgeLabel = !hasActivity ? 'Getting Started' : isOnTrack ? 'On Track' : 'Needs Attention';
+  const { color: badgeColor, label: badgeLabel } = STATUS_META[childStudentStatus(child)];
 
   return (
     <View style={styles.childCard}>

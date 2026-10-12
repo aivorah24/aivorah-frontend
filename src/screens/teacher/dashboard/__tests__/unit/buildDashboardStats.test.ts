@@ -38,7 +38,7 @@ describe('buildDashboardStats — class-level counts', () => {
   });
 
   test('needsAttentionStudents caps at 3 even when more are flagged', () => {
-    const students = [1, 2, 3, 4, 5].map(n => student({ id: `s${n}`, needsAttention: true }));
+    const students = [1, 2, 3, 4, 5].map(n => student({ id: `s${n}`, status: 'needs_attention' }));
     const stats = buildDashboardStats(students, null, [], GOLD);
     expect(stats.allNeedsAttention).toHaveLength(5);
     expect(stats.needsAttentionStudents).toHaveLength(3);
@@ -156,9 +156,9 @@ describe('buildDashboardStats — insight tiles', () => {
   });
 
   test('the "Need Support" tile reflects allNeedsAttention count', () => {
-    const stats = buildDashboardStats([student({ needsAttention: true })], null, [], GOLD);
+    const stats = buildDashboardStats([student({ status: 'needs_attention' })], null, [], GOLD);
     expect(stats.learningPathTiles[0].stat).toBe('1');
-    expect(stats.learningPathTiles[0].label).toBe('Struggling');
+    expect(stats.learningPathTiles[0].label).toBe('Needs Attention');
   });
 
   test('with no students, the Top Score tile shows placeholder text, not a crash', () => {
@@ -191,13 +191,13 @@ describe('buildDashboardStats — recent activity feed', () => {
 
 describe('buildDashboardStats — AI suggested action', () => {
   test('with struggling students, the action nudges toward reviewing them', () => {
-    const stats = buildDashboardStats([student({ needsAttention: true, name: 'Aarav Sharma' })], null, [], GOLD);
-    expect(stats.aiActionTitle).toContain('Review struggling students');
+    const stats = buildDashboardStats([student({ status: 'needs_attention', name: 'Aarav Sharma' })], null, [], GOLD);
+    expect(stats.aiActionTitle).toContain('Re-engage inactive students');
     expect(stats.aiActionBody).toContain('Aarav');
   });
 
   test('with no struggling students and progress > 0, the action encourages continuing', () => {
-    const stats = buildDashboardStats([student({ needsAttention: false, progressPct: 60 })], null, [], GOLD);
+    const stats = buildDashboardStats([student({ status: 'excelling', progressPct: 60 })], null, [], GOLD);
     expect(stats.aiActionTitle).toContain('60%');
   });
 

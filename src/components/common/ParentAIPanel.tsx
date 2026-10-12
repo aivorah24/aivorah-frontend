@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { spacing, radius } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
+import { childStudentStatus, STATUS_META } from '../../utils/studentStatus';
 
 const P = {
   rose:  '#B8797E',
@@ -116,7 +117,7 @@ Current streak: ${selectedChild.currentStreak ?? 0} days
 XP points: ${selectedChild.xpPoints ?? 0}
 Assignments done: ${selectedChild.assignmentsDone ?? 0}
 Last active: ${selectedChild.lastActive ? new Date(selectedChild.lastActive).toDateString() : 'unknown'}
-Status: ${(selectedChild.currentStreak ?? 0) >= 3 ? 'On track' : 'Needs attention'}
+Status: ${STATUS_META[childStudentStatus(selectedChild)].label}
 Last lesson: ${selectedChild.lastLesson || 'unknown'}`
     : 'No child data available yet.';
 

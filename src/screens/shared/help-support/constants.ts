@@ -2,7 +2,7 @@ import type { Faq } from './types';
 
 export const TEACHER_FAQS: Faq[] = [
   { q: 'How do I create an assignment for all students?', a: "Go to Assignments → tap '+'. Leave the student field set to 'All Students' to broadcast to everyone enrolled. The assignment appears instantly in every student's app and is auto-tracked in their schedule." },
-  { q: 'How do I see which students need help?', a: "Your Dashboard shows a 'Needs Attention' section. The Students screen gives a full breakdown — look for red badges. Students with scores below 60% on recent assignments are automatically flagged." },
+  { q: 'How do I see which students need help?', a: "Every student has a status tag: Getting Started (first week), Excelling, On Track, Keep Going, or Needs Attention (not active for 7+ days). Your Dashboard shows a 'Needs Attention' count, and the Students screen has a filter for it." },
   { q: 'How is student progress calculated?', a: "Progress = completed topics ÷ total curriculum topics × 100. Students earn XP for each topic they complete via the Learn screen. You can view per-student breakdowns in the Progress tab." },
   { q: 'How does AI auto-grading work?', a: "When a student submits a scaffolded assignment (brainstorm, drawing, writing), the AI analyses each step against the topic and grade level. It returns a score (0–100%) and step-by-step feedback. You can review grades in Assignments." },
   { q: 'Can I message parents directly?', a: "Yes — go to Messages in the sidebar. Your conversation list shows all parent threads. Parents can only see messages related to their own child. Tap the compose icon to start a new conversation." },

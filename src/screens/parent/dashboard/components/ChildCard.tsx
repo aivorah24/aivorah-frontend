@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { ChildData } from '../types';
+import { STATUS_META } from '../../../../utils/studentStatus';
 
 export default function ChildCard({
   child, isSelected, onPress, onViewCreds, colors, s,
@@ -11,9 +12,7 @@ export default function ChildCard({
   onPress: () => void; onViewCreds: (c: ChildData) => void;
   colors: AppColors; s: any;
 }) {
-  const isOnTrack = child.status === 'on_track';
-  const badgeColor = isOnTrack ? colors.accentYellow : colors.accentYellow;
-  const badgeLabel = isOnTrack ? 'On Track' : child.status === 'getting_started' ? 'Getting Started' : 'Keep Going';
+  const { color: badgeColor, label: badgeLabel } = STATUS_META[child.status] ?? STATUS_META.getting_started;
 
   return (
     <TouchableOpacity

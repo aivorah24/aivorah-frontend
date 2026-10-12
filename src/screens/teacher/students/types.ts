@@ -1,3 +1,5 @@
+import type { StudentStatus } from '../../../utils/studentStatus';
+
 export type Student = {
   id: string;
   name: string;
@@ -14,6 +16,7 @@ export type Student = {
   assignmentsDone: number;
   lastActive: string;
   needsAttention: boolean;
+  status?: StudentStatus;
   photoUrl?: string;
   createdAt?: string | null;
   hasStarted?: boolean;
