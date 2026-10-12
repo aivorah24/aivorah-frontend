@@ -14,7 +14,7 @@ function Harness() {
       <Text testID="error">{h.error}</Text>
       <Text testID="days">{h.days}</Text>
       <Text testID="calls">{h.data?.summary.totalCalls ?? ''}</Text>
-      <TouchableOpacity testID="set30" onPress={() => h.setDays(30)}><Text>30</Text></TouchableOpacity>
+      <TouchableOpacity testID="set90" onPress={() => h.setDays(90)}><Text>90</Text></TouchableOpacity>
     </>
   );
 }
@@ -22,12 +22,12 @@ function Harness() {
 describe('useLlmStats', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('loads stats for the default 7-day window', async () => {
+  it('loads stats for the default 30-day window', async () => {
     (fetchLlmStats as jest.Mock).mockResolvedValueOnce({ summary: { totalCalls: 12 } });
     await render(<Harness />);
     await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
     expect(screen.getByTestId('calls').props.children).toBe(12);
-    expect(fetchLlmStats).toHaveBeenCalledWith(7);
+    expect(fetchLlmStats).toHaveBeenCalledWith(30);
   });
 
   it('reloads when days changes', async () => {
@@ -37,9 +37,9 @@ describe('useLlmStats', () => {
     const user = userEvent.setup();
     await render(<Harness />);
     await waitFor(() => expect(screen.getByTestId('calls').props.children).toBe(12));
-    await user.press(screen.getByTestId('set30'));
+    await user.press(screen.getByTestId('set90'));
     await waitFor(() => expect(screen.getByTestId('calls').props.children).toBe(40));
-    expect(fetchLlmStats).toHaveBeenLastCalledWith(30);
+    expect(fetchLlmStats).toHaveBeenLastCalledWith(90);
   });
 
   it('surfaces a load error', async () => {

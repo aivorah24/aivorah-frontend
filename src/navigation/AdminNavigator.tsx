@@ -11,12 +11,14 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import PlatformOverviewScreen from '../screens/aivorah-admin/overview/PlatformOverviewScreen';
+import AdminUsersScreen from '../screens/aivorah-admin/users/AdminUsersScreen';
 import MapToTeacherScreen from '../screens/aivorah-admin/map-to-teacher/MapToTeacherScreen';
 import BulkImportScreen from '../screens/aivorah-admin/bulk-import/BulkImportScreen';
 import LlmUsageScreen from '../screens/aivorah-admin/llm-usage/LlmUsageScreen';
 
 export type AdminDrawerParamList = {
   PlatformOverview: undefined;
+  AdminUsers: undefined;
   MapToTeacher: undefined;
   BulkImport: undefined;
   LlmUsage: undefined;
@@ -47,6 +49,7 @@ export default function AdminNavigator() {
       } as any}
     >
       <Drawer.Screen name="PlatformOverview" component={PlatformOverviewScreen} />
+      <Drawer.Screen name="AdminUsers" component={AdminUsersScreen} />
       <Drawer.Screen name="MapToTeacher" component={MapToTeacherScreen} />
       <Drawer.Screen name="BulkImport" component={BulkImportScreen} />
       <Drawer.Screen name="LlmUsage" component={LlmUsageScreen} />

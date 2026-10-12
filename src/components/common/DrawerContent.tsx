@@ -107,7 +107,8 @@ const THEME_OPTIONS: { id: ThemeMode; icon: string; label: string }[] = [
 
 const ADMIN_NAV_ITEMS = [
   { label: 'Platform Overview', icon: 'bar-chart-2', screen: 'PlatformOverview', group: 'MENU' },
-  { label: 'Map to Teacher', icon: 'users', screen: 'MapToTeacher', group: 'MENU' },
+  { label: 'Users', icon: 'users', screen: 'AdminUsers', group: 'MENU' },
+  { label: 'Map to Teacher', icon: 'user-check', screen: 'MapToTeacher', group: 'MENU' },
   { label: 'Bulk Import', icon: 'upload-cloud', screen: 'BulkImport', group: 'MENU' },
   { label: 'LLM Usage', icon: 'cpu', screen: 'LlmUsage', group: 'MENU' },
 ];
@@ -195,7 +196,8 @@ export default function DrawerContent(props: any) {
   // the full menu untouched. (Other screens stay registered for deep navigation.)
   const MOBILE_TEACHER_SCREENS = ['TeacherDashboard', 'TeacherStudents', 'TeacherAttendance', 'TeacherAssignments', 'TeacherSchedule', 'TeacherProgress', 'TeacherMessages', 'TeacherSettings', 'TeacherHelp'];
   const MOBILE_PARENT_SCREENS  = ['ParentDashboard', 'ParentMyKids', 'ParentDailyTasks', 'ParentSchedule', 'ParentProgress', 'ParentMessages', 'ParentControls', 'ParentSettings', 'ParentHelp'];
-  const mobileAllow = Platform.OS !== 'web' ? (isTeacher ? MOBILE_TEACHER_SCREENS : isParent ? MOBILE_PARENT_SCREENS : null) : null;
+  // Not for admins: their menu is ADMIN_NAV_ITEMS even when the underlying role is teacher/parent.
+  const mobileAllow = Platform.OS !== 'web' && !isAdmin ? (isTeacher ? MOBILE_TEACHER_SCREENS : isParent ? MOBILE_PARENT_SCREENS : null) : null;
   const NAV_ITEMS = (mobileAllow ? NAV_ITEMS_BASE.filter((i) => mobileAllow.includes(i.screen)) : NAV_ITEMS_BASE)
     .filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
   const groups = isAdmin ? ['MENU'] : (isSuperAdmin || isTeacher) ? ['MENU', 'TEACHING DEVELOPMENT', 'SYSTEM'] : isSchoolAdmin ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : isParent ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];

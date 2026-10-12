@@ -8,6 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useStudentData } from '../../../context/StudentDataContext';
 import { useNotification } from '../../../context/NotificationContext';
 import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
+import { authHeader } from '../../../services/authHeader';
 
 import type { ScheduleEvent, SelectedEventDetail } from './types';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
@@ -106,7 +107,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!highlightId) return;
     let cancelled = false;
-    fetch(`${SCHEDULE_SERVER_URL}/schedule/event/${highlightId}`)
+    authHeader().then(headers => fetch(`${SCHEDULE_SERVER_URL}/schedule/event/${highlightId}`, { headers }))
       .then(r => (r.ok ? r.json() : null))
       .then((event: ScheduleEvent | null) => {
         if (cancelled || !event) return;

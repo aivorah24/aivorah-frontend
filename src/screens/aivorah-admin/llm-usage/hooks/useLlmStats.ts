@@ -3,7 +3,7 @@ import { fetchLlmStats } from '../services/llmStatsService';
 import type { LlmStats } from '../types';
 
 export function useLlmStats() {
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(30);
   const [data, setData] = useState<LlmStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

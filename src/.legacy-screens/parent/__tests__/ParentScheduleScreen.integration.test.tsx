@@ -13,6 +13,9 @@ jest.mock('../../../components/common/TimePicker', () => () => null);
 jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'parent@example.com' } }),
 }));
+jest.mock('../../../services/authHeader', () => ({
+  authHeader: jest.fn(async () => ({ Authorization: 'Bearer parent-token' })),
+}));
 jest.mock('../../../context/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
@@ -63,6 +66,20 @@ test("the child's upcoming deadlines exclude completed work", async () => {
     const urls = (global.fetch as jest.Mock).mock.calls.map(([u]) => String(u));
     expect(urls.find(u => u.includes('/schedule/upcoming'))).toContain('hideCompleted=true');
   });
+});
+
+test('every schedule-service call (reads and the save) carries the signed-in token', async () => {
+  mockApi({ children: [CHILD] });
+  const user = userEvent.setup();
+  await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
+  await user.press(await screen.findByText('Add Event for Aanya'));
+  await user.type(screen.getByPlaceholderText(/title/i), 'Reading');
+  await user.press(screen.getByText('Add Event'));
+  await waitFor(() => expect(postBody()).not.toBeNull());
+
+  const scheduleCalls = (global.fetch as jest.Mock).mock.calls.filter(([u]) => String(u).includes('/schedule'));
+  expect(scheduleCalls.length).toBeGreaterThan(2);
+  scheduleCalls.forEach(([, init]) => expect(init?.headers?.Authorization).toBe('Bearer parent-token'));
 });
 
 test('offers the parent event types, including Challenge, with no emoji', async () => {

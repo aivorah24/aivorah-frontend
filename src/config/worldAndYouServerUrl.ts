@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // "The World & You" backend base URL — routed to the standalone
@@ -13,6 +14,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-world-and-you-service-xmqw.onrender.com';
 
 const WORLD_AND_YOU_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3010' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3010' : LIVE_SERVICE;
 
 export default WORLD_AND_YOU_SERVER_URL;

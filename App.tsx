@@ -136,10 +136,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 // html/body have no background by default (white). React Navigation's drawer
 // scene view repaints its own themed background on every mount, so switching
 // sidebar items showed a one-frame white flash through the gap. Match the
-// app's dark background at the document level so there's nothing to flash to.
+// app's background at the document level so there's nothing to flash to.
+// Starts from the saved theme (ThemeContext keeps it in sync after that).
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  let saved: string | null = null;
+  try { saved = localStorage.getItem('@ai_mentor_theme'); } catch {}
+  const systemDark = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const dark = saved === 'dark' || (saved === 'auto' && systemDark);
   const bgFix = document.createElement('style');
-  bgFix.textContent = `html, body, #root { background-color: #0B0B0B; }`;
+  bgFix.id = 'aivorah-page-bg';
+  bgFix.textContent = `html, body, #root { background-color: ${dark ? darkColors.bgDark : lightColors.bgDark}; }`;
   document.head.appendChild(bgFix);
 }
 
@@ -208,7 +214,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import NotificationBanner from './src/components/common/NotificationBanner';
 import { AnnouncementProvider } from './src/screens/shared/announcements/context/AnnouncementProvider';
-import { colors } from './src/theme';
+import { colors, darkColors, lightColors } from './src/theme';
 import { auth } from './src/config/firebase';
 import { isStudentLocked, subscribeStudentLocked } from './src/services/lockStatus';
 import { useNavigation } from '@react-navigation/native';
@@ -758,6 +764,8 @@ function RootNavigator() {
     !loading && isAuthenticated &&
     user?.onboardingComplete === false &&
     !(user?.email?.endsWith('@demo.com') || user?.email?.endsWith('@test.ai')) &&
+    // Admins never onboard, and /admin-login signs in without the explicit-login flag.
+    !isAdminEmail(user?.email) &&
     !isSpecialAuthLinkPath &&
     (typeof sessionStorage === 'undefined' || sessionStorage.getItem('aivorah_auth_this_session') !== '1') &&
     genuinelyStale;
@@ -862,7 +870,10 @@ function RootNavigator() {
   // Dedicated Aivorah Admin sign-in -- only relevant while signed out; once
   // signed in, isAdminEmail(user?.email) further below routes straight to
   // AdminNavigator regardless of this path.
+  // !loading: while Firebase restores a session, isAuthenticated is briefly false —
+  // without this a refresh flashed the sign-in form before landing on the admin console.
   const isAdminLoginPath =
+    !loading &&
     !isAuthenticated &&
     Platform.OS === 'web' &&
     typeof window !== 'undefined' &&

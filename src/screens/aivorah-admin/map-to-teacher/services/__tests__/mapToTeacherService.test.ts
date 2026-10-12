@@ -1,4 +1,4 @@
-import { fetchAdminStudents, fetchAdminTeachers, assignStudentsToTeacher } from '../mapToTeacherService';
+import { fetchAdminStudents, fetchAdminTeachers, fetchAdminSchools, assignStudentsToTeacher } from '../mapToTeacherService';
 import SERVER_URL from '../../../../../config/platformAdminServerUrl';
 
 jest.mock('../../../../../services/authHeader', () => ({
@@ -24,6 +24,19 @@ describe('fetchAdminStudents', () => {
   it('throws on failure', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'nope' }) });
     await expect(fetchAdminStudents()).rejects.toThrow('nope');
+  });
+});
+
+describe('fetchAdminSchools', () => {
+  it('returns schools with their board', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ([{ id: 'x', name: 'TSRA', curriculum: 'IB' }]) });
+    expect(await fetchAdminSchools()).toEqual([{ id: 'x', name: 'TSRA', curriculum: 'IB' }]);
+    expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/schools`, { headers: { Authorization: 'Bearer tok' } });
+  });
+
+  it('throws on failure', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'nope' }) });
+    await expect(fetchAdminSchools()).rejects.toThrow('nope');
   });
 });
 

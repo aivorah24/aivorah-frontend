@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { darkColors, lightColors, AppColors } from '../theme';
 
 export type ThemeMode = 'dark' | 'light' | 'auto';
@@ -72,6 +73,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const dark = themeMode === 'auto' ? systemIsDark : themeMode === 'dark';
     return { colors: dark ? darkColors : lightColors, isDark: dark };
   }, [themeMode, systemIsDark]);
+
+  // Keep the page background (set before first render in App.tsx) matching the active theme.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const el = document.getElementById('aivorah-page-bg');
+    if (el) el.textContent = `html, body, #root { background-color: ${colors.bgDark}; }`;
+  }, [colors]);
 
   return (
     <ThemeContext.Provider value={{ themeMode, setThemeMode, colors, isDark }}>

@@ -464,7 +464,7 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
 // SIGN UP MODAL
 // ─────────────────────────────────────────────────────────
 // CBSE follows the NCERT syllabus, so NCERT is not a separate board option (#157).
-const CURRICULA = ['IB PYP', 'CBSE', 'ICSE', 'Cambridge'];
+const CURRICULA = ['IB PYP', 'IB MYP', 'IB DP', 'CBSE', 'ICSE', 'Cambridge'];
 
 function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogle, addParentRole, addParentRoleSSO }: {
   visible: boolean; onClose: () => void; onSwitchLogin: () => void;

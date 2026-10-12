@@ -122,7 +122,8 @@ interface SidebarProps {
 
 const ADMIN_NAV_ITEMS = [
   { label: 'Platform Overview', icon: 'bar-chart-2', screen: 'PlatformOverview', group: 'MENU' },
-  { label: 'Map to Teacher', icon: 'users', screen: 'MapToTeacher', group: 'MENU' },
+  { label: 'Users', icon: 'users', screen: 'AdminUsers', group: 'MENU' },
+  { label: 'Map to Teacher', icon: 'user-check', screen: 'MapToTeacher', group: 'MENU' },
   { label: 'Bulk Import', icon: 'upload-cloud', screen: 'BulkImport', group: 'MENU' },
   { label: 'LLM Usage', icon: 'cpu', screen: 'LlmUsage', group: 'MENU' },
 ];

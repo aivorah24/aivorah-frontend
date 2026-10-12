@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { fetchAdminStudents, fetchAdminTeachers, assignStudentsToTeacher } from '../services/mapToTeacherService';
-import type { AdminStudent, AdminTeacher } from '../types';
+import { fetchAdminStudents, fetchAdminTeachers, fetchAdminSchools, assignStudentsToTeacher } from '../services/mapToTeacherService';
+import type { AdminSchool, AdminStudent, AdminTeacher } from '../types';
 
 export function useMapToTeacher() {
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [teachers, setTeachers] = useState<AdminTeacher[]>([]);
+  const [schools, setSchools] = useState<AdminSchool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -27,6 +28,12 @@ export function useMapToTeacher() {
       setError(e?.message || 'Could not load students/teachers. Check your connection.');
     } finally {
       setLoading(false);
+    }
+    // Boards only narrow the Curriculum filter — without them the filters fall back to the student data.
+    try {
+      setSchools(await fetchAdminSchools());
+    } catch {
+      setSchools([]);
     }
   }, []);
 
@@ -73,7 +80,7 @@ export function useMapToTeacher() {
   }
 
   return {
-    students, teachers, visibleStudents, loading, error, load,
+    students, teachers, schools, visibleStudents, loading, error, load,
     onlyUnassigned, setOnlyUnassigned,
     selectedStudentIds, toggleStudent,
     teacherEmail, setTeacherEmail,

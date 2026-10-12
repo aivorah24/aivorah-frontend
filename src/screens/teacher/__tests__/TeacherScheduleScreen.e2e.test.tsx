@@ -71,6 +71,9 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.setTimeout(15000);
+jest.mock('../../../services/authHeader', () => ({
+  authHeader: jest.fn(async () => ({ Authorization: 'Bearer teacher-token' })),
+}));
 jest.mock('../../../context/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
@@ -193,7 +196,10 @@ describe('TeacherScheduleScreen — E2E golden path', () => {
         expect.stringContaining('/student/by-teacher/teacher%40aivorah.test'),
       );
     });
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/schedule/teacher?date='));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/schedule/teacher?date='),
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer teacher-token' }) }),
+    );
   });
 });
 

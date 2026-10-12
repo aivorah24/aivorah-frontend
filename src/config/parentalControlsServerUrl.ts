@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Parental Controls microservice (aivorah-parental-controls-service) -
@@ -10,6 +11,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-parental-controls-service.onrender.com';
 
 const PARENTAL_CONTROLS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3018' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3018' : LIVE_SERVICE;
 
 export default PARENTAL_CONTROLS_SERVER_URL;

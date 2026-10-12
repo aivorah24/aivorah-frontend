@@ -92,8 +92,13 @@ export function useGradesSections(userEmail: string | undefined | null) {
     setAssignFor({ grade, section, studentCount: 0, classTeacherEmail: null, classTeacherName: null });
     setAssignSearch('');
     setAssignError('');
-    if (userEmail && teachers.length === 0) {
-      try { setTeachers(await schoolAdminClassesService.getTeachers(userEmail)); } catch { setTeachers([]); }
+    // Refetch on every open (teachers added since the first open must show up);
+    // keep the previous list on screen meanwhile, and say so if the load fails.
+    if (!userEmail) return;
+    try {
+      setTeachers(await schoolAdminClassesService.getTeachers(userEmail));
+    } catch (err: any) {
+      setAssignError(err?.message || 'Could not load teachers. Check your connection and try again.');
     }
   }
 

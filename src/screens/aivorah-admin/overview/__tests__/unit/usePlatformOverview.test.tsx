@@ -5,14 +5,19 @@ import { usePlatformOverview } from '../../hooks/usePlatformOverview';
 
 jest.mock('../../services/platformAdminOverviewService', () => ({
   fetchPlatformOverview: jest.fn(),
+  fetchChartsData: jest.fn(async () => ({
+    roleCounts: { student: 2, teacher: 1, parent: 1 }, curriculumMap: {}, gradeMap: {},
+    onboarding: { student: { done: 2, total: 2 }, teacher: { done: 1, total: 1 }, parent: { done: 1, total: 1 } },
+    topXP: [], assignmentStats: { total: 0, completed: 0, pending: 0, byType: {} }, assignmentsLast7: [],
+  })),
 }));
 import { fetchPlatformOverview } from '../../services/platformAdminOverviewService';
 
 const PAYLOAD = {
   counts: { users: 4, students: 2, teachers: 1, parents: 1, totalXP: 150, assignments: 2, assignmentsCompleted: 1 },
   students: [
-    { id: 's1', name: 'Asha', email: 'a@x.test', grade: 'Grade 5', curriculum: 'CBSE', school: 'TSRA', location: '', onboardingComplete: true, xpPoints: 100, level: 2, currentStreak: 3, studyTimeMinutes: 40, completedTopicsCount: 2, hasParent: true, teacherCount: 1 },
-    { id: 's2', name: 'Ben', email: 'b@x.test', grade: 'Grade 6', curriculum: 'CBSE', school: '', location: '', onboardingComplete: true, xpPoints: 50, level: 1, currentStreak: 0, studyTimeMinutes: 10, completedTopicsCount: 0, hasParent: false, teacherCount: 0 },
+    { id: 's1', name: 'Asha', email: 'a@x.test', grade: 'Grade 5', curriculum: 'CBSE', school: 'TSRA', location: '', onboardingComplete: true, xpPoints: 100, level: 2, currentStreak: 3, studyTimeMinutes: 40, completedTopicsCount: 2, hasParent: true, teacherCount: 1, lastSeen: '2026-10-01T00:00:00Z' },
+    { id: 's2', name: 'Ben', email: 'b@x.test', grade: 'Grade 6', curriculum: 'CBSE', school: '', location: '', onboardingComplete: false, xpPoints: 50, level: 1, currentStreak: 0, studyTimeMinutes: 10, completedTopicsCount: 0, hasParent: false, teacherCount: 0, lastSeen: null },
   ],
   teachers: [{ id: 't1', name: 'Ms Rao', email: 'rao@x.test', school: 'TSRA', location: '' }],
   parents: [{ id: 'p1', name: 'Mr Kumar', email: 'kumar@x.test', school: '', location: '' }],
@@ -34,6 +39,10 @@ function Harness() {
       <Text testID="tsraStudents">{h.schoolDrilldown[0]?.students ?? ''}</Text>
       <Text testID="tsraTeachers">{h.schoolDrilldown[0]?.teachers ?? ''}</Text>
       <Text testID="tsraAvgXP">{h.schoolDrilldown[0]?.avgXP ?? ''}</Text>
+      <Text testID="onboardingRate">{h.onboardingRatePct}</Text>
+      <Text testID="avgStreak">{h.avgStreak}</Text>
+      <Text testID="lastSeenCount">{h.lastSeenStudents.length}</Text>
+      <Text testID="lastSeenFirst">{h.lastSeenStudents[0]?.id ?? ''}</Text>
       <TouchableOpacity testID="load" onPress={() => h.load()}><Text>load</Text></TouchableOpacity>
     </>
   );
@@ -55,6 +64,10 @@ describe('usePlatformOverview', () => {
     expect(screen.getByTestId('tsraStudents').props.children).toBe(1);
     expect(screen.getByTestId('tsraTeachers').props.children).toBe(1);
     expect(screen.getByTestId('tsraAvgXP').props.children).toBe(100);
+    expect(screen.getByTestId('onboardingRate').props.children).toBe(50);
+    expect(screen.getByTestId('avgStreak').props.children).toBe(2);
+    expect(screen.getByTestId('lastSeenCount').props.children).toBe(1);
+    expect(screen.getByTestId('lastSeenFirst').props.children).toBe('s1');
   });
 
   it('surfaces a load error message and does not crash on a B2C-only platform (no schools)', async () => {

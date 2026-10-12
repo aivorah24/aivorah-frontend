@@ -1,12 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { fetchPlatformOverview } from '../services/platformAdminOverviewService';
-import type { PlatformOverview, SchoolDrilldownRow } from '../types';
+import { fetchChartsData, fetchPlatformOverview } from '../services/platformAdminOverviewService';
+import type { ChartsData, PlatformOverview, SchoolDrilldownRow } from '../types';
 
 export function usePlatformOverview() {
   const [data, setData] = useState<PlatformOverview | null>(null);
+  const [charts, setCharts] = useState<ChartsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // The charts breakdown is a secondary, non-blocking call — if it fails,
+  // the core overview (KPIs, school drill-down) still renders.
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -17,6 +20,11 @@ export function usePlatformOverview() {
     } finally {
       setLoading(false);
     }
+    try {
+      setCharts(await fetchChartsData());
+    } catch {
+      // charts section just stays empty — not worth surfacing a second error banner
+    }
   }, []);
 
   // B2B = has a school on file; B2C = parent-enrolled, no school — same
@@ -25,6 +33,23 @@ export function usePlatformOverview() {
   const b2cStudents = useMemo(() => (data?.students || []).filter((s) => !s.school), [data]);
   const schoolCount = useMemo(() => new Set(b2bStudents.map((s) => s.school)).size, [b2bStudents]);
   const b2bSharePct = data?.counts.students ? Math.round((b2bStudents.length / data.counts.students) * 100) : 0;
+
+  const onboardingRatePct = data?.counts.students
+    ? Math.round(((data.students.filter((s) => s.onboardingComplete).length) / data.counts.students) * 100)
+    : 0;
+  const avgStreak = data?.students.length
+    ? Math.round(data.students.reduce((sum, s) => sum + (s.currentStreak || 0), 0) / data.students.length)
+    : 0;
+
+  // Most recently active students — the "Last Seen" table's source, derived
+  // from student_stats.updated_at (no separate analytics endpoint needed).
+  const lastSeenStudents = useMemo(() => {
+    return (data?.students || [])
+      .filter((s) => !!s.lastSeen)
+      .slice()
+      .sort((a, b) => new Date(b.lastSeen as string).getTime() - new Date(a.lastSeen as string).getTime())
+      .slice(0, 10);
+  }, [data]);
 
   const schoolDrilldown: SchoolDrilldownRow[] = useMemo(() => {
     if (!data) return [];
@@ -49,7 +74,8 @@ export function usePlatformOverview() {
   }, [data, b2bStudents]);
 
   return {
-    data, loading, error, load,
+    data, charts, loading, error, load,
     b2bStudents, b2cStudents, schoolCount, b2bSharePct, schoolDrilldown,
+    onboardingRatePct, avgStreak, lastSeenStudents,
   };
 }

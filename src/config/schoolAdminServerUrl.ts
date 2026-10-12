@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // School Admin microservice base URL (aivorah-school-admin-service) —
@@ -8,6 +9,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-school-admin-service.onrender.com';
 
 const SCHOOL_ADMIN_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3018' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3018' : LIVE_SERVICE;
 
 export default SCHOOL_ADMIN_SERVER_URL;
