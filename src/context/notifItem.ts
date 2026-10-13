@@ -33,12 +33,24 @@ export function isEventType(n: V2Notification) {
   return n.type === 'event_scheduled';
 }
 
+export function isClassPostType(n: V2Notification) {
+  return n.type === 'class_post';
+}
+
 // Legacy items that the V2 feed replaces when it is active.
 export function isV2OwnedLegacy(i: NotifItem) {
   return i.type === 'assignment' || i.type === 'quiz' || i.type === 'challenge' || (i.type === 'event' && i.autoDue === false);
 }
 
 export function toNotifItem(n: V2Notification): NotifItem {
+  // Class posts reuse the portfolio item shape (icon, deep link to the class feed).
+  if (isClassPostType(n)) {
+    return {
+      id: n.id, type: 'portfolio', title: n.title, subtitle: n.body || '', senderName: '',
+      createdAt: n.createdAt, readAt: n.readAt, v2: n,
+      grade: n.data?.grade, section: n.data?.section, postId: n.data?.postId || n.entityId,
+    };
+  }
   const isAssignment = isAssignmentType(n);
   const type: NotifItem['type'] = isEventType(n)
     ? 'event'

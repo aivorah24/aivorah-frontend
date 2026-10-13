@@ -109,3 +109,28 @@ describe('openNotification', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+describe('class_post notifications', () => {
+  const post = (o: Partial<V2Notification> = {}) => v2({
+    type: 'class_post', entityType: 'class_post', entityId: 'post-7', title: 'New class post: Grade 5-A', body: 'Science fair!',
+    data: { postId: 'post-7', grade: 'Grade 5', section: 'A' }, ...o,
+  });
+
+  test('maps to a portfolio item carrying the class + post', () => {
+    expect(toNotifItem(post())).toMatchObject({ type: 'portfolio', grade: 'Grade 5', section: 'A', postId: 'post-7', subtitle: 'Science fair!' });
+  });
+
+  test.each([['student', null], ['parent', 'kid-1']])('%s tap opens that class\'s post', (role, childId) => {
+    expect(resolveNotificationTarget(toNotifItem(post({ childId })), role))
+      .toEqual({ screen: 'ClassDetail', params: { grade: 'Grade 5', section: 'A', postId: 'post-7', label: 'Grade 5 Portfolio' } });
+  });
+
+  test('opening marks only that V2 row read', () => {
+    const actions = { markNotificationRead: jest.fn(), clearUnread: jest.fn(), clearUnreadAssignments: jest.fn(), clearUnreadChallenges: jest.fn(), clearUnreadEvents: jest.fn() };
+    const navigate = jest.fn();
+    openNotification(toNotifItem(post()), { role: 'student', navigate, actions });
+    expect(actions.markNotificationRead).toHaveBeenCalledWith('n1');
+    expect(actions.clearUnreadEvents).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('ClassDetail', expect.objectContaining({ postId: 'post-7' }));
+  });
+});

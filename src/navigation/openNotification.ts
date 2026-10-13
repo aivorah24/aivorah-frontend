@@ -45,6 +45,13 @@ function v2Target(item: NotifItem): NotificationTarget | null {
       ? { screen: 'ParentAssignments', params: { childId: n.childId, highlightId } }
       : { screen: 'Assignments', params: { highlightId } };
   }
+  if (n.type === 'class_post') {
+    const grade = n.data?.grade;
+    return {
+      screen: 'ClassDetail',
+      params: { grade, section: n.data?.section ?? '', postId: n.data?.postId || n.entityId, label: `${grade || 'Class'} Portfolio` },
+    };
+  }
   if (n.type === 'event_scheduled') {
     const highlightId = n.data?.eventId || n.entityId;
     return isParent

@@ -1,25 +1,31 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import type { AppColors } from '../../../../theme';
+import { attendanceTone } from '../../../../theme/attendanceColors';
 
 const CARDS = [
-  { key: 'present', label: 'Present', color: '#0ca678', bg: '#e6fcf5', border: '#c3fae8' },
-  { key: 'absent', label: 'Absent', color: '#f03e3e', bg: '#fff5f5', border: '#ffe3e3' },
-  { key: 'late', label: 'Late', color: '#ba905a', bg: '#ba905a12', border: '#ba905a25' },
-  { key: 'unmarked', label: 'Unmarked', color: '#495057', bg: '#f8f9fa', border: '#e9ecef' },
+  { key: 'present', label: 'Present' },
+  { key: 'absent', label: 'Absent' },
+  { key: 'late', label: 'Late' },
+  { key: 'unmarked', label: 'Unmarked' },
 ] as const;
 
-export default function StatsRow({ stats, styles }: {
+export default function StatsRow({ stats, styles, colors }: {
   stats: { present: number; absent: number; late: number; unmarked: number };
   styles: any;
+  colors: AppColors;
 }) {
   return (
     <View style={styles.statsContainer}>
-      {CARDS.map((c) => (
-        <View key={c.key} style={[styles.statCard, { borderLeftColor: c.color, backgroundColor: c.bg, borderColor: c.border }]}>
-          <Text testID={`attendance-stat-${c.key}`} style={[styles.statValue, { color: c.color }]}>{stats[c.key]}</Text>
-          <Text style={[styles.statLabel, { color: c.color }]}>{c.label}</Text>
-        </View>
-      ))}
+      {CARDS.map((c) => {
+        const t = attendanceTone(colors, c.key);
+        return (
+          <View key={c.key} testID={`attendance-stat-card-${c.key}`} style={[styles.statCard, { borderLeftColor: t.fg, backgroundColor: t.bg, borderColor: t.border }]}>
+            <Text testID={`attendance-stat-${c.key}`} style={[styles.statValue, { color: t.fg }]}>{stats[c.key]}</Text>
+            <Text style={[styles.statLabel, { color: t.fg }]}>{c.label}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
