@@ -23,12 +23,14 @@ export function useNotificationPrefs(email: string | undefined) {
     }).catch(() => {});
   }, [key]);
 
-  const setPref = useCallback((field: keyof NotificationPrefs, value: boolean) => {
-    setPrefs((prev) => {
-      const next = { ...prev, [field]: value };
-      AsyncStorage.setItem(key, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+  // Resolves once the bell's key is written, so a poll after it sees the new value.
+  const setPref = useCallback(async (field: keyof NotificationPrefs, value: boolean) => {
+    setPrefs((prev) => ({ ...prev, [field]: value }));
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const stored = raw ? JSON.parse(raw) : {};
+      await AsyncStorage.setItem(key, JSON.stringify({ ...stored, [field]: value }));
+    } catch {}
   }, [key]);
 
   return { prefs, setPref };

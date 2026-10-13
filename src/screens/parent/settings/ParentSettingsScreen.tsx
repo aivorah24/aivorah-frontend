@@ -28,13 +28,15 @@ import type { NotificationPrefs } from './types';
 
 export default function ParentSettingsScreen({ navigation }: any) {
   const { colors, themeMode, setThemeMode } = useTheme();
-  const { triggerPoll, clearUnreadAssignments, clearUnreadChallenges } = useNotification();
+  const { triggerPoll, clearUnreadAssignments, clearUnreadChallenges, muteCategory } = useNotification();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const data = useParentSettingsData();
   const { prefs, setPref } = useNotificationPrefs(data.user?.email);
 
-  function handleToggleNotif(key: keyof NotificationPrefs, value: boolean) {
-    setPref(key, value);
+  async function handleToggleNotif(key: keyof NotificationPrefs, value: boolean) {
+    // Hide a muted category from the bell at once; the poll then reads the saved pref.
+    if (!value && (key === 'assignmentAlerts' || key === 'challengeUpdates')) muteCategory(key);
+    await setPref(key, value);
     if (value && key === 'assignmentAlerts') clearUnreadAssignments();
     else if (value && key === 'challengeUpdates') clearUnreadChallenges();
     else triggerPoll();

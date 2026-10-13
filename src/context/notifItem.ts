@@ -33,6 +33,16 @@ export function isEventType(n: V2Notification) {
   return n.type === 'event_scheduled';
 }
 
+// Settings toggles: Assignment Alerts gates assignments + non-challenge events,
+// Challenge Updates gates challenges + challenge events (same split as legacy).
+export interface CategoryPrefs { assign: boolean; challenge: boolean }
+
+export function isV2Allowed(n: V2Notification, p: CategoryPrefs) {
+  if (isAssignmentType(n)) return p.assign;
+  if (isEventType(n)) return n.data?.eventType === 'challenge' ? p.challenge : p.assign;
+  return p.challenge;
+}
+
 // Legacy items that the V2 feed replaces when it is active.
 export function isV2OwnedLegacy(i: NotifItem) {
   return i.type === 'assignment' || i.type === 'quiz' || i.type === 'challenge' || (i.type === 'event' && i.autoDue === false);
