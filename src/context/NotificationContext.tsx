@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, toNotifItem, isAssignmentType, isEventType, isClassPostType, isV2OwnedLegacy } from './notifItem';
+import { NotifItem, toNotifItem, isAssignmentType, isEventType, isClassPostType, isAnnouncementType, isV2OwnedLegacy } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -415,8 +415,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
-        // Class posts have no badge category of their own; never count them as challenges.
-        const classPostUnread = stillUnread.filter(isClassPostType).length;
+        // Class posts and announcements have no badge category of their own; never count them as challenges.
+        const classPostUnread = stillUnread.filter(n => isClassPostType(n) || isAnnouncementType(n)).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(assignUnread);
         setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread - classPostUnread) + (allowChallenge ? challengeEventCount : 0));
@@ -637,7 +637,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     locallyReadRef.current.set(id, new Date().toISOString());
     if (isAssignmentType(known)) setUnreadAssignments(c => Math.max(0, c - 1));
     else if (isEventType(known)) setUnreadEvents(c => Math.max(0, c - 1));
-    else setUnreadChallenges(c => Math.max(0, c - 1));
+    else if (!isClassPostType(known) && !isAnnouncementType(known)) setUnreadChallenges(c => Math.max(0, c - 1));
     syncLocalReads();
     try {
       await apiMarkRead(id);

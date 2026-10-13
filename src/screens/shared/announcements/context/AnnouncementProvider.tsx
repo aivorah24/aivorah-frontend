@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useAuth } from '../../../../context/AuthContext';
+import { useNotification } from '../../../../context/NotificationContext';
 import { fetchActiveAnnouncements, dismissAnnouncement } from '../services/announcementsApi';
 import { Announcement } from '../types';
 
@@ -23,6 +24,7 @@ const POLL_INTERVAL_MS = 90000;
 
 export function AnnouncementProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const { toastItem } = useNotification();
   const [bannerAnnouncements, setBannerAnnouncements] = useState<Announcement[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -71,6 +73,12 @@ export function AnnouncementProvider({ children }: { children: React.ReactNode }
       sub.remove();
     };
   }, [fetchActive]);
+
+  // A new announcement just reached the bell (8s poll) — show its banner now, not on the next 90s poll.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch triggered by an external notification, external sync
+    if (toastItem?.type === 'announcement') void fetchActive();
+  }, [toastItem, fetchActive]);
 
   return (
     <AnnouncementContext.Provider value={{ bannerAnnouncements, dismiss, refresh: fetchActive }}>

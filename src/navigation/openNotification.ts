@@ -23,12 +23,14 @@ export function screensForRole(role: Role) {
     messages:    role === 'teacher' ? 'TeacherMessages'    : role === 'parent' ? 'ParentMessages'    : 'Messages',
     challenges:  role === 'teacher' ? 'TeacherChallenges'  : role === 'parent' ? 'ParentChallenges'  : 'Challenges',
     schedule:    role === 'teacher' ? 'TeacherSchedule'    : role === 'parent' ? 'ParentSchedule'    : 'Schedule',
+    announcements: role === 'teacher' ? 'TeacherAnnouncements' : role === 'parent' ? 'ParentAnnouncements'
+      : role === 'school_admin' ? 'SchoolAdminAnnouncements' : 'Announcements',
   };
 }
 
 // V2 rows carry child_id only for parent recipients, so the row itself (not the
 // signed-in role) decides student vs parent routing.
-function v2Target(item: NotifItem): NotificationTarget | null {
+function v2Target(item: NotifItem, role: Role): NotificationTarget | null {
   const n = item.v2!;
   const isParent = !!n.childId;
   const isChallenge = n.type === 'challenge_assigned' || n.type === 'challenge_due';
@@ -51,6 +53,9 @@ function v2Target(item: NotifItem): NotificationTarget | null {
       screen: 'ClassDetail',
       params: { grade, section: n.data?.section ?? '', postId: n.data?.postId || n.entityId, label: `${grade || 'Class'} Portfolio` },
     };
+  }
+  if (n.type === 'announcement') {
+    return { screen: screensForRole(role).announcements, params: { openId: n.data?.announcementId || n.entityId } };
   }
   if (n.type === 'event_scheduled') {
     const highlightId = n.data?.eventId || n.entityId;
@@ -86,7 +91,7 @@ function legacyTarget(item: NotifItem, role: Role): NotificationTarget | null {
 }
 
 export function resolveNotificationTarget(item: NotifItem, role: Role): NotificationTarget | null {
-  return item.v2 ? v2Target(item) : legacyTarget(item, role);
+  return item.v2 ? v2Target(item, role) : legacyTarget(item, role);
 }
 
 function markOpened(item: NotifItem, actions: OpenNotificationActions) {
