@@ -21,6 +21,7 @@ import { validateLoginForm, validateSignupForm } from './utils/validation';
 import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../../constants/supportContact';
 
 // ─────────────────────────────────────────────────────────
 // Constants
@@ -138,6 +139,7 @@ function getFbError(code: string): string {
     case 'auth/email-already-in-use':  return 'An account with this email already exists.';
     case 'auth/weak-password':         return 'Password must be at least 6 characters.';
     case 'auth/invalid-email':         return 'Please enter a valid email address.';
+    case 'auth/user-disabled':         return BLOCKED_ACCOUNT_MESSAGE;
     case 'auth/too-many-requests':     return 'Too many attempts. Please try again later.';
     case 'auth/network-request-failed': return 'Network error. Check your connection.';
     case 'auth/popup-closed-by-user':  return 'Google sign-in was cancelled.';

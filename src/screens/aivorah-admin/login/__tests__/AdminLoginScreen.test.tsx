@@ -36,4 +36,14 @@ describe('AdminLoginScreen', () => {
     await user.press(screen.getByTestId('admin-login-submit'));
     expect(await screen.findByText('Incorrect email or password.')).toBeTruthy();
   });
+
+  it('tells a blocked user to contact support', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValueOnce({ code: 'auth/user-disabled' });
+    const user = userEvent.setup();
+    await render(<AdminLoginScreen />);
+    await user.type(screen.getByTestId('admin-login-email'), 'admin@aivorah.test');
+    await user.type(screen.getByTestId('admin-login-password'), 'x');
+    await user.press(screen.getByTestId('admin-login-submit'));
+    expect(await screen.findByText(/suspended by an administrator.*aivorah24@gmail\.com/)).toBeTruthy();
+  });
 });

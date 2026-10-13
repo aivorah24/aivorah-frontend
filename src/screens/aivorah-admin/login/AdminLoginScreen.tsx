@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator 
 import { Feather } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../config/firebase';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../../../constants/supportContact';
 
 // A dedicated sign-in page for the Aivorah Admin page (Platform Overview
 // etc.) — not the student/teacher/parent signup flow. Still a real Firebase
@@ -35,7 +36,9 @@ export default function AdminLoginScreen() {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       // App.tsx's auth-state listener takes it from here.
     } catch (e: any) {
-      setError(e?.code === 'auth/invalid-credential' ? 'Incorrect email or password.' : (e?.message || 'Sign-in failed. Please try again.'));
+      setError(e?.code === 'auth/invalid-credential' ? 'Incorrect email or password.'
+        : e?.code === 'auth/user-disabled' ? BLOCKED_ACCOUNT_MESSAGE
+        : (e?.message || 'Sign-in failed. Please try again.'));
       setSigning(false);
     }
   }

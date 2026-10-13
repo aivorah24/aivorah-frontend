@@ -16,6 +16,7 @@ import AUTH_SERVER_URL from '../config/authServerUrl';
 import PROFILE_SERVER_URL from '../config/profileServerUrl';
 import { useTheme } from './ThemeContext';
 import { prefetchStudentDashboard } from '../utils/curriculumPrefetch';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../constants/supportContact';
 
 const PROFILE_KEY = 'ai_mentor_user_profile';
 
@@ -946,7 +947,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           message = 'The email address is badly formatted.';
           break;
         case 'auth/user-disabled':
-          message = 'This user account has been disabled.';
+          message = BLOCKED_ACCOUNT_MESSAGE;
           break;
         case 'auth/too-many-requests':
           message = 'Too many attempts. Please try again later.';
@@ -1225,6 +1226,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           message = 'Google sign-in was cancelled.';
         } else if (error.code === 'auth/network-request-failed') {
           message = 'Network error. Please check your connection.';
+        } else if (error.code === 'auth/user-disabled') {
+          message = BLOCKED_ACCOUNT_MESSAGE;
         }
         throw new Error(message);
       } finally {
