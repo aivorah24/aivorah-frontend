@@ -13,12 +13,15 @@ jest.mock('../../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: { accentYellow: '#fa0', textMuted: '#888' }, isDark: true }),
 }));
 
+// B004 regression: the real AuthContext user object never has an `id` field
+// — only StudentDataContext.studentId is ever resolved. This mock matches
+// that real shape (no id on user) so this test would have caught the bug.
 jest.mock('../../../../../context/AuthContext', () => ({
-  useAuth: () => ({ user: { email: 'a@a.com', role: 'student', id: 'u1' } }),
+  useAuth: () => ({ user: { email: 'a@a.com', role: 'student' } }),
 }));
 
 jest.mock('../../../../../context/StudentDataContext', () => ({
-  useStudentData: () => ({ completeLesson: jest.fn(), addXP: jest.fn(), recordStudyTime: jest.fn() }),
+  useStudentData: () => ({ studentId: 'real-resolved-student-id', completeLesson: jest.fn(), addXP: jest.fn(), recordStudySeconds: jest.fn() }),
 }));
 
 jest.mock('../../../../../components/common/ScreenLayout', () => {

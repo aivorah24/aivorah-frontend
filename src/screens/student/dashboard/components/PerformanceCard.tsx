@@ -13,6 +13,7 @@ interface BarTopic {
   pct: number;
   hasData: boolean;
   mastered: boolean;
+  inProgress: boolean;
 }
 
 interface BestTopic {
@@ -141,14 +142,23 @@ export function PerformanceCard({
             ['#BAA467', '#C5BD96'],
           ];
           const [c1, c2] = barColors[i % barColors.length];
+          // In-progress (started via Learn/Listen, no score/mastery yet) gets
+          // a distinct dashed teal outline — reuses the app's existing
+          // "study time" teal (BRAND.teal) rather than inventing a new color
+          // — plus a small "In Progress" caption instead of "0%", so a
+          // student who's opened a chapter but not yet quizzed it can tell
+          // it apart from one they've never touched.
+          const showInProgress = t.inProgress && !t.hasData;
           return (
             <View key={`${t.fullLabel}-${i}`} style={styles.barCol}>
-              <Text style={[styles.barPct, { color: t.hasData ? c1 : colors.textDim }]}>{t.pct}%</Text>
-              <View style={[styles.barTrack, { borderColor: c1 + '40' }]}>
+              <Text style={[styles.barPct, { color: t.hasData ? c1 : showInProgress ? BRAND.teal : colors.textDim }]}>
+                {t.hasData ? `${t.pct}%` : showInProgress ? 'Started' : `${t.pct}%`}
+              </Text>
+              <View style={[styles.barTrack, { borderColor: showInProgress ? BRAND.teal + '60' : c1 + '40' }]}>
                 <LinearGradient
-                  colors={t.hasData ? [c1, c2] : [colors.borderColor, colors.borderColor]}
+                  colors={t.hasData ? [c1, c2] : showInProgress ? [BRAND.teal + '60', BRAND.teal + '30'] : [colors.borderColor, colors.borderColor]}
                   start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                  style={[styles.barFill, { height: `${Math.max(t.pct, 4)}%` as any }]}
+                  style={[styles.barFill, { height: `${Math.max(t.pct, showInProgress ? 10 : 4)}%` as any }]}
                 />
               </View>
               <Text style={[styles.barLabel, { color: colors.textDim }]} numberOfLines={2}>{t.label}</Text>

@@ -27,8 +27,9 @@ import { useResponsive } from '../../../hooks/useResponsive';
 import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
 import {
   computeRealTopicPerf, computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic,
-  computeAllBarTopics, computeMasteredTopics, computeLessonSubjects,
+  computeAllBarTopics, computeMasteredTopics, computeLessonSubjects, selectFeaturedLesson,
 } from '../utils/performanceStats';
+import { isPassingScore, isMasteryScore } from '../utils/masteryRules';
 import { useDashboardData } from './hooks/useDashboardData';
 import type { CurriculumTopic, CurriculumData } from './types';
 import { BRAND, PASTEL, SUBJECT_COLORS, SUBJECT_ICONS } from './constants';
@@ -151,6 +152,9 @@ export default function DashboardScreen({ navigation, route }: any) {
 
   // ── Derived ──────────────────────────────────────────────
   const completedSet  = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
+  // B002/B003: frontend-local only (see notes on computeAllBarTopics /
+  // selectFeaturedLesson) — defaults to [] via ZERO_STATS for old records.
+  const startedSet    = useMemo(() => new Set(stats.startedTopics ?? []), [stats.startedTopics]);
   const allLessons    = useMemo(() => {
     if (!curriculum) return [];
     return curriculum.topics.map(t => {
@@ -193,16 +197,10 @@ export default function DashboardScreen({ navigation, route }: any) {
     const candidates = curatedTopicNames.size > 0
       ? allLessons.filter(l => curatedTopicNames.has(l.topic))
       : allLessons;
-    // Pick the most recently attempted topic (by lastActivity from perfData)
-    const withActivity = candidates
-      .filter(l => perfData.topics[l.topic]?.lastActivity)
-      .sort((a, b) => {
-        const ta = perfData.topics[a.topic]?.lastActivity ?? '';
-        const tb = perfData.topics[b.topic]?.lastActivity ?? '';
-        return tb.localeCompare(ta); // most recent first
-      });
-    return withActivity[0] ?? candidates.find(l => l.progress > 0) ?? candidates[0] ?? allLessons[0];
-  }, [allLessons, perfData, curatedTopicNames]);
+    // Pick the most recently attempted topic (by lastActivity from perfData) —
+    // extracted to selectFeaturedLesson (performanceStats.ts) for unit testing.
+    return selectFeaturedLesson(candidates, perfData, startedSet, completedSet) ?? allLessons[0];
+  }, [allLessons, perfData, curatedTopicNames, startedSet, completedSet]);
 
   // The REAL chapter that featuredLesson.topic actually belongs to — not just
   // chapters[0]. Previously the headline always showed the first chapter
@@ -332,8 +330,8 @@ export default function DashboardScreen({ navigation, route }: any) {
   // no curated mapping yet (e.g. Mathematics) still show 0%/no-data — honest,
   // not fabricated — until that subject gets the same curated treatment.
   const allBarTopics = useMemo(
-    () => computeAllBarTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet),
-    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
+    () => computeAllBarTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet, startedSet),
+    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet, startedSet]
   );
 
   // No "All" chip — same reasoning as lessonSubjects above: a flat "All" view
@@ -365,8 +363,8 @@ export default function DashboardScreen({ navigation, route }: any) {
   // with which chapter they belong to yet (see note on allBarTopics). This is a genuine
   // progress-based estimate, not tied to any specific named chapter.
   const masteredTopics = useMemo(
-    () => computeMasteredTopics(subjectChapters, curriculum, completedSet),
-    [subjectChapters, curriculum, completedSet]
+    () => computeMasteredTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet),
+    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
   );
 
   // % of attempted quizzes scoring ≥60% — always a real, live number (0% is a
@@ -398,8 +396,8 @@ export default function DashboardScreen({ navigation, route }: any) {
     if (!realTopicPerf.length) return 'Start a quiz on any chapter to see your scores here.';
     const weak = [...realTopicPerf].sort((a, b) => a.pct - b.pct)[0];
     const strong = [...realTopicPerf].sort((a, b) => b.pct - a.pct)[0];
-    if (avgScore >= 80) return `Outstanding! You're mastering ${strong.fullLabel ?? strong.label}. Keep it up!`;
-    if (avgScore >= 60) return `Good progress! Focus a bit more on ${weak.fullLabel ?? weak.label} to level up.`;
+    if (isMasteryScore(avgScore)) return `Outstanding! You're mastering ${strong.fullLabel ?? strong.label}. Keep it up!`;
+    if (isPassingScore(avgScore)) return `Good progress! Focus a bit more on ${weak.fullLabel ?? weak.label} to level up.`;
     return `Keep practising! ${weak.fullLabel ?? weak.label} needs more attention — you can do it!`;
   }, [realTopicPerf, avgScore]);
 

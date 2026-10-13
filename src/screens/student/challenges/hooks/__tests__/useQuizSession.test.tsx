@@ -23,13 +23,13 @@ function makeChallenge(overrides: Partial<Challenge> = {}): Challenge {
 }
 
 const mockCompleteChallenge = jest.fn();
-const mockRecordStudyTime = jest.fn();
+const mockRecordStudySeconds = jest.fn();
 const mockOnChallengeCompleted = jest.fn();
 
 function Harness({ studentId = 's1', grade = 'Grade 4', userEmail = 'a@a.com' }: any) {
   const hook = useQuizSession({
     studentId, grade, userEmail,
-    completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted,
+    completeChallenge: mockCompleteChallenge, recordStudySeconds: mockRecordStudySeconds, onChallengeCompleted: mockOnChallengeCompleted,
   });
   return (
     <>
@@ -180,7 +180,7 @@ describe('useQuizSession — timer', () => {
     }) as any;
 
     function StartHarness() {
-      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
+      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudySeconds: mockRecordStudySeconds, onChallengeCompleted: mockOnChallengeCompleted });
       React.useEffect(() => { hook.startChallenge(makeChallenge({ timeLimitMinutes: 1 })); }, []);
       return <Text testID="timeLeft">{String(hook.timeLeft)}</Text>;
     }
@@ -219,7 +219,7 @@ describe('useQuizSession — timer', () => {
     }) as any;
 
     function TimeoutHarness() {
-      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudyTime: mockRecordStudyTime, onChallengeCompleted: mockOnChallengeCompleted });
+      const hook = useQuizSession({ studentId: 's1', grade: 'Grade 4', userEmail: 'a@a.com', completeChallenge: mockCompleteChallenge, recordStudySeconds: mockRecordStudySeconds, onChallengeCompleted: mockOnChallengeCompleted });
       React.useEffect(() => { hook.startChallenge(makeChallenge({ timeLimitMinutes: 1 })); }, []);
       return (
         <>

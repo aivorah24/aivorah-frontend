@@ -4,6 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { AppColors } from '../../../../theme';
 import type { Student } from '../types';
+import { StudentStatusBadge } from '../../../../components/common/StudentStatusBadge';
+import { resolveStudentStatus } from '../../../../utils/studentStatus';
 import { initials, toTitleCase, avatarGradient, lastActiveLabel } from '../utils/studentDisplay';
 
 function StudentAvatarComponent({ photoUrl, name, grad, styles }: {
@@ -68,25 +70,7 @@ export default function StudentCard({
           <Text style={styles.studentName}>{displayName}</Text>
           <Text style={styles.studentMeta}>{s.grade} · {s.curriculum}</Text>
         </View>
-        {s.needsAttention ? (
-          <View style={styles.attentionBadge}>
-            <Feather name="alert-circle" size={11} color="#B8797E" />
-            <Text style={[styles.badgeText, { color: '#B8797E' }]}>Attention</Text>
-          </View>
-        ) : s.hasStarted === false ? (
-          // Brand-new student who hasn't engaged yet — show a neutral
-          // "Getting Started" state instead of "On Track", which would
-          // wrongly imply proven progress on a 0% account.
-          <View style={styles.gettingStartedBadge}>
-            <Feather name="play-circle" size={11} color="#9A7B2E" />
-            <Text style={[styles.badgeText, { color: '#9A7B2E' }]}>Getting Started</Text>
-          </View>
-        ) : (
-          <View style={styles.onTrackBadge}>
-            <Feather name="check-circle" size={11} color="#5A8A70" />
-            <Text style={[styles.badgeText, { color: '#5A8A70' }]}>On Track</Text>
-          </View>
-        )}
+        <StudentStatusBadge status={resolveStudentStatus(s)} testID={`teacher-students-status-${s.id}`} />
         {!promoteMode && (
           <TouchableOpacity
             testID={`teacher-students-remove-${s.id}`}
@@ -106,7 +90,7 @@ export default function StudentCard({
       <View style={styles.progressWrap}>
         <View style={styles.progressBarBg}>
           <LinearGradient
-            colors={s.needsAttention ? ['#B8797E', '#C4836A'] : ['#5F8A86', '#5A8A70']}
+            colors={resolveStudentStatus(s) === 'needs_attention' ? ['#B8797E', '#C4836A'] : ['#5F8A86', '#5A8A70']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressBarFill, { width: `${s.progressPct}%` as any }]}

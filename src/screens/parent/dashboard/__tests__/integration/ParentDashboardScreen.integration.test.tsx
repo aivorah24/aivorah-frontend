@@ -124,13 +124,13 @@ describe('ParentDashboardScreen', () => {
   });
 
   test('a real child renders their real name, grade, and status badge', async () => {
-    global.fetch = jest.fn((url: string) => jsonRes(url, [rawChild({ currentStreak: 3 })])) as any;
+    global.fetch = jest.fn((url: string) => jsonRes(url, [rawChild({ currentStreak: 3, addedAt: '2020-01-01', lastActive: new Date().toISOString(), completedTopics: ['a', 'b', 'c', 'd'] })])) as any;
 
     await render(<ParentDashboardScreen navigation={navigation} route={{ params: {} }} />);
 
     await waitFor(() => expect(screen.getByText('Anaya')).toBeTruthy());
     expect(screen.getByText('Grade 4')).toBeTruthy();
-    expect(screen.getByText('On Track')).toBeTruthy(); // real activity + real streak >= 1
+    expect(screen.getByText('On Track')).toBeTruthy(); // active, established, 20% progress
     expect(screen.getByText("Anaya's Weekly Snapshot")).toBeTruthy();
   });
 

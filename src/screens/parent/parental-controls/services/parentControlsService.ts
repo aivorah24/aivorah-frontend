@@ -17,8 +17,11 @@ export async function fetchChildren(parentEmail: string): Promise<Child[]> {
 
 export async function fetchScreenTime(parentEmail: string, childId: string): Promise<any> {
   const res = await fetch(`${PARENTAL_CONTROLS_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children/${childId}/screen-time`);
+  if (!res.ok) throw new Error(`GET screen-time -> ${res.status}`);
   return res.json();
 }
+
+const UNREACHABLE = "Couldn't reach parental controls. Please try again.";
 
 export async function saveScreenTime(
   parentEmail: string,
@@ -48,5 +51,7 @@ export async function saveScreenTime(
       }),
     },
   );
-  return res.json();
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) return { success: false, error: data?.error || UNREACHABLE };
+  return data;
 }

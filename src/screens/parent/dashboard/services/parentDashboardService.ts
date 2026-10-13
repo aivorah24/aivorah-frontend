@@ -1,6 +1,7 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import type { ChildData } from '../types';
+import { childStudentStatus } from '../../../../utils/studentStatus';
 import { fetchStudentAttendanceSummary } from '../../../../services/attendanceClient';
 
 export function mapChild(c: any): ChildData {
@@ -8,11 +9,8 @@ export function mapChild(c: any): ChildData {
     id: c.id, name: c.name, grade: c.grade,
     curriculum: c.curriculum ?? '', totalTopics: c.totalTopics ?? 0,
     school: c.school ?? '',
-    status: (() => {
-      const hasActivity = (c.xpPoints ?? 0) > 0 || (c.studyTimeMinutes ?? 0) > 0 || (c.completedTopics?.length ?? 0) > 0;
-      if (!hasActivity) return 'getting_started';
-      return (c.currentStreak ?? 0) >= 1 ? 'on_track' : 'needs_attention';
-    })(),
+    status: childStudentStatus(c),
+    lastActive: c.lastActive ?? null,
     xpPoints: c.xpPoints ?? 0,
     completedTopics: c.completedTopics ?? [],
     currentStreak: c.currentStreak ?? 0,

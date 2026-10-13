@@ -10,7 +10,7 @@ import { useStudentData, xpForNextLevel } from '../../../context/StudentDataCont
 import { useTheme } from '../../../context/ThemeContext';
 
 import { useWeeklyActivity } from './hooks/useWeeklyActivity';
-import { useSubjectPerformance } from './hooks/useSubjectPerformance';
+import { useChapterProgress } from './hooks/useChapterProgress';
 import { computeOverallPct, computeSubjectStats, computeMaxMinutes, computeAchievements } from './utils/progressCalculations';
 import { ProgressHero } from './components/ProgressHero';
 import { WeeklyActivityCard } from './components/WeeklyActivityCard';
@@ -28,17 +28,18 @@ export default function ProgressScreen({ navigation }: any) {
 
   const firstName = user?.name?.split(' ')[0] || 'there';
 
-  const { periodTab, setPeriodTab, weeklyDays, loading } = useWeeklyActivity(studentId);
-  const curriculum = useSubjectPerformance(user?.grade, user?.curriculum);
+  const { weeklyDays, loading } = useWeeklyActivity(studentId);
 
   // ── Derived real values ───────────────────────────────────
 
   const completedSet = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
-  // Use totalTopics from server stats — curriculum-aware (IB PYP Grade 4 = 54, NCERT etc.)
-  const totalTopics = stats.totalTopics ?? 0;
-  const overallPct = computeOverallPct(completedSet.size, totalTopics);
+  // B005: denominator is the Dashboard's chapter list, not stats.totalTopics (server Qdrant lookup that returns 0 when Qdrant is down).
+  const chapters = useChapterProgress(user?.grade, user?.curriculum, studentId, user?.email, completedSet);
+  const totalChapters = chapters?.length ?? 0;
+  const masteredChapters = chapters?.filter(c => c.mastered).length ?? 0;
+  const overallPct = computeOverallPct(masteredChapters, totalChapters);
 
-  const subjectStats = useMemo(() => computeSubjectStats(curriculum, completedSet), [curriculum, completedSet]);
+  const subjectStats = useMemo(() => computeSubjectStats(chapters), [chapters]);
 
   // Weekly bar chart — real study minutes per day
   const maxMinutes = useMemo(() => computeMaxMinutes(weeklyDays), [weeklyDays]);
@@ -90,7 +91,8 @@ export default function ProgressScreen({ navigation }: any) {
             styles={styles}
             overallPct={overallPct}
             completedCount={completedSet.size}
-            totalTopics={totalTopics}
+            masteredChapters={masteredChapters}
+            totalChapters={totalChapters}
             currentStreak={stats.currentStreak}
             level={stats.level}
             xpPoints={stats.xpPoints}
@@ -103,8 +105,6 @@ export default function ProgressScreen({ navigation }: any) {
           <WeeklyActivityCard
             styles={styles}
             colors={colors}
-            periodTab={periodTab}
-            setPeriodTab={setPeriodTab}
             weeklyDays={weeklyDays}
             maxMinutes={maxMinutes}
           />
@@ -171,18 +171,6 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
   cardTitle: { fontSize: 14, fontWeight: '600', color: c.textMain },
-  periodTabs: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: c.borderColor,
-  },
-  periodTab: { paddingHorizontal: spacing.md, paddingVertical: 6 },
-  periodTabActive: { backgroundColor: c.accentYellow },
-  periodTabText: { fontSize: 12, color: c.textMuted, fontWeight: '500' },
-  periodTabTextActive: { color: 'white' },
 
   emptyBar: { alignItems: 'center', paddingVertical: 24, gap: 8 },
   emptyText: { fontSize: 12, color: c.textMuted, textAlign: 'center', lineHeight: 18 },
@@ -192,7 +180,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   barMinute: { fontSize: 9, color: c.textDim, fontWeight: '600', height: 14 },
   barWrapper: { flex: 1, width: '100%', justifyContent: 'flex-end' },
   bar: { width: '100%', borderRadius: 4, minHeight: 4 },
-  barActive: { shadowColor: '#9FB2A4', shadowOffset: { width: 0, height: 0 }, shadowRadius: 8, shadowOpacity: 0.5 },
+  barActive: { shadowColor: '#C9A24E', shadowOffset: { width: 0, height: 0 }, shadowRadius: 8, shadowOpacity: 0.5 },
   barLabel: { fontSize: 10, color: c.textMuted },
 
   weekTotals: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: c.borderColor, paddingTop: spacing.lg },
@@ -227,15 +215,15 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(16,185,129,0.08)',
+    backgroundColor: 'rgba(201,162,78,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.2)',
+    borderColor: 'rgba(201,162,78,0.30)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     maxWidth: 200,
   },
-  topicChipText: { fontSize: 12, fontWeight: '600', color: '#7E9A86' },
+  topicChipText: { fontSize: 12, fontWeight: '600', color: '#A8853A' },
 
   achieveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: 20 },
   achieveCard: {
@@ -249,7 +237,9 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  achieveCardLocked: { opacity: 0.5 },
+  achieveCardLocked: { opacity: 0.6 },
+  unlockedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  unlockedBadgeText: { fontSize: 10, fontWeight: '700' },
   achieveIcon: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   achieveLabel: { fontSize: 12, fontWeight: '600', color: c.textMain, textAlign: 'center' },
   lockedText: { fontSize: 10, color: c.textDim, fontWeight: '600' },

@@ -47,6 +47,12 @@ export interface StudentStats {
   completedTopics:     string[];
   lastLesson:          string;
   totalTopics:         number;
+  // B002/B003 fix: topics a student has opened Learn/Listen for but not yet
+  // passed a quiz on — the "In Progress" signal that didn't exist before.
+  // Local-only (not yet synced server-side); a missing field on old cached or
+  // server records safely defaults to [] via `{ ...ZERO_STATS, ...data }`
+  // everywhere stats are hydrated, so existing records are unaffected.
+  startedTopics:       string[];
 }
 
 interface StudentDataContextType {
@@ -60,11 +66,20 @@ interface StudentDataContextType {
   refreshStats:      () => void;
   addXP:             (xp: number) => void;
   exploreTopic:      () => void;
+  // B001/B002/B003 fix: call when a student opens Learn/Listen for a specific
+  // topic (not just views a chapter list) — marks it In Progress and awards
+  // the existing explore-XP exactly once per topic (no double-counting on
+  // repeat opens). Does not change exploreTopic()'s own signature/behavior.
+  startTopicActivity: (topic: string) => void;
   completeLesson:    (topic: string, subject?: string, grade?: string, curriculum?: string) => void;
   completeChallenge: (xpAwarded?: number) => void;
   completeAssignment:() => void;
-  recordStudyTime:   (minutes: number, source?: 'learningPath' | 'assignment' | 'challenge' | 'other', subject?: string) => void;
+  recordStudyTime:   (minutes: number, source?: StudySource, subject?: string) => void;
+  // Carries sub-minute remainders forward so short sessions still add up.
+  recordStudySeconds: (seconds: number, source?: StudySource, subject?: string) => void;
 }
+
+export type StudySource = 'learningPath' | 'assignment' | 'challenge' | 'other';
 
 // ─────────────────────────────────────────────────────────
 // Defaults
@@ -87,6 +102,7 @@ const ZERO_STATS: StudentStats = {
   completedTopics:     [],
   lastLesson:          '',
   totalTopics:         0,
+  startedTopics:       [],
 };
 
 // ─────────────────────────────────────────────────────────
@@ -163,10 +179,12 @@ const StudentDataContext = createContext<StudentDataContextType>({
   refreshStats:      () => {},
   addXP:             () => {},
   exploreTopic:      () => {},
+  startTopicActivity: () => {},
   completeLesson:    () => {},
   completeChallenge: () => {},
   completeAssignment:() => {},
   recordStudyTime:   () => {},
+  recordStudySeconds: () => {},
 });
 
 // ─────────────────────────────────────────────────────────
@@ -186,6 +204,15 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   // out real/cached stats back to zero while it re-fetches — only an actual
   // account switch should ever do that.
   const lastResetEmailRef = useRef<string | null>(null);
+  // Synchronous mirror of stats.startedTopics, used only to guard
+  // startTopicActivity against rapid duplicate calls in the same tick (see
+  // startTopicActivity below) — kept in sync with `stats` whenever it loads
+  // or is reconciled from the server, so a fresh load/account switch doesn't
+  // leave stale entries behind.
+  const startedTopicsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    startedTopicsRef.current = new Set(stats.startedTopics);
+  }, [stats.startedTopics]);
 
   // ── Load from server — re-run whenever logged-in email changes, or when
   // refreshStats() is called after a failed load ──
@@ -275,7 +302,19 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   // (learningPath / assignment / challenge), which the teacher dashboard uses
   // to report time spent per activity stream, not just an aggregate total.
 
-  function recordStudyTime(mins: number, source: 'learningPath' | 'assignment' | 'challenge' | 'other' = 'other', subject?: string) {
+  const pendingStudySecondsRef = useRef<Record<string, number>>({});
+  useEffect(() => { pendingStudySecondsRef.current = {}; }, [studentId]);
+
+  function recordStudySeconds(seconds: number, source: StudySource = 'other', subject?: string) {
+    if (!(seconds > 0)) return;
+    const key = `${source}|${subject ?? ''}`;
+    const total = (pendingStudySecondsRef.current[key] ?? 0) + seconds;
+    const mins = Math.floor(total / 60);
+    pendingStudySecondsRef.current[key] = total - mins * 60;
+    if (mins > 0) recordStudyTime(mins, source, subject);
+  }
+
+  function recordStudyTime(mins: number, source: StudySource = 'other', subject?: string) {
     setStats(prev => ({
       ...prev,
       studyTimeMinutes:    prev.studyTimeMinutes    + mins,
@@ -305,6 +344,35 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   function exploreTopic() {
     setStats(prev => ({ ...prev, topicsExplored: prev.topicsExplored + 1, lastActiveDate: todayISO() }));
     addXP(25);
+  }
+
+  function startTopicActivity(topic: string) {
+    // Rapid/synchronous repeat calls for the same topic (e.g. two effects
+    // firing before React re-renders) must only count once. A closure check
+    // against `stats` (render-time snapshot) isn't enough — two calls in the
+    // same tick both see the same stale snapshot and both think the topic is
+    // new. startedTopicsRef is mutated synchronously as the primary guard;
+    // the check against `prev` inside the setStats updater is a second,
+    // belt-and-suspenders guard against any other source of duplicate calls
+    // (e.g. a stats reconciliation racing in between).
+    // No XP here: startedTopics isn't persisted server-side yet, so it resets on
+    // every reload and an XP award would repeat each time the topic is reopened.
+    if (startedTopicsRef.current.has(topic) || stats.completedTopics.includes(topic)) {
+      setStats(prev => ({ ...prev, lastActiveDate: todayISO() }));
+      return;
+    }
+    startedTopicsRef.current.add(topic);
+    setStats(prev => {
+      if (prev.startedTopics.includes(topic) || prev.completedTopics.includes(topic)) {
+        return { ...prev, lastActiveDate: todayISO() };
+      }
+      return {
+        ...prev,
+        startedTopics:  [...prev.startedTopics, topic],
+        topicsExplored: prev.topicsExplored + 1,
+        lastActiveDate: todayISO(),
+      };
+    });
   }
 
   function completeLesson(topic: string, subject?: string, grade?: string, curriculum?: string) {
@@ -360,7 +428,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, completeLesson, completeChallenge, completeAssignment, recordStudyTime }}>
+    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, startTopicActivity, completeLesson, completeChallenge, completeAssignment, recordStudyTime, recordStudySeconds }}>
       {children}
     </StudentDataContext.Provider>
   );

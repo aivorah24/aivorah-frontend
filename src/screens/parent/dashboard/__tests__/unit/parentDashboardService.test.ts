@@ -17,28 +17,29 @@ function rawChild(overrides: Record<string, any> = {}) {
 }
 
 describe('mapChild — real status derivation', () => {
-  test('real activity (xp/study time/completed topics) + a real streak -> on_track', () => {
-    expect(mapChild(rawChild({ currentStreak: 2 })).status).toBe('on_track');
+  const today = new Date().toISOString();
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
+
+  test('child added today who already logged in -> getting_started, not needs_attention', () => {
+    expect(mapChild(rawChild({ addedAt: today, lastActive: today, completedTopics: [] })).status).toBe('getting_started');
   });
 
-  test('real activity but zero current streak -> needs_attention (fell off track)', () => {
-    expect(mapChild(rawChild({ xpPoints: 500, studyTimeMinutes: 0, completedTopics: [], currentStreak: 0 })).status).toBe('needs_attention');
+  test('not active for 7+ days -> needs_attention', () => {
+    expect(mapChild(rawChild({ addedAt: daysAgo(60), lastActive: daysAgo(8) })).status).toBe('needs_attention');
   });
 
-  test('genuinely zero activity across every signal -> getting_started, not needs_attention', () => {
-    expect(mapChild(rawChild({ xpPoints: 0, studyTimeMinutes: 0, completedTopics: [], currentStreak: 0 })).status).toBe('getting_started');
-  });
-
-  test('zero xp/streak but real study time still counts as real activity -> on_track/needs_attention, not getting_started', () => {
-    const result = mapChild(rawChild({ xpPoints: 0, studyTimeMinutes: 15, completedTopics: [], currentStreak: 0 }));
-    expect(result.status).not.toBe('getting_started');
+  test('established and recently active -> tagged by progress', () => {
+    const base = { addedAt: daysAgo(60), lastActive: today, totalTopics: 10 };
+    expect(mapChild(rawChild({ ...base, completedTopics: ['a', 'b', 'c', 'd', 'e'] })).status).toBe('excelling');
+    expect(mapChild(rawChild({ ...base, completedTopics: ['a', 'b'] })).status).toBe('on_track');
+    expect(mapChild(rawChild({ ...base, completedTopics: ['a'] })).status).toBe('keep_going');
   });
 
   test('missing optional fields default safely, not undefined/NaN', () => {
     const result = mapChild({ id: 'c2', name: 'Rohan', grade: 'Grade 2' });
     expect(result).toEqual({
       id: 'c2', name: 'Rohan', grade: 'Grade 2', curriculum: '', totalTopics: 0, school: '',
-      status: 'getting_started', xpPoints: 0, completedTopics: [], currentStreak: 0,
+      status: 'getting_started', lastActive: null, xpPoints: 0, completedTopics: [], currentStreak: 0,
       studyTimeMinutes: 0, assignmentsDone: 0, challengesCompleted: 0, lastLesson: '',
     });
   });

@@ -34,10 +34,11 @@ function Harness() {
   return (
     <View>
       <Text testID="order">{n.notificationItems.map(i => `${i.id}${i.readAt ? '(r)' : ''}`).join(',')}</Text>
-      <Text testID="counts">{`a:${n.unreadAssignments} c:${n.unreadChallenges} m:${n.unreadCount}`}</Text>
+      <Text testID="counts">{`a:${n.unreadAssignments} c:${n.unreadChallenges} m:${n.unreadCount} e:${n.unreadEvents}`}</Text>
       <Text testID="mode">{`${n.notificationsV2Active ? 'v2' : 'legacy'}|${n.feedStatus}|more:${n.hasMore}`}</Text>
       <Text testID="toast">{n.toastVisible ? n.toastItem?.id ?? 'none' : 'hidden'}</Text>
       <Pressable testID="read-c1" onPress={() => n.markNotificationRead('c1')} />
+      <Pressable testID="read-e1" onPress={() => n.markNotificationRead('e1')} />
       <Pressable testID="more" onPress={() => n.loadMore()} />
       <Pressable testID="read-all" onPress={() => n.markAllRead()} />
     </View>
@@ -179,4 +180,76 @@ test('a notification cleared by the server (e.g. task completed) disappears on t
   await poll();
   await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('msg_m1,a1'));
   expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:0/);
+});
+
+describe('scheduled calendar events (V2 event_scheduled)', () => {
+  const E1 = v2('e1', '2026-09-25T09:45:00Z', {
+    type: 'event_scheduled', entityType: 'schedule_event', entityId: 'ev_1',
+    title: 'New event for Asha: Math class', data: { eventId: 'ev_1', eventType: 'lesson' },
+  });
+  const legacyUserEvent = { id: 'evt_ev_1', type: 'event', srcType: 'lesson', autoDue: false, title: 'Math class', subtitle: '', senderName: 'Your teacher', createdAt: '2026-09-25T09:30:00Z' };
+  const legacyDueEvent = { id: 'evt_due', type: 'event', srcType: 'deadline', autoDue: true, title: 'HW — Assignment due', subtitle: '', senderName: 'Your teacher', createdAt: '2026-09-25T08:00:00Z' };
+
+  beforeEach(() => {
+    page = [C1, E1, A1];
+    unread = [C1, E1, A1];
+    legacySummary.events = 2;
+    legacySummary.notificationItems = [...legacySummary.notificationItems, legacyUserEvent, legacyDueEvent];
+  });
+
+  test('V2 event row replaces the legacy copy of the same event; auto due reminders stay', async () => {
+    await mount();
+    expect(screen.getByTestId('order')).toHaveTextContent('c1,e1,msg_m1,a1,evt_due');
+    expect(screen.getByTestId('order')).not.toHaveTextContent('evt_ev_1');
+  });
+
+  test('V2 event rows count as events, not challenges', async () => {
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1 e:2/);
+  });
+
+  test('opening an event notification lowers the event count only', async () => {
+    await mount();
+    await fireEvent.press(screen.getByTestId('read-e1'));
+    await waitFor(() => expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1 e:1/));
+    expect(mockApi.markNotificationRead).toHaveBeenCalledWith('e1');
+  });
+
+  test('a newly arrived event notification toasts', async () => {
+    await mount();
+    const E2 = v2('e2', '2026-09-25T11:00:00Z', { type: 'event_scheduled', entityType: 'schedule_event', data: { eventId: 'ev_2' } });
+    page = [E2, C1, E1, A1];
+    unread = [E2, C1, E1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('e2'));
+  });
+
+  test('an older server without autoDue: legacy events stay visible and counted (nothing lost)', async () => {
+    legacySummary.notificationItems = legacySummary.notificationItems.map((i: any) => { const { autoDue, ...rest } = i; return rest; });
+    await mount();
+    expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
+    expect(screen.getByTestId('counts')).toHaveTextContent(/e:3/);
+  });
+
+  test('with V2 on, a newly arrived legacy due reminder still toasts', async () => {
+    await mount();
+    legacySummary.notificationItems = [...legacySummary.notificationItems,
+      { ...legacyDueEvent, id: 'evt_due2', createdAt: '2026-09-25T12:00:00Z' }];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('evt_due2'));
+  });
+
+  test('mark all read clears the event count', async () => {
+    await mount();
+    await fireEvent.press(screen.getByTestId('read-all'));
+    await waitFor(() => expect(screen.getByTestId('counts')).toHaveTextContent(/e:0/));
+  });
+
+  test('V2 unavailable → legacy event items are shown as before', async () => {
+    mockApi.fetchNotifications.mockRejectedValue(new NotificationsUnavailableError('401'));
+    mockApi.fetchUnreadCount.mockRejectedValue(new NotificationsUnavailableError('401'));
+    await render(<NotificationProvider><Harness /></NotificationProvider>);
+    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent(/legacy\|ready/));
+    expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
+  });
 });

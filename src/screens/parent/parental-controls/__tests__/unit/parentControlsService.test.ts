@@ -40,7 +40,7 @@ describe('parentControlsService', () => {
   describe('fetchScreenTime', () => {
     it('calls the parental-controls service GET endpoint', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
-        json: jest.fn().mockResolvedValueOnce({ isEnabled: true }),
+        ok: true, json: jest.fn().mockResolvedValueOnce({ isEnabled: true }),
       });
 
       const res = await parentControlsService.fetchScreenTime('parent@test.com', 'c1');
@@ -54,7 +54,7 @@ describe('parentControlsService', () => {
   describe('saveScreenTime', () => {
     it('POSTs the full control payload to the parental-controls service', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
-        json: jest.fn().mockResolvedValueOnce({ success: true }),
+        ok: true, json: jest.fn().mockResolvedValueOnce({ success: true }),
       });
 
       const res = await parentControlsService.saveScreenTime('parent@test.com', 'c1', CTRL);
@@ -93,5 +93,21 @@ describe('parentControlsService', () => {
       const res = await parentControlsService.saveScreenTime('parent@test.com', 'c1', CTRL);
       expect(res).toEqual({ success: false, error: 'boom' });
     });
+  });
+});
+
+describe('parentControlsService — server unreachable (parental controls RCA)', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('fetchScreenTime throws on a non-OK response instead of handing back an error body as settings', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 404, json: jest.fn().mockResolvedValue({ error: 'not found' }) });
+    await expect(parentControlsService.fetchScreenTime('p@test.com', 'c1')).rejects.toThrow('404');
+  });
+
+  it('saveScreenTime returns a readable failure for a non-JSON 404 (no server behind the URL)', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 404, json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token N')) });
+    const res = await parentControlsService.saveScreenTime('p@test.com', 'c1', CTRL);
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/couldn't reach|could not reach/i);
   });
 });

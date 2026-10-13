@@ -24,11 +24,11 @@ jest.mock('../../../../context/ThemeContext', () => ({
 }));
 
 const mockAddXP = jest.fn();
-const mockRecordStudyTime = jest.fn();
+const mockRecordStudySeconds = jest.fn();
 jest.mock('../../../../context/StudentDataContext', () => ({
   useStudentData: () => ({
     stats: { xpPoints: 500, challengesCompleted: 3, completedTopics: ['a', 'b'], currentStreak: 4 },
-    studentId: 's1', addXP: mockAddXP, recordStudyTime: mockRecordStudyTime,
+    studentId: 's1', addXP: mockAddXP, recordStudySeconds: mockRecordStudySeconds,
   }),
 }));
 

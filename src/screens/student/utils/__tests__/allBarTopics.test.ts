@@ -18,8 +18,57 @@ describe('computeAllBarTopics', () => {
     const result = computeAllBarTopics(subjectChapters, false, 'Grade 6', { topics: {}, avgScore: null }, new Set());
 
     expect(result).toEqual([
-      { label: 'Fractions', fullLabel: 'Fractions', subject: 'Mathematics', pct: 0, hasData: false, mastered: false },
+      { label: 'Fractions', fullLabel: 'Fractions', subject: 'Mathematics', pct: 0, hasData: false, mastered: false, inProgress: false },
     ]);
+  });
+
+  // B002 fix: a chapter with no score/session data yet, but a topic the
+  // student has opened via Learn/Listen (startedTopics), must show as
+  // "in progress" rather than indistinguishable from never-touched.
+  test('a chapter with a started topic (no score yet) -> inProgress true', () => {
+    mockGetSubjectSyllabus.mockReturnValue([
+      { title: 'Fables and Folk Tales', topics: [{ name: 'A Bottle of Dew' }, { name: 'The Lion and the Mouse' }] },
+    ]);
+    const perfData = { topics: {}, avgScore: null };
+    const subjectChapters = [{ subject: 'English', chapters: ['Fables and Folk Tales'] }];
+    const startedTopics = new Set(['A Bottle of Dew']);
+    const result = computeAllBarTopics(subjectChapters, false, 'Grade 6', perfData, new Set(), startedTopics);
+
+    expect(result[0].inProgress).toBe(true);
+    expect(result[0].mastered).toBe(false);
+  });
+
+  test('a chapter with no started topics and no data -> inProgress false', () => {
+    mockGetSubjectSyllabus.mockReturnValue([
+      { title: 'Fables and Folk Tales', topics: [{ name: 'A Bottle of Dew' }] },
+    ]);
+    const subjectChapters = [{ subject: 'English', chapters: ['Fables and Folk Tales'] }];
+    const result = computeAllBarTopics(subjectChapters, false, 'Grade 6', { topics: {}, avgScore: null }, new Set(), new Set());
+
+    expect(result[0].inProgress).toBe(false);
+  });
+
+  test('a mastered chapter is never also flagged inProgress', () => {
+    mockGetSubjectSyllabus.mockReturnValue([
+      { title: 'Fables and Folk Tales', topics: [{ name: 'A Bottle of Dew' }] },
+    ]);
+    const perfData = { topics: { 'A Bottle of Dew': { avgScore: 90 } }, avgScore: null };
+    const subjectChapters = [{ subject: 'English', chapters: ['Fables and Folk Tales'] }];
+    const startedTopics = new Set(['A Bottle of Dew']);
+    const result = computeAllBarTopics(subjectChapters, false, 'Grade 6', perfData, new Set(), startedTopics);
+
+    expect(result[0].mastered).toBe(true);
+    expect(result[0].inProgress).toBe(false);
+  });
+
+  test('backward compatibility: omitting startedTopics entirely defaults to not-in-progress, no crash', () => {
+    mockGetSubjectSyllabus.mockReturnValue([
+      { title: 'Fables and Folk Tales', topics: [{ name: 'A Bottle of Dew' }] },
+    ]);
+    const subjectChapters = [{ subject: 'English', chapters: ['Fables and Folk Tales'] }];
+    expect(() => computeAllBarTopics(subjectChapters, false, 'Grade 6', { topics: {}, avgScore: null }, new Set())).not.toThrow();
+    const result = computeAllBarTopics(subjectChapters, false, 'Grade 6', { topics: {}, avgScore: null }, new Set());
+    expect(result[0].inProgress).toBe(false);
   });
 
   test('a curated chapter with real quiz scores -> attributed pct and hasData true', () => {
@@ -72,37 +121,42 @@ describe('computeAllBarTopics', () => {
 });
 
 describe('computeMasteredTopics', () => {
-  test('no curriculum -> 0', () => {
-    expect(computeMasteredTopics([{ subject: 'Math', chapters: ['Unit 1'] }], null, new Set())).toBe(0);
-  });
-
-  test('estimates mastered chapters as (completed/total topics) x chapter count, per subject', () => {
-    const curriculum = {
-      topics: [
-        { topic: 'Fractions', subject: 'Math' },
-        { topic: 'Decimals', subject: 'Math' },
-        { topic: 'Algebra', subject: 'Math' },
-        { topic: 'Grammar', subject: 'English' },
-      ],
-    };
-    const subjectChapters = [
-      { subject: 'Math', chapters: ['U1', 'U2', 'U3'] }, // 3 chapters
-      { subject: 'English', chapters: ['U1'] },
-    ];
-    // 2 of 3 Math topics completed -> floor(2/3 * 3) = 2. English: 0 of 1 completed -> 0.
-    const completedSet = new Set(['Fractions', 'Decimals']);
-    expect(computeMasteredTopics(subjectChapters, curriculum, completedSet)).toBe(2);
-  });
-
   test('a subject with no chapters yet is skipped entirely', () => {
-    const curriculum = { topics: [{ topic: 'Fractions', subject: 'Math' }] };
+    mockGetSubjectSyllabus.mockReturnValue([]);
     const subjectChapters = [{ subject: 'Math', chapters: [] }];
-    expect(computeMasteredTopics(subjectChapters, curriculum, new Set(['Fractions']))).toBe(0);
+    expect(computeMasteredTopics(subjectChapters, false, 'Grade 6', { topics: {}, avgScore: null }, new Set(['Fractions']))).toBe(0);
   });
 
-  test('a subject with no matching curriculum topics is skipped', () => {
-    const curriculum = { topics: [{ topic: 'Fractions', subject: 'Math' }] };
-    const subjectChapters = [{ subject: 'Science', chapters: ['U1'] }];
-    expect(computeMasteredTopics(subjectChapters, curriculum, new Set())).toBe(0);
+  // B004 FIX: the dashboard's headline "Mastered X/Y" count and the
+  // per-chapter `mastered` flag (computeAllBarTopics) must agree, since both
+  // claim to answer the same question for the same data. computeMasteredTopics
+  // now derives from computeAllBarTopics itself (the single authoritative
+  // per-chapter rule: every topic completed or avgScore>=80) instead of a
+  // separate proportional estimate, so they can no longer diverge. Here
+  // exactly one of two chapters is genuinely mastered by the authoritative
+  // rule, and the aggregate count must match it exactly.
+  test('aggregate mastered count must match the number of chapters computeAllBarTopics marks mastered', () => {
+    mockGetSubjectSyllabus.mockReturnValue([
+      { title: 'Unit 1', topics: [{ name: 'Fractions' }, { name: 'Decimals' }] },
+      { title: 'Unit 2', topics: [{ name: 'Algebra' }] },
+    ]);
+    const perfData = {
+      topics: {
+        Fractions: { avgScore: 90 },
+        Decimals: { avgScore: 85 },
+        // Algebra: not attempted -> avgScore 0, not mastered.
+      },
+      avgScore: null,
+    };
+    const completedSet = new Set<string>(); // nothing in completedSet; mastery via avgScore only
+    const subjectChapters = [{ subject: 'Math', chapters: ['Unit 1', 'Unit 2'] }];
+
+    const barTopics = computeAllBarTopics(subjectChapters, false, 'Grade 6', perfData, completedSet);
+    const authoritativeMasteredCount = barTopics.filter(b => b.mastered).length; // Unit 1 only -> 1
+
+    const aggregateMasteredCount = computeMasteredTopics(subjectChapters, false, 'Grade 6', perfData, completedSet);
+
+    expect(aggregateMasteredCount).toBe(authoritativeMasteredCount);
+    expect(aggregateMasteredCount).toBe(1);
   });
 });
