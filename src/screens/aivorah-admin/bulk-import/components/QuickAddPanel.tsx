@@ -8,6 +8,7 @@ import { getGradesForCurriculum } from '../../../school-admin/teachers/utils/tea
 import { curriculaForBoard, compareGrades, describeBoard } from '../../shared/academicLabels';
 import { SelectField } from '../../shared/SelectField';
 import { useBulkImport } from '../hooks/useBulkImport';
+import { SchoolCurriculumPicker } from './SchoolCurriculumPicker';
 
 const ALL_CURRICULA = ['IB PYP', 'IB MYP', 'IB DP', 'CBSE', 'ICSE', 'Cambridge'];
 const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -23,16 +24,21 @@ export function QuickAddPanel() {
   const s = useMemo(() => makeStyles(colors), [colors]);
   const {
     namesText, setNamesText, names, grade, setGrade, section, setSection,
-    schoolsState, schoolId, setSchoolId, school, submitting, error, result, submit, reset,
+    schoolsState, schoolId, setSchoolId, school, needsBoard, chosenBoard, setChosenBoard, board, submitting, error, result, submit, reset,
   } = useBulkImport();
 
-  const gradeOptions = school ? gradesForBoard(school.curriculum) : [];
-  const boardLabel = describeBoard(school?.curriculum);
+  const gradeOptions = school ? gradesForBoard(board) : [];
+  const boardLabel = describeBoard(board);
+  const boardMissing = needsBoard && !chosenBoard;
 
   function pickSchool(id: string) {
     setSchoolId(id);
     const next = schoolsState.schools.find((sc) => sc.id === id);
     if (grade && !gradesForBoard(next?.curriculum).includes(grade)) setGrade('');
+  }
+  function pickBoard(b: string) {
+    setChosenBoard(b);
+    if (grade && !gradesForBoard(b).includes(grade)) setGrade('');
   }
 
   if (result) {
@@ -81,12 +87,11 @@ export function QuickAddPanel() {
           <View style={s.fields}>
             <SelectField testID="bulk-school" label="School" placeholder={schoolsState.placeholder} value={schoolId}
               options={schoolsState.schools.map((sc) => ({ value: sc.id, label: sc.name }))} onChange={pickSchool} minWidth={0} />
-            {!!school && (
-              <Text style={s.curriculumNote} testID="bulk-curriculum-note">
-                {boardLabel
-                  ? `Curriculum: ${boardLabel} (from ${school.name})`
-                  : `${school.name} has no curriculum set — students will be enrolled without one`}
-              </Text>
+            {needsBoard && !!school && (
+              <SchoolCurriculumPicker testID="bulk-curriculum" schoolName={school.name} value={chosenBoard} onChange={pickBoard} minWidth={0} />
+            )}
+            {!needsBoard && !!school && !!boardLabel && (
+              <Text style={s.curriculumNote} testID="bulk-curriculum-note">{`Curriculum: ${boardLabel} (from ${school.name})`}</Text>
             )}
             <SelectField testID="bulk-grade" label="Grade" placeholder={school ? 'Select' : 'Pick school'} value={grade}
               options={gradeOptions} onChange={setGrade} minWidth={0} />
@@ -123,7 +128,7 @@ export function QuickAddPanel() {
             <Text style={s.errorBannerText}>{error}</Text>
           </View>
         )}
-        <TouchableOpacity testID="bulk-import-submit" style={[s.submitBtn, submitting && { opacity: 0.6 }]} onPress={submit} disabled={submitting} activeOpacity={0.85}>
+        <TouchableOpacity testID="bulk-import-submit" style={[s.submitBtn, (submitting || boardMissing) && { opacity: 0.6 }]} onPress={submit} disabled={submitting || boardMissing} activeOpacity={0.85}>
           {submitting ? <ActivityIndicator color="#0B0B0B" size="small" /> : (
             <>
               <Feather name="user-plus" size={14} color="#0B0B0B" />

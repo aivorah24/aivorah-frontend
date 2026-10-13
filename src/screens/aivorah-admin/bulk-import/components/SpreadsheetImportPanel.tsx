@@ -9,6 +9,7 @@ import { describeBoard } from '../../shared/academicLabels';
 import { SelectField } from '../../shared/SelectField';
 import { TablePager, usePaged } from '../../shared/TablePager';
 import { useSpreadsheetImport } from '../hooks/useSpreadsheetImport';
+import { SchoolCurriculumPicker } from './SchoolCurriculumPicker';
 
 // Curriculum comes from the school, so it's never a column.
 const IMPORT_FIELDS = STUDENT_IMPORT_FIELDS.filter((f) => f.value !== 'curriculum');
@@ -56,7 +57,8 @@ export function SpreadsheetImportPanel() {
   const s = useMemo(() => makeStyles(colors), [colors]);
   const imp = useSpreadsheetImport();
   const page = usePaged(imp.reviewed, 10);
-  const boardLabel = describeBoard(imp.school?.curriculum);
+  const boardLabel = describeBoard(imp.board);
+  const boardMissing = imp.needsBoard && !imp.chosenBoard;
 
   if (imp.result) {
     const r = imp.result;
@@ -143,10 +145,11 @@ export function SpreadsheetImportPanel() {
           {!!imp.school && (
             <View style={s.boardBox}>
               <Text style={s.boardLabel}>BOARD</Text>
-              <Text style={s.boardValue}>
-                {boardLabel || 'Not set — students will be enrolled without a curriculum'}
-              </Text>
+              <Text style={s.boardValue}>{describeBoard(imp.school.curriculum) || 'Not set'}</Text>
             </View>
+          )}
+          {imp.needsBoard && !!imp.school && (
+            <SchoolCurriculumPicker testID="bulk-sheet-curriculum" schoolName={imp.school.name} value={imp.chosenBoard} onChange={imp.setChosenBoard} />
           )}
         </View>
         {!!imp.schoolsError && (
@@ -212,11 +215,9 @@ export function SpreadsheetImportPanel() {
             {imp.reviewed.some((r) => r.warnings.length) && <Text style={[s.pill, s.pillWarn]}>{imp.reviewed.filter((r) => r.warnings.length).length} with notes</Text>}
           </View>
 
-          {!!imp.school && (
+          {!!imp.school && !!boardLabel && (
             <Text style={s.curriculumNote} testID="bulk-sheet-curriculum-note">
-              {boardLabel
-                ? `All students will be enrolled in ${boardLabel} (from ${imp.school.name})`
-                : `${imp.school.name} has no curriculum set — students will be enrolled without one`}
+              {`All students will be enrolled in ${boardLabel} (from ${imp.school.name})`}
             </Text>
           )}
 
@@ -258,16 +259,16 @@ export function SpreadsheetImportPanel() {
           {!!imp.submitError && <Text style={s.errorText} testID="bulk-sheet-submit-error">{imp.submitError}</Text>}
           <TouchableOpacity
             testID="bulk-sheet-import"
-            style={[s.submitBtn, (!imp.schoolId || !imp.readyRows.length) && { opacity: 0.55 }]}
+            style={[s.submitBtn, (!imp.schoolId || !imp.readyRows.length || boardMissing) && { opacity: 0.55 }]}
             onPress={imp.submit}
-            disabled={imp.submitting}
+            disabled={imp.submitting || boardMissing}
             activeOpacity={0.85}
           >
             {imp.submitting ? <ActivityIndicator color="#0B0B0B" size="small" /> : (
               <>
                 <Feather name="upload" size={15} color="#0B0B0B" />
                 <Text style={s.btnPrimaryText}>
-                  {imp.school
+                  {boardMissing ? 'Choose a curriculum to import' : imp.school
                     ? `Import ${imp.readyRows.length} student${imp.readyRows.length !== 1 ? 's' : ''} to ${imp.school.name}`
                     : 'Choose a school to import'}
                 </Text>

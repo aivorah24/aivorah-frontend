@@ -24,6 +24,8 @@ export function isUnknownLabel(s: string | undefined | null): boolean {
 }
 
 const IB_FAMILY = ['IB PYP', 'IB MYP', 'IB DP'];
+// Values schools.curriculum may hold (the backend accepts exactly these).
+export const SCHOOL_BOARDS = ['IB', 'CBSE', 'ICSE', 'Cambridge'];
 const BOARDS = [...IB_FAMILY, 'CBSE', 'ICSE', 'Cambridge'];
 
 // Curricula a school's board allows: "IB" → the three IB programmes; a specific

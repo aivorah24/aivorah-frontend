@@ -4,6 +4,7 @@ export interface BulkCreatePayload {
   section?: string;
   schoolId: string;
   school: string;
+  curriculum?: string; // only when the school has none — saved to it
 }
 
 export interface CreatedStudent {
@@ -31,6 +32,7 @@ export interface BulkCreateResult {
 export interface SpreadsheetImportPayload {
   schoolId: string;
   fileName: string;
+  curriculum?: string; // only when the school has none — saved to it
   rows: Record<string, string>[];
 }
 

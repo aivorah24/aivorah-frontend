@@ -45,5 +45,5 @@ test('warns (without blocking) when the spreadsheet curriculum differs from the 
   const [n] = reviewRows([['Dev', 'dev@s.test', '5', 'NCERT', '', '', '']], MAP, 'CBSE', CURR_COL);
   expect(n.warnings).toEqual([]); // NCERT is CBSE
   const [x] = reviewRows([['Dev', 'dev@s.test', '5', 'ICSE', '', '', '']], MAP, null, CURR_COL);
-  expect(x.warnings).toEqual(['Spreadsheet says ICSE — ignored, this school has no curriculum set']);
+  expect(x.warnings).toEqual(["Spreadsheet says ICSE — choose the school's curriculum above"]);
 });

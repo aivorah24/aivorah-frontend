@@ -9,7 +9,8 @@ const MAX_ROWS = 500;
 
 export function useSpreadsheetImport() {
   const { schools, error: schoolsError, reload: loadSchools, placeholder: schoolPlaceholder } = useAdminSchools();
-  const [schoolId, setSchoolId] = useState('');
+  const [schoolId, setSchoolIdState] = useState('');
+  const [chosenBoard, setChosenBoard] = useState('');
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [dataRows, setDataRows] = useState<string[][]>([]);
@@ -22,6 +23,10 @@ export function useSpreadsheetImport() {
   const [result, setResult] = useState<SpreadsheetImportResult | null>(null);
 
   const school = useMemo(() => schools.find((s) => s.id === schoolId) || null, [schools, schoolId]);
+  // A school with no curriculum needs one picked here; the import saves it to the school.
+  const needsBoard = !!school && !school.curriculum;
+  const board = school?.curriculum || (needsBoard && chosenBoard) || null;
+  const setSchoolId = useCallback((id: string) => { setSchoolIdState(id); setChosenBoard(''); }, []);
 
   // Grid = header row + data rows, from either an .xlsx/.xls or a .csv file.
   const loadGrid = useCallback((grid: string[][], name: string) => {
@@ -63,8 +68,8 @@ export function useSpreadsheetImport() {
   }
 
   const reviewed = useMemo(
-    () => reviewRows(dataRows, columnMap, school?.curriculum ?? null, sheetCurriculumCol),
-    [dataRows, columnMap, school, sheetCurriculumCol],
+    () => reviewRows(dataRows, columnMap, board, sheetCurriculumCol),
+    [dataRows, columnMap, board, sheetCurriculumCol],
   );
   const readyRows = reviewed.filter((r) => r.issues.length === 0);
   const blockedRows = reviewed.filter((r) => r.issues.length > 0);
@@ -74,12 +79,16 @@ export function useSpreadsheetImport() {
 
   async function submit() {
     if (!schoolId) { setSubmitError('Choose a school first.'); return; }
+    if (needsBoard && !chosenBoard) { setSubmitError('Choose a curriculum for this school.'); return; }
     if (!nameMapped) { setSubmitError('Map a column to Student Name.'); return; }
     if (!readyRows.length) { setSubmitError('No rows are ready to import.'); return; }
     setSubmitting(true);
     setSubmitError('');
     try {
-      setResult(await importSpreadsheet({ schoolId, fileName, rows: readyRows.map((r) => r.values) }));
+      setResult(await importSpreadsheet({
+        schoolId, fileName, rows: readyRows.map((r) => r.values), ...(needsBoard && { curriculum: chosenBoard }),
+      }));
+      if (needsBoard) loadSchools(); // school now has a curriculum
     } catch (e: any) {
       setSubmitError(e?.message || 'Import failed.');
     } finally {
@@ -94,6 +103,7 @@ export function useSpreadsheetImport() {
 
   return {
     schools, schoolsError, loadSchools, schoolPlaceholder, schoolId, setSchoolId, school,
+    needsBoard, chosenBoard, setChosenBoard, board,
     fileName, headers, columnMap, setColumnField, columnsOpen, setEditingColumns, fileError, loadGrid, loadFile,
     reviewed, readyRows, blockedRows, nameMapped,
     submitting, submitError, result, submit, reset,

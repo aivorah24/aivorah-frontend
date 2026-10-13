@@ -35,7 +35,7 @@ export function reviewRows(
     else if (v.studentEmail) seenEmails.set(v.studentEmail, rowNum);
 
     if (sheetCurriculum && !curriculum) {
-      warnings.push(`Spreadsheet says ${sheetCurriculum} — ignored, this school has no curriculum set`);
+      warnings.push(`Spreadsheet says ${sheetCurriculum} — choose the school's curriculum above`);
     } else if (sheetCurriculum && curriculum && !curriculaForBoard(sheetCurriculum)?.includes(curriculum)) {
       warnings.push(`Spreadsheet says ${sheetCurriculum} — will use ${curriculum}`);
     }

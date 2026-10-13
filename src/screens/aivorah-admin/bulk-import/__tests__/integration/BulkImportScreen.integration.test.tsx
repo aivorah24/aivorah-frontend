@@ -15,9 +15,11 @@ jest.mock('../../../map-to-teacher/services/mapToTeacherService', () => ({
   fetchAdminSchools: jest.fn(async () => [
     { id: 'sch1', name: 'TSRA', curriculum: 'IB' },
     { id: 'sch2', name: 'Seed Test School (CBSE)', curriculum: 'CBSE' },
+    { id: 'sch3', name: 'Blank School', curriculum: null },
   ]),
 }));
-import { bulkCreateStudents } from '../../services/bulkImportService';
+import { Platform } from 'react-native';
+import { bulkCreateStudents, importSpreadsheet } from '../../services/bulkImportService';
 import { fetchAdminSchools } from '../../../map-to-teacher/services/mapToTeacherService';
 
 const nav = { openDrawer: jest.fn() };
@@ -86,6 +88,74 @@ describe('BulkImportScreen — Quick add', () => {
     await user.press(screen.getByTestId('bulk-import-submit'));
     expect(await screen.findByTestId('bulk-error-row-0')).toBeTruthy();
     expect(screen.getByText('Email already exists')).toBeTruthy();
+  });
+});
+
+describe('BulkImportScreen — Quick add, school with no curriculum', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('requires a curriculum pick (button disabled), shows the hint, and sends it', async () => {
+    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [], total: 0 });
+    const user = await openQuickAdd();
+    await choose(user, 'bulk-school', 'sch3');
+    expect(screen.queryByTestId('bulk-curriculum-note')).toBeNull();
+    expect(screen.getByTestId('bulk-curriculum-hint').props.children).toBe('Blank School has no curriculum yet — choose one');
+    await user.type(screen.getByTestId('bulk-names'), 'Asha');
+    await user.press(screen.getByTestId('bulk-import-submit'));
+    expect(bulkCreateStudents).not.toHaveBeenCalled();
+
+    await choose(user, 'bulk-curriculum', 'IB');
+    expect(screen.getByTestId('bulk-curriculum-hint').props.children).toBe("This will set Blank School's curriculum to IB");
+    await choose(user, 'bulk-grade', 'Grade 7');
+    await user.press(screen.getByTestId('bulk-import-submit'));
+    expect(bulkCreateStudents).toHaveBeenCalledWith({ schoolId: 'sch3', school: 'Blank School', curriculum: 'IB', grade: 'Grade 7', section: '', students: ['Asha'] });
+  });
+
+  test('a school that already has a curriculum shows no picker and sends none', async () => {
+    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [], total: 0 });
+    const user = await openQuickAdd();
+    await choose(user, 'bulk-school', 'sch2');
+    expect(screen.queryByTestId('bulk-curriculum')).toBeNull();
+    await choose(user, 'bulk-grade', 'Grade 5');
+    await user.type(screen.getByTestId('bulk-names'), 'Bo');
+    await user.press(screen.getByTestId('bulk-import-submit'));
+    expect((bulkCreateStudents as jest.Mock).mock.calls[0][0]).not.toHaveProperty('curriculum');
+  });
+});
+
+// Stubs the web file input + FileReader so "Choose file" loads `csv`.
+function stubFilePicker(csv: string) {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  const input: any = { click: () => { input.files = [{ name: 'class.csv' }]; input.onchange(); } };
+  (global as any).document = { createElement: () => input };
+  (global as any).FileReader = class { result = ''; onload: any; readAsText() { this.result = csv; this.onload(); } };
+}
+
+describe('BulkImportScreen — spreadsheet tab, school with no curriculum', () => {
+  afterEach(() => { delete (global as any).document; delete (global as any).FileReader; jest.restoreAllMocks(); });
+
+  test('curriculum picker gates the import; review line and row warnings use the chosen curriculum', async () => {
+    (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'Blank School', created: 1, skipped: [], errors: [], credentials: [] });
+    stubFilePicker('Student Name,Grade,Curriculum\nAsha,7,CBSE');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', 'sch3');
+    expect(screen.getByTestId('bulk-sheet-curriculum-hint').props.children).toBe('Blank School has no curriculum yet — choose one');
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+
+    expect(await screen.findByTestId('bulk-sheet-columns-edit')).toBeTruthy();
+    expect(screen.getByTestId('bulk-sheet-import').props.accessibilityState?.disabled).toBe(true);
+    expect(screen.getByText('Choose a curriculum to import')).toBeTruthy();
+    expect(screen.queryByTestId('bulk-sheet-curriculum-note')).toBeNull();
+
+    await choose(user, 'bulk-sheet-curriculum', 'IB');
+    expect(screen.getByTestId('bulk-sheet-curriculum-hint').props.children).toBe("This will set Blank School's curriculum to IB");
+    expect(screen.getByTestId('bulk-sheet-curriculum-note').props.children).toBe('All students will be enrolled in IB PYP / MYP / DP (by grade) (from Blank School)');
+    expect(screen.getByText('! Spreadsheet says CBSE — will use IB MYP')).toBeTruthy();
+    expect(screen.getByTestId('bulk-sheet-import').props.accessibilityState?.disabled).toBe(false);
+
+    await user.press(screen.getByTestId('bulk-sheet-import'));
+    expect(importSpreadsheet).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'sch3', curriculum: 'IB', fileName: 'class.csv' }));
   });
 });
 

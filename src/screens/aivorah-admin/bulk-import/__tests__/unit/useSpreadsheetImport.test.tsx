@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useSpreadsheetImport } from '../../hooks/useSpreadsheetImport';
 
 jest.mock('../../../map-to-teacher/services/mapToTeacherService', () => ({
-  fetchAdminSchools: jest.fn(async () => [{ id: 'sch1', name: 'TSRA', curriculum: 'IB' }]),
+  fetchAdminSchools: jest.fn(async () => [{ id: 'sch1', name: 'TSRA', curriculum: 'IB' }, { id: 'sch3', name: 'Blank', curriculum: null }]),
 }));
 jest.mock('../../services/bulkImportService', () => ({ importSpreadsheet: jest.fn() }));
 import { importSpreadsheet } from '../../services/bulkImportService';
@@ -19,7 +19,7 @@ beforeEach(() => jest.clearAllMocks());
 test('loads schools, auto-maps headers, and sends only the rows that passed review', async () => {
   (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'TSRA', created: 1, skipped: [], errors: [], credentials: [] });
   const { result } = await renderHook(() => useSpreadsheetImport());
-  await waitFor(() => expect(result.current.schools).toHaveLength(1));
+  await waitFor(() => expect(result.current.schools).toHaveLength(2));
 
   await act(async () => { result.current.setSchoolId('sch1'); });
   await act(async () => { result.current.loadGrid(GRID, 'g4.xlsx'); });
@@ -55,7 +55,7 @@ test('remapping a column moves the field off its old column, and import needs a 
 test('a Curriculum column is never mapped, only checked against the school, and the mapping card collapses once matched', async () => {
   (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'TSRA', created: 1, skipped: [], errors: [], credentials: [] });
   const { result } = await renderHook(() => useSpreadsheetImport());
-  await waitFor(() => expect(result.current.schools).toHaveLength(1));
+  await waitFor(() => expect(result.current.schools).toHaveLength(2));
   await act(async () => { result.current.setSchoolId('sch1'); });
   await act(async () => { result.current.loadGrid([['Student Name', 'Grade', 'Curriculum'], ['Asha', '4', 'CBSE']], 'c.csv'); });
 
@@ -77,6 +77,29 @@ test('the mapping card is open when Student Name could not be matched', async ()
   await act(async () => { result.current.loadGrid([['Who', 'Grade'], ['Asha', '4']], 'x.csv'); });
   expect(result.current.nameMapped).toBe(false);
   expect(result.current.columnsOpen).toBe(true);
+});
+
+test('a school with no curriculum needs one chosen; it drives review and is sent once (only then)', async () => {
+  (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'Blank', created: 1, skipped: [], errors: [], credentials: [] });
+  const { result } = await renderHook(() => useSpreadsheetImport());
+  await waitFor(() => expect(result.current.schools).toHaveLength(2));
+  await act(async () => { result.current.setSchoolId('sch3'); result.current.loadGrid([['Student Name', 'Grade'], ['Asha', '12']], 'b.csv'); });
+  expect(result.current.needsBoard).toBe(true);
+  expect(result.current.reviewed[0].curriculum).toBeNull();
+
+  await act(async () => { await result.current.submit(); });
+  expect(result.current.submitError).toBe('Choose a curriculum for this school.');
+  expect(importSpreadsheet).not.toHaveBeenCalled();
+
+  await act(async () => { result.current.setChosenBoard('IB'); });
+  expect(result.current.reviewed[0].curriculum).toBe('IB DP');
+  await act(async () => { await result.current.submit(); });
+  expect(importSpreadsheet).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'sch3', curriculum: 'IB' }));
+
+  // switching school clears the pick; a school with a curriculum never sends one
+  await act(async () => { result.current.reset(); result.current.setSchoolId('sch1'); });
+  expect(result.current.chosenBoard).toBe('');
+  expect(result.current.needsBoard).toBe(false);
 });
 
 test('a file with only a header row, or over 500 rows, is rejected with a clear message', async () => {
