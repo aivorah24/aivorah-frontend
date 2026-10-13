@@ -3,6 +3,8 @@ import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
 import { isCbseCurriculum } from '../../../../utils/curriculum';
+import { fetchPublishedSyllabus, getCuratedSyllabus } from '../../learning-paths/subject-syllabus/api';
+import type { SubjectSyllabusData } from '../../utils/learningPathProgress';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
 // Each function throws/rejects on failure; callers (useDashboardData) decide
@@ -50,5 +52,36 @@ export async function fetchUpcomingDeadlines(studentId: string) {
 
 export async function fetchPerformance(studentId: string, email: string) {
   const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/performance?email=${encodeURIComponent(email)}`);
+  return res.json();
+}
+
+// Subject + chapter list from the SAME call the Learning Paths screen makes
+// (learning-paths/hooks/useSubjects.ts) — so the dashboard's chapter total
+// and subject chips always match what the student sees there.
+export async function fetchLearningPathSubjects(curriculum: string, grade: string) {
+  const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`);
+  if (!res.ok) throw new Error('fetchLearningPathSubjects failed');
+  return res.json();
+}
+
+// One subject's chapters WITH their topics — the same source and fallback
+// the Learning Paths syllabus screen uses (subject-syllabus/hooks/
+// useSyllabusChapters.ts): published/Qdrant syllabus first, the curated
+// static syllabus only when the server has none. Topic names here are the
+// exact names quizzes, completeLesson and startTopicActivity record progress
+// under, which is what lets the dashboard attribute progress to chapters.
+export async function fetchSubjectSyllabus(curriculum: string, grade: string, subject: string): Promise<SubjectSyllabusData> {
+  let units: SubjectSyllabusData['units'] = [];
+  try {
+    units = (await fetchPublishedSyllabus(curriculum, grade, subject)) as unknown as SubjectSyllabusData['units'];
+  } catch { /* fall back to curated below */ }
+  if (units.length > 0) return { subject, units, isDbBacked: true };
+  const curated = getCuratedSyllabus(curriculum, grade, subject) ?? [];
+  return { subject, units: curated, isDbBacked: false };
+}
+
+export async function fetchWeeklyActivity(studentId: string) {
+  const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${studentId}/weekly?period=week`);
+  if (!res.ok) throw new Error('fetchWeeklyActivity failed');
   return res.json();
 }

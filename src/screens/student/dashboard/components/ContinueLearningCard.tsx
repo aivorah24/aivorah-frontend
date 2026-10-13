@@ -5,120 +5,94 @@ import type { AppColors } from '../../../../theme';
 import { RingChart } from './common/icons';
 import { SectionHeader } from './common/SectionHeader';
 import type { makeStyles } from '../DashboardScreen';
-
-interface FeaturedLesson {
-  grade: string; subject: string; topic: string; unit: string;
-  color: string; icon: React.ComponentProps<typeof Feather>['name'];
-  progress: number; quizScore: number | null; quizCount: number;
-}
-
-interface FeaturedChapter {
-  title: string;
-}
+import { BRAND, SUBJECT_COLORS, SUBJECT_ICONS } from '../constants';
+import type { ContinueLearning, LessonRef } from '../../utils/learningPathProgress';
 
 interface ContinueLearningCardProps {
   styles: ReturnType<typeof makeStyles>;
   colors: AppColors;
   cardBg: string;
-  featuredLesson: FeaturedLesson;
-  featuredChapter: FeaturedChapter | null;
+  continueLearning: ContinueLearning;
+  // Topics done in the current topic's chapter (for the ring).
+  chapterDone: number;
+  // Average quiz score on the current topic, if any.
+  quizScore: number | null;
+  studentGrade: string;
   ringTrack: string;
-  openFeaturedLesson: () => void;
+  onOpen: (ref: LessonRef) => void;
 }
 
-// "Continue Learning" card — the single most-recently-active (or first
-// available) lesson, with a progress ring and Learn/Practice/Master stage
-// dots. Caller renders this only `{featuredLesson && <ContinueLearningCard ... />}`,
-// same as the pre-extraction JSX.
+const STATUS_LABEL = { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed' } as const;
+
+// "Continue Learning" — the Learning Path topic the student last worked on.
+// Left partway → that same topic, "Resume". Finished → marked Completed,
+// with the next unfinished topic (next chapter once this one is done) as the
+// call to action. Nothing touched yet → the first topic, "Start".
 export function ContinueLearningCard({
   styles,
   colors,
   cardBg,
-  featuredLesson,
-  featuredChapter,
+  continueLearning,
+  chapterDone,
+  quizScore,
+  studentGrade,
   ringTrack,
-  openFeaturedLesson,
+  onOpen,
 }: ContinueLearningCardProps) {
+  const { current, status, next } = continueLearning;
+  const color = SUBJECT_COLORS[current.subject] ?? BRAND.violet;
+  const icon = SUBJECT_ICONS[current.subject] ?? 'book-open';
+  const total = current.chapter.topics.length;
+  const progress = total ? Math.round((chapterDone / total) * 100) : 0;
+  const target = status === 'completed' && next ? next : current;
+  const statusColor = status === 'completed' ? BRAND.green : status === 'in_progress' ? BRAND.teal : colors.textDim;
+  const cta = status === 'completed' ? (next ? 'Start next' : 'Review') : status === 'in_progress' ? 'Resume' : 'Start';
+  const hint = status === 'completed'
+    ? (next ? `Up next: Chapter ${next.chapter.chapterNo} · ${next.chapter.title} — ${next.topic.name}` : `You've finished every chapter in ${current.subject}!`)
+    : status === 'in_progress'
+      ? (quizScore != null ? `Quiz score ${quizScore}% — pass the quiz to complete it.` : 'Pick up where you left off.')
+      : 'Start to build your foundation.';
+
   return (
     <>
       <SectionHeader title="Continue Learning" sub="Pick up where you left off" />
       <TouchableOpacity
-        style={[styles.clCard, { backgroundColor: cardBg, borderColor: featuredLesson.color + '30' }]}
-        onPress={openFeaturedLesson}
+        testID="continue-learning-card"
+        style={[styles.clCard, { backgroundColor: cardBg, borderColor: color + '30' }]}
+        onPress={() => onOpen(target)}
         activeOpacity={0.86}
       >
-        <View style={[styles.clStrip, { backgroundColor: featuredLesson.color }]} />
+        <View style={[styles.clStrip, { backgroundColor: color }]} />
         <View style={styles.clBody}>
           <View style={styles.clTopRow}>
             <View style={{ flex: 1, gap: 5 }}>
-              <View style={[styles.clSubPill, { backgroundColor: featuredLesson.color + '15', borderColor: featuredLesson.color + '35' }]}>
-                <Feather name={featuredLesson.icon} size={11} color={featuredLesson.color} />
-                <Text style={[styles.clSubText, { color: featuredLesson.color }]}>{featuredLesson.subject} · {featuredLesson.grade}</Text>
+              <View style={[styles.clSubPill, { backgroundColor: color + '15', borderColor: color + '35' }]}>
+                <Feather name={icon} size={11} color={color} />
+                <Text style={[styles.clSubText, { color }]}>{current.subject} · {studentGrade}</Text>
               </View>
-              {/* Headline shows the chapter that featuredLesson.topic actually belongs
-                  to (featuredChapter, resolved in the parent) — NOT always the first
-                  chapter. This is what makes it advance as the student progresses: once
-                  every topic in "Fables and Folk Tales" is done, featuredLesson moves on
-                  to a topic in the next chapter and this headline follows it automatically. */}
-              {featuredChapter ? (
-                <>
-                  <Text style={[styles.clTopic, { color: colors.textMain }]} numberOfLines={2}>{featuredChapter.title}</Text>
-                  <Text style={[styles.clUnit, { color: colors.textMuted }]}>Next lesson: {featuredLesson.topic}</Text>
-                </>
-              ) : (
-                <Text style={[styles.clTopic, { color: colors.textMain }]}>{featuredLesson.topic}</Text>
-              )}
+              <Text style={[styles.clTopic, { color: colors.textMain }]} numberOfLines={2}>
+                Chapter {current.chapter.chapterNo}: {current.chapter.title}
+              </Text>
+              <Text style={[styles.clUnit, { color: colors.textMuted }]} numberOfLines={2}>{current.topic.name}</Text>
+              <View style={[styles.clSubPill, { alignSelf: 'flex-start', backgroundColor: statusColor + '15', borderColor: statusColor + '40' }]}>
+                {status === 'completed' && <Feather name="check-circle" size={11} color={statusColor} />}
+                <Text testID="continue-learning-status" style={[styles.clSubText, { color: statusColor }]}>{STATUS_LABEL[status]}</Text>
+              </View>
             </View>
-            {/* Ring on right */}
+            {/* Ring: topics done in this chapter */}
             <View style={styles.clRingWrap}>
-              <RingChart progress={featuredLesson.progress / 100} color={featuredLesson.color} size={68} stroke={7} track={ringTrack} />
+              <RingChart progress={progress / 100} color={color} size={68} stroke={7} track={ringTrack} />
               <View style={styles.clRingCenter}>
-                <Text style={[styles.clRingPct, { color: featuredLesson.color }]}>{featuredLesson.progress}%</Text>
+                <Text style={[styles.clRingPct, { color }]}>{chapterDone}/{total}</Text>
                 <Text style={[styles.clRingDone, { color: colors.textDim }]}>done</Text>
               </View>
             </View>
           </View>
 
-          {/* Stage dots — each stage means something specific, not just a %
-              threshold on one blended "progress" number (that hid students who'd
-              read the lesson but not quizzed yet: sessions-only progress was 30%,
-              under the old 33% cutoff, so Learn stayed unlit even though they'd
-              started):
-                Learn    = has read/opened the lesson OR attempted a quiz
-                Practice = has taken at least one quiz (any score)
-                Master   = quiz average is ≥80% */}
-          <View style={styles.stageRow}>
-            {['Learn', 'Practice', 'Master'].map((s, i, arr) => {
-              const stageDone = [
-                featuredLesson.progress > 0 || featuredLesson.quizCount > 0,
-                featuredLesson.quizCount > 0,
-                featuredLesson.quizScore != null && featuredLesson.quizScore >= 80,
-              ];
-              const done = stageDone[i];
-              return (
-                <React.Fragment key={s}>
-                  <View style={styles.stageNode}>
-                    <View style={[styles.stageDot, { backgroundColor: done ? featuredLesson.color : colors.borderColor }]}>
-                      {done && <Feather name="check" size={8} color="#fff" />}
-                    </View>
-                    <Text style={[styles.stageLbl, { color: done ? featuredLesson.color : colors.textDim }]}>{s}</Text>
-                  </View>
-                  {i < arr.length - 1 && <View style={[styles.stageLine, { backgroundColor: done ? featuredLesson.color + '60' : colors.borderColor }]} />}
-                </React.Fragment>
-              );
-            })}
-          </View>
-
-          {/* Bottom row */}
           <View style={styles.clBottomRow}>
-            <Text style={[styles.clHint, { color: colors.textMuted }]}>
-              {featuredLesson.quizScore != null && featuredLesson.quizScore >= 80 ? 'Mastered! Review to retain.'
-                : featuredLesson.quizCount > 0 ? 'Quiz taken — keep practising to master it.'
-                : featuredLesson.progress > 0 ? "You've read this — take the quiz to test yourself."
-                : 'Start to build your foundation.'}
-            </Text>
-            <View style={[styles.clCtaBtn, { backgroundColor: featuredLesson.color }]}>
-              <Text style={styles.clCtaTxt}>{featuredLesson.progress >= 100 ? 'Review' : featuredLesson.progress > 0 ? 'Continue' : 'Start'}</Text>
+            <Text style={[styles.clHint, { color: colors.textMuted }]} numberOfLines={2}>{hint}</Text>
+            <View style={[styles.clCtaBtn, { backgroundColor: color }]}>
+              <Text style={styles.clCtaTxt}>{cta}</Text>
               <Feather name="arrow-right" size={12} color="#fff" />
             </View>
           </View>

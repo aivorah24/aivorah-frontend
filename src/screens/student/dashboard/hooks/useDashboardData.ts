@@ -8,7 +8,11 @@ import {
   fetchCurriculumSubjects,
   fetchUpcomingDeadlines,
   fetchPerformance,
+  fetchLearningPathSubjects,
+  fetchSubjectSyllabus,
+  fetchWeeklyActivity,
 } from '../services/dashboardService';
+import type { SubjectSyllabusData, WeeklyDay } from '../../utils/learningPathProgress';
 import type { CurriculumData, CurriculumTopic, PerfData, SubjectChapters, UpcomingDeadline } from '../types';
 import { monolithContentCurriculum } from '../../../../utils/curriculum';
 
@@ -41,6 +45,10 @@ interface UseDashboardDataParams {
   childCurriculum?: string;
   isIBPYP: boolean;
   studentGrade: string;
+  // Curriculum exactly as the Learning Paths screen sends it ('CBSE' for
+  // CBSE/NCERT, otherwise the profile value) — subjects and per-subject
+  // syllabi below are fetched with it so both screens read the same data.
+  learningPathCurriculum: string;
   studentId?: string;
   userEmail?: string;
   navigation: { addListener: (event: string, cb: () => void) => () => void };
@@ -56,6 +64,7 @@ export function useDashboardData({
   childCurriculum,
   isIBPYP,
   studentGrade,
+  learningPathCurriculum,
   studentId,
   userEmail,
   navigation,
@@ -87,6 +96,8 @@ export function useDashboardData({
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<UpcomingDeadline[]>([]);
   const [perfData, setPerfData] = useState<PerfData>({ topics: {}, avgScore: null });
   const [subjectChapters, setSubjectChapters] = useState<SubjectChapters[]>(prefetchedSubjects ?? []);
+  const [syllabi, setSyllabi] = useState<Record<string, SubjectSyllabusData>>({});
+  const [weeklyDays, setWeeklyDays] = useState<WeeklyDay[]>([]);
 
   // ── Curriculum (cache-first, falls back to static data if the server is down) ──
   useEffect(() => {
@@ -141,17 +152,40 @@ export function useDashboardData({
       setSubjectChapters([]);
       return;
     }
-    const curricParam = isIBPYP ? 'IB_PYP' : monolithContentCurriculum(childCurriculum);
-    fetchCurriculumSubjects(curricParam, studentGrade)
+    // Same endpoint + curriculum value as the Learning Paths screen
+    // (useSubjects.ts) — previously non-CBSE curricula read the monolith's
+    // /curriculum/subjects here instead, so the two screens could disagree.
+    let cancelled = false;
+    fetchLearningPathSubjects(learningPathCurriculum, studentGrade)
       .then(d => {
-        if (!Array.isArray(d.subjects)) return;
+        if (cancelled || !Array.isArray(d.subjects) || d.subjects.length === 0) return;
         setSubjectChapters(d.subjects.map((s: any) => ({
           subject: s.subject,
-          chapters: (s.chapters?.length ? s.chapters.map((c: any) => c.title) : s.units) || [],
+          chapters: (s.chapters?.length ? s.chapters.map((c: any) => c.title) : s.units?.map((u: any) => (typeof u === 'string' ? u : u?.title)).filter(Boolean)) || [],
         })));
       })
       .catch(() => {});
-  }, [isIBPYP, childCurriculum, studentGrade, noContentGrade]);
+    return () => { cancelled = true; };
+  }, [learningPathCurriculum, studentGrade, noContentGrade]);
+
+  // ── Each subject's chapters WITH topics (same source as the Learning Paths
+  // syllabus screen) — needed to attribute saved progress, which is keyed by
+  // topic name, to chapters. One request per subject, in parallel.
+  const subjectNamesKey = subjectChapters.map(s => s.subject).join('|');
+  useEffect(() => {
+    if (noContentGrade || !subjectNamesKey) return;
+    let cancelled = false;
+    const subjects = subjectNamesKey.split('|');
+    Promise.all(subjects.map(subject =>
+      fetchSubjectSyllabus(learningPathCurriculum, studentGrade, subject).catch(() => null)
+    )).then(results => {
+      if (cancelled) return;
+      const next: Record<string, SubjectSyllabusData> = {};
+      results.forEach(r => { if (r) next[r.subject] = r; });
+      setSyllabi(next);
+    });
+    return () => { cancelled = true; };
+  }, [subjectNamesKey, learningPathCurriculum, studentGrade, noContentGrade]);
 
   // ── Upcoming deadlines ──
   useEffect(() => {
@@ -161,20 +195,27 @@ export function useDashboardData({
       .catch(() => {});
   }, [studentId, childOverride]);
 
-  // ── Per-topic quiz performance — refetches on screen focus too ──
-  const fetchPerfData = useCallback(() => {
-    if (!studentId || !userEmail || childOverride) return;
-    fetchPerformance(studentId, userEmail)
-      .then(d => { if (d.topics) setPerfData(d); })
+  // ── Per-topic quiz performance + this week's activity — refetched every
+  // time the student comes back to the dashboard (the navigator keeps it
+  // mounted, so mount-only fetches would show stale numbers) ──
+  const fetchProgressData = useCallback(() => {
+    if (!studentId || childOverride) return;
+    if (userEmail) {
+      fetchPerformance(studentId, userEmail)
+        .then(d => { if (d && d.topics) setPerfData(d); })
+        .catch(() => {});
+    }
+    fetchWeeklyActivity(studentId)
+      .then(d => { if (Array.isArray(d?.days)) setWeeklyDays(d.days); })
       .catch(() => {});
   }, [studentId, userEmail, childOverride]);
 
-  useEffect(() => { fetchPerfData(); }, [fetchPerfData]);
+  useEffect(() => { fetchProgressData(); }, [fetchProgressData]);
 
   useEffect(() => {
-    const unsub = navigation.addListener('focus', fetchPerfData);
+    const unsub = navigation.addListener('focus', fetchProgressData);
     return unsub;
-  }, [navigation, fetchPerfData]);
+  }, [navigation, fetchProgressData]);
 
   return {
     curriculum,
@@ -184,6 +225,8 @@ export function useDashboardData({
     upcomingDeadlines,
     perfData,
     subjectChapters,
+    syllabi,
+    weeklyDays,
     noContentGrade,
   };
 }

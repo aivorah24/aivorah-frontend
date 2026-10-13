@@ -37,10 +37,11 @@ function Harness({ questions, studentId, practiceQuiz }: { questions?: any; stud
   const completeLesson = React.useMemo(() => jest.fn(), []);
   const addXP = React.useMemo(() => jest.fn(), []);
   const recordStudySeconds = React.useMemo(() => jest.fn(), []);
+  const recordQuizResult = React.useMemo(() => jest.fn(), []);
   const navigation = React.useMemo(() => ({ goBack: jest.fn(), navigate: jest.fn() }), []);
   React.useEffect(() => {
-    (globalThis as any).__lastMocks = { completeLesson, addXP, recordStudySeconds, navigation };
-  }, [completeLesson, addXP, recordStudySeconds, navigation]);
+    (globalThis as any).__lastMocks = { completeLesson, addXP, recordStudySeconds, recordQuizResult, navigation };
+  }, [completeLesson, addXP, recordStudySeconds, recordQuizResult, navigation]);
 
   const h = useQuiz({
     topic: 'Topic', grade: 'Grade 6', subject: 'English', curriculum: 'CBSE',
@@ -53,6 +54,7 @@ function Harness({ questions, studentId, practiceQuiz }: { questions?: any; stud
     completeLesson,
     addXP,
     recordStudySeconds,
+    recordQuizResult,
   });
 
   return (
@@ -234,6 +236,22 @@ describe('useQuiz — navigation between questions', () => {
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
     expect((globalThis as any).__lastMocks.completeLesson).toHaveBeenCalled();
     expect((globalThis as any).__lastMocks.addXP).not.toHaveBeenCalled();
+  });
+
+  // Dashboard sync: the finished score is recorded locally right away, so the
+  // dashboard shows it even before the fire-and-forget track-result write is
+  // visible through GET /performance.
+  test('finishing the quiz records the score locally for the dashboard (topic name + subject)', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextWrong'));
+
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+    expect((globalThis as any).__lastMocks.recordQuizResult).toHaveBeenCalledTimes(1);
+    expect((globalThis as any).__lastMocks.recordQuizResult).toHaveBeenCalledWith('Topic', 50, 'English');
   });
 
   test('goPrev on the real first question is a real no-op', async () => {
