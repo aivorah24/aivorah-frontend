@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
@@ -6,6 +6,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import { fetchComments, addComment, toggleLike, PortfolioPost, PortfolioComment } from '../api/classPortfolioApi';
+
+// Enter sends; Shift+Enter (and IME composition) keeps the default newline.
+export function isSendKey(e: any): boolean {
+  const n = e?.nativeEvent ?? {};
+  return n.key === 'Enter' && !n.shiftKey && !n.isComposing;
+}
 
 // Full-screen media viewer + comment panel — the one genuinely new UI
 // component this feature needed (no existing lightbox in the app to fork).
@@ -25,6 +31,10 @@ export default function PostLightbox({ post, onClose, onLikeChanged }: {
   const [loadingComments, setLoadingComments] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  // State updates are async; the ref blocks a second Enter before re-render.
+  const sendingRef = useRef(false);
+  const inputRef = useRef<TextInput>(null);
+  const canSend = !!draft.trim() && !sending;
 
   const load = useCallback(async () => {
     setLoadingComments(true);
@@ -53,17 +63,27 @@ export default function PostLightbox({ post, onClose, onLikeChanged }: {
   }
 
   async function onSend() {
-    if (!draft.trim() || sending) return;
+    const body = draft.trim();
+    if (!body || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
-      const created = await addComment(post.id, email, draft.trim());
+      const created = await addComment(post.id, email, body);
       setComments((prev) => [...prev, created]);
       setDraft('');
     } catch {
       // leave draft intact so the user can retry
     } finally {
+      sendingRef.current = false;
       setSending(false);
+      inputRef.current?.focus();
     }
+  }
+
+  function onKeyPress(e: any) {
+    if (Platform.OS !== 'web' || !isSendKey(e)) return;
+    e.preventDefault?.();
+    void onSend();
   }
 
   const attachment = post.attachments[index];
@@ -153,15 +173,32 @@ export default function PostLightbox({ post, onClose, onLikeChanged }: {
             {canComment && (
               <View style={styles.inputRow}>
                 <TextInput
+                  ref={inputRef}
+                  testID="comment-input"
                   value={draft}
                   onChangeText={setDraft}
                   placeholder="Write your comment here"
                   placeholderTextColor={colors.textDim}
                   style={styles.input}
                   multiline
+                  returnKeyType="send"
+                  // Native: the return key submits and keeps the keyboard up. Web uses onKeyPress.
+                  submitBehavior={Platform.OS === 'web' ? undefined : 'submit'}
+                  onSubmitEditing={Platform.OS === 'web' ? undefined : () => void onSend()}
+                  onKeyPress={onKeyPress}
                 />
-                <TouchableOpacity onPress={onSend} disabled={sending || !draft.trim()} accessibilityRole="button" accessibilityLabel="Send comment">
-                  <Feather name="send" size={18} color={draft.trim() ? colors.accentYellow : colors.textDim} />
+                <TouchableOpacity
+                  testID="comment-send"
+                  style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+                  onPress={onSend}
+                  disabled={!canSend}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send comment"
+                  accessibilityState={{ disabled: !canSend }}
+                >
+                  {sending
+                    ? <ActivityIndicator size="small" color={colors.accentYellow} />
+                    : <Feather name="send" size={18} color={canSend ? colors.accentYellow : colors.textDim} />}
                 </TouchableOpacity>
               </View>
             )}
@@ -209,9 +246,11 @@ function makeStyles(colors: AppColors) {
     actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     actionText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '600', color: colors.textMuted },
     inputRow: {
-      flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: spacing.md,
-      borderTopWidth: 1, borderTopColor: colors.borderColor,
+      flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: spacing.md,
+      paddingLeft: spacing.md, paddingRight: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderColor,
     },
+    sendBtn: { width: 44, height: 44, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+    sendBtnDisabled: { opacity: 0.5 },
     input: {
       flex: 1, fontFamily: fonts.serif, fontSize: 13, color: colors.textMain, maxHeight: 80,
       backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor,
