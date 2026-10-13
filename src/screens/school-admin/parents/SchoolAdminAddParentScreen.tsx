@@ -10,14 +10,16 @@ import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import { useAddParentState } from './hooks/useAddParentState';
 import ChildLinkEditor from './components/ChildLinkEditor';
+import FormSubmitError from '../shared/FormSubmitError';
 
 export default function SchoolAdminAddParentScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
   const {
-    firstName, setFirstName, lastName, setLastName, phone, setPhone, children,
+    firstName, setFirstName, lastName, setLastName, parentEmail, setParentEmail, phone, setPhone, children,
     submitting, formError, unresolved, result,
+    existingParent, canLinkExisting, linking, linkResult, linkToExisting,
     sectionsByGrade, allSections, schoolCurriculumBase, openDropdown, setOpenDropdown,
     canSubmit, updateChild, addChild, removeChild, submit, reset,
   } = useAddParentState(user?.email);
@@ -53,7 +55,24 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
           onMenuPress={() => navigation?.openDrawer?.()}
         />
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {result ? (
+          {linkResult ? (
+            <>
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
+                <Text style={styles.summaryTitle}>Linked to {linkResult.name}</Text>
+                <Text style={styles.summaryHint}>
+                  {linkResult.linked > 0
+                    ? `The child now appears on ${linkResult.email}'s account. Their existing login is unchanged.`
+                    : `The child was already linked to ${linkResult.email}.`}
+                </Text>
+              </View>
+              <View style={[styles.footerRow, { justifyContent: 'center' }]}>
+                <TouchableOpacity style={styles.primaryBtn} onPress={goToParents} accessibilityRole="button">
+                  <Text style={styles.primaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : result ? (
             <>
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
@@ -94,6 +113,12 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
                     <TextInput value={lastName} onChangeText={setLastName} style={styles.textInput} placeholder="e.g. Emandi" placeholderTextColor={colors.textDim} />
                   </View>
                 </View>
+                <Text style={styles.formLabel}>Email</Text>
+                <TextInput
+                  value={parentEmail} onChangeText={setParentEmail} style={styles.textInput}
+                  placeholder="Optional — a login ID is generated if left blank" placeholderTextColor={colors.textDim}
+                  autoCapitalize="none" keyboardType="email-address"
+                />
                 <Text style={styles.formLabel}>Phone</Text>
                 <TextInput
                   value={phone} onChangeText={setPhone} style={styles.textInput}
@@ -116,21 +141,22 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
                 />
               </View>
 
-              {!!formError && (
-                <View style={styles.emptyBox}>
-                  <Feather name="alert-circle" size={22} color={colors.textDim} />
-                  <Text style={styles.emptyText}>{formError}</Text>
-                </View>
-              )}
+              <FormSubmitError
+                message={formError}
+                colors={colors}
+                action={canLinkExisting && existingParent
+                  ? { label: `Link to ${existingParent.name || existingParent.email}`, onPress: linkToExisting, busy: linking }
+                  : undefined}
+              />
 
               <View style={styles.footerRow}>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={goToParents} accessibilityRole="button" disabled={submitting}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={goToParents} accessibilityRole="button" disabled={submitting || linking}>
                   <Text style={styles.secondaryBtnText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.primaryBtn, (!canSubmit || submitting) && styles.primaryBtnDisabled]}
+                  style={[styles.primaryBtn, (!canSubmit || submitting || linking) && styles.primaryBtnDisabled]}
                   onPress={submit}
-                  disabled={!canSubmit || submitting}
+                  disabled={!canSubmit || submitting || linking}
                   accessibilityRole="button"
                 >
                   {submitting ? <ActivityIndicator color="#0B0B0B" size="small" /> : <Text style={styles.primaryBtnText}>Create Parent</Text>}
@@ -160,11 +186,10 @@ function makeStyles(colors: AppColors) {
     primaryBtnText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: '#0B0B0B' },
     secondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.sm, paddingHorizontal: 16, height: 42 },
     secondaryBtnText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: colors.textHeading },
-    emptyBox: { alignItems: 'center', paddingTop: 12, paddingBottom: 12, gap: 10, paddingHorizontal: 24, marginBottom: spacing.md },
-    emptyText: { fontFamily: fonts.serif, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
     summaryCard: { backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.lg, alignItems: 'center' },
     summaryIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentGreen, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
     summaryTitle: { fontFamily: fonts.serif, fontSize: 17, fontWeight: '700', color: colors.textHeading, marginBottom: 6 },
+    summaryHint: { fontFamily: fonts.serif, fontSize: 12.5, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
     warnText: { fontFamily: fonts.serif, fontSize: 12, color: colors.accentYellow, textAlign: 'center' },
     credBlock: { marginTop: 6 },
     credRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.borderColor },

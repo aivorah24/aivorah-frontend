@@ -30,6 +30,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
+import { friendlyAccountError } from '../shared/accountErrors';
+import FormSubmitError from '../shared/FormSubmitError';
 
 interface Credentials {
   name: string;
@@ -266,7 +268,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setFormError(data?.error || 'Failed to add student'); return; }
+      if (!res.ok) { setFormError(friendlyAccountError(data?.error, 'Failed to add student')); return; }
       setResult(data as CreateResult);
     } catch {
       setFormError('Failed to add student. Check your connection.');
@@ -484,12 +486,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
                 )}
               </View>
 
-              {!!formError && (
-                <View style={styles.emptyBox}>
-                  <Feather name="alert-circle" size={22} color={colors.textDim} />
-                  <Text style={styles.emptyText}>{formError}</Text>
-                </View>
-              )}
+              <FormSubmitError message={formError} colors={colors} />
 
               <View style={styles.footerRow}>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={goToStudents} accessibilityRole="button" disabled={submitting}>
@@ -568,8 +565,6 @@ function makeStyles(colors: AppColors) {
     },
     secondaryBtnText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: colors.textHeading },
 
-    emptyBox: { alignItems: 'center', paddingTop: 12, paddingBottom: 12, gap: 10, paddingHorizontal: 24, marginBottom: spacing.md },
-    emptyText: { fontFamily: fonts.serif, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
 
     // ── Success state ────────────────────────────────────────────────────
     summaryCard: {

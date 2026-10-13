@@ -102,7 +102,9 @@ export default function ChildLinkEditor({
             <Text style={styles.formLabel}>Student name</Text>
             <TextInput value={c.name} onChangeText={(v) => onUpdate(c.key, { name: v })} style={styles.textInput} placeholder="e.g. Vihaan Kapoor" placeholderTextColor={colors.textDim} />
 
-            <View style={[styles.formRow, curriculumOpen && { zIndex: 23 }]}>
+            {/* Lift the row whose menu is open — Grade sits in this row, and its
+                menu overlaps the Section row below, which otherwise catches taps. */}
+            <View testID={`child-${idx}-row-grade`} style={[styles.formRow, (curriculumOpen || gradeOpen) && { zIndex: 23 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.formLabel}>Curriculum</Text>
                 <FormDropdown
@@ -128,7 +130,7 @@ export default function ChildLinkEditor({
                 />
               </View>
             </View>
-            <View style={[styles.formRow, (gradeOpen || sectionOpen) && { zIndex: 22 }]}>
+            <View testID={`child-${idx}-row-section`} style={[styles.formRow, sectionOpen && { zIndex: 22 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.formLabel}>Section</Text>
                 <FormDropdown
