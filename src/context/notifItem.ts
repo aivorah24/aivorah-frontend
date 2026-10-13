@@ -3,7 +3,7 @@ import type { V2Notification } from '../services/notificationsApi';
 
 export interface NotifItem {
   id: string;
-  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio';
+  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio' | 'account';
   senderEmail?: string;
   // For 'event' items, the source schedule type ('challenge' | 'deadline' | 'study' …).
   // A challenge's due-date event has srcType 'challenge' so it can be gated under the
@@ -33,6 +33,11 @@ export function isEventType(n: V2Notification) {
   return n.type === 'event_scheduled';
 }
 
+// Platform-admin edits to the user's own account (role, school, grade…).
+export function isAccountType(n: V2Notification) {
+  return n.type === 'account_updated';
+}
+
 // Legacy items that the V2 feed replaces when it is active.
 export function isV2OwnedLegacy(i: NotifItem) {
   return i.type === 'assignment' || i.type === 'quiz' || i.type === 'challenge' || (i.type === 'event' && i.autoDue === false);
@@ -40,7 +45,9 @@ export function isV2OwnedLegacy(i: NotifItem) {
 
 export function toNotifItem(n: V2Notification): NotifItem {
   const isAssignment = isAssignmentType(n);
-  const type: NotifItem['type'] = isEventType(n)
+  const type: NotifItem['type'] = isAccountType(n)
+    ? 'account'
+    : isEventType(n)
     ? 'event'
     : isAssignment ? (n.data?.assignmentType === 'quiz' ? 'quiz' : 'assignment') : 'challenge';
   return {

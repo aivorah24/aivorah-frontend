@@ -8,6 +8,9 @@ export interface AdminUser {
   role: AdminUserRole | string;
   school: string | null;
   school_id: string | null;
+  curriculum?: string | null;
+  grade?: string | null;
+  section?: string | null;
   status: AdminUserStatus;
   last_active_at: string | null;
   created_at: string;
@@ -18,6 +21,12 @@ export interface AdminUsersPage { users: AdminUser[]; total: number; page: numbe
 
 export interface AdminUserFilters { q: string; role: string; status: string; page: number }
 
-export interface AdminUserEdit { name?: string; role?: string; school?: string | null }
+export interface AcademicFields { curriculum?: string | null; grade?: string | null; section?: string | null }
+
+export interface AdminUserEdit extends AcademicFields { name?: string; role?: string; school?: string | null }
+
+export interface AdminUserCreate extends AcademicFields { name: string; email: string; role: string; school?: string | null; frontendOrigin?: string }
+
+export interface SchoolGrade { name: string; sections: { name: string; archived: boolean }[]; archived: boolean }
 
 export interface BulkResult { id: string; ok: boolean; error?: string }

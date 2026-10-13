@@ -16,6 +16,7 @@ jest.mock('../../../shared/useAdminSchools', () => ({
 jest.mock('../../services/usersService', () => ({
   fetchAdminUsers: jest.fn(), updateAdminUser: jest.fn(), blockAdminUser: jest.fn(),
   unblockAdminUser: jest.fn(), bulkSetBlocked: jest.fn(), sendPasswordReset: jest.fn(),
+  createAdminUser: jest.fn(), fetchSchoolStructure: jest.fn(async () => []),
 }));
 import * as svc from '../../services/usersService';
 
@@ -91,6 +92,55 @@ describe('AdminUsersScreen', () => {
     await fireEvent.press(screen.getByText('Confirm & save'));
     await waitFor(() => expect(mockSvc.updateAdminUser).toHaveBeenCalledWith('u1', { name: 'Asha R', role: 'teacher', school: undefined }));
     expect(await screen.findByText(/Asha R updated — they've been notified/)).toBeTruthy();
+  });
+
+  test('edit: changing to student asks for curriculum, grade and section', async () => {
+    mockSvc.updateAdminUser.mockResolvedValue({ changed: ['role'] });
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-edit-u2'));
+    await pickOption('users-edit-role', 'student');
+    await fireEvent.press(screen.getByTestId('users-edit-save'));
+    expect(await screen.findByText('Choose a curriculum and grade for this student.')).toBeTruthy();
+
+    await pickOption('users-field-curriculum', 'IB PYP');
+    await pickOption('users-field-grade', 'Grade 3');
+    await fireEvent.changeText(screen.getByTestId('users-field-section'), 'A');
+    await fireEvent.press(screen.getByTestId('users-edit-save'));
+    await fireEvent.press(await screen.findByText('Confirm & save'));
+    await waitFor(() => expect(mockSvc.updateAdminUser).toHaveBeenCalledWith('u2', expect.objectContaining({
+      role: 'student', curriculum: 'IB PYP', grade: 'Grade 3', section: 'A',
+    })));
+  });
+
+  test('add user: validates, then sends an invitation', async () => {
+    mockSvc.createAdminUser.mockResolvedValue({ user: {} as any, inviteSent: true, verificationSent: true });
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-add'));
+    await fireEvent.press(screen.getByTestId('users-add-submit'));
+    expect(await screen.findByText('Enter the full name.')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByTestId('users-add-name'), 'Riya Shah');
+    await fireEvent.changeText(screen.getByTestId('users-add-email'), 'Riya@Real.com');
+    await pickOption('users-add-role', 'teacher');
+    await pickOption('users-add-school', 'TSRA');
+    await fireEvent.press(screen.getByTestId('users-add-submit'));
+    await waitFor(() => expect(mockSvc.createAdminUser).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Riya Shah', email: 'riya@real.com', role: 'teacher', school: 'TSRA',
+    })));
+    expect(await screen.findByText(/Invitation sent to riya@real.com/)).toBeTruthy();
+  });
+
+  test('add user: school admin needs a school; student needs curriculum + grade', async () => {
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-add'));
+    await fireEvent.changeText(screen.getByTestId('users-add-name'), 'X');
+    await fireEvent.changeText(screen.getByTestId('users-add-email'), 'x@real.com');
+    await fireEvent.press(screen.getByTestId('users-add-submit'));
+    expect(await screen.findByText('Choose a curriculum and grade for this student.')).toBeTruthy();
+    await pickOption('users-add-role', 'school_admin');
+    await fireEvent.press(screen.getByTestId('users-add-submit'));
+    expect(await screen.findByText('Choose the school this admin manages.')).toBeTruthy();
+    expect(mockSvc.createAdminUser).not.toHaveBeenCalled();
   });
 
   test('edit: moving to B2C sends school null; server error is shown', async () => {

@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, toNotifItem, isAssignmentType, isEventType, isV2OwnedLegacy } from './notifItem';
+import { NotifItem, toNotifItem, isAssignmentType, isEventType, isAccountType, isV2OwnedLegacy } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -31,6 +31,7 @@ interface NotificationState {
   unreadAssignments: number;
   unreadChallenges: number;
   unreadEvents: number;
+  unreadAccount: number;
   unreadJoinRequests: number; // pending B2C→B2B school-join requests (school-admin only)
   latestNotif: LatestNotif | null;
   notificationItems: NotifItem[]; // newest first, includes the latest unread chat message
@@ -58,6 +59,7 @@ const NotificationContext = createContext<NotificationState>({
   unreadAssignments: 0,
   unreadChallenges: 0,
   unreadEvents: 0,
+  unreadAccount: 0,
   unreadJoinRequests: 0,
   latestNotif: null,
   notificationItems: [],
@@ -178,6 +180,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [unreadAssignments, setUnreadAssignments] = useState(0);
   const [unreadChallenges,  setUnreadChallenges]  = useState(0);
   const [unreadEvents,      setUnreadEvents]      = useState(0);
+  const [unreadAccount,     setUnreadAccount]     = useState(0);
   const [unreadJoinRequests, setUnreadJoinRequests] = useState(0);
   const [latestNotif,       setLatestNotif]       = useState<LatestNotif | null>(null);
   // Legacy-derived items (whole feed in legacy mode; message/event/task/portfolio only in V2 mode).
@@ -415,9 +418,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
+        const accountUnread = stillUnread.filter(isAccountType).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(assignUnread);
-        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread) + (allowChallenge ? challengeEventCount : 0));
+        setUnreadAccount(accountUnread);
+        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread - accountUnread) + (allowChallenge ? challengeEventCount : 0));
         setUnreadEvents(eventUnread + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);
@@ -439,7 +444,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user?.email) {
       // reset tied to the same effect that owns the polling subscription below — external sync, see react-hooks/set-state-in-effect
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0);
+      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0); setUnreadAccount(0);
       setLatestNotif(null); setToastVisible(false);
       prevMsgRef.current = 0; prevAssignRef.current = 0; prevChallengeRef.current = 0; prevEventRef.current = 0;
       staleGuardUntil.current = 0; markReadCutoff.current = null;
@@ -653,6 +658,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       mergeById(v2FirstPage, v2Older).forEach(n => { if (!n.readAt) locallyReadRef.current.set(n.id, now); });
       setUnreadAssignments(0);
       setUnreadChallenges(0);
+      setUnreadAccount(0);
       setUnreadEvents(0);
       syncLocalReads();
       await markAllNotificationsRead().catch(err => { if (__DEV__) console.warn('[NotifCtx] read-all failed:', err); });
@@ -679,7 +685,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   return (
     <NotificationContext.Provider value={{
-      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadJoinRequests,
+      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadAccount, unreadJoinRequests,
       latestNotif, notificationItems, toastItem, toastVisible,
       dismissToast, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents, refresh, triggerPoll, muteCategory,
       notificationsV2Active: v2Active, feedStatus, hasMore: v2Active && !!v2Cursor, loadingMore, loadMore,

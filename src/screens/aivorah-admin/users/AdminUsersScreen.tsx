@@ -82,7 +82,7 @@ export default function AdminUsersScreen({ navigation }: any) {
               <Feather name="upload-cloud" size={15} color={colors.textMain} />
               <Text style={s.outlineBtnText}>Bulk import</Text>
             </TouchableOpacity>
-            <TouchableOpacity testID="users-add" style={[s.goldBtn, { backgroundColor: colors.accentYellow }]} onPress={() => navigation?.navigate?.('BulkImport')}>
+            <TouchableOpacity testID="users-add" style={[s.goldBtn, { backgroundColor: colors.accentYellow }]} onPress={() => setPanel({ type: 'add' })}>
               <Feather name="plus" size={15} color={colors.cardDark} />
               <Text style={[s.goldBtnText, { color: colors.cardDark }]}>Add user</Text>
             </TouchableOpacity>

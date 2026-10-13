@@ -5,7 +5,8 @@ import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
 import { SelectField } from '../../shared/SelectField';
 import { useAdminSchools } from '../../shared/useAdminSchools';
-import { updateAdminUser, blockAdminUser, unblockAdminUser, sendPasswordReset } from '../services/usersService';
+import { updateAdminUser, blockAdminUser, unblockAdminUser, sendPasswordReset, createAdminUser } from '../services/usersService';
+import { AcademicFields, type AcademicValue } from './AcademicFields';
 import type { AdminUser } from '../types';
 
 export const ROLE_OPTIONS = [
@@ -18,8 +19,9 @@ export const roleLabel = (r: string) => ROLE_OPTIONS.find((o) => o.value === r)?
 
 const BLOCK_REASONS = ['Policy violation', 'Unpaid / contract ended', 'Security concern', 'Requested by school'];
 const NO_SCHOOL = '__b2c__';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export type SlideOverMode = { type: 'edit' | 'block'; user: AdminUser } | null;
+export type SlideOverMode = { type: 'edit' | 'block'; user: AdminUser } | { type: 'add' } | null;
 
 export function UserSlideOver({ mode, onClose, onDone }: { mode: SlideOverMode; onClose: () => void; onDone: (message: string) => void }) {
   const { colors } = useTheme();
@@ -31,7 +33,9 @@ export function UserSlideOver({ mode, onClose, onDone }: { mode: SlideOverMode; 
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} testID="users-panel-backdrop" />
         <View style={s.panel}>
           <ScrollView contentContainerStyle={s.panelBody}>
-            {mode.type === 'edit'
+            {mode.type === 'add'
+              ? <AddBody s={s} colors={colors} onClose={onClose} onDone={onDone} />
+              : mode.type === 'edit'
               ? <EditBody user={mode.user} s={s} colors={colors} onClose={onClose} onDone={onDone} />
               : <BlockBody user={mode.user} s={s} colors={colors} onClose={onClose} onDone={onDone} />}
           </ScrollView>
@@ -46,6 +50,7 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
   const [name, setName] = useState(user.name || '');
   const [role, setRole] = useState(String(user.role));
   const [school, setSchool] = useState(user.school || NO_SCHOOL);
+  const [acad, setAcad] = useState<AcademicValue>({ curriculum: user.curriculum || '', grade: user.grade || '', section: user.section || '' });
   const [confirmRole, setConfirmRole] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +63,11 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
     { value: NO_SCHOOL, label: 'Direct (B2C) — no school' },
   ];
 
+  const isStudent = role === 'student';
+  const schoolId = schools.schools.find((sc) => sc.name === school)?.id ?? null;
+
   async function save() {
+    if (isStudent && roleChanged && (!acad.curriculum || !acad.grade)) { setError('Choose a curriculum and grade for this student.'); return; }
     if (roleChanged && !confirmRole) { setConfirmRole(true); return; }
     setBusy(true); setError('');
     try {
@@ -67,6 +76,11 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
         name: name.trim() !== user.name ? name.trim() : undefined,
         role: roleChanged ? role : undefined,
         school: nextSchool !== (user.school || null) ? nextSchool : undefined,
+        ...(isStudent ? {
+          curriculum: acad.curriculum !== (user.curriculum || '') ? acad.curriculum : undefined,
+          grade: acad.grade !== (user.grade || '') ? acad.grade : undefined,
+          section: acad.section.trim() !== (user.section || '') ? acad.section.trim() || null : undefined,
+        } : {}),
       });
       onDone(changed.length ? `${name.trim() || user.name} updated — they've been notified.` : 'No changes to save.');
     } catch (e: any) {
@@ -103,6 +117,7 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
       </View>
       <SelectField testID="users-edit-role" label="Role" value={role} options={ROLE_OPTIONS} onChange={(v) => { setRole(v); setConfirmRole(false); }} minWidth={0} />
       <SelectField testID="users-edit-school" label="School" placeholder={schools.placeholder} value={school} options={schoolOptions} onChange={setSchool} minWidth={0} />
+      {isStudent && <AcademicFields schoolId={schoolId} value={acad} onChange={setAcad} s={s} colors={colors} />}
       <TouchableOpacity testID="users-edit-reset" style={s.resetBtn} onPress={reset} disabled={resetMsg === 'Sending…'}>
         <Feather name="mail" size={14} color={colors.textMain} />
         <Text style={s.resetBtnText}>Send password reset link</Text>
@@ -121,6 +136,77 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
       <View style={s.actions}>
         <TouchableOpacity testID="users-edit-save" style={[s.primaryBtn, { backgroundColor: colors.accentYellow }]} onPress={save} disabled={busy}>
           {busy ? <ActivityIndicator color={colors.cardDark} /> : <Text style={[s.primaryBtnText, { color: colors.cardDark }]}>{confirmRole ? 'Confirm & save' : 'Save changes'}</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity style={s.cancelBtn} onPress={onClose}><Text style={s.cancelText}>Cancel</Text></TouchableOpacity>
+      </View>
+    </>
+  );
+}
+
+function AddBody({ s, colors, onClose, onDone }: { s: any; colors: AppColors; onClose: () => void; onDone: (m: string) => void }) {
+  const schools = useAdminSchools();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('student');
+  const [school, setSchool] = useState(NO_SCHOOL);
+  const [acad, setAcad] = useState<AcademicValue>({ curriculum: '', grade: '', section: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const isStudent = role === 'student';
+  const schoolId = schools.schools.find((sc) => sc.name === school)?.id ?? null;
+  const schoolOptions = [
+    ...schools.schools.map((sc) => ({ value: sc.name, label: sc.name })),
+    ...(role === 'school_admin' ? [] : [{ value: NO_SCHOOL, label: 'Direct (B2C) — no school' }]),
+  ];
+
+  async function create() {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!name.trim()) return setError('Enter the full name.');
+    if (!EMAIL_RE.test(trimmedEmail)) return setError('Enter a valid email address.');
+    if (role === 'school_admin' && (!school || school === NO_SCHOOL)) return setError('Choose the school this admin manages.');
+    if (isStudent && (!acad.curriculum || !acad.grade)) return setError('Choose a curriculum and grade for this student.');
+    setBusy(true); setError('');
+    try {
+      const { verificationSent } = await createAdminUser({
+        name: name.trim(), email: trimmedEmail, role,
+        school: school && school !== NO_SCHOOL ? school : null,
+        ...(isStudent ? { curriculum: acad.curriculum, grade: acad.grade, section: acad.section.trim() || null } : {}),
+        frontendOrigin: typeof window !== 'undefined' && window.location ? window.location.origin : undefined,
+      });
+      onDone(`Invitation sent to ${trimmedEmail}. They'll set a password and verify their email before signing in.${verificationSent ? '' : ' (The verification email will follow on their first sign-in.)'}`);
+    } catch (e: any) {
+      setError(e?.message || 'Could not create this account.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <View>
+        <Text style={[s.eyebrow, { color: colors.accentYellow }]}>ADD USER</Text>
+        <Text style={s.title}>Invite a new user</Text>
+      </View>
+      <Text style={s.hint}>They'll receive an email to set their password, then verify their email address before they can use Aivorah.</Text>
+      <View style={s.field}>
+        <Text style={s.label}>FULL NAME</Text>
+        <TextInput testID="users-add-name" style={s.input} value={name} onChangeText={setName} placeholder="e.g. Riya Shah" placeholderTextColor={colors.textDim} />
+      </View>
+      <View style={s.field}>
+        <Text style={s.label}>EMAIL</Text>
+        <TextInput testID="users-add-email" style={s.input} value={email} onChangeText={setEmail} placeholder="name@example.com"
+          placeholderTextColor={colors.textDim} autoCapitalize="none" keyboardType="email-address" />
+      </View>
+      <SelectField testID="users-add-role" label="Role" value={role} options={ROLE_OPTIONS}
+        onChange={(v) => { setRole(v); if (v === 'school_admin' && school === NO_SCHOOL) setSchool(''); }} minWidth={0} />
+      <SelectField testID="users-add-school" label={role === 'school_admin' ? 'School' : 'School (optional)'} placeholder={schools.placeholder}
+        value={school} options={schoolOptions} onChange={setSchool} minWidth={0} />
+      {isStudent && <AcademicFields schoolId={schoolId} value={acad} onChange={setAcad} s={s} colors={colors} />}
+      {!!error && <Text style={s.error} testID="users-add-error">{error}</Text>}
+      <View style={s.actions}>
+        <TouchableOpacity testID="users-add-submit" style={[s.primaryBtn, { backgroundColor: colors.accentYellow }]} onPress={create} disabled={busy}>
+          {busy ? <ActivityIndicator color={colors.cardDark} /> : <Text style={[s.primaryBtnText, { color: colors.cardDark }]}>Send invitation</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={s.cancelBtn} onPress={onClose}><Text style={s.cancelText}>Cancel</Text></TouchableOpacity>
       </View>

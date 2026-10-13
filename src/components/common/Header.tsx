@@ -91,6 +91,7 @@ export default function Header({
     unreadAssignments,
     unreadChallenges,
     unreadEvents,
+    unreadAccount = 0,
     latestNotif,
     notificationItems,
     clearUnread,
@@ -126,7 +127,7 @@ const [editingName, setEditingName] = useState(false);
 
   // Bell count: real-time messages + assignments + challenges (+ school join
   // requests for a school admin, whose bell is otherwise unused).
-  const count = unreadCount + unreadAssignments + unreadChallenges + unreadEvents + unreadJoinRequests;
+  const count = unreadCount + unreadAssignments + unreadChallenges + unreadEvents + unreadAccount + unreadJoinRequests;
   const avatarStyle = (user as any)?.avatarStyle;
   const photoUrl = (user as any)?.photoUrl;
 
@@ -366,7 +367,7 @@ const [editingName, setEditingName] = useState(false);
                       const isTask = item.type === 'task';
                       const isMessage = item.type === 'message';
                       const accent = colors.accentYellow;
-                      const iconName = isMessage ? 'message-square' : isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
+                      const iconName = item.type === 'account' ? 'user-check' : isMessage ? 'message-square' : isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
                       return (
                       <TouchableOpacity
                         key={item.id}

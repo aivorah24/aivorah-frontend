@@ -1,6 +1,6 @@
 import PLATFORM_ADMIN_SERVER_URL from '../../../../config/platformAdminServerUrl';
 import { authHeader } from '../../../../services/authHeader';
-import type { AdminUserEdit, AdminUserFilters, AdminUsersPage, BulkResult } from '../types';
+import type { AdminUser, AdminUserCreate, AdminUserEdit, AdminUserFilters, AdminUsersPage, BulkResult, SchoolGrade } from '../types';
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = { ...(await authHeader()), ...(init.body ? { 'Content-Type': 'application/json' } : {}) };
@@ -35,3 +35,9 @@ export const bulkSetBlocked = (ids: string[], blocked: boolean) =>
 
 export const sendPasswordReset = (id: string) =>
   call<{ sent: boolean }>(`/admin/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: JSON.stringify({}) });
+
+export const createAdminUser = (body: AdminUserCreate) =>
+  call<{ user: AdminUser; inviteSent: boolean; verificationSent: boolean }>('/admin/users', { method: 'POST', body: JSON.stringify(body) });
+
+export const fetchSchoolStructure = (schoolId: string) =>
+  call<{ grades: SchoolGrade[] }>(`/schools/${encodeURIComponent(schoolId)}/structure`).then((r) => r.grades || []);

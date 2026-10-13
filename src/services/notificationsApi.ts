@@ -2,7 +2,7 @@
 // from the Firebase ID token, never from an email parameter.
 import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 
-export type V2NotificationType = 'challenge_assigned' | 'assignment_assigned' | 'challenge_due' | 'assignment_due' | 'event_scheduled';
+export type V2NotificationType = 'challenge_assigned' | 'assignment_assigned' | 'challenge_due' | 'assignment_due' | 'event_scheduled' | 'account_updated';
 
 export interface V2Notification {
   id: string;
