@@ -1,4 +1,4 @@
-import { daysUntil, formatDate, stripGradePrefix } from '../../utils/helpers';
+import { daysUntil, formatDate, stripGradePrefix, gradeFromLabel } from '../../utils/helpers';
 
 describe('daysUntil', () => {
   test('a date in the past is overdue', () => {
@@ -45,5 +45,23 @@ describe('stripGradePrefix', () => {
   test('handles empty/undefined input', () => {
     expect(stripGradePrefix('')).toBe('');
     expect(stripGradePrefix(undefined as any)).toBe('');
+  });
+});
+
+describe('gradeFromLabel', () => {
+  test('a PYP label picks the matching grade pill', () => {
+    expect(gradeFromLabel('PYP 4', ['Grade 3', 'Grade 4', 'Grade 6'])).toBe('Grade 4');
+  });
+
+  test('a grade the teacher does not teach is still selected, not left on their default', () => {
+    expect(gradeFromLabel('Grade 4', ['Grade 6'])).toBe('Grade 4');
+  });
+
+  test('Grade 1 does not match Grade 10–12', () => {
+    expect(gradeFromLabel('Grade 1', ['Grade 10', 'Grade 11', 'Grade 12'])).toBe('Grade 1');
+  });
+
+  test('a non-numeric grade is kept as written', () => {
+    expect(gradeFromLabel('UKG', ['LKG', 'UKG'])).toBe('UKG');
   });
 });

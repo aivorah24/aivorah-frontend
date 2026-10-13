@@ -24,7 +24,7 @@ afterEach(() => { global.fetch = realFetch; alertSpy.mockRestore(); });
 
 const BASE_ARGS = {
   user: { school: 'Green Valley' }, title: '', setTitle: () => {}, chapter: '', setChapter: () => {},
-  subject: 'Maths', setSubject: () => {}, grade: 'Grade 4', setGrade: () => {}, curriculum: 'IB PYP',
+  subject: 'Maths', setSubject: () => {}, grade: 'Grade 4', setGrade: () => {}, curriculum: 'IB PYP', setCurriculum: () => {},
   gradeOptions: ['Grade 4'], effectiveGrade: 'Grade 4', effectiveCurriculum: 'IB PYP',
   selectedLanguage: '', setSelectedLanguage: () => {}, setSuccessCriteria: () => {}, setTeacherNotes: () => {},
   setIbWordBank: () => {}, setIbStamps: () => {}, setFormError: () => {},
