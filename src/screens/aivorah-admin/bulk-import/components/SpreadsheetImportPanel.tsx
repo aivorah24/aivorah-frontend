@@ -156,7 +156,9 @@ export function SpreadsheetImportPanel() {
             <View style={s.boardBox} testID="bulk-sheet-board">
               <Text style={s.boardLabel}>BOARD</Text>
               <View style={s.boardValueBox}>
-                <Text style={s.boardValue} numberOfLines={1}>{describeBoard(imp.school.curriculum) || 'Not set'}</Text>
+                <Text style={s.boardValue} numberOfLines={1} testID="bulk-sheet-board-value">
+                  {describeBoard(imp.school.curriculum) || (imp.chosenBoard ? `Not set → ${imp.chosenBoard} on import` : 'Not set')}
+                </Text>
               </View>
             </View>
           )}

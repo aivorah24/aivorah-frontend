@@ -91,6 +91,71 @@ describe('BulkImportScreen — Quick add', () => {
   });
 });
 
+jest.mock('../../../../../utils/spreadsheet', () => ({ ...jest.requireActual('../../../../../utils/spreadsheet'), downloadCsv: jest.fn() }));
+import { downloadCsv } from '../../../../../utils/spreadsheet';
+
+describe('BulkImportScreen — Quick add, share/download logins', () => {
+  const created = [
+    { name: 'Asha', email: 'asha.1@x.student', password: 'Pw1!', grade: 'Grade 5', section: 'B' },
+    { name: 'Ben', email: 'ben.2@x.student', password: 'Pw2!', grade: 'Grade 5', section: 'B' },
+  ];
+  let writeText: jest.Mock;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.replaceProperty(Platform, 'OS', 'web');
+    writeText = jest.fn(async () => {});
+    (global as any).navigator = { clipboard: { writeText } }; // no navigator.share
+  });
+  afterEach(() => { delete (global as any).navigator; jest.restoreAllMocks(); });
+
+  async function createTwo() {
+    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created, errors: [], total: 2 });
+    const user = await openQuickAdd();
+    await choose(user, 'bulk-school', 'sch2');
+    await choose(user, 'bulk-grade', 'Grade 5');
+    await user.type(screen.getByTestId('bulk-names'), 'Asha\nBen');
+    await user.press(screen.getByTestId('bulk-import-submit'));
+    await screen.findByTestId('bulk-created-row-asha.1@x.student');
+    return user;
+  }
+
+  test('per-row share copies that login to the clipboard and shows the note', async () => {
+    const user = await createTwo();
+    expect(screen.queryByTestId('bulk-share-note')).toBeNull();
+    await user.press(screen.getByTestId('bulk-share-asha.1@x.student'));
+    expect(writeText).toHaveBeenCalledWith("Asha's Aivorah login:\nEmail: asha.1@x.student\nPassword: Pw1!\nSign in at https://aivorah.ai");
+    expect((await screen.findByTestId('bulk-share-note')).props.children).toMatch(/^Login details copied/);
+  });
+
+  test('share all copies every login; download writes a CSV named after the school', async () => {
+    const user = await createTwo();
+    await user.press(screen.getByTestId('bulk-quick-share-all'));
+    const text = writeText.mock.calls[0][0];
+    expect(text).toContain('Email: asha.1@x.student');
+    expect(text).toContain('Email: ben.2@x.student');
+
+    await user.press(screen.getByTestId('bulk-quick-download-logins'));
+    expect(downloadCsv).toHaveBeenCalledWith('aivorah-logins-seed-test-school-cbse-.csv', expect.stringContaining('Ben,ben.2@x.student,Pw2!,Grade 5,B'));
+  });
+
+  test('uses navigator.share when present instead of copying', async () => {
+    const share = jest.fn(async () => {});
+    (global as any).navigator.share = share;
+    const user = await createTwo();
+    await user.press(screen.getByTestId('bulk-share-ben.2@x.student'));
+    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining('Password: Pw2!') });
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('bulk-share-note')).toBeNull();
+  });
+
+  test('download is web-only', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    await createTwo();
+    expect(screen.queryByTestId('bulk-quick-download-logins')).toBeNull();
+    expect(screen.getByTestId('bulk-quick-share-all')).toBeTruthy();
+  });
+});
+
 describe('BulkImportScreen — Quick add, school with no curriculum', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -148,8 +213,10 @@ describe('BulkImportScreen — spreadsheet tab, school with no curriculum', () =
     expect(screen.getByText('Choose a curriculum to import')).toBeTruthy();
     expect(screen.queryByTestId('bulk-sheet-curriculum-note')).toBeNull();
 
+    expect(screen.getByTestId('bulk-sheet-board-value').props.children).toBe('Not set');
     await choose(user, 'bulk-sheet-curriculum', 'IB');
     expect(screen.getByTestId('bulk-sheet-curriculum-hint').props.children).toBe("This will set Blank School's curriculum to IB");
+    expect(screen.getByTestId('bulk-sheet-board-value').props.children).toBe('Not set → IB on import');
     expect(screen.getByTestId('bulk-sheet-curriculum-note').props.children).toBe('All students will be enrolled in IB PYP / MYP / DP (by grade) (from Blank School)');
     expect(screen.getByText('! Spreadsheet says CBSE — will use IB MYP')).toBeTruthy();
     expect(screen.getByTestId('bulk-sheet-import').props.accessibilityState?.disabled).toBe(false);
