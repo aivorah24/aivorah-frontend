@@ -168,12 +168,13 @@ function AddBody({ s, colors, onClose, onDone }: { s: any; colors: AppColors; on
     if (isStudent && (!acad.curriculum || !acad.grade)) return setError('Choose a curriculum and grade for this student.');
     setBusy(true); setError('');
     try {
-      const { verificationSent } = await createAdminUser({
+      const { inviteSent, inviteError, verificationSent } = await createAdminUser({
         name: name.trim(), email: trimmedEmail, role,
         school: school && school !== NO_SCHOOL ? school : null,
         ...(isStudent ? { curriculum: acad.curriculum, grade: acad.grade, section: acad.section.trim() || null } : {}),
         frontendOrigin: typeof window !== 'undefined' && window.location ? window.location.origin : undefined,
       });
+      if (inviteSent === false) return onDone(inviteError || `Account created for ${trimmedEmail}, but the invite email could not be sent. Use "Send password reset" to retry.`);
       onDone(`Invitation sent to ${trimmedEmail}. They'll set a password and verify their email before signing in.${verificationSent ? '' : ' (The verification email will follow on their first sign-in.)'}`);
     } catch (e: any) {
       setError(e?.message || 'Could not create this account.');

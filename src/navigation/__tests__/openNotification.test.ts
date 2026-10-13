@@ -101,6 +101,16 @@ describe('openNotification', () => {
     expect(a.markNotificationRead).not.toHaveBeenCalled();
   });
 
+  test('account_updated: maps to an account item, marks read, returns null, no navigation', () => {
+    const a = actions();
+    const navigate = jest.fn();
+    const item = toNotifItem(v2({ id: 'n-acc', type: 'account_updated', entityType: 'user', entityId: 'u1', data: {} }));
+    expect(item.type).toBe('account');
+    expect(openNotification(item, { role: 'teacher', navigate, actions: a })).toBeNull();
+    expect(a.markNotificationRead).toHaveBeenCalledWith('n-acc');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   test('unknown type: marks read, does not navigate', () => {
     const a = actions();
     const navigate = jest.fn();

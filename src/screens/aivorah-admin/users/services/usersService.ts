@@ -37,7 +37,7 @@ export const sendPasswordReset = (id: string) =>
   call<{ sent: boolean }>(`/admin/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: JSON.stringify({}) });
 
 export const createAdminUser = (body: AdminUserCreate) =>
-  call<{ user: AdminUser; inviteSent: boolean; verificationSent: boolean }>('/admin/users', { method: 'POST', body: JSON.stringify(body) });
+  call<{ user: AdminUser; inviteSent: boolean; inviteError?: string | null; verificationSent: boolean }>('/admin/users', { method: 'POST', body: JSON.stringify(body) });
 
 export const fetchSchoolStructure = (schoolId: string) =>
   call<{ grades: SchoolGrade[] }>(`/schools/${encodeURIComponent(schoolId)}/structure`).then((r) => r.grades || []);

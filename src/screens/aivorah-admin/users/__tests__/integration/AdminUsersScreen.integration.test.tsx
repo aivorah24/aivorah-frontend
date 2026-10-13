@@ -130,6 +130,17 @@ describe('AdminUsersScreen', () => {
     expect(await screen.findByText(/Invitation sent to riya@real.com/)).toBeTruthy();
   });
 
+  test('add user: reports when the account was created but the invite failed', async () => {
+    mockSvc.createAdminUser.mockResolvedValue({ user: {} as any, inviteSent: false, inviteError: null, verificationSent: true });
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-add'));
+    await fireEvent.changeText(screen.getByTestId('users-add-name'), 'Riya Shah');
+    await fireEvent.changeText(screen.getByTestId('users-add-email'), 'riya@real.com');
+    await pickOption('users-add-role', 'teacher');
+    await fireEvent.press(screen.getByTestId('users-add-submit'));
+    expect(await screen.findByText(/invite email could not be sent/)).toBeTruthy();
+  });
+
   test('add user: school admin needs a school; student needs curriculum + grade', async () => {
     await render(<AdminUsersScreen navigation={{}} />);
     await fireEvent.press(await screen.findByTestId('users-add'));

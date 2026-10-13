@@ -7,7 +7,7 @@ export type V2NotificationType = 'challenge_assigned' | 'assignment_assigned' | 
 export interface V2Notification {
   id: string;
   type: V2NotificationType;
-  entityType: 'challenge_assignment' | 'assignment' | 'schedule_event';
+  entityType: 'challenge_assignment' | 'assignment' | 'schedule_event' | 'user';
   entityId: string;
   childId: string | null;
   title: string;
