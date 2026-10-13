@@ -160,6 +160,11 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                   : 'This conversion needs your review before publishing'}
               </Text>
             </View>
+            {(interactiveQuiz as any).visualUnderstandingAvailable === false && (
+              <Text testID="quiz-preview-text-only-note" style={{ color: '#c9d1d9', fontSize: 12, marginTop: 6, marginLeft: 23 }}>
+                Read from the worksheet's text only (no vision AI available right now) — pictures are included, but answers to picture-based questions need you in Edit Answers.
+              </Text>
+            )}
             {conversionReport.taskCountWarning && (
               <Text style={{ color: '#f85149', fontSize: 12, marginTop: 6, marginLeft: 23, fontWeight: '700' }}>
                 ⚠ {conversionReport.taskCountWarning}
