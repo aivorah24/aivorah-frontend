@@ -82,7 +82,7 @@ export default function TeacherAttendanceScreen({ navigation, route }: any) {
 
             {!loadError && selected && (
               <>
-                <StatsRow stats={stats} styles={styles} />
+                <StatsRow stats={stats} styles={styles} colors={colors} />
 
                 <View style={styles.actionsBar}>
                   <View style={styles.searchContainer}>
@@ -131,7 +131,7 @@ export default function TeacherAttendanceScreen({ navigation, route }: any) {
                 {!!message && (
                   <Text
                     testID="attendance-save-message"
-                    style={[styles.saveMessage, { color: message.kind === 'success' ? '#0ca678' : colors.accentRed }]}
+                    style={[styles.saveMessage, { color: message.kind === 'success' ? colors.accentGreen : colors.accentRed }]}
                   >
                     {message.text}
                   </Text>

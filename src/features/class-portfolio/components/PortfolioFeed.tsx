@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Alert, Modal, TextInput } from 'react-native';
 import { Feather, AntDesign } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
-import { fetchPosts, toggleLike, publishPost, deletePost, PortfolioPost, fetchFolders, PortfolioFolder } from '../api/classPortfolioApi';
+import { toggleLike, publishPost, deletePost, PortfolioPost } from '../api/classPortfolioApi';
+import { usePortfolioPosts } from '../hooks/usePortfolioPosts';
 import { fetchMyClasses } from '../../classes/api/classesApi';
 import PostLightbox from './PostLightbox';
 import PortfolioComposerModal from './PortfolioComposerModal';
@@ -40,10 +40,10 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
   const classTeacherEmail = classTeacherEmailProp || fetchedClassTeacherEmail;
   const isHomeroomTeacher = !!classTeacherEmail && email.toLowerCase() === String(classTeacherEmail).toLowerCase();
 
-  const [posts, setPosts] = useState<PortfolioPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { posts, setPosts, folders: dbFolders, loading, error, refresh } = usePortfolioPosts(grade, section, email);
+  const load = useCallback(() => refresh(), [refresh]);
   const [openPostId, setOpenPostId] = useState<string | null>(initialOpenPostId || null);
+  const openPost = openPostId ? posts.find((p) => p.id === openPostId) : undefined;
   const [showComposer, setShowComposer] = useState(false);
 
   // Sync openPostId when the deep-link prop changes (render-time adjustment
@@ -60,7 +60,6 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
   const [showDateModal, setShowDateModal] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [dbFolders, setDbFolders] = useState<PortfolioFolder[]>([]);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [activeDateField, setActiveDateField] = useState<'start' | 'end' | null>(null);
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
@@ -131,43 +130,6 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
       return true;
     });
   }, [posts, searchQuery, selectedFolder, startDate, endDate]);
-
-  const load = useCallback(async () => {
-    if (!email || !grade) return;
-    setLoading(true);
-    setError('');
-    try {
-      const [fetchedPosts, fetchedFolders] = await Promise.all([
-        fetchPosts(grade, section, email),
-        fetchFolders(grade, section, email)
-      ]);
-      setPosts(fetchedPosts);
-      setDbFolders(fetchedFolders);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load posts');
-    } finally {
-      setLoading(false);
-    }
-  }, [email, grade, section]);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  useEffect(() => {
-    if (!email || !grade) return;
-    const interval = setInterval(async () => {
-      try {
-        const [fetchedPosts, fetchedFolders] = await Promise.all([
-          fetchPosts(grade, section, email),
-          fetchFolders(grade, section, email)
-        ]);
-        setPosts(fetchedPosts);
-        setDbFolders(fetchedFolders);
-      } catch (e) {
-        // silent catch to prevent interrupting user
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [email, grade, section]);
 
   async function onLike(post: PortfolioPost) {
     // Optimistic toggle — matches the app's existing like/dismiss patterns.
@@ -489,9 +451,11 @@ export default function PortfolioFeed({ grade, section, classTeacherEmail: class
         )}
       </ScrollView>
 
-      {openPostId && (
+      {/* Deep-linked post opens once the feed has it; a deleted post never crashes the lightbox. */}
+      {openPost && (
         <PostLightbox
-          post={posts.find((p) => p.id === openPostId)!}
+          key={openPost.id}
+          post={openPost}
           onClose={() => setOpenPostId(null)}
           onLikeChanged={load}
         />

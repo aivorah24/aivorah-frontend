@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, toNotifItem, isAssignmentType, isEventType, isV2OwnedLegacy } from './notifItem';
+import { NotifItem, toNotifItem, isAssignmentType, isEventType, isClassPostType, isV2OwnedLegacy } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -415,9 +415,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
+        // Class posts have no badge category of their own; never count them as challenges.
+        const classPostUnread = stillUnread.filter(isClassPostType).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(assignUnread);
-        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread) + (allowChallenge ? challengeEventCount : 0));
+        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread - classPostUnread) + (allowChallenge ? challengeEventCount : 0));
         setUnreadEvents(eventUnread + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);

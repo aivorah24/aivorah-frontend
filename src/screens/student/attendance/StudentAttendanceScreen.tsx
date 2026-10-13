@@ -7,12 +7,14 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useStudentData } from '../../../context/StudentDataContext';
 import { makeStyles } from './styles';
 import { useStudentAttendance } from './hooks/useStudentAttendance';
+import { attendanceTone } from '../../../theme/attendanceColors';
+import { todayISO } from '../../teacher/attendance/utils/attendanceUtils';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const STATUS_STYLE: Record<string, { bg: string; fg: string; icon: any; note: string }> = {
-  present: { bg: '#e6fcf5', fg: '#0ca678', icon: 'check-circle', note: 'Arrived on time for homeroom check-in' },
-  absent: { bg: '#fff5f5', fg: '#f03e3e', icon: 'x-circle', note: 'No check-in recorded for the school day.' },
-  late: { bg: '#ba905a12', fg: '#ba905a', icon: 'clock', note: 'Late arrival recorded. Checked-in after homeroom.' },
+const STATUS_META: Record<string, { icon: any; note: string }> = {
+  present: { icon: 'check-circle', note: 'Arrived on time for homeroom check-in' },
+  absent: { icon: 'x-circle', note: 'No check-in recorded for the school day.' },
+  late: { icon: 'clock', note: 'Late arrival recorded. Checked-in after homeroom.' },
 };
 
 export function formatDateLabel(dateStr: string) {
@@ -26,6 +28,8 @@ export default function StudentAttendanceScreen({ navigation }: any) {
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const tone = (st: string) => attendanceTone(colors, st);
+  const today = todayISO();
 
   const { studentId } = useStudentData();
   const { summary, loading, error } = useStudentAttendance(studentId);
@@ -76,8 +80,8 @@ export default function StudentAttendanceScreen({ navigation }: any) {
             <View style={[styles.layoutRow, isWide && styles.layoutRowWide]}>
               <View style={[styles.leftColumn, isWide && styles.leftColumnWide]}>
                 <View style={styles.overallRateCard}>
-                  <View style={[styles.statIconBadge, { backgroundColor: '#ba905a15', width: 40, height: 40, borderRadius: 20 }]}>
-                    <Feather name="award" size={18} color="#ba905a" />
+                  <View style={[styles.statIconBadge, { backgroundColor: colors.accentYellowGlow, width: 40, height: 40, borderRadius: 20 }]}>
+                    <Feather name="award" size={18} color={colors.accentYellow} />
                   </View>
                   <View testID="attendance-rate">
                     <Text style={styles.overallRateText}>{hasRecords ? `${counts!.ratePct}%` : 'No attendance recorded yet'}</Text>
@@ -86,14 +90,17 @@ export default function StudentAttendanceScreen({ navigation }: any) {
                 </View>
 
                 <View style={styles.statsCardsGrid}>
-                  {(['present', 'absent', 'late'] as const).map((k) => (
-                    <View key={k} style={[styles.statCard, { borderLeftColor: STATUS_STYLE[k].fg, backgroundColor: STATUS_STYLE[k].bg }]}>
-                      <View style={styles.statCardHeaderRow}>
-                        <Text testID={`attendance-count-${k}`} style={[styles.statValue, { color: STATUS_STYLE[k].fg }]}>{counts?.[k] ?? 0}</Text>
+                  {(['present', 'absent', 'late'] as const).map((k) => {
+                    const t = tone(k);
+                    return (
+                      <View key={k} testID={`attendance-card-${k}`} style={[styles.statCard, { borderLeftColor: t.fg, backgroundColor: t.bg, borderColor: t.border }]}>
+                        <View style={styles.statCardHeaderRow}>
+                          <Text testID={`attendance-count-${k}`} style={[styles.statValue, { color: t.fg }]}>{counts?.[k] ?? 0}</Text>
+                        </View>
+                        <Text style={[styles.statLabel, { color: t.fg }]}>{k.charAt(0).toUpperCase() + k.slice(1)}</Text>
                       </View>
-                      <Text style={[styles.statLabel, { color: STATUS_STYLE[k].fg }]}>{k.charAt(0).toUpperCase() + k.slice(1)}</Text>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
 
                 {!hasRecords && (
@@ -123,12 +130,15 @@ export default function StudentAttendanceScreen({ navigation }: any) {
                     <View style={styles.calendarGrid}>
                       {cells.map((d, i) => {
                         const st = d ? statusByDate[d] : null;
+                        const isToday = d === today;
                         return (
                           <View key={i} style={styles.calendarDayCell}>
                             {d && (
                               <>
-                                <Text style={[styles.calendarDayText, !!st && { fontWeight: '700' }]}>{parseInt(d.slice(8), 10)}</Text>
-                                <View style={[styles.calendarDayUnderline, { backgroundColor: st ? STATUS_STYLE[st].fg : 'transparent' }]} />
+                                <Text style={[styles.calendarDayText, (!!st || isToday) && { fontWeight: '700' }, !!st && { color: tone(st).fg }]}>{parseInt(d.slice(8), 10)}</Text>
+                                {/* Status dot; today keeps the gold underline. */}
+                                <View testID={st ? `attendance-day-dot-${d}` : undefined} style={[styles.calendarDayDot, { backgroundColor: st ? tone(st).fg : 'transparent' }]} />
+                                <View testID={isToday ? 'attendance-day-today' : undefined} style={[styles.calendarDayUnderline, { backgroundColor: isToday ? colors.accentYellow : 'transparent' }]} />
                               </>
                             )}
                           </View>
@@ -142,7 +152,7 @@ export default function StudentAttendanceScreen({ navigation }: any) {
                     {history.length > 0 ? (
                       <View style={styles.logList}>
                         {history.map((log) => {
-                          const st = STATUS_STYLE[log.status] || STATUS_STYLE.present;
+                          const st = { ...(STATUS_META[log.status] || STATUS_META.present), ...tone(log.status) };
                           return (
                             <View key={log.date} testID={`attendance-history-row-${log.date}`} style={styles.logItem}>
                               <View style={styles.logItemMain}>
@@ -151,7 +161,7 @@ export default function StudentAttendanceScreen({ navigation }: any) {
                                     <Feather name={st.icon} size={15} color={st.fg} />
                                     <Text style={styles.logItemDate}>{formatDateLabel(log.date)}</Text>
                                   </View>
-                                  <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                                  <View testID={`attendance-badge-${log.date}`} style={[styles.statusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
                                     <Text style={[styles.statusBadgeText, { color: st.fg }]}>{log.status.charAt(0).toUpperCase() + log.status.slice(1)}</Text>
                                   </View>
                                 </View>

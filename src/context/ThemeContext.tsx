@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { darkColors, lightColors, AppColors } from '../theme';
+import { applyDocumentChrome } from '../utils/documentChrome';
 
 export type ThemeMode = 'dark' | 'light' | 'auto';
 
@@ -72,6 +74,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const dark = themeMode === 'auto' ? systemIsDark : themeMode === 'dark';
     return { colors: dark ? darkColors : lightColors, isDark: dark };
   }, [themeMode, systemIsDark]);
+
+  // Web: document background tracks the theme (no dark band behind light screens).
+  useEffect(() => {
+    if (Platform.OS === 'web') applyDocumentChrome(colors.bgDark);
+  }, [colors.bgDark]);
 
   return (
     <ThemeContext.Provider value={{ themeMode, setThemeMode, colors, isDark }}>

@@ -253,3 +253,26 @@ describe('scheduled calendar events (V2 event_scheduled)', () => {
     expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
   });
 });
+
+describe('V2 class posts', () => {
+  const P1 = v2('p1', '2026-09-25T11:00:00Z', {
+    type: 'class_post', entityType: 'class_post', entityId: 'post-1', title: 'New class post for Asha: Grade 5-A',
+    data: { postId: 'post-1', grade: 'Grade 5', section: 'A' },
+  });
+
+  test('a newly published class post shows in the bell and toasts', async () => {
+    await mount();
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('p1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^p1,c1/);
+  });
+
+  test('class posts never inflate the challenge badge', async () => {
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1/);
+  });
+});
