@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, StyleSheet, Share } from 'react-native';
+import { csvEscape, downloadCsv } from '../../../../utils/spreadsheet';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import { radius, fonts } from '../../../../theme';
@@ -18,6 +19,22 @@ const NO_SECTION = 'all';
 const gradesForBoard = (board: string | null | undefined) =>
   [...new Set((curriculaForBoard(board) ?? ALL_CURRICULA).flatMap(getGradesForCurriculum))]
     .filter((g) => /^Grade \d+$/.test(g)).sort(compareGrades);
+
+
+const loginText = (c: { name: string; email: string; password: string }) =>
+  `${c.name}'s Aivorah login:\nEmail: ${c.email}\nPassword: ${c.password}\nSign in at https://aivorah.ai`;
+
+// Native share sheet where available; on web without navigator.share, copy to the clipboard instead.
+async function shareText(message: string): Promise<'shared' | 'copied' | 'failed'> {
+  if (Platform.OS !== 'web') {
+    try { await Share.share({ message }); return 'shared'; } catch { return 'failed'; }
+  }
+  const nav: any = typeof navigator !== 'undefined' ? navigator : null;
+  if (nav?.share) {
+    try { await nav.share({ text: message }); return 'shared'; } catch { /* cancelled — fall back to copy */ }
+  }
+  try { await nav?.clipboard?.writeText(message); return 'copied'; } catch { return 'failed'; }
+}
 
 export function QuickAddPanel() {
   const { colors } = useTheme();
@@ -41,7 +58,18 @@ export function QuickAddPanel() {
     if (grade && !gradesForBoard(b).includes(grade)) setGrade('');
   }
 
+  const [shareNote, setShareNote] = useState('');
+  async function share(message: string) {
+    const how = await shareText(message);
+    setShareNote(how === 'copied' ? 'Login details copied — paste them into WhatsApp, email or a message.' : how === 'failed' ? 'Could not share — use Download instead.' : '');
+  }
+
   if (result) {
+    const downloadLogins = () => downloadCsv(
+      `aivorah-logins-${(school?.name || 'students').replace(/\W+/g, '-').toLowerCase()}.csv`,
+      [['Name', 'Login email', 'Password', 'Grade', 'Section'].join(','),
+        ...result.created.map((c) => [c.name, c.email, c.password, c.grade || '', c.section || ''].map((v) => csvEscape(String(v))).join(','))].join('\n'),
+    );
     return (
       <View style={s.card}>
         <View style={s.headRow}>
@@ -54,6 +82,7 @@ export function QuickAddPanel() {
         <View style={s.tableBox}>
           <View style={[s.tr, s.thRow]}>
             {['Name', 'Login email', 'Password', 'Grade'].map((h) => <Text key={h} style={s.th}>{h}</Text>)}
+            <Text style={[s.th, { flex: 0, width: 36 }]} />
           </View>
           {result.created.map((c) => (
             <View key={c.email} style={s.tr} testID={`bulk-created-row-${c.email}`}>
@@ -61,6 +90,9 @@ export function QuickAddPanel() {
               <Text style={s.td} numberOfLines={1}>{c.email}</Text>
               <Text style={[s.td, s.mono]}>{c.password}</Text>
               <Text style={s.td}>{c.grade}{c.section ? ` · ${c.section}` : ''}</Text>
+              <TouchableOpacity style={{ width: 36, alignItems: 'center' }} onPress={() => share(loginText(c))} testID={`bulk-share-${c.email}`} accessibilityLabel={`Share ${c.name}'s login`}>
+                <Feather name="share-2" size={14} color={colors.accentYellow} />
+              </TouchableOpacity>
             </View>
           ))}
           {result.errors.map((e, i) => (
@@ -70,10 +102,25 @@ export function QuickAddPanel() {
             </View>
           ))}
         </View>
-        <TouchableOpacity style={[s.btnGhost, { marginTop: 14 }]} onPress={reset} testID="bulk-import-again">
-          <Feather name="refresh-ccw" size={13} color={colors.accentYellow} />
-          <Text style={s.btnGhostText}>Add more</Text>
-        </TouchableOpacity>
+        {!!shareNote && <Text style={[s.hint, { marginTop: 10 }]} testID="bulk-share-note">{shareNote}</Text>}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+          {result.created.length > 0 && Platform.OS === 'web' && (
+            <TouchableOpacity style={s.btnGhost} onPress={downloadLogins} testID="bulk-quick-download-logins">
+              <Feather name="download" size={13} color={colors.accentYellow} />
+              <Text style={s.btnGhostText}>Download logins (Excel .csv)</Text>
+            </TouchableOpacity>
+          )}
+          {result.created.length > 0 && (
+            <TouchableOpacity style={s.btnGhost} onPress={() => share(result.created.map(loginText).join('\n\n'))} testID="bulk-quick-share-all">
+              <Feather name="share-2" size={13} color={colors.accentYellow} />
+              <Text style={s.btnGhostText}>Share all logins</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={s.btnGhost} onPress={() => { setShareNote(''); reset(); }} testID="bulk-import-again">
+            <Feather name="refresh-ccw" size={13} color={colors.accentYellow} />
+            <Text style={s.btnGhostText}>Add more</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -90,8 +137,16 @@ export function QuickAddPanel() {
             {needsBoard && !!school && (
               <SchoolCurriculumPicker testID="bulk-curriculum" schoolName={school.name} value={chosenBoard} onChange={pickBoard} minWidth={0} />
             )}
-            {!needsBoard && !!school && !!boardLabel && (
-              <Text style={s.curriculumNote} testID="bulk-curriculum-note">{`Curriculum: ${boardLabel} (from ${school.name})`}</Text>
+            {!(needsBoard && school) && (
+              <View testID="bulk-curriculum-field">
+                <Text style={s.roLabel}>CURRICULUM</Text>
+                <View style={s.roBox}>
+                  <Text style={[s.roText, !school && { color: colors.textDim }]} numberOfLines={1} testID="bulk-curriculum-note">
+                    {school ? `${boardLabel || 'Not set'} (from ${school.name})` : 'Pick school'}
+                  </Text>
+                  <Feather name="lock" size={12} color={colors.textDim} />
+                </View>
+              </View>
             )}
             <SelectField testID="bulk-grade" label="Grade" placeholder={school ? 'Select' : 'Pick school'} value={grade}
               options={gradeOptions} onChange={setGrade} minWidth={0} />
@@ -149,6 +204,9 @@ function makeStyles(c: AppColors) {
     colNames: { flexGrow: 1.4, flexBasis: 360, minWidth: 280 },
     fields: { gap: 12, marginTop: 12 },
     curriculumNote: { fontSize: 12.5, fontWeight: '600', color: c.textMain },
+    roLabel: { fontSize: 11, fontWeight: '700', color: c.textDim, letterSpacing: 0.4 },
+    roBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 36, paddingHorizontal: 12, borderRadius: radius.sm, marginTop: 6, borderWidth: 1, borderColor: c.borderColor, backgroundColor: c.bgDark },
+    roText: { fontSize: 13, color: c.textMain, flexShrink: 1 },
     headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     title: { fontFamily: fonts.serif, fontSize: 15, fontWeight: '800', color: c.textHeading },
     countBadge: {

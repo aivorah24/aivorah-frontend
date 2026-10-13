@@ -48,7 +48,7 @@ describe('BulkImportScreen — Quick add', () => {
 
     await choose(user, 'bulk-school', 'sch1');
     expect(screen.queryByTestId('bulk-curriculum')).toBeNull();
-    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('Curriculum: IB PYP / MYP / DP (by grade) (from TSRA)');
+    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('IB PYP / MYP / DP (by grade) (from TSRA)');
 
     await user.press(screen.getByTestId('bulk-grade'));
     expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
@@ -67,7 +67,7 @@ describe('BulkImportScreen — Quick add', () => {
   test('a single-board school shows its board as the curriculum', async () => {
     const user = await openQuickAdd();
     await choose(user, 'bulk-school', 'sch2');
-    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('Curriculum: CBSE (from Seed Test School (CBSE))');
+    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('CBSE (from Seed Test School (CBSE))');
     await user.press(screen.getByTestId('bulk-grade'));
     expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
   });
