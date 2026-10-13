@@ -11,11 +11,12 @@ import { CBSE_G6_ENGLISH_SYLLABUS, type SyllabusChapter } from './cbseG6EnglishS
 import { CBSE_G6_SCIENCE_SYLLABUS } from './cbseG6ScienceSyllabus';
 import { CBSE_G6_SOCIAL_SCIENCE_SYLLABUS } from './cbseG6SocialScienceSyllabus';
 import { CBSE_G6_MATHEMATICS_SYLLABUS } from './cbseG6MathematicsSyllabus';
+import { isCbseCurriculum } from '../utils/curriculum';
 
 export type { SyllabusChapter, SyllabusTopic, ListenPart, VocabWord } from './cbseG6EnglishSyllabus';
 
 export function getSubjectSyllabus(curriculum: string, grade: string, subject: string): SyllabusChapter[] {
-  const isCBSE = /^(cbse|ncert)$/i.test(curriculum.trim());
+  const isCBSE = isCbseCurriculum(curriculum);
   const isG6 = /^grade\s*6$/i.test(grade.trim());
   if (!isCBSE || !isG6) return [];
 

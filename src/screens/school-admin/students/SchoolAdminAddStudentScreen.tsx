@@ -32,6 +32,7 @@ import type { AppColors } from '../../../theme';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
 import { friendlyAccountError } from '../shared/accountErrors';
 import FormSubmitError from '../shared/FormSubmitError';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 interface Credentials {
   name: string;
@@ -116,7 +117,8 @@ function getGradesForCurriculum(curr: string): string[] {
 // options that belong to THIS school's base type. An IB school shows just the
 // three IB levels (PYP/MYP/DP); a CBSE school shows only CBSE; a school with
 // no base type set falls back to the full list.
-function curriculaForBase(base: string | null): string[] {
+function curriculaForBase(rawBase: string | null): string[] {
+  const base = normalizeCurriculum(rawBase) ?? null;
   if (base === 'IB') return ['IB PYP', 'IB MYP', 'IB DP'];
   if (base && CURRICULA.includes(base)) return [base];
   return CURRICULA;
@@ -125,7 +127,8 @@ function curriculaForBase(base: string | null): string[] {
 // For a school whose base type is already a single full curriculum (e.g. CBSE)
 // we pre-select it; for an IB school the exact level (PYP/MYP/DP) still depends
 // on the child, so we leave it unselected for the admin to choose.
-function defaultCurriculumForBase(base: string | null): string {
+function defaultCurriculumForBase(rawBase: string | null): string {
+  const base = normalizeCurriculum(rawBase);
   if (!base) return '';
   return CURRICULA.includes(base) ? base : '';
 }

@@ -44,6 +44,22 @@ describe('useStudentProgress', () => {
     expect(screen.getByTestId('topicCount').props.children).toBe(1);
   });
 
+  test('legacy NCERT students are filtered and listed as CBSE', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({
+      students: [
+        { id: 's1', name: 'A', grade: 'Grade 8', curriculum: 'NCERT', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Science'], topicStatus: {} },
+        { id: 's2', name: 'B', grade: 'Grade 8', curriculum: 'CBSE', section: 'A', class: null, photoUrl: null, scopedSubjects: ['Science'], topicStatus: {} },
+      ],
+      topics: [],
+    })) as any;
+
+    await render(<Harness teacherEmail="teacher@test.com" />);
+
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(JSON.parse(screen.getByTestId('filters').props.children).curriculum).toBe('CBSE');
+    expect(screen.getByTestId('studentCount').props.children).toBe(2);
+  });
+
   test('availableGrades reflects the real fetched data, not a hardcoded list (unaffected by the grade auto-default)', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonRes({
       students: [

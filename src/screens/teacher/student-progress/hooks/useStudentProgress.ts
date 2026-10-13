@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchStudentProgressHeatmap } from '../services/studentProgressService';
 import { filterByClass, normalizeGrade, type ClassFilters } from '../utils/rosterFilters';
 import type { HeatmapData } from '../types';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 const EMPTY: HeatmapData = { students: [], topics: [] };
 
@@ -26,7 +27,9 @@ export function useStudentProgress(teacherEmail: string | undefined) {
     setError(false);
     try {
       const result = await fetchStudentProgressHeatmap(teacherEmail, {});
-      setData(result && Array.isArray(result.students) ? result : EMPTY);
+      setData(result && Array.isArray(result.students)
+        ? { ...result, students: result.students.map((s) => ({ ...s, curriculum: normalizeCurriculum(s.curriculum) ?? null })) }
+        : EMPTY);
       setLastRefreshedAt(Date.now());
     } catch {
       setError(true);
