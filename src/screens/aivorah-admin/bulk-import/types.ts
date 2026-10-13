@@ -2,8 +2,8 @@ export interface BulkCreatePayload {
   students: string[];
   grade: string;
   section?: string;
+  schoolId: string;
   school: string;
-  curriculum: string;
 }
 
 export interface CreatedStudent {
@@ -52,9 +52,11 @@ export interface SpreadsheetImportResult {
 }
 
 // A spreadsheet row after column mapping and client-side checks; issues block the row, warnings don't.
+// `curriculum` is the school's (resolved by grade) — never sent; the server resolves it too.
 export interface ReviewedRow {
   rowNum: number;
   values: Record<string, string>;
+  curriculum: string | null;
   issues: string[];
   warnings: string[];
 }

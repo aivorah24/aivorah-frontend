@@ -52,6 +52,33 @@ test('remapping a column moves the field off its old column, and import needs a 
   expect(importSpreadsheet).not.toHaveBeenCalled();
 });
 
+test('a Curriculum column is never mapped, only checked against the school, and the mapping card collapses once matched', async () => {
+  (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'TSRA', created: 1, skipped: [], errors: [], credentials: [] });
+  const { result } = await renderHook(() => useSpreadsheetImport());
+  await waitFor(() => expect(result.current.schools).toHaveLength(1));
+  await act(async () => { result.current.setSchoolId('sch1'); });
+  await act(async () => { result.current.loadGrid([['Student Name', 'Grade', 'Curriculum'], ['Asha', '4', 'CBSE']], 'c.csv'); });
+
+  expect(result.current.columnMap).toEqual(['studentName', 'grade', '']);
+  expect(result.current.columnsOpen).toBe(false);
+  expect(result.current.reviewed[0].warnings).toContain('Spreadsheet says CBSE — will use IB PYP');
+  expect(result.current.readyRows).toHaveLength(1);
+
+  await act(async () => { await result.current.submit(); });
+  const sent = (importSpreadsheet as jest.Mock).mock.calls[0][0].rows[0];
+  expect(sent).not.toHaveProperty('curriculum');
+
+  await act(async () => { result.current.setEditingColumns(true); });
+  expect(result.current.columnsOpen).toBe(true);
+});
+
+test('the mapping card is open when Student Name could not be matched', async () => {
+  const { result } = await renderHook(() => useSpreadsheetImport());
+  await act(async () => { result.current.loadGrid([['Who', 'Grade'], ['Asha', '4']], 'x.csv'); });
+  expect(result.current.nameMapped).toBe(false);
+  expect(result.current.columnsOpen).toBe(true);
+});
+
 test('a file with only a header row, or over 500 rows, is rejected with a clear message', async () => {
   const { result } = await renderHook(() => useSpreadsheetImport());
   await act(async () => { result.current.loadGrid([['Student Name']], 'empty.csv'); });

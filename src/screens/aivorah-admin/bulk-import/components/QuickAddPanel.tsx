@@ -5,40 +5,34 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { radius, fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { getGradesForCurriculum } from '../../../school-admin/teachers/utils/teachingEntries';
-import { curriculaForBoard, compareGrades } from '../../shared/academicLabels';
+import { curriculaForBoard, compareGrades, describeBoard } from '../../shared/academicLabels';
 import { SelectField } from '../../shared/SelectField';
 import { useBulkImport } from '../hooks/useBulkImport';
-import { useAdminSchools } from '../../shared/useAdminSchools';
 
 const ALL_CURRICULA = ['IB PYP', 'IB MYP', 'IB DP', 'CBSE', 'ICSE', 'Cambridge'];
 const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const NO_SECTION = 'all';
 
-const gradesFor = (curriculum: string) =>
-  getGradesForCurriculum(curriculum).filter((g) => /^Grade \d+$/.test(g)).sort(compareGrades);
+// Grades across every curriculum the school's board covers (IB → 1-12 via PYP/MYP/DP).
+const gradesForBoard = (board: string | null | undefined) =>
+  [...new Set((curriculaForBoard(board) ?? ALL_CURRICULA).flatMap(getGradesForCurriculum))]
+    .filter((g) => /^Grade \d+$/.test(g)).sort(compareGrades);
 
 export function QuickAddPanel() {
   const { colors } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const {
     namesText, setNamesText, names, grade, setGrade, section, setSection,
-    school, setSchool, curriculum, setCurriculum, submitting, error, result, submit, reset,
+    schoolsState, schoolId, setSchoolId, school, submitting, error, result, submit, reset,
   } = useBulkImport();
-  const schoolsState = useAdminSchools();
 
-  const board = schoolsState.schools.find((sc) => sc.name === school)?.curriculum ?? null;
-  const curriculumOptions = curriculaForBoard(board) ?? ALL_CURRICULA;
-  const gradeOptions = curriculum ? gradesFor(curriculum) : [];
+  const gradeOptions = school ? gradesForBoard(school.curriculum) : [];
+  const boardLabel = describeBoard(school?.curriculum);
 
-  function pickSchool(name: string) {
-    setSchool(name);
-    const allowed = curriculaForBoard(schoolsState.schools.find((sc) => sc.name === name)?.curriculum) ?? ALL_CURRICULA;
-    if (allowed.length === 1) pickCurriculum(allowed[0]);
-    else if (curriculum && !allowed.includes(curriculum)) { setCurriculum(''); setGrade(''); }
-  }
-  function pickCurriculum(c: string) {
-    setCurriculum(c);
-    if (grade && !gradesFor(c).includes(grade)) setGrade('');
+  function pickSchool(id: string) {
+    setSchoolId(id);
+    const next = schoolsState.schools.find((sc) => sc.id === id);
+    if (grade && !gradesForBoard(next?.curriculum).includes(grade)) setGrade('');
   }
 
   if (result) {
@@ -85,18 +79,17 @@ export function QuickAddPanel() {
           <Text style={s.title}>Class details</Text>
           <Text style={s.hint}>Applied to every student in this batch.</Text>
           <View style={s.fields}>
-            <SelectField testID="bulk-school" label="School" placeholder={schoolsState.placeholder} value={school}
-              options={schoolsState.schools.map((sc) => sc.name)} onChange={pickSchool} minWidth={0} />
-            <View style={s.pair}>
-              <View style={{ flex: 1 }}>
-                <SelectField testID="bulk-curriculum" label="Curriculum" placeholder="Select" value={curriculum}
-                  options={curriculumOptions} onChange={pickCurriculum} minWidth={0} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <SelectField testID="bulk-grade" label="Grade" placeholder={curriculum ? 'Select' : 'Pick curriculum'} value={grade}
-                  options={gradeOptions} onChange={setGrade} minWidth={0} />
-              </View>
-            </View>
+            <SelectField testID="bulk-school" label="School" placeholder={schoolsState.placeholder} value={schoolId}
+              options={schoolsState.schools.map((sc) => ({ value: sc.id, label: sc.name }))} onChange={pickSchool} minWidth={0} />
+            {!!school && (
+              <Text style={s.curriculumNote} testID="bulk-curriculum-note">
+                {boardLabel
+                  ? `Curriculum: ${boardLabel} (from ${school.name})`
+                  : `${school.name} has no curriculum set — students will be enrolled without one`}
+              </Text>
+            )}
+            <SelectField testID="bulk-grade" label="Grade" placeholder={school ? 'Select' : 'Pick school'} value={grade}
+              options={gradeOptions} onChange={setGrade} minWidth={0} />
             <SelectField testID="bulk-section" label="Section (optional)" allLabel="No section" value={section || NO_SECTION}
               options={SECTIONS} onChange={(v) => setSection(v === NO_SECTION ? '' : v)} minWidth={0} />
           </View>
@@ -150,7 +143,7 @@ function makeStyles(c: AppColors) {
     colDetails: { flexGrow: 1, flexBasis: 300, minWidth: 260 },
     colNames: { flexGrow: 1.4, flexBasis: 360, minWidth: 280 },
     fields: { gap: 12, marginTop: 12 },
-    pair: { flexDirection: 'row', gap: 12 },
+    curriculumNote: { fontSize: 12.5, fontWeight: '600', color: c.textMain },
     headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     title: { fontFamily: fonts.serif, fontSize: 15, fontWeight: '800', color: c.textHeading },
     countBadge: {

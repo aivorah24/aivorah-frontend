@@ -5,18 +5,20 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { radius, fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { STUDENT_IMPORT_FIELDS, csvEscape, downloadCsv, downloadXlsxTemplate } from '../../../../utils/spreadsheet';
-import { curriculaForBoard } from '../../shared/academicLabels';
+import { describeBoard } from '../../shared/academicLabels';
 import { SelectField } from '../../shared/SelectField';
 import { TablePager, usePaged } from '../../shared/TablePager';
 import { useSpreadsheetImport } from '../hooks/useSpreadsheetImport';
 
-const TEMPLATE_HEADERS = STUDENT_IMPORT_FIELDS.map((f) => f.label);
+// Curriculum comes from the school, so it's never a column.
+const IMPORT_FIELDS = STUDENT_IMPORT_FIELDS.filter((f) => f.value !== 'curriculum');
+const TEMPLATE_HEADERS = IMPORT_FIELDS.map((f) => f.label);
+const EXAMPLE: Record<string, string> = {
+  studentName: 'Asha Rao', studentEmail: 'asha.rao@example.com', grade: 'Grade 4', section: 'A',
+  parentName: 'Mona Rao', parentEmail: 'mona.rao@example.com', parentPhone: '9876543210',
+};
+const TEMPLATE_EXAMPLE = IMPORT_FIELDS.map((f) => EXAMPLE[f.value] || '');
 const NOT_IMPORTED = '__none__';
-
-function templateExample(board: string | null): string[] {
-  const curriculum = curriculaForBoard(board)?.[0] || 'CBSE';
-  return ['Asha Rao', 'asha.rao@example.com', '', 'Grade 4', 'A', curriculum, 'Mona Rao', 'mona.rao@example.com', '9876543210'];
-}
 
 function pickFile(onLoad: (name: string, content: ArrayBuffer | string) => void) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -54,8 +56,7 @@ export function SpreadsheetImportPanel() {
   const s = useMemo(() => makeStyles(colors), [colors]);
   const imp = useSpreadsheetImport();
   const page = usePaged(imp.reviewed, 10);
-  const board = imp.school?.curriculum ?? null;
-  const boardCurricula = curriculaForBoard(board);
+  const boardLabel = describeBoard(imp.school?.curriculum);
 
   if (imp.result) {
     const r = imp.result;
@@ -124,7 +125,7 @@ export function SpreadsheetImportPanel() {
   }
 
   const hasFile = imp.headers.length > 0;
-  const fieldOptions = [{ value: NOT_IMPORTED, label: "Don't import" }, ...STUDENT_IMPORT_FIELDS];
+  const fieldOptions = [{ value: NOT_IMPORTED, label: "Don't import" }, ...IMPORT_FIELDS];
 
   return (
     <View style={{ gap: 16 }}>
@@ -143,7 +144,7 @@ export function SpreadsheetImportPanel() {
             <View style={s.boardBox}>
               <Text style={s.boardLabel}>BOARD</Text>
               <Text style={s.boardValue}>
-                {boardCurricula ? boardCurricula.join(' · ') : 'Not set — curriculum comes from each row'}
+                {boardLabel || 'Not set — students will be enrolled without a curriculum'}
               </Text>
             </View>
           )}
@@ -159,7 +160,7 @@ export function SpreadsheetImportPanel() {
         done={hasFile}
         s={s}
         right={(
-          <TouchableOpacity testID="bulk-sheet-template" style={[s.btnGhost, { marginLeft: 'auto' as any }]} onPress={() => downloadXlsxTemplate('aivorah-students-template.xlsx', TEMPLATE_HEADERS, [templateExample(board)])}>
+          <TouchableOpacity testID="bulk-sheet-template" style={[s.btnGhost, { marginLeft: 'auto' as any }]} onPress={() => downloadXlsxTemplate('aivorah-students-template.xlsx', TEMPLATE_HEADERS, [TEMPLATE_EXAMPLE])}>
             <Feather name="file-text" size={14} color={colors.accentYellow} />
             <Text style={s.btnGhostText}>Download template</Text>
           </TouchableOpacity>
@@ -174,8 +175,14 @@ export function SpreadsheetImportPanel() {
         </TouchableOpacity>
         {!!imp.fileError && <Text style={s.errorText} testID="bulk-sheet-file-error">{imp.fileError}</Text>}
 
-        {hasFile && (
-          <View style={{ marginTop: 14 }}>
+        {hasFile && !imp.columnsOpen && (
+          <TouchableOpacity testID="bulk-sheet-columns-edit" style={s.columnsLine} onPress={() => imp.setEditingColumns(true)} activeOpacity={0.7}>
+            <Feather name="check" size={13} color={colors.accentGreen} />
+            <Text style={[s.hint, { marginTop: 0 }]}>Columns matched automatically · <Text style={s.linkText}>Edit</Text></Text>
+          </TouchableOpacity>
+        )}
+        {hasFile && imp.columnsOpen && (
+          <View style={{ marginTop: 14 }} testID="bulk-sheet-columns">
             <Text style={s.subTitle}>Columns</Text>
             <Text style={s.hint}>Matched automatically from your headers — change any that are wrong.</Text>
             <View style={s.mapGrid}>
@@ -205,12 +212,19 @@ export function SpreadsheetImportPanel() {
             {imp.reviewed.some((r) => r.warnings.length) && <Text style={[s.pill, s.pillWarn]}>{imp.reviewed.filter((r) => r.warnings.length).length} with notes</Text>}
           </View>
 
+          {!!imp.school && (
+            <Text style={s.curriculumNote} testID="bulk-sheet-curriculum-note">
+              {boardLabel
+                ? `All students will be enrolled in ${boardLabel} (from ${imp.school.name})`
+                : `${imp.school.name} has no curriculum set — students will be enrolled without one`}
+            </Text>
+          )}
+
           <View style={s.tableBox}>
             <View style={[s.tr, s.thRow]}>
               <Text style={[s.th, s.tdNarrow]}>Row</Text>
               <Text style={s.th}>Student</Text>
               <Text style={s.th}>Grade · Section</Text>
-              <Text style={s.th}>Curriculum</Text>
               <Text style={s.th}>Parent</Text>
               <Text style={[s.th, { flex: 1.6 }]}>Check</Text>
             </View>
@@ -225,7 +239,6 @@ export function SpreadsheetImportPanel() {
                     <Text style={s.tdSub} numberOfLines={1}>{v.studentEmail || 'login generated'}</Text>
                   </View>
                   <Text style={s.td}>{[v.grade, v.section].filter(Boolean).join(' · ') || '—'}</Text>
-                  <Text style={s.td}>{v.curriculum || (board ? 'From school' : '—')}</Text>
                   <Text style={s.td} numberOfLines={1}>{v.parentName || '—'}</Text>
                   <View style={[s.tdCol, { flex: 1.6 }]}>
                     {bad
@@ -289,6 +302,9 @@ function makeStyles(c: AppColors) {
     dropTitle: { fontSize: 14, fontWeight: '700', color: c.textMain },
     mapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 },
     mapItem: { minWidth: 180, flexGrow: 1, flexBasis: 200 },
+    columnsLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, alignSelf: 'flex-start' },
+    linkText: { color: c.accentYellow, fontWeight: '700' },
+    curriculumNote: { fontSize: 12.5, fontWeight: '600', color: c.textMain, marginBottom: 10 },
     mapHeader: { fontSize: 11.5, color: c.textMuted, fontWeight: '600' },
     pills: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 },
     pill: { fontSize: 11.5, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.full, overflow: 'hidden' },

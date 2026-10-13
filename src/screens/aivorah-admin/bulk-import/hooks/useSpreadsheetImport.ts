@@ -14,6 +14,8 @@ export function useSpreadsheetImport() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [dataRows, setDataRows] = useState<string[][]>([]);
   const [columnMap, setColumnMap] = useState<(StudentImportField | '')[]>([]);
+  const [sheetCurriculumCol, setSheetCurriculumCol] = useState(-1);
+  const [editingColumns, setEditingColumns] = useState(false);
   const [fileError, setFileError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -40,7 +42,11 @@ export function useSpreadsheetImport() {
     setFileName(name);
     setHeaders(head);
     setDataRows(rows);
-    setColumnMap(head.map(guessStudentField));
+    // Curriculum comes from the school — a curriculum column is never imported, only checked against it.
+    const guessed = head.map(guessStudentField);
+    setSheetCurriculumCol(guessed.indexOf('curriculum'));
+    setColumnMap(guessed.map((f) => (f === 'curriculum' ? '' : f)));
+    setEditingColumns(false);
   }, []);
 
   const loadFile = useCallback((name: string, content: ArrayBuffer | string) => {
@@ -56,10 +62,15 @@ export function useSpreadsheetImport() {
     setColumnMap((prev) => prev.map((f, i) => (i === col ? field : f === field && field ? '' : f)));
   }
 
-  const reviewed = useMemo(() => reviewRows(dataRows, columnMap, school?.curriculum ?? null), [dataRows, columnMap, school]);
+  const reviewed = useMemo(
+    () => reviewRows(dataRows, columnMap, school?.curriculum ?? null, sheetCurriculumCol),
+    [dataRows, columnMap, school, sheetCurriculumCol],
+  );
   const readyRows = reviewed.filter((r) => r.issues.length === 0);
   const blockedRows = reviewed.filter((r) => r.issues.length > 0);
   const nameMapped = columnMap.includes('studentName');
+  // Mapping card stays collapsed while every required column is matched.
+  const columnsOpen = editingColumns || !nameMapped;
 
   async function submit() {
     if (!schoolId) { setSubmitError('Choose a school first.'); return; }
@@ -77,13 +88,13 @@ export function useSpreadsheetImport() {
   }
 
   function reset() {
-    setFileName(''); setHeaders([]); setDataRows([]); setColumnMap([]);
+    setFileName(''); setHeaders([]); setDataRows([]); setColumnMap([]); setSheetCurriculumCol(-1); setEditingColumns(false);
     setFileError(''); setSubmitError(''); setResult(null);
   }
 
   return {
     schools, schoolsError, loadSchools, schoolPlaceholder, schoolId, setSchoolId, school,
-    fileName, headers, columnMap, setColumnField, fileError, loadGrid, loadFile,
+    fileName, headers, columnMap, setColumnField, columnsOpen, setEditingColumns, fileError, loadGrid, loadFile,
     reviewed, readyRows, blockedRows, nameMapped,
     submitting, submitError, result, submit, reset,
   };

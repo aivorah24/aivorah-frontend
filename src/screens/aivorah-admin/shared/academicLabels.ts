@@ -36,6 +36,24 @@ export function curriculaForBoard(board: string | null | undefined): string[] | 
   return hit ? [hit] : null;
 }
 
+// Curriculum a student in `grade` gets at a school on `board` — mirrors the
+// server's resolveCurriculum(): IB → PYP (≤5) / MYP (6-10) / DP (11+).
+export function resolveCurriculum(board: string | null | undefined, grade: string | null | undefined): string | null {
+  const allowed = curriculaForBoard(board);
+  if (!allowed) return null;
+  if (allowed.length === 1) return allowed[0];
+  const n = parseInt(String(grade || '').replace(/\D/g, ''), 10);
+  if (!n || n <= 5) return 'IB PYP';
+  return n <= 10 ? 'IB MYP' : 'IB DP';
+}
+
+// One-line label for a school's board: "IB PYP / MYP / DP (by grade)", "CBSE", or null.
+export function describeBoard(board: string | null | undefined): string | null {
+  const allowed = curriculaForBoard(board);
+  if (!allowed) return null;
+  return allowed.length > 1 ? 'IB PYP / MYP / DP (by grade)' : allowed[0];
+}
+
 // Merges a { rawLabel: count } map under normalized labels, dropping blank/"Unknown" buckets.
 export function mergeCounts(
   map: Record<string, number>,

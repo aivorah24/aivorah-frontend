@@ -37,37 +37,35 @@ async function choose(user: ReturnType<typeof userEvent.setup>, field: string, o
 describe('BulkImportScreen — Quick add', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('school, curriculum and grade are dropdowns; an IB school offers only IB curricula; created logins are shown', async () => {
+  test('curriculum comes from the school (no curriculum field); an IB school offers Grades 1-12; created logins are shown', async () => {
     (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({
       created: [{ name: 'Asha', email: 'asha.123@tsra.student', password: 'Abc123!@', grade: 'Grade 5', curriculum: 'IB PYP', school: 'TSRA' }],
       errors: [], total: 1,
     });
     const user = await openQuickAdd();
 
-    await choose(user, 'bulk-school', 'TSRA');
-    await user.press(screen.getByTestId('bulk-curriculum'));
-    expect(await screen.findByTestId('bulk-curriculum-option-IB MYP')).toBeTruthy();
-    expect(screen.queryByTestId('bulk-curriculum-option-CBSE')).toBeNull();
-    await user.press(screen.getByTestId('bulk-curriculum-option-IB PYP'));
+    await choose(user, 'bulk-school', 'sch1');
+    expect(screen.queryByTestId('bulk-curriculum')).toBeNull();
+    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('Curriculum: IB PYP / MYP / DP (by grade) (from TSRA)');
 
     await user.press(screen.getByTestId('bulk-grade'));
-    expect(await screen.findByTestId('bulk-grade-option-Grade 5')).toBeTruthy();
-    expect(screen.queryByTestId('bulk-grade-option-Grade 6')).toBeNull();
+    expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
     await user.press(screen.getByTestId('bulk-grade-option-Grade 5'));
     await choose(user, 'bulk-section', 'B');
 
     await user.type(screen.getByTestId('bulk-names'), 'Asha');
     await user.press(screen.getByTestId('bulk-import-submit'));
 
-    expect(bulkCreateStudents).toHaveBeenCalledWith(expect.objectContaining({ school: 'TSRA', curriculum: 'IB PYP', grade: 'Grade 5', section: 'B', students: ['Asha'] }));
+    const payload = (bulkCreateStudents as jest.Mock).mock.calls[0][0];
+    expect(payload).toEqual({ schoolId: 'sch1', school: 'TSRA', grade: 'Grade 5', section: 'B', students: ['Asha'] });
     expect(await screen.findByTestId('bulk-created-row-asha.123@tsra.student')).toBeTruthy();
     expect(screen.getByText('Abc123!@')).toBeTruthy();
   });
 
-  test('a single-board school picks its curriculum automatically', async () => {
+  test('a single-board school shows its board as the curriculum', async () => {
     const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'Seed Test School (CBSE)');
-    expect(screen.getByText('CBSE')).toBeTruthy(); // the curriculum trigger's label, set without opening it
+    await choose(user, 'bulk-school', 'sch2');
+    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('Curriculum: CBSE (from Seed Test School (CBSE))');
     await user.press(screen.getByTestId('bulk-grade'));
     expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
   });
@@ -82,7 +80,7 @@ describe('BulkImportScreen — Quick add', () => {
   test('shows per-row errors alongside successes', async () => {
     (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [{ name: 'Dup', error: 'Email already exists' }], total: 0 });
     const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'Seed Test School (CBSE)');
+    await choose(user, 'bulk-school', 'sch2');
     await choose(user, 'bulk-grade', 'Grade 5');
     await user.type(screen.getByTestId('bulk-names'), 'Dup');
     await user.press(screen.getByTestId('bulk-import-submit'));

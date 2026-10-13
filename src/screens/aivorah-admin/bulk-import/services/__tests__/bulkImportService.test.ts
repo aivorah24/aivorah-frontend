@@ -9,7 +9,7 @@ beforeEach(() => { global.fetch = jest.fn(); });
 
 describe('bulkCreateStudents', () => {
   it('posts the payload with the auth header', async () => {
-    const payload = { students: ['Cam'], grade: 'Grade 5', school: 'TSRA', curriculum: 'CBSE' };
+    const payload = { students: ['Cam'], grade: 'Grade 5', schoolId: 'sch1', school: 'TSRA' };
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ created: [], errors: [], total: 0 }) });
     await bulkCreateStudents(payload);
     expect(global.fetch).toHaveBeenCalledWith(`${SERVER_URL}/students/bulk-create`, {
@@ -21,7 +21,7 @@ describe('bulkCreateStudents', () => {
 
   it('throws the server-provided error message on failure', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'School name is required' }) });
-    await expect(bulkCreateStudents({ students: [], grade: '', school: '', curriculum: '' })).rejects.toThrow('School name is required');
+    await expect(bulkCreateStudents({ students: [], grade: '', schoolId: '', school: '' })).rejects.toThrow('School name is required');
   });
 });
 
