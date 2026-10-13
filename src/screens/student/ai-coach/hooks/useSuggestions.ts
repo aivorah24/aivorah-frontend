@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import SERVER_URL from '../../../../config/serverUrl';
 import { fetchWithRetry } from '../../../../utils/fetchWithRetry';
 import { FALLBACK_SUGGESTIONS } from '../constants';
+import { NCERT_CONTENT_KEY } from '../../../../utils/curriculum';
 
 const QUESTION_TEMPLATES = [
   (t: string) => `What is ${t}?`,
@@ -38,7 +39,7 @@ export function useSuggestions(userGrade: string, userCurriculum: string) {
     const isIBPYP = !userCurriculum || userCurriculum.toLowerCase().includes('ib');
     const endpoint = isIBPYP
       ? `${SERVER_URL}/curriculum?curriculum=IB_PYP&grade=${encodeURIComponent(userGrade)}`
-      : `${SERVER_URL}/curriculum?curriculum=NCERT&grade=${encodeURIComponent(userGrade)}`;
+      : `${SERVER_URL}/curriculum?curriculum=${NCERT_CONTENT_KEY}&grade=${encodeURIComponent(userGrade)}`;
 
     // A single-attempt fetch here used to mean any grade whose one request
     // happened to hit a transient network blip (confirmed real on this dev

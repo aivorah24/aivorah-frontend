@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SERVER_URL from '../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
+import { normalizeCurriculum, monolithContentCurriculum } from './curriculum';
 
 // Warms the Dashboard's curriculum data the MOMENT a student's session is
 // resolved (login, or a persisted session restored on app open) — instead of
@@ -24,7 +25,7 @@ const memSubjects = new Map<string, CachedSubjectChapters>();
 // student and an IB DP Grade 11 student would silently share (and overwrite)
 // the exact same cache entry. Keying on the real curriculum string avoids that.
 export function curriculumCacheKey(isIBPYP: boolean, grade: string, curriculum?: string): string {
-  const bucket = isIBPYP ? 'ibpyp' : (curriculum || 'ncert').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const bucket = isIBPYP ? 'ibpyp' : (normalizeCurriculum(curriculum) || 'cbse').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return `dashboard_curriculum_${bucket}_${grade}_v1`;
 }
 
@@ -81,7 +82,7 @@ export async function prefetchStudentDashboard(user: { role?: string; grade?: st
       data = { topics, totalTopics: topics.length };
       type = 'ibpyp';
     } else if (useUnified) {
-      const curricParam = encodeURIComponent(isIBPYP ? 'IB_PYP' : (user.curriculum ?? 'NCERT'));
+      const curricParam = encodeURIComponent(isIBPYP ? 'IB_PYP' : monolithContentCurriculum(user.curriculum));
       const gradeParam = encodeURIComponent(studentGrade);
       const res = await fetch(`${SERVER_URL}/curriculum?curriculum=${curricParam}&grade=${gradeParam}`);
       if (!res.ok) return;

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
+import { normalizeCurriculum } from '../../../../../utils/curriculum';
 
 interface Props {
   colors: AppColors;
@@ -175,7 +176,7 @@ export default function BulkImportTab({
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMain }}>{r.name}</Text>
                     <Text style={{ fontSize: 11, color: colors.textMuted }} numberOfLines={1}>
-                      {r.grade} · {r.curriculum}{r.email ? ` · ${r.email}` : ''}
+                      {r.grade} · {normalizeCurriculum(r.curriculum)}{r.email ? ` · ${r.email}` : ''}
                     </Text>
                     {r.parentName ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>

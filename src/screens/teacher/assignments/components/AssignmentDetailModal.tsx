@@ -7,6 +7,7 @@ import type { Assignment } from '../types';
 import { SUBJECT_COLORS } from '../constants';
 import { daysUntil, formatDate } from '../utils/helpers';
 import { getAnsweredQuizHtml } from '../utils/quizHtml';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 // The assignment Detail modal (Overview / Students / Questions tabs) —
 // extracted verbatim (no behavior change) from TeacherAssignmentsScreen.tsx,
@@ -68,7 +69,7 @@ export function AssignmentDetailModal({
                     <Text style={[styles.typeText, { color: sc }]}>{a.type?.toUpperCase()}</Text>
                   </View>
                   {a.grade && <View style={styles.broadcastPill}><Text style={styles.broadcastText}>{a.grade}</Text></View>}
-                  {a.curriculum && <View style={styles.broadcastPill}><Text style={styles.broadcastText}>{a.curriculum}</Text></View>}
+                  {a.curriculum && <View style={styles.broadcastPill}><Text style={styles.broadcastText}>{normalizeCurriculum(a.curriculum)}</Text></View>}
                   {a.studentId === null && (
                     <View style={styles.broadcastPill}>
                       <Feather name="users" size={9} color={gold} />

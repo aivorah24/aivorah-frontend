@@ -149,14 +149,15 @@ describe('useProfileFields — grade', () => {
 });
 
 describe('useProfileFields — curriculum', () => {
-  test('saves the real selected curriculum', async () => {
+  test('saves a legacy "NCERT" pick as CBSE', async () => {
     const user = userEvent.setup();
     await render(<Harness />);
 
     await user.press(screen.getByTestId('setCurriculum'));
     await user.press(screen.getByTestId('saveCurriculum'));
 
-    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ curriculum: 'NCERT' }));
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ curriculum: 'CBSE' }));
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls.at(-1)[1].body).curriculum).toBe('CBSE');
   });
 
   test('saving with no curriculum selected is a real no-op', async () => {

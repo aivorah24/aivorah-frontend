@@ -10,6 +10,7 @@ import {
   fetchPerformance,
 } from '../services/dashboardService';
 import type { CurriculumData, CurriculumTopic, PerfData, SubjectChapters, UpcomingDeadline } from '../types';
+import { monolithContentCurriculum } from '../../../../utils/curriculum';
 
 // Reshapes a /curriculum/subjects response (per-subject topic lists, used by
 // the Learning Path screen) into the flat CurriculumData shape this hook's
@@ -114,7 +115,7 @@ export function useDashboardData({
 
         let data: any;
         if (useUnified) {
-          const curricParam = isIBPYP ? 'IB_PYP' : (childCurriculum ?? 'NCERT');
+          const curricParam = isIBPYP ? 'IB_PYP' : monolithContentCurriculum(childCurriculum);
           data = await fetchCurriculum(curricParam, studentGrade);
           setCurriculum(parseIBPYPCurriculum(data));
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now(), type: 'ibpyp' }));
@@ -140,7 +141,7 @@ export function useDashboardData({
       setSubjectChapters([]);
       return;
     }
-    const curricParam = isIBPYP ? 'IB_PYP' : (childCurriculum ?? 'NCERT');
+    const curricParam = isIBPYP ? 'IB_PYP' : monolithContentCurriculum(childCurriculum);
     fetchCurriculumSubjects(curricParam, studentGrade)
       .then(d => {
         if (!Array.isArray(d.subjects)) return;

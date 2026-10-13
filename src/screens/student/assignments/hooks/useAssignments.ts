@@ -6,6 +6,7 @@ import { useNotification } from '../../../../context/NotificationContext';
 import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import type { Assignment, QuizQuestion } from '../types';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 // True only for a brief grace period right after a page load. A refresh that
 // restores the Assignments route focuses it immediately — during this window we
@@ -95,7 +96,7 @@ async function hydrateQuizQuestions(item: Assignment): Promise<QuizQuestion[]> {
         subject: item.subject || 'Mathematics',
         chapter: topic,
         grade: item.grade || 'Grade 3',
-        curriculum: item.curriculum || 'NCERT',
+        curriculum: normalizeCurriculum(item.curriculum) || 'CBSE',
         difficulty: 'medium',
         count: 5,
         teacherNotes: '',

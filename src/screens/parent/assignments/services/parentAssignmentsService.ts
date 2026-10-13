@@ -3,6 +3,7 @@ import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
+import { isCbseCurriculum } from '../../../../utils/curriculum';
 
 // Fallback only - used before the child's curriculum/grade is known, or if
 // the /curriculum/subjects lookup below fails. The real subject list is
@@ -47,7 +48,7 @@ export async function fetchCurriculumTopics(grade: string): Promise<{ subject: s
 // student learning-paths screen uses (see useSubjects.ts for why IB DP/MYP
 // and CBSE route to the learning-paths service instead of the monolith).
 export async function fetchSubjectOptions(curriculum: string, grade: string): Promise<string[]> {
-  const isCBSE = /^cbse$/i.test(curriculum.trim());
+  const isCBSE = isCbseCurriculum(curriculum);
   const isIBDPorMYP = /^ib.?(dp|myp)$/i.test(curriculum.trim());
   const gradeNum = parseInt(String(grade).replace(/\D/g, ''), 10);
   const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && gradeNum >= 6;
