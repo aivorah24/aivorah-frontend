@@ -20,6 +20,7 @@ import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
 import { useTheme } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
+import type { NotifItem } from '../../context/notifItem';
 import { openNotification } from '../../navigation/openNotification';
 import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
@@ -119,6 +120,8 @@ export default function Header({
 
   const [bellVisible, setBellVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
+  // Informational items (admin account updates) open a full-text detail card instead of a screen.
+  const [detailItem, setDetailItem] = useState<NotifItem | null>(null);
 
 const [editingName, setEditingName] = useState(false);
   const [savingName, setSavingName] = useState(false);
@@ -381,6 +384,7 @@ const [editingName, setEditingName] = useState(false);
                             navigate: (screen, params) => navigation.navigate(screen, params),
                             actions: { markNotificationRead, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents },
                           });
+                          if (item.type === 'account') setDetailItem(item);
                         }}
                       >
                         <View style={[styles.notifIconWrap, { backgroundColor: accent + '22' }]}>
@@ -527,6 +531,24 @@ const [editingName, setEditingName] = useState(false);
         >
           {renderAvatarCircle(36)}
         </TouchableOpacity>
+
+        <Modal visible={!!detailItem} transparent animationType="fade" onRequestClose={() => setDetailItem(null)}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setDetailItem(null)} testID="notif-detail-backdrop">
+            <TouchableOpacity activeOpacity={1} style={styles.notifDetailCard} testID="notif-detail">
+              <View style={styles.notifDetailHead}>
+                <View style={[styles.notifIconWrap, { backgroundColor: colors.accentYellow + '22' }]}>
+                  <Feather name="user-check" size={16} color={colors.accentYellow} />
+                </View>
+                <Text style={styles.notifDetailTitle}>{detailItem?.title}</Text>
+              </View>
+              <Text style={styles.notifDetailBody}>{detailItem?.subtitle}</Text>
+              {!!detailItem && <Text style={styles.notifTime}>{formatNotifTime(detailItem.createdAt)}</Text>}
+              <TouchableOpacity style={[styles.notifDetailClose, { backgroundColor: colors.accentYellow }]} onPress={() => setDetailItem(null)} testID="notif-detail-close">
+                <Text style={[styles.notifDetailCloseText, { color: colors.cardDark }]}>Close</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Profile modal — redesigned */}
         <Modal visible={profileVisible} transparent animationType="fade" onRequestClose={() => { setProfileVisible(false); setEditingName(false); }}>
@@ -798,6 +820,12 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   },
   notifItemTitle: { fontSize: 13, fontWeight: '600', color: c.textMain, lineHeight: 18 },
   notifSender: { fontSize: 12, fontWeight: '600', color: c.textMain },
+  notifDetailCard: { alignSelf: 'center', marginTop: 120, width: '92%', maxWidth: 440, backgroundColor: c.cardDark, borderRadius: 20, borderWidth: 1, borderColor: c.borderColor, padding: 22, gap: 12 },
+  notifDetailHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notifDetailTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: c.textMain },
+  notifDetailBody: { fontSize: 14, lineHeight: 21, color: c.textMuted },
+  notifDetailClose: { marginTop: 6, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  notifDetailCloseText: { fontSize: 14, fontWeight: '700' },
   notifPreview: { fontSize: 12, color: c.textMuted, marginTop: 2, lineHeight: 17 },
   notifTime: { fontSize: 10, color: c.textDim, marginTop: 3 },
   notifUnreadDot: {
