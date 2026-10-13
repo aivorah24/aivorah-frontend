@@ -2,8 +2,8 @@
  * TransliterationInput — a TextInput that lets a user TYPE in English (Latin)
  * and get their words converted to an Indic/target script (Hindi, Telugu, …),
  * so teachers and students can author Language-Acquisition content without a
- * special keyboard. Backed by the existing server proxy GET /quiz/transliterate
- * (Google Input Tools), which already powers the student quiz IME.
+ * special keyboard. Backed by aivorah-assignments-service GET /quiz/transliterate
+ * (Google Input Tools proxy), which also powers the student quiz IME.
  *
  * When `langCode` is null/'en' it behaves exactly like a plain TextInput — so it
  * is safe to use everywhere and only "turns on" for a real target language.
@@ -14,7 +14,7 @@
  */
 import React, { useCallback, useRef, useState } from 'react';
 import { View, TextInput, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import SERVER_URL from '../../config/serverUrl';
+import ASSIGNMENTS_SERVER_URL from '../../config/assignmentsServerUrl';
 
 // Human language name (as stored on assignments) → Google Input Tools code.
 // Extend this as more Language-Acquisition languages are offered.
@@ -44,6 +44,7 @@ export function detectLangCodeFromText(text?: string | null): string | null {
   if (/[઀-૿]/.test(text)) return 'gu'; // Gujarati
   if (/[ঀ-৿]/.test(text)) return 'bn'; // Bengali
   if (/[਀-੿]/.test(text)) return 'pa'; // Gurmukhi (Punjabi)
+  if (/[଀-୿]/.test(text)) return 'or'; // Odia
   if (/[؀-ۿ]/.test(text)) return 'ar'; // Arabic/Urdu
   return null;
 }
@@ -85,7 +86,7 @@ export default function TransliterationInput({
   const fetchSuggestions = useCallback((word: string) => {
     if (!active || !word || !/[a-zA-Z]/.test(word)) { setSuggestions([]); return; }
     setLoading(true);
-    fetch(`${SERVER_URL}/quiz/transliterate?text=${encodeURIComponent(word)}&lang=${langCode}`)
+    fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/transliterate?text=${encodeURIComponent(word)}&lang=${langCode}`)
       .then(r => (r.ok ? r.json() : null))
       .then((data) => {
         // The server proxy normalises Google Input Tools to { suggestions: [...] }.

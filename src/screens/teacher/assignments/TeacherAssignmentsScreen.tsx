@@ -175,7 +175,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     pickDoc, generateInteractiveQuiz, resetUploadState,
   } = useUploadWorksheet({
     user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
-    gradeOptions, effectiveGrade, effectiveCurriculum, setSelectedLanguage,
+    gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
     setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
     quizDifficulty, setQuizQuestions, setType,
   });

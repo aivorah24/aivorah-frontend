@@ -26,7 +26,7 @@ const BASE_ARGS = {
   user: { school: 'Green Valley' }, title: '', setTitle: () => {}, chapter: '', setChapter: () => {},
   subject: 'Maths', setSubject: () => {}, grade: 'Grade 4', setGrade: () => {}, curriculum: 'IB PYP',
   gradeOptions: ['Grade 4'], effectiveGrade: 'Grade 4', effectiveCurriculum: 'IB PYP',
-  setSelectedLanguage: () => {}, setSuccessCriteria: () => {}, setTeacherNotes: () => {},
+  selectedLanguage: '', setSelectedLanguage: () => {}, setSuccessCriteria: () => {}, setTeacherNotes: () => {},
   setIbWordBank: () => {}, setIbStamps: () => {}, setFormError: () => {},
   quizDifficulty: 'medium' as const, setQuizQuestions: () => {}, setType: () => {},
 };
@@ -125,5 +125,72 @@ describe('useUploadWorksheet.generateInteractiveQuiz integration', () => {
     await render(<Harness docFiles={[]} />);
     await user.press(screen.getByTestId('generate'));
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  // 2026-10-13 manual test: the worksheet language was never passed to the
+  // rendered quiz, so "change language" did nothing for students.
+  describe('worksheet language', () => {
+    const quizJob = (url: string, renders: any[]) => {
+      if (String(url).includes('/quiz/generate-async')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ jobId: 'job-1' }) });
+      if (String(url).includes('/jobs/')) return Promise.resolve({ json: () => Promise.resolve({ status: 'done', result: { quiz: { title: 'Q', language: 'Telugu', tasks: [{ title: 'T1', questions: [{ question: 'Q1', answer: 1 }] }] } } }) });
+      return null;
+    };
+
+    function LangHarness({ lang }: { lang: string }) {
+      const h = useUploadWorksheet({ ...BASE_ARGS, selectedLanguage: lang });
+      React.useEffect(() => { h.setDocFiles([{ name: 'w.pdf', base64: 'X', mime: 'application/pdf', url: 'https://x/w.pdf' }]); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return (
+        <View>
+          <Text testID="lang">{h.interactiveQuiz ? `[${h.interactiveQuiz.language}]` : ''}</Text>
+          <Text testID="html">{h.interactiveQuiz?._previewHTML ?? ''}</Text>
+          <TouchableOpacity testID="generate" onPress={() => h.generateInteractiveQuiz()} />
+        </View>
+      );
+    }
+
+    test("the teacher's chosen language is sent to generation and stamped on the quiz", async () => {
+      const renders: any[] = [];
+      global.fetch = jest.fn().mockImplementation((url: string, opts: any) => {
+        if (String(url).includes('/quiz/render-preview')) { renders.push(JSON.parse(opts.body).quiz); return Promise.resolve({ ok: true, text: () => Promise.resolve('<html>hi</html>') }); }
+        return quizJob(url, renders);
+      }) as any;
+      const user = userEvent.setup();
+      await render(<LangHarness lang="Hindi" />);
+      await user.press(screen.getByTestId('generate'));
+      await waitFor(() => expect(screen.getByTestId('lang').props.children).toBe('[Hindi]'));
+      const genCall = (global.fetch as jest.Mock).mock.calls.find(c => String(c[0]).includes('/quiz/generate-async'));
+      expect(JSON.parse(genCall[1].body).language).toBe('Hindi');
+      expect(renders[0].language).toBe('Hindi');
+    });
+
+    test('Auto-detect keeps the language the server detected', async () => {
+      global.fetch = jest.fn().mockImplementation((url: string) => {
+        if (String(url).includes('/quiz/render-preview')) return Promise.resolve({ ok: true, text: () => Promise.resolve('<html>') });
+        return quizJob(url, []);
+      }) as any;
+      const user = userEvent.setup();
+      await render(<LangHarness lang="" />);
+      await user.press(screen.getByTestId('generate'));
+      await waitFor(() => expect(screen.getByTestId('lang').props.children).toBe('[Telugu]'));
+    });
+
+    test('changing the language after generation re-renders the preview with the new language', async () => {
+      const renders: any[] = [];
+      global.fetch = jest.fn().mockImplementation((url: string, opts: any) => {
+        if (String(url).includes('/quiz/render-preview')) {
+          const q = JSON.parse(opts.body).quiz; renders.push(q);
+          return Promise.resolve({ ok: true, text: () => Promise.resolve(`<html lang="${q.language}">`) });
+        }
+        return quizJob(url, renders);
+      }) as any;
+      const user = userEvent.setup();
+      const r = await render(<LangHarness lang="Telugu" />);
+      await user.press(screen.getByTestId('generate'));
+      await waitFor(() => expect(screen.getByTestId('lang').props.children).toBe('[Telugu]'));
+      await r.rerender(<LangHarness lang="Tamil" />);
+      await waitFor(() => expect(screen.getByTestId('html').props.children).toBe('<html lang="Tamil">'));
+      expect(screen.getByTestId('lang').props.children).toBe('[Tamil]');
+      expect(renders[renders.length - 1].language).toBe('Tamil');
+    });
   });
 });

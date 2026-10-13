@@ -7,7 +7,10 @@ export const SUBJECTS = [
 ];
 export const ALL_GRADES = ['Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 export const IB_GRADES  = ['Grade 3', 'Grade 4', 'Grade 5'];
-export const LANGUAGES = ['Telugu', 'Hindi', 'Tamil', 'Kannada', 'French', 'Spanish', 'Mandarin', 'Arabic'];
+export const LANGUAGES = [
+  'Telugu', 'Hindi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Marathi', 'Punjabi', 'Odia',
+  'Urdu', 'Sanskrit', 'French', 'Spanish', 'German', 'Mandarin', 'Arabic',
+];
 export const TYPES = ['assignment', 'quiz'];
 // Aivorah gold — matches the gold theme applied across teacher/parent/student screens
 export const AIVORAH_GOLD = '#BAA467';
