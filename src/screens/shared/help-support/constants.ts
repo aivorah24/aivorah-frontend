@@ -9,7 +9,7 @@ export const TEACHER_FAQS: Faq[] = [
   { q: 'How do I create a challenge for my class?', a: "Go to Challenges → '+'. Set the title, subject, time limit, and difficulty. Challenges are broadcast to all enrolled students. Per-student challenges and paid challenge flows are coming soon." },
   { q: 'What does the AI Suggested Action mean?', a: "The AI analyses class data — scores, engagement, topic completion — and recommends the single most impactful action you can take today. It could be a re-teach prompt, a challenge suggestion, or flagging a struggling student." },
   { q: 'How do I track assignment submissions?', a: "Go to Assignments → tap any assignment to see submission status. Completed assignments show the student's score and AI feedback. The status badge turns green when all students have submitted." },
-  { q: 'Can students use the AI Coach without my permission?', a: "Yes — the AI Coach is always available for self-directed learning. It stays within the enrolled curriculum (IB PYP or NCERT) and grade level. You can see AI Coach usage in the student's Progress screen." },
+  { q: 'Can students use the AI Coach without my permission?', a: "Yes — the AI Coach is always available for self-directed learning. It stays within the enrolled curriculum (IB PYP or CBSE) and grade level. You can see AI Coach usage in the student's Progress screen." },
   { q: 'How do I contact Aivorah support?', a: "Use the 'Submit Ticket' button below to send us a message, or chat with Aivorah 24/7 for instant answers. Our support team responds to tickets within 24 hours on business days." },
 ];
 

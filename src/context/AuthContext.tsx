@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -16,6 +16,7 @@ import AUTH_SERVER_URL from '../config/authServerUrl';
 import PROFILE_SERVER_URL from '../config/profileServerUrl';
 import { useTheme } from './ThemeContext';
 import { prefetchStudentDashboard } from '../utils/curriculumPrefetch';
+import { normalizeCurriculum, normalizeUserCurricula } from '../utils/curriculum';
 
 const PROFILE_KEY = 'ai_mentor_user_profile';
 
@@ -37,7 +38,7 @@ export interface User {
   roles?: UserRole[];        // all roles this user has (dual-role users: ['teacher','parent'])
   activeRole?: UserRole;     // currently active profile
   grade?: string;
-  curriculum?: string;       // e.g. 'NCERT', 'IB PYP', 'CBSE', 'IGCSE'
+  curriculum?: string;       // e.g. 'IB PYP', 'CBSE', 'IGCSE' — never 'NCERT' (normalised on every setUser)
   school?: string;           // free-text school name (not authoritative for B2B)
   schoolId?: string | null;  // official school-org FK. Set => B2B (school account);
                              // null/undefined => B2C (independent self-signup). Drives
@@ -260,7 +261,11 @@ function isSystemGeneratedStudentEmail(email: string) {
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
+  // Every user that reaches state (sync, cache, refresh, updates) has legacy "NCERT" curricula read as CBSE.
+  const setUser = useCallback((next: React.SetStateAction<User | null>) => {
+    setUserState((prev) => normalizeUserCurricula(typeof next === 'function' ? next(prev) : next));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   // True once Firebase has confirmed the auth state (user or null)
@@ -794,7 +799,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, ...fields }),
+        body: JSON.stringify({ email: user.email, ...fields, ...(fields.curriculum ? { curriculum: normalizeCurriculum(fields.curriculum) } : {}) }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -975,7 +980,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch(`${AUTH_SERVER_URL}/user/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, role, curriculum: curriculum || undefined }),
+        body: JSON.stringify({ name, email, role, curriculum: normalizeCurriculum(curriculum) || undefined }),
       }).catch(() => {});
 
       // Send branded verification email from aivorah24@gmail.com (not Firebase spam)
@@ -1433,10 +1438,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         children: [{ name: 'Rohan Patel', grade: 'Grade 5', curriculum: 'IB PYP', email: 'rohan@test.ai' }],
       },
 
-      // ── NCERT STUDENTS ──────────────────────────────────────────────────────────
-      'arjun@test.ai': { ...base, name: 'Arjun Sharma', email: 'arjun@test.ai', role: 'student', grade: 'Grade 3', curriculum: 'NCERT' },
-      'priya@test.ai': { ...base, name: 'Priya Nair',   email: 'priya@test.ai', role: 'student', grade: 'Grade 3', curriculum: 'NCERT' },
-      'kavya@test.ai': { ...base, name: 'Kavya Reddy',  email: 'kavya@test.ai', role: 'student', grade: 'Grade 5', curriculum: 'NCERT' },
+      // ── CBSE STUDENTS ──────────────────────────────────────────────────────────
+      'arjun@test.ai': { ...base, name: 'Arjun Sharma', email: 'arjun@test.ai', role: 'student', grade: 'Grade 3', curriculum: 'CBSE' },
+      'priya@test.ai': { ...base, name: 'Priya Nair',   email: 'priya@test.ai', role: 'student', grade: 'Grade 3', curriculum: 'CBSE' },
+      'kavya@test.ai': { ...base, name: 'Kavya Reddy',  email: 'kavya@test.ai', role: 'student', grade: 'Grade 5', curriculum: 'CBSE' },
 
       // ── CBSE STUDENTS ────────────────────────────────────────────────────────────
       'tanvi@test.ai':  { ...base, name: 'Tanvi Gupta',  email: 'tanvi@test.ai',  role: 'student', grade: 'Grade 3', curriculum: 'CBSE' },

@@ -1,3 +1,5 @@
+import { normalizeCurriculum } from '../../../../utils/curriculum';
+
 export interface ChildEntry {
   key: string;
   admissionNumber: string;
@@ -28,7 +30,8 @@ export function getGradesForCurriculum(curr: string): string[] {
   return ['Nursery', 'LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 }
 
-export function curriculaForBase(base: string | null): string[] {
+export function curriculaForBase(rawBase: string | null): string[] {
+  const base = normalizeCurriculum(rawBase) ?? null;
   if (base === 'IB') return ['IB PYP', 'IB MYP', 'IB DP'];
   if (base && CURRICULA.includes(base)) return [base];
   return CURRICULA;

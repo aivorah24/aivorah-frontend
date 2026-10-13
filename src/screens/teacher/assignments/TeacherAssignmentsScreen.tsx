@@ -45,6 +45,7 @@ import { BulkUploadFlow } from './components/BulkUploadFlow';
 import { AIAssignmentFlow } from './components/AIAssignmentFlow';
 import { WorksheetUploadFlow } from './components/WorksheetUploadFlow';
 import { UploadWizardFooter } from './components/UploadWizardFooter';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function TeacherAssignmentsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -317,7 +318,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     setTitle(''); setChapter(''); setDueDate(''); setNote('');
     setSubject('Mathematics');
     setGrade(user?.teaches?.[0]?.grade || 'Grade 3');
-    setCurriculum(user?.teaches?.[0]?.curriculum || user?.curriculum || 'NCERT');
+    setCurriculum(user?.teaches?.[0]?.curriculum || user?.curriculum || 'CBSE');
     setType('assignment'); setQuestions(['']); setSuccessCriteria(['']); setTaskSteps([]); setQuizQuestions([]); setTeacherNotes(''); setFormError('');
     setAssignTo('all'); setSelectedStudent(null); setStudentSearch('');
     setCreateMode('choose');
@@ -540,7 +541,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                           </View>
                           <Text style={styles.subjectLabel}>{a.subject}</Text>
                           {a.grade ? <Text style={styles.subjectLabel}>{a.grade}</Text> : null}
-                          {a.curriculum ? <Text style={styles.subjectLabel}>{a.curriculum}</Text> : null}
+                          {a.curriculum ? <Text style={styles.subjectLabel}>{normalizeCurriculum(a.curriculum)}</Text> : null}
                           {a.studentId === null && (
                             <View style={styles.broadcastPill}>
                               <Feather name="users" size={9} color={gold} />
