@@ -3,7 +3,8 @@ import { Text, View, Pressable } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 const MOCK_USER = { email: 'parent@test.ai', role: 'parent' };
-jest.mock('../AuthContext', () => ({ useAuth: () => ({ user: MOCK_USER }) }));
+const mockApplyAccountUpdate = jest.fn().mockResolvedValue(undefined);
+jest.mock('../AuthContext', () => ({ useAuth: () => ({ user: MOCK_USER, applyAccountUpdate: mockApplyAccountUpdate }) }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -251,5 +252,37 @@ describe('scheduled calendar events (V2 event_scheduled)', () => {
     await render(<NotificationProvider><Harness /></NotificationProvider>);
     await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent(/legacy\|ready/));
     expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
+  });
+});
+
+describe('platform-admin account updates (V2 account_updated)', () => {
+  const ACC = v2('acc1', '2026-09-25T12:00:00Z', {
+    type: 'account_updated', entityType: 'user', entityId: 'u-parent', childId: null,
+    title: 'Your name has been updated', data: {}, actorRole: 'platform_admin',
+  });
+
+  test('a new account_updated row (parent, no child) is listed, toasts and applies the update once', async () => {
+    await mount();
+    expect(mockApplyAccountUpdate).not.toHaveBeenCalled();
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('acc1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^acc1,/);
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+    await poll(); // already seen → not applied again
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test('other arrivals and account rows already present at mount do not trigger it', async () => {
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await mount();
+    const C2 = v2('c2', '2026-09-25T13:00:00Z');
+    page = [C2, ACC, C1, A1];
+    unread = [C2, ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('c2'));
+    expect(mockApplyAccountUpdate).not.toHaveBeenCalled();
   });
 });

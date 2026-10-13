@@ -174,7 +174,9 @@ function normalizeLatest(raw: any): LatestNotif | null {
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, applyAccountUpdate } = useAuth();
+  const applyAccountUpdateRef = useRef(applyAccountUpdate);
+  applyAccountUpdateRef.current = applyAccountUpdate;
 
   const [unreadCount,       setUnreadCount]       = useState(0);
   const [unreadAssignments, setUnreadAssignments] = useState(0);
@@ -387,6 +389,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (v2BaselineRef.current && !markReadInFlight.current && arrived.length) {
           fresh = [...arrived.map(toNotifItem), ...fresh].sort((a, b) => ts(b) - ts(a));
         }
+        // A platform admin edited this account: re-read the profile once per poll.
+        if (v2BaselineRef.current && arrived.some(isAccountType)) applyAccountUpdateRef.current?.()?.catch(() => {});
         v2BaselineRef.current = true;
       }
 

@@ -38,6 +38,7 @@ export interface User {
   roles?: UserRole[];        // all roles this user has (dual-role users: ['teacher','parent'])
   activeRole?: UserRole;     // currently active profile
   grade?: string;
+  section?: string;
   curriculum?: string;       // e.g. 'NCERT', 'IB PYP', 'CBSE', 'IGCSE'
   school?: string;           // free-text school name (not authoritative for B2B)
   schoolId?: string | null;  // official school-org FK. Set => B2B (school account);
@@ -74,6 +75,7 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (fields: Partial<User>) => void;
   refreshProfile: () => Promise<void>;
+  applyAccountUpdate: () => Promise<void>;
   saveProfile: (fields: { curriculum?: string; grade?: string; school?: string; location?: string }) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (name: string, email: string, password: string, role: UserRole, curriculum?: string) => Promise<void>;
@@ -97,6 +99,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   updateUser: () => {},
   refreshProfile: async () => {},
+  applyAccountUpdate: async () => {},
   saveProfile: async () => {},
   signInWithEmail: async () => {},
   signUpWithEmail: async (_n, _e, _p, _r, _c) => {},
@@ -130,6 +133,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
       combined._accountExists = !!(data.id || data.role);
       Object.assign(combined, {
         grade:              data.grade      || undefined,
+        section:            data.section    || undefined,
         curriculum:         data.curriculum || undefined,
         school:             data.school     || undefined,
         schoolId:           data.schoolId   ?? null,
@@ -167,7 +171,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
           accountStatus: pref.accountStatus || undefined,
           teaches: Array.isArray(pref.teaches) && pref.teaches.length > 0 ? pref.teaches : undefined,
           children: Array.isArray(pref.children) && pref.children.length > 0 ? pref.children : undefined,
-          roles: Array.isArray(pref.roles) && pref.roles.length > 0 ? pref.roles : undefined,
+          roles: Array.isArray(pref.roles) && pref.roles.length > 0 ? pref.roles : combined.roles,
           activeRole: pref.activeRole || undefined,
           // Fall back to whatever /user/sync already set above (never blank
           // it out to undefined just because this second, best-effort call
@@ -182,6 +186,35 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
   } catch {}
 
   return combined;
+}
+
+// The server's primary role must be in roles; otherwise roles is stale (e.g. a platform-admin role change).
+export function rolesWithPrimary(roles: UserRole[] | undefined, primary: UserRole | undefined): UserRole[] | undefined {
+  if (!primary) return roles;
+  return roles && roles.includes(primary) ? roles : [primary];
+}
+
+// Applies a fresh server profile after a platform-admin edit. Switches the active role only when
+// the primary role changed (or the active one was removed); multi-role users keep their pick.
+export function mergeAccountUpdate(prev: User, fresh: Partial<User>): User {
+  const serverRole = fresh.role as UserRole | undefined;
+  const prevRoles: UserRole[] = prev.roles?.length ? prev.roles : [prev.role];
+  const roles = rolesWithPrimary(fresh.roles?.length ? fresh.roles : prevRoles, serverRole) ?? prevRoles;
+  const current = prev.activeRole ?? prev.role;
+  const switchTo = serverRole && (!prevRoles.includes(serverRole) || !roles.includes(current)) ? serverRole : current;
+  return {
+    ...prev,
+    name:       fresh.name ?? prev.name,
+    grade:      fresh.grade,
+    section:    fresh.section,
+    curriculum: fresh.curriculum,
+    school:     fresh.school,
+    schoolId:   fresh.schoolId !== undefined ? fresh.schoolId : prev.schoolId,
+    photoUrl:   fresh.photoUrl ?? prev.photoUrl,
+    roles,
+    role: switchTo,
+    activeRole: switchTo,
+  };
 }
 
 let _pendingRole: UserRole = 'student';
@@ -574,7 +607,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (Array.isArray(supaProfile.roles) && supaProfile.roles.length > 0 ? supaProfile.roles as UserRole[] : null) ||
           (Array.isArray(savedLocal.roles)   && savedLocal.roles.length   > 0 ? savedLocal.roles   as UserRole[] : null) ||
           [resolvedRole];
-        const validRoles = bestRoles;
+        // Server role wins: a stale roles list (old role after an admin change) must not restore the old role.
+        const validRoles = rolesWithPrimary(bestRoles, supaProfile.role as UserRole | undefined)!;
         // Priority: AsyncStorage > DB activeRole > DB role
         const savedActiveRole = (savedLocal.activeRole || supaProfile.activeRole) as UserRole | undefined;
         const activeRole: UserRole = isAddingNewRole
@@ -583,7 +617,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const finalAuthProvider = isGoogleProvider || savedLocal.authProvider === 'google' || supaProfile.authProvider === 'google' ? 'google' : (baseUser.authProvider || 'password');
         let resolvedUser = {
           ...baseUser, ...savedLocal, ...supaProfile,
-          email, onboardingComplete, emailVerified, role: activeRole, roles: bestRoles, authProvider: finalAuthProvider,
+          email, onboardingComplete, emailVerified, role: activeRole, activeRole, roles: validRoles, authProvider: finalAuthProvider,
           // Bug #9: avatarStyle/learningStyle/interests/bio ONLY ever come
           // from the second, best-effort GET /user/preferences call inside
           // fetchSupabaseProfile() — never from the reliable /user/sync call
@@ -771,21 +805,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name:       fresh.name       ?? prev.name,
           photoUrl:   fresh.photoUrl   ?? prev.photoUrl,
         };
-        AsyncStorage.setItem(PROFILE_KEY, JSON.stringify({
-          name: updated.name, grade: updated.grade, curriculum: updated.curriculum,
-          email: updated.email, role: updated.role, activeRole: updated.activeRole,
-          school: updated.school,
-          schoolId: updated.schoolId !== undefined ? updated.schoolId : null,
-          location: updated.location,
-          onboardingComplete: updated.onboardingComplete, emailVerified: updated.emailVerified,
-          accountStatus: updated.accountStatus, avatarStyle: updated.avatarStyle,
-          learningStyle: updated.learningStyle, interests: updated.interests, bio: updated.bio,
-          photoUrl: updated.photoUrl, roles: updated.roles, mustChangePassword: updated.mustChangePassword,
-          authProvider: updated.authProvider,
-        })).catch(() => {});
+        persistSession(updated);
         return updated;
       });
     } catch {}
+  }
+
+  // Re-read the profile after a platform-admin edit (bell 'account_updated') and apply role/name/
+  // school/grade/section live; a primary-role change switches the navigator immediately.
+  const accountUpdateInFlight = React.useRef(false);
+  async function applyAccountUpdate() {
+    const email = user?.email;
+    if (!email || accountUpdateInFlight.current) return;
+    accountUpdateInFlight.current = true;
+    try {
+      const fresh = await fetchSupabaseProfile(email);
+      if (fresh._syncOk !== true || fresh._accountExists === false) return;
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = mergeAccountUpdate(prev, fresh);
+        persistSession(updated);
+        return updated;
+      });
+    } catch {} finally {
+      accountUpdateInFlight.current = false;
+    }
+  }
+
+  function persistSession(updated: User) {
+    AsyncStorage.setItem(PROFILE_KEY, JSON.stringify({
+      name: updated.name, grade: updated.grade, section: updated.section, curriculum: updated.curriculum,
+      email: updated.email, role: updated.role, activeRole: updated.activeRole,
+      school: updated.school,
+      schoolId: updated.schoolId !== undefined ? updated.schoolId : null,
+      location: updated.location,
+      onboardingComplete: updated.onboardingComplete, emailVerified: updated.emailVerified,
+      accountStatus: updated.accountStatus, avatarStyle: updated.avatarStyle,
+      learningStyle: updated.learningStyle, interests: updated.interests, bio: updated.bio,
+      photoUrl: updated.photoUrl, roles: updated.roles, mustChangePassword: updated.mustChangePassword,
+      authProvider: updated.authProvider,
+    })).catch(() => {});
   }
 
   // Save curriculum/grade/school/location to Supabase and update local state
@@ -883,7 +942,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const newUser: User = {
         name, email, role: resolvedRole,
-        roles:              Array.isArray(profile.roles) ? profile.roles as UserRole[] : [resolvedRole],
+        roles:              rolesWithPrimary(Array.isArray(profile.roles) ? profile.roles as UserRole[] : undefined, resolvedRole),
         grade:              profile.grade              || undefined,
         curriculum:         profile.curriculum         || undefined,
         school:             profile.school             || 'Hyderabad International School',
@@ -1495,7 +1554,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, isAuthenticated: !!user, loading,
       authError, clearAuthError,
-      login, logout, updateUser, refreshProfile, saveProfile,
+      login, logout, updateUser, refreshProfile, applyAccountUpdate, saveProfile,
       signInWithEmail, signUpWithEmail, signInWithGoogle,
       demoLogin, testLogin, switchRole, addParentRoleToTeacher, addParentRoleToTeacherSSO,
       beginAddParentProfile, cancelAddParentProfile,
