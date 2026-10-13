@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { fonts, radius } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { AccessRequest } from '../types';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 interface AccessRequestAuditModalProps {
   selectedAuditRequest: AccessRequest | null;
@@ -78,7 +79,7 @@ export default function AccessRequestAuditModal({
                   <View style={styles.auditGridItem}>
                     <Text style={[styles.auditGridLabel, { color: colors.textDim }]}>CURRICULUM</Text>
                     <Text style={[styles.auditGridVal, { color: colors.textHeading }]}>
-                      {selectedAuditRequest.curriculum || 'Standard IB/CBSE'}
+                      {normalizeCurriculum(selectedAuditRequest.curriculum) || 'Standard IB/CBSE'}
                     </Text>
                   </View>
                   <View style={styles.auditGridItem}>

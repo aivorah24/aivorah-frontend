@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, CategoryPrefs, toNotifItem, isAssignmentType, isEventType, isV2OwnedLegacy, isV2Allowed } from './notifItem';
+import { NotifItem, CategoryPrefs, toNotifItem, isAssignmentType, isEventType, isClassPostType, isAnnouncementType, isV2OwnedLegacy, isV2Allowed } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -420,10 +420,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
+        // Class posts and announcements have no badge category of their own; never count them as challenges.
+        const classPostUnread = stillUnread.filter(n => isClassPostType(n) || isAnnouncementType(n)).length;
         const allowedEvents = stillUnread.filter(n => isEventType(n) && isV2Allowed(n, prefsNow)).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(allowAssign ? assignUnread : 0);
-        setUnreadChallenges(allowChallenge ? Math.max(0, total - assignUnread - eventUnread) + challengeEventCount : 0);
+        setUnreadChallenges(allowChallenge ? Math.max(0, total - assignUnread - eventUnread - classPostUnread) + challengeEventCount : 0);
         setUnreadEvents(allowedEvents + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);
@@ -642,7 +644,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     locallyReadRef.current.set(id, new Date().toISOString());
     if (isAssignmentType(known)) setUnreadAssignments(c => Math.max(0, c - 1));
     else if (isEventType(known)) setUnreadEvents(c => Math.max(0, c - 1));
-    else setUnreadChallenges(c => Math.max(0, c - 1));
+    else if (!isClassPostType(known) && !isAnnouncementType(known)) setUnreadChallenges(c => Math.max(0, c - 1));
     syncLocalReads();
     try {
       await apiMarkRead(id);

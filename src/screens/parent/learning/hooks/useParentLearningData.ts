@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchChildren, fetchStudentStats, fetchChildReport, fetchCurriculumSubjects } from '../services/parentLearningService';
 import type { Child, ChildReport } from '../types';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 // Deliberately does NOT seed `children` from AuthContext's `user.children` -
 // confirmed via a live E2E investigation (2026-09-04) that field can hold
@@ -34,7 +35,7 @@ export function useParentLearningData(parentEmail: string, targetChildId?: strin
   }, [parentEmail, targetChildId]);
 
   const child = children[selectedIdx];
-  const childCurriculum = child?.curriculum ?? '';
+  const childCurriculum = normalizeCurriculum(child?.curriculum) ?? '';
   const childGrade = child?.grade ?? 'Grade 3';
   const completedSet = useMemo(() => new Set(completedTopics), [completedTopics]);
 

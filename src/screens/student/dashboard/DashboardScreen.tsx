@@ -241,7 +241,7 @@ export default function DashboardScreen({ navigation, route }: any) {
       }
     }
     navigation.navigate('LessonScreen', {
-      subject: featuredLesson.subject, curriculum: isIBPYP ? 'IB_PYP' : 'NCERT', grade: studentGrade,
+      subject: featuredLesson.subject, curriculum: isIBPYP ? 'IB_PYP' : 'CBSE', grade: studentGrade,
       byNameTopic: featuredLesson.topic, topicName: featuredLesson.topic,
     });
   }

@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AttendanceStatus, RosterStudent } from '../../../../services/attendanceClient';
+import { attendanceColor } from '../../../../theme/attendanceColors';
 
-const BUTTONS: { status: AttendanceStatus; label: string; icon: any; color: string }[] = [
-  { status: 'present', label: 'Present', icon: 'check', color: '#10b981' },
-  { status: 'absent', label: 'Absent', icon: 'x', color: '#f03e3e' },
-  { status: 'late', label: 'Late', icon: 'clock', color: '#ba905a' },
+const BUTTONS: { status: AttendanceStatus; label: string; icon: any }[] = [
+  { status: 'present', label: 'Present', icon: 'check' },
+  { status: 'absent', label: 'Absent', icon: 'x' },
+  { status: 'late', label: 'Late', icon: 'clock' },
 ];
 
 export default function StudentRow({ student, last, onMark, styles, colors }: {
@@ -32,11 +33,12 @@ export default function StudentRow({ student, last, onMark, styles, colors }: {
       <View style={styles.attendanceButtonsCol}>
         {BUTTONS.map((b) => {
           const on = student.status === b.status;
+          const color = attendanceColor(colors, b.status);
           return (
             <TouchableOpacity
               key={b.status}
               testID={`attendance-status-${student.id}-${b.status}`}
-              style={[styles.attendanceButton, on && { backgroundColor: `${b.color}22`, borderColor: b.color }]}
+              style={[styles.attendanceButton, on && { backgroundColor: `${color}22`, borderColor: color }]}
               onPress={() => onMark(student.id, b.status)}
               activeOpacity={0.7}
               accessibilityRole="button"
@@ -44,8 +46,8 @@ export default function StudentRow({ student, last, onMark, styles, colors }: {
               accessibilityState={{ selected: on }}
               aria-selected={on}
             >
-              <Feather name={b.icon} size={13} color={on ? b.color : colors.textDim} />
-              <Text style={[styles.attendanceBtnLabel, on && { color: b.color, fontWeight: '700' }]}>{b.label}</Text>
+              <Feather name={b.icon} size={13} color={on ? color : colors.textDim} />
+              <Text style={[styles.attendanceBtnLabel, on && { color, fontWeight: '700' }]}>{b.label}</Text>
             </TouchableOpacity>
           );
         })}

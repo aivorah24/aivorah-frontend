@@ -308,3 +308,49 @@ describe('category toggles gate V2 rows (student + parent)', () => {
     await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1'));
   });
 });
+
+describe('V2 class posts', () => {
+  const P1 = v2('p1', '2026-09-25T11:00:00Z', {
+    type: 'class_post', entityType: 'class_post', entityId: 'post-1', title: 'New class post for Asha: Grade 5-A',
+    data: { postId: 'post-1', grade: 'Grade 5', section: 'A' },
+  });
+
+  test('a newly published class post shows in the bell and toasts', async () => {
+    await mount();
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('p1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^p1,c1/);
+  });
+
+  test('class posts never inflate the challenge badge', async () => {
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1/);
+  });
+});
+
+describe('V2 announcements', () => {
+  const N1 = v2('n1', '2026-09-25T11:00:00Z', {
+    type: 'announcement', entityType: 'announcement', entityId: 'ann-1', title: 'New announcement: Sports Day',
+    data: { announcementId: 'ann-1', severity: 'info', displayType: 'both' },
+  });
+
+  test('a newly published announcement shows in the bell and toasts', async () => {
+    await mount();
+    page = [N1, C1, A1];
+    unread = [N1, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('n1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^n1,c1/);
+  });
+
+  test('announcements never inflate the challenge badge', async () => {
+    page = [N1, C1, A1];
+    unread = [N1, C1, A1];
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1/);
+  });
+});

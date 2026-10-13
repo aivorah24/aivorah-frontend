@@ -7,6 +7,7 @@ import { useResponsive } from '../../../../hooks/useResponsive';
 import { useSubjects } from '../../../student/learning-paths/hooks/useSubjects';
 import SubjectCard from '../../../student/learning-paths/components/SubjectCard';
 import { listSubjectEdits, type SubjectEditsSummary } from '../services/subjectEditsService';
+import { isCbseCurriculum } from '../../../../utils/curriculum';
 
 const ALL_GRADES = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
 const gradeLabel = (g: string) => `Grade ${String(g).replace(/\D/g, '') || g}`;
@@ -26,7 +27,7 @@ export default function TeacherSubjectCards({ colors }: { colors: AppColors }) {
   const [showAll, setShowAll] = useState(false);
   const curriculumRaw = teaches.find((t) => t.grade === grade)?.curriculum || teaches[0].curriculum;
   const isPYP = /^ib.?pyp$/i.test(curriculumRaw.trim());
-  const isCBSE = !isPYP && /^(ncert|cbse)$/i.test(curriculumRaw.trim());
+  const isCBSE = !isPYP && isCbseCurriculum(curriculumRaw);
   const curriculum = isCBSE ? 'CBSE' : curriculumRaw;
   const { subjects, loading } = useSubjects(curriculumRaw, grade, isCBSE, isPYP);
 

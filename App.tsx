@@ -126,20 +126,18 @@ import { StyleSheet, View, ActivityIndicator, Platform, Text, TextInput, Touchab
 import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 import { applyActionCode, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { applyDocumentChrome } from './src/utils/documentChrome';
 
 // Set browser tab title
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.title = 'Aivorah';
 }
 
-// html/body have no background by default (white). React Navigation's drawer
-// scene view repaints its own themed background on every mount, so switching
-// sidebar items showed a one-frame white flash through the gap. Match the
-// app's dark background at the document level so there's nothing to flash to.
+// html/body have no background by default (white), which flashed through the
+// drawer scene on every mount. Paint the document before first render; the
+// ThemeProvider then keeps it in sync with light/dark and locks #root scrolling.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const bgFix = document.createElement('style');
-  bgFix.textContent = `html, body, #root { background-color: #0B0B0B; }`;
-  document.head.appendChild(bgFix);
+  applyDocumentChrome(darkColors.bgDark);
 }
 
 // ── Aivorah global font: Plus Jakarta Sans ──
@@ -204,7 +202,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import NotificationBanner from './src/components/common/NotificationBanner';
 import { AnnouncementProvider } from './src/screens/shared/announcements/context/AnnouncementProvider';
-import { colors } from './src/theme';
+import { colors, darkColors } from './src/theme';
 import { auth } from './src/config/firebase';
 import { isStudentLocked, subscribeStudentLocked } from './src/services/lockStatus';
 import { useNavigation } from '@react-navigation/native';

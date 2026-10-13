@@ -27,6 +27,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 type FieldKey = 'teacherName' | 'email' | 'curriculum' | 'grade' | 'subjects' | 'phone';
 interface ParsedRow { teacherName: string; email: string; curriculum: string; grade: string; subjects: string; phone: string; }
@@ -276,6 +277,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
     rawGrid.forEach((cells, i) => {
       const rec = emptyRow();
       columnMap.forEach((field, c) => { if (field) rec[field] = (cells[c] ?? '').trim(); });
+      rec.curriculum = rec.curriculum.split('|').map((s) => normalizeCurriculum(s)).join('|');
       const rowNum = i + 2;
       if (!rec.teacherName) { invalid.push({ rowNum, reason: 'Missing Teacher Name' }); return; }
       if (rec.email && !EMAIL_RE.test(rec.email)) { invalid.push({ rowNum, reason: `Invalid Email "${rec.email}"` }); return; }

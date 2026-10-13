@@ -31,6 +31,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 type FieldKey = 'studentName' | 'studentEmail' | 'admissionNo' | 'curriculum' | 'grade' | 'section' | 'parentName' | 'parentEmail' | 'parentPhone';
 
@@ -464,6 +465,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
         if (!field) return;
         rec[field] = (cells[c] ?? '').trim();
       });
+      rec.curriculum = normalizeCurriculum(rec.curriculum);
       const rowNum = i + 2; // +1 header, +1 to make it 1-indexed for the file
       if (!rec.studentName) {
         invalid.push({ rowNum, reason: 'Missing Student Name' });

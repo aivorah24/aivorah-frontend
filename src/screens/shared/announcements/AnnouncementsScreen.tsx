@@ -112,6 +112,8 @@ export default function AnnouncementsScreen({ navigation, route }: any) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to deep-link nav param, external sync
       setActiveId(openId);
       if (isMobile) setMobileShowDetail(true);
+      setItems((prev) => prev.map((a) => (a.id === openId ? { ...a, isSeen: true } : a)));
+      if (userEmail) markSeen(openId, userEmail).catch(() => {});
     }
   }, [route?.params?.openId]);
 

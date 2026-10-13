@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import React from 'react';
 import { schoolAdminStudentsService, type StudentRow } from '../services/schoolAdminStudentsService';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 export type StatusFilter = 'all' | 'invited' | 'active' | 'inactive' | 'archived';
 export type SortKey = 'name' | 'grade' | 'admissionNumber';
@@ -59,7 +60,7 @@ export function useStudentsListState(
       const data = await schoolAdminStudentsService.getFacets(userEmail);
       setFacetGrades(data.grades);
       setFacetSections(data.sections);
-      setFacetCurriculums(data.curriculums);
+      setFacetCurriculums([...new Set<string>((data.curriculums || []).map((c: string) => normalizeCurriculum(c)))]);
     } catch { /* filter dropdowns just stay at their previous values */ }
   }, [userEmail]);
 

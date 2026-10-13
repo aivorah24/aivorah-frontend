@@ -12,6 +12,7 @@ import { useParentLearningData } from './hooks/useParentLearningData';
 import StatsBanner from './components/StatsBanner';
 import SubjectCard from './components/SubjectCard';
 import SubjectDetailPanel from './components/SubjectDetailPanel';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function ParentLearningScreen({ navigation, route }: any) {
   const { colors, isDark } = useTheme();
@@ -33,7 +34,7 @@ export default function ParentLearningScreen({ navigation, route }: any) {
   const { totalItems, doneItems, overallPct, curriculumLabel } = useMemo(() => {
     const total = subjects.reduce((s, sub) => s + (sub.topicCount ?? 0), 0);
     const done  = Math.min(completedTopics.length, total);
-    const currLabel = isIBPYP ? 'IB PYP' : (childCurriculum || 'NCERT');
+    const currLabel = isIBPYP ? 'IB PYP' : (normalizeCurriculum(childCurriculum) || 'CBSE');
     return {
       totalItems: total,
       doneItems: done,

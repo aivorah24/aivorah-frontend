@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { childStudentStatus, STATUS_META } from '../../../../utils/studentStatus';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 export function formatStudyTime(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -28,7 +29,7 @@ export function ChildCard({ child, colors, styles, navigation, onRemove, onEdit,
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.childName} numberOfLines={1}>{child.name}</Text>
-          <Text style={styles.childSub} numberOfLines={1}>{child.grade}{child.curriculum ? ` · ${child.curriculum}` : ''}{child.school ? ` · ${child.school}` : ''}</Text>
+          <Text style={styles.childSub} numberOfLines={1}>{child.grade}{child.curriculum ? ` · ${normalizeCurriculum(child.curriculum)}` : ''}{child.school ? ` · ${child.school}` : ''}</Text>
         </View>
         <View style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <View style={{ flexDirection: 'row', gap: 10 }}>
