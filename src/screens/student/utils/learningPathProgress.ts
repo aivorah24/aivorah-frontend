@@ -14,8 +14,6 @@
 // Paths section renders (SubjectSyllabusScreen: /teacher/syllabus/current,
 // curated fallback) and the same completion rule (completedTopics by name).
 
-import { isTopicMastered } from './masteryRules';
-
 export interface LpTopic {
   id?: string;
   name: string;
@@ -111,16 +109,40 @@ export function buildLpChapters(
 
 // ── Per-chapter status (Learning Path card, bars, mastered count) ──
 
-export function isTopicDone(name: string, completedSet: Set<string>, perf: Perf): boolean {
-  return isTopicMastered(name, completedSet, perf.topics[name]?.avgScore);
+// A topic is done exactly when the Learning Paths screen says so: it is in
+// completedTopics (Learn/Listen finished + Practice passed at 60%+, recorded
+// by completeLesson). A high quiz average on its own does NOT complete a
+// topic — counting it did (isTopicMastered's ">= 80%" path) made the
+// dashboard report a chapter as done that Learning Paths shows as 0%.
+export function isTopicDone(name: string, completedSet: Set<string>): boolean {
+  return completedSet.has(name);
 }
 
-function isTopicTouched(name: string, completedSet: Set<string>, startedSet: Set<string>, perf: Perf, activity: LearningActivity): boolean {
+function sameSubject(a: string | undefined, b: string): boolean {
+  return !a || a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+// Quiz performance and device activity are keyed by bare topic name across
+// every subject, so a generic name ("Introduction", "Let us reflect") in one
+// subject must not light up a same-named topic in another. Only use an
+// entry when its recorded subject is this chapter's subject (or unknown).
+export function perfForTopic(perf: Perf, name: string, subject: string): PerfTopic | undefined {
   const p = perf.topics[name];
+  return p && sameSubject(p.subject, subject) ? p : undefined;
+}
+
+function activityForTopic(activity: LearningActivity, name: string, subject: string): LocalTopicActivity | undefined {
+  const a = activity[name];
+  return a && sameSubject(a.subject, subject) ? a : undefined;
+}
+
+function isTopicTouched(name: string, subject: string, completedSet: Set<string>, startedSet: Set<string>, perf: Perf, activity: LearningActivity): boolean {
+  const p = perfForTopic(perf, name, subject);
+  const a = activityForTopic(activity, name, subject);
   return completedSet.has(name)
     || startedSet.has(name)
-    || !!activity[name]?.lastOpenedAt
-    || (activity[name]?.quizzes?.length ?? 0) > 0
+    || !!a?.lastOpenedAt
+    || (a?.quizzes?.length ?? 0) > 0
     || (p?.quizCount ?? 0) > 0
     || (p?.sessions ?? 0) > 0;
 }
@@ -138,15 +160,15 @@ export function computeChapterProgress(
 ): ChapterProgress[] {
   return chapters.map(ch => {
     const names = ch.topics.map(t => t.name);
-    const doneCount = names.filter(n => isTopicDone(n, completedSet, perf)).length;
+    const doneCount = names.filter(n => isTopicDone(n, completedSet)).length;
     const scored = names
-      .map(n => perf.topics[n])
+      .map(n => perfForTopic(perf, n, ch.subject))
       .filter((p): p is PerfTopic => !!p && p.avgScore != null && (p.quizCount ?? 1) > 0)
       .map(p => p.avgScore as number);
     const hasData = scored.length > 0;
     const pct = hasData ? Math.round(scored.reduce((s, n) => s + n, 0) / scored.length) : 0;
     const completed = names.length > 0 && doneCount === names.length;
-    const touched = names.some(n => isTopicTouched(n, completedSet, startedSet, perf, activity));
+    const touched = names.some(n => isTopicTouched(n, ch.subject, completedSet, startedSet, perf, activity));
     const status: ChapterStatus = completed ? 'completed' : touched ? 'in_progress' : 'not_started';
     return {
       ...ch,
@@ -278,10 +300,10 @@ export interface ContinueLearning {
   next: LessonRef | null;
 }
 
-function lastTouchedAt(name: string, perf: Perf, activity: LearningActivity): string {
-  const a = activity[name];
+function lastTouchedAt(name: string, subject: string, perf: Perf, activity: LearningActivity): string {
+  const a = activityForTopic(activity, name, subject);
   const times = [
-    perf.topics[name]?.lastActivity ?? '',
+    perfForTopic(perf, name, subject)?.lastActivity ?? '',
     a?.lastOpenedAt ?? '',
     ...(a?.quizzes ?? []).map(q => q.at),
   ];
@@ -301,13 +323,13 @@ export function selectContinueLearning(
   );
   if (!ordered.length) return null;
 
-  const done = (r: LessonRef) => isTopicDone(r.topic.name, completedSet, perf);
+  const done = (r: LessonRef) => isTopicDone(r.topic.name, completedSet);
 
   // Most recently touched topic wins (opened, quizzed, or completed).
   let current: LessonRef | undefined;
   let best = '';
   for (const r of ordered) {
-    const t = lastTouchedAt(r.topic.name, perf, activity);
+    const t = lastTouchedAt(r.topic.name, r.subject, perf, activity);
     if (t && t > best) { best = t; current = r; }
   }
   // No timestamps on this device (e.g. fresh login): fall back to the

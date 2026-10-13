@@ -30,7 +30,7 @@ import {
 import {
   buildLpChapters, computeChapterProgress, countCompletedChapters, computeQuizTopicPerf,
   computeWeeklyActiveDays, weeklyConsistencyPct, indexTopics, mergeLocalQuizResults,
-  selectContinueLearning, type LessonRef,
+  selectContinueLearning, perfForTopic, type LessonRef,
 } from '../utils/learningPathProgress';
 import { lessonScreenParams } from '../utils/lessonNavigation';
 import { isCbseCurriculum } from '../../../utils/curriculum';
@@ -522,7 +522,7 @@ export default function DashboardScreen({ navigation, route }: any) {
                     cardBg={cardBg}
                     continueLearning={continueLearning}
                     chapterDone={chapterProgress.find(c => c.subject === continueLearning.current.subject && c.chapterIndex === continueLearning.current.chapter.chapterIndex)?.doneCount ?? 0}
-                    quizScore={mergedPerf.topics[continueLearning.current.topic.name]?.avgScore ?? null}
+                    quizScore={perfForTopic(mergedPerf, continueLearning.current.topic.name, continueLearning.current.subject)?.avgScore ?? null}
                     studentGrade={studentGrade}
                     ringTrack={ringTrack}
                     onOpen={openLesson}

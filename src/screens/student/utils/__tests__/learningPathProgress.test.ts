@@ -215,3 +215,51 @@ describe('selectContinueLearning — Bug 5', () => {
     expect(selectContinueLearning(buildLpChapters(subjectChapters, {}), EMPTY_PERF, new Set())).toBeNull();
   });
 });
+
+// Reported on a real Grade 8 student: Learning Paths showed ONLY English
+// Chapter 1 "Wit and Wisdom" at 100% (1 of 5 started), but the dashboard
+// said 2/117. The dashboard counted extra ways of "done" that Learning Paths
+// does not, and matched quiz results by bare topic name across subjects.
+describe('completed-chapter count matches Learning Paths exactly (Grade 8 "2/117" report)', () => {
+  const g8 = buildLpChapters(
+    [
+      { subject: 'English', chapters: ['Wit and Wisdom', 'Values and Dispositions'] },
+      { subject: 'Arts', chapters: ['Bringing Words Alive — Play Reading'] },
+    ],
+    {
+      English: { subject: 'English', isDbBacked: true, units: [
+        { unitNo: 1, title: 'Wit and Wisdom', topics: [{ name: 'The Wit that Won Hearts' }, { name: 'A Concrete Example' }, { name: 'Wisdom Paves the Way' }] },
+        { unitNo: 2, title: 'Values and Dispositions', topics: [{ name: "Somebody's Mother" }, { name: 'Introduction' }] },
+      ] },
+      Arts: { subject: 'Arts', isDbBacked: true, units: [
+        { unitNo: 1, title: 'Bringing Words Alive — Play Reading', topics: [{ name: 'Introduction' }] },
+      ] },
+    }
+  );
+  const completed = new Set(['The Wit that Won Hearts', 'A Concrete Example', 'Wisdom Paves the Way']);
+
+  test('a quiz average of 80%+ on a topic that is NOT in completedTopics does not complete its chapter', () => {
+    // e.g. a quiz scored on a same-named topic that never went through completeLesson
+    const perf: Perf = { topics: { Introduction: { avgScore: 100, quizCount: 1 } }, avgScore: 100 };
+    const p = computeChapterProgress(g8, perf, completed);
+    expect(countCompletedChapters(p)).toBe(1);
+    expect(p.find(c => c.subject === 'Arts')!.status).not.toBe('completed');
+  });
+
+  test('a quiz recorded under one subject does not touch a same-named topic in another subject', () => {
+    const perf: Perf = { topics: { Introduction: { avgScore: 90, quizCount: 1, subject: 'English', lastActivity: '2026-10-13T10:00:00Z' } }, avgScore: 90 };
+    const p = computeChapterProgress(g8, perf, completed);
+    expect(p.find(c => c.subject === 'Arts')!).toMatchObject({ status: 'not_started', hasData: false });
+    expect(p.find(c => c.title === 'Values and Dispositions')!).toMatchObject({ status: 'in_progress', hasData: true });
+    expect(countCompletedChapters(p)).toBe(1);
+  });
+
+  test('device activity tagged with another subject does not mark this chapter In progress', () => {
+    const p = computeChapterProgress(g8, EMPTY_PERF, completed, new Set(), { Introduction: { subject: 'English', lastOpenedAt: '2026-10-13T10:00:00Z' } });
+    expect(p.find(c => c.subject === 'Arts')!.status).toBe('not_started');
+  });
+
+  test('only Wit and Wisdom completed → exactly 1 completed chapter', () => {
+    expect(countCompletedChapters(computeChapterProgress(g8, EMPTY_PERF, completed))).toBe(1);
+  });
+});
