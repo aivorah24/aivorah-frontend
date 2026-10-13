@@ -212,11 +212,6 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
                   <View style={styles.cardTitleRow}>
                     <View style={[styles.sevDot, { backgroundColor: severityColor(colors, item.severity) }]} />
                     <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={[styles.statusPill, statusPillStyle(shown, colors)]}>
-                      <Text style={[styles.statusPillText, { color: statusPillStyle(shown, colors).textColor }]} testID={`announcement-status-${item.id}`}>
-                        {STATUS_LABEL[shown]}
-                      </Text>
-                    </View>
                   </View>
                   <Text style={styles.cardMeta} numberOfLines={1}>
                     {audienceLabel(item)}  ·  {DISPLAY_LABEL[item.displayType] || item.displayType}  ·  {SEVERITY_LABEL[item.severity]}
@@ -230,6 +225,11 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
+                  <View style={[styles.statusPill, statusPillStyle(shown, colors)]}>
+                    <Text style={[styles.statusPillText, { color: statusPillStyle(shown, colors).textColor }]} testID={`announcement-status-${item.id}`}>
+                      {STATUS_LABEL[shown]}
+                    </Text>
+                  </View>
                   {(item.status === 'draft' || item.status === 'scheduled') && (
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: colors.accentYellow }]}
@@ -728,11 +728,11 @@ function makeStyles(colors: AppColors) {
     cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sevDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
     cardTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 14.5, fontWeight: '700', color: colors.textHeading },
-    statusPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+    statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, marginRight: 4 },
     statusPillText: { fontFamily: fonts.serif, fontSize: 10.5, fontWeight: '700' },
     cardMeta: { fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted, marginTop: 5 },
     cardDates: { fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, marginTop: 3 },
-    cardActions: { flexDirection: 'row', gap: 8 },
+    cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     actionBtn: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: radius.sm },
     actionBtnOutline: { borderWidth: 1, borderColor: colors.borderColor },
     actionBtnText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700' },
