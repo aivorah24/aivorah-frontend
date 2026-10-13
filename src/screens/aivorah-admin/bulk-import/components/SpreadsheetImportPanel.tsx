@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import { radius, fonts } from '../../../../theme';
@@ -20,6 +20,16 @@ const EXAMPLE: Record<string, string> = {
 };
 const TEMPLATE_EXAMPLE = IMPORT_FIELDS.map((f) => EXAMPLE[f.value] || '');
 const NOT_IMPORTED = '__none__';
+
+// Review table columns — header and body cells share these so they stay aligned.
+const COL = StyleSheet.create({
+  row: { flex: 0, width: 56 },
+  student: { flex: 1.4 },
+  grade: { flex: 1 },
+  curriculum: { flex: 1 },
+  parent: { flex: 1 },
+  check: { flex: 1.6 },
+});
 
 function pickFile(onLoad: (name: string, content: ArrayBuffer | string) => void) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -143,9 +153,11 @@ export function SpreadsheetImportPanel() {
             minWidth={280}
           />
           {!!imp.school && (
-            <View style={s.boardBox}>
+            <View style={s.boardBox} testID="bulk-sheet-board">
               <Text style={s.boardLabel}>BOARD</Text>
-              <Text style={s.boardValue}>{describeBoard(imp.school.curriculum) || 'Not set'}</Text>
+              <View style={s.boardValueBox}>
+                <Text style={s.boardValue} numberOfLines={1}>{describeBoard(imp.school.curriculum) || 'Not set'}</Text>
+              </View>
             </View>
           )}
           {imp.needsBoard && !!imp.school && (
@@ -222,35 +234,41 @@ export function SpreadsheetImportPanel() {
           )}
 
           <View style={s.tableBox}>
-            <View style={[s.tr, s.thRow]}>
-              <Text style={[s.th, s.tdNarrow]}>Row</Text>
-              <Text style={s.th}>Student</Text>
-              <Text style={s.th}>Grade · Section</Text>
-              <Text style={s.th}>Parent</Text>
-              <Text style={[s.th, { flex: 1.6 }]}>Check</Text>
-            </View>
-            {page.pageRows.map((r) => {
-              const v = r.values;
-              const bad = r.issues.length > 0;
-              return (
-                <View key={r.rowNum} style={[s.tr, bad && s.trBad]} testID={`bulk-sheet-row-${r.rowNum}`}>
-                  <Text style={[s.td, s.tdNarrow]}>{r.rowNum}</Text>
-                  <View style={s.tdCol}>
-                    <Text style={s.tdStrong} numberOfLines={1}>{v.studentName || '—'}</Text>
-                    <Text style={s.tdSub} numberOfLines={1}>{v.studentEmail || 'login generated'}</Text>
-                  </View>
-                  <Text style={s.td}>{[v.grade, v.section].filter(Boolean).join(' · ') || '—'}</Text>
-                  <Text style={s.td} numberOfLines={1}>{v.parentName || '—'}</Text>
-                  <View style={[s.tdCol, { flex: 1.6 }]}>
-                    {bad
-                      ? r.issues.map((t) => <Text key={t} style={s.issueText}>✕ {t}</Text>)
-                      : r.warnings.length
-                        ? r.warnings.map((t) => <Text key={t} style={s.warnText}>! {t}</Text>)
-                        : <Text style={s.okText}>✓ Ready</Text>}
-                  </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={s.tableScroll}>
+              <View style={{ flex: 1 }}>
+                <View style={[s.tr, s.thRow]}>
+                  <Text style={[s.th, s.cell, COL.row]}>Row</Text>
+                  <Text style={[s.th, s.cell, COL.student]}>Student</Text>
+                  <Text style={[s.th, s.cell, COL.grade]}>Grade · Section</Text>
+                  <Text style={[s.th, s.cell, COL.curriculum]}>Curriculum</Text>
+                  <Text style={[s.th, s.cell, COL.parent]}>Parent</Text>
+                  <Text style={[s.th, s.cell, COL.check]}>Check</Text>
                 </View>
-              );
-            })}
+                {page.pageRows.map((r) => {
+                  const v = r.values;
+                  const bad = r.issues.length > 0;
+                  return (
+                    <View key={r.rowNum} style={[s.tr, bad && s.trBad]} testID={`bulk-sheet-row-${r.rowNum}`}>
+                      <Text style={[s.td, s.cell, COL.row]}>{r.rowNum}</Text>
+                      <View style={[s.cell, COL.student]}>
+                        <Text style={s.tdStrong} numberOfLines={1}>{v.studentName || '—'}</Text>
+                        <Text style={s.tdSub} numberOfLines={1}>{v.studentEmail || 'login generated'}</Text>
+                      </View>
+                      <Text style={[s.td, s.cell, COL.grade]} numberOfLines={1}>{[v.grade, v.section].filter(Boolean).join(' · ') || '—'}</Text>
+                      <Text style={[s.td, s.cell, COL.curriculum]} numberOfLines={1} testID={`bulk-sheet-row-${r.rowNum}-curriculum`}>{r.curriculum || '—'}</Text>
+                      <Text style={[s.td, s.cell, COL.parent]} numberOfLines={1}>{v.parentName || '—'}</Text>
+                      <View style={[s.cell, COL.check]}>
+                        {bad
+                          ? r.issues.map((t) => <Text key={t} style={s.issueText}>✕ {t}</Text>)
+                          : r.warnings.length
+                            ? r.warnings.map((t) => <Text key={t} style={s.warnText}>! {t}</Text>)
+                            : <Text style={s.okText}>✓ Ready</Text>}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
             <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
               <TablePager testIDPrefix="bulk-sheet-page" colors={colors} {...page} />
             </View>
@@ -289,10 +307,13 @@ function makeStyles(c: AppColors) {
     stepNumDone: { backgroundColor: c.accentYellow },
     stepNumText: { fontSize: 12.5, fontWeight: '800', color: c.accentYellow },
     stepTitle: { fontFamily: fonts.serif, fontSize: 15, fontWeight: '800', color: c.textHeading },
-    row: { flexDirection: 'row', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' },
-    boardBox: { paddingBottom: 6 },
-    boardLabel: { fontSize: 10.5, fontWeight: '700', color: c.textDim, letterSpacing: 0.4 },
-    boardValue: { fontSize: 13, fontWeight: '600', color: c.textMain, marginTop: 4 },
+    // Top-aligned so labels line up even when a field has a hint underneath.
+    row: { flexDirection: 'row', columnGap: 16, rowGap: 12, alignItems: 'flex-start', flexWrap: 'wrap' },
+    boardBox: { minWidth: 140 },
+    boardLabel: { fontSize: 11, fontWeight: '700', color: c.textDim, letterSpacing: 0.4 },
+    // Same height/offset as SelectField's trigger, so the value sits on the selects' centre line.
+    boardValueBox: { height: 36, marginTop: 6, justifyContent: 'center' },
+    boardValue: { fontSize: 13, fontWeight: '600', color: c.textMain },
     hint: { fontSize: 11.5, color: c.textDim, marginTop: 4, lineHeight: 16 },
     subTitle: { fontSize: 13, fontWeight: '800', color: c.textHeading },
     errorText: { fontSize: 12.5, color: c.accentRed, marginTop: 8 },
@@ -319,7 +340,8 @@ function makeStyles(c: AppColors) {
     th: { flex: 1, fontSize: 11.5, fontWeight: '800', color: c.textMain },
     td: { flex: 1, fontSize: 12.5, color: c.textMain },
     tdNarrow: { flex: 0, width: 56 },
-    tdCol: { flex: 1, minWidth: 0 },
+    cell: { flexBasis: 0, minWidth: 0 },
+    tableScroll: { flexGrow: 1, minWidth: 760 },
     tdStrong: { fontSize: 12.5, fontWeight: '700', color: c.textHeading },
     tdSub: { fontSize: 11, color: c.textDim, marginTop: 1 },
     mono: { fontFamily: Platform.OS === 'web' ? 'ui-monospace, monospace' : undefined },

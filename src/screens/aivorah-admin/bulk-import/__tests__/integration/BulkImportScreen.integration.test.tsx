@@ -159,6 +159,49 @@ describe('BulkImportScreen — spreadsheet tab, school with no curriculum', () =
   });
 });
 
+describe('BulkImportScreen — review table curriculum column', () => {
+  afterEach(() => { delete (global as any).document; delete (global as any).FileReader; jest.restoreAllMocks(); });
+
+  async function loadFor(schoolId: string) {
+    stubFilePicker('Student Name,Grade\nAsha,3\nBen,7\nCara,12');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', schoolId);
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+    await screen.findByTestId('bulk-sheet-row-1');
+    return user;
+  }
+  const curriculumCells = () => [1, 2, 3].map((n) => screen.getByTestId(`bulk-sheet-row-${n}-curriculum`).props.children);
+
+  test('IB school resolves each row by grade: PYP / MYP / DP', async () => {
+    await loadFor('sch1');
+    expect(screen.getByText('Curriculum')).toBeTruthy();
+    expect(curriculumCells()).toEqual(['IB PYP', 'IB MYP', 'IB DP']);
+  });
+
+  test('CBSE school shows CBSE on every row', async () => {
+    await loadFor('sch2');
+    expect(curriculumCells()).toEqual(['CBSE', 'CBSE', 'CBSE']);
+  });
+
+  test("school with no curriculum shows '—' until the admin picks one, then the pick per grade", async () => {
+    const user = await loadFor('sch3');
+    expect(curriculumCells()).toEqual(['—', '—', '—']);
+    await choose(user, 'bulk-sheet-curriculum', 'IB');
+    expect(curriculumCells()).toEqual(['IB PYP', 'IB MYP', 'IB DP']);
+    await choose(user, 'bulk-sheet-curriculum', 'ICSE');
+    expect(curriculumCells()).toEqual(['ICSE', 'ICSE', 'ICSE']);
+  });
+
+  test('BOARD block sits beside the selects with the same label and trigger height', async () => {
+    await loadFor('sch1');
+    const board = screen.getByTestId('bulk-sheet-board');
+    expect(screen.getByText('BOARD')).toBeTruthy();
+    expect(screen.getByText('IB PYP / MYP / DP (by grade)')).toBeTruthy();
+    expect(board.props.style).toEqual(expect.objectContaining({ minWidth: 140 }));
+  });
+});
+
 describe('BulkImportScreen — spreadsheet tab', () => {
   test('opens on the spreadsheet tab with the school picker and template download', async () => {
     await render(<BulkImportScreen navigation={nav} />);

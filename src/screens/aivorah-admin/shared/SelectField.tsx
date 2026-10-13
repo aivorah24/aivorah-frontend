@@ -81,7 +81,7 @@ export function SelectField({ testID, label, allLabel, placeholder, value, optio
 
 function makeStyles(colors: AppColors) {
   return StyleSheet.create({
-    label: { fontSize: 10.5, fontWeight: '700', color: colors.textDim, letterSpacing: 0.4 },
+    label: { fontSize: 11, fontWeight: '700', color: colors.textDim, letterSpacing: 0.4 },
     trigger: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       height: 36, paddingHorizontal: 12, borderRadius: radius.sm, marginTop: 6,
