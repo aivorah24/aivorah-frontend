@@ -26,7 +26,6 @@ import { useEmailChange } from '../../shared/account/hooks/useEmailChange';
 import ChangeEmailModal from '../../shared/account/components/ChangeEmailModal';
 import { usePasswordChange } from './hooks/usePasswordChange';
 import { useDeleteAccount } from './hooks/useDeleteAccount';
-import { useParentProfile } from './hooks/useParentProfile';
 import SectionHeader from './components/SectionHeader';
 import NotificationsSection from './components/NotificationsSection';
 import BrandingLogosCard from './components/BrandingLogosCard';
@@ -80,17 +79,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
   const { schoolLogoUrl, curriculumLogoUrl, uploadingLogo, handlePickLogo } = useBrandingLogos(
     user?.school, (user as any)?.curriculum,
   );
-  const isDualRole = (user?.roles?.length ?? 0) > 1;
-
-  // Parent onboarding modal state
-  const [parentModal,   setParentModal]   = useState(false);
-  const [parentStep,    setParentStep]    = useState<'choose' | 'create' | 'link'>('choose');
-  const [childName,       setChildName]       = useState('');
-  const [childEmail,      setChildEmail]      = useState('');
-  const [childPassword,   setChildPassword]   = useState('');
-  const [childGrade,      setChildGrade]      = useState('Grade 3');
-  const [childCurriculum, setChildCurriculum] = useState('IB PYP');
-  const [linkEmail, setLinkEmail] = useState('');
 
   // Edit modals
   const [activeModal,   setActiveModal]   = useState<ModalType>(null);
@@ -210,29 +198,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
     setFeedback({ title: 'Password Changed', message: 'Your password has been updated successfully.' });
   }
 
-  // Extracted 2026-08-27 — see hooks/useParentProfile.ts (unit-tested there).
-  const { loading: parentLoading, error: parentError, setError: setParentError, createChild, linkChild } = useParentProfile(user?.email, updateUser);
-
-  function openParentOnboarding() {
-    setParentStep('choose');
-    setParentError('');
-    setChildName(''); setChildEmail(''); setChildPassword('');
-    setChildGrade('Grade 3'); setChildCurriculum('IB PYP');
-    setLinkEmail('');
-    setParentModal(true);
-  }
-
-  async function submitParentOnboarding() {
-    const ok = parentStep === 'create'
-      ? await createChild({ name: childName.trim(), email: childEmail.trim() || undefined, password: childPassword.trim() || undefined, grade: childGrade, curriculum: childCurriculum, school: user?.school || '' })
-      : parentStep === 'link'
-      ? await linkChild(linkEmail.trim())
-      : false;
-    if (!ok) return;
-    setParentModal(false);
-    setFeedback({ title: 'Parent Profile Ready', message: "Switch to your Parent profile from the sidebar to view your child's progress and assign work." });
-  }
-
   function handleSignOut() {
     setSignOutConfirm(true);
   }
@@ -296,30 +261,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
                 <FieldRow label="Email Address" sub={user?.email || '—'} btnLabel="Change" onPress={() => openModal('email')} styles={styles} />
                 <View style={styles.divider} />
                 <FieldRow label="School / Institution" sub={user?.school || 'Not set'} btnLabel="Update" onPress={() => openModal('school')} styles={styles} />
-                <View style={styles.divider} />
-                <View style={styles.fieldRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Parent Profile</Text>
-                    <Text style={styles.fieldSub}>
-                      {isDualRole
-                        ? 'You have a parent profile — switch from the sidebar'
-                        : 'Add a parent profile to monitor your child\'s learning'}
-                    </Text>
-                  </View>
-                  {isDualRole ? (
-                    <View style={[styles.comingSoonBadge, { backgroundColor: colors.accentGreen + '18', borderColor: colors.accentGreen + '40' }]}>
-                      <Text style={[styles.comingSoonText, { color: colors.accentGreen }]}>Active</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.changeBtn, { backgroundColor: gold + '15', borderColor: gold + '40', borderWidth: 1 }]}
-                      onPress={openParentOnboarding}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.changeBtnText, { color: gold }]}>Add</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
               </View>
 
               {/* ── Branding (school + curriculum logo, reused on every worksheet) ── */}
@@ -533,127 +474,6 @@ export default function TeacherSettingsScreen({ navigation }: any) {
         {modalError ? <Text style={{ color: colors.accentRed, fontSize: 13, marginTop: 8 }}>{modalError}</Text> : null}
         <ModalButtons onCancel={closeModal} onSave={handleSaveCurriculum} loading={modalLoading} saveLabel="Save" styles={styles} />
       </AppModal>
-
-      {/* ── Parent Profile Onboarding Modal ── */}
-      <Modal visible={parentModal} transparent animationType="fade" onRequestClose={() => setParentModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { maxWidth: 480 }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accentGreen + '20', alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name="home" size={16} color={colors.accentGreen} />
-                </View>
-                <View>
-                  <Text style={styles.modalTitle}>Add Parent Profile</Text>
-                  <Text style={[styles.fieldSub, { marginTop: 0 }]}>Monitor your child&apos;s learning on Aivorah</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => setParentModal(false)}><Feather name="x" size={20} color={colors.textMuted} /></TouchableOpacity>
-            </View>
-
-            {parentStep === 'choose' && (
-              <View style={{ gap: 12, marginTop: 8 }}>
-                <Text style={[styles.fieldLabel, { marginBottom: 4 }]}>How would you like to add your child?</Text>
-                <TouchableOpacity
-                  style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }]}
-                  onPress={() => { setParentError(''); setParentStep('create'); }} activeOpacity={0.8}
-                >
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: gold + '20', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="user-plus" size={18} color={gold} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Create new student account</Text>
-                    <Text style={styles.fieldSub}>My child doesn&apos;t have an Aivorah account yet</Text>
-                  </View>
-                  <Feather name="chevron-right" size={16} color={colors.textDim} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }]}
-                  onPress={() => { setParentError(''); setParentStep('link'); }} activeOpacity={0.8}
-                >
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentBlue + '20', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="link" size={18} color={colors.accentBlue} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Link existing account</Text>
-                    <Text style={styles.fieldSub}>My child already has an Aivorah student account</Text>
-                  </View>
-                  <Feather name="chevron-right" size={16} color={colors.textDim} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {parentStep === 'create' && (
-              <View style={{ gap: 10, marginTop: 8 }}>
-                <TouchableOpacity onPress={() => setParentStep('choose')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <Feather name="arrow-left" size={14} color={colors.textMuted} />
-                  <Text style={[styles.fieldSub, { color: colors.textMuted }]}>Back</Text>
-                </TouchableOpacity>
-                <Text style={styles.fieldLabel}>Child&apos;s Full Name *</Text>
-                <TextInput style={styles.modalTextInput} value={childName} onChangeText={setChildName} placeholder="e.g. Arjun" placeholderTextColor={colors.textDim} autoCapitalize="words" />
-                <Text style={styles.fieldLabel}>Child&apos;s Email <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
-                <TextInput style={styles.modalTextInput} value={childEmail} onChangeText={setChildEmail} placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim} keyboardType="email-address" autoCapitalize="none" />
-                <Text style={styles.fieldLabel}>Password <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
-                <TextInput style={styles.modalTextInput} value={childPassword} onChangeText={setChildPassword} placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim} secureTextEntry />
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Grade</Text>
-                    {(['Grade 3','Grade 4','Grade 5','Grade 6'] as const).map(g => (
-                      <TouchableOpacity key={g} onPress={() => setChildGrade(g)} activeOpacity={0.8}
-                        style={[styles.modalTextInput, { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderColor: childGrade === g ? gold : colors.borderColor }]}
-                      >
-                        <Text style={[styles.fieldSub, { color: childGrade === g ? gold : colors.textMuted }]}>{g}</Text>
-                        {childGrade === g && <Feather name="check" size={13} color={gold} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.fieldLabel}>Curriculum</Text>
-                    {(['IB PYP','CBSE','ICSE','Cambridge'] as const).map(c => (
-                      <TouchableOpacity key={c} onPress={() => setChildCurriculum(c)} activeOpacity={0.8}
-                        style={[styles.modalTextInput, { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderColor: childCurriculum === c ? gold : colors.borderColor }]}
-                      >
-                        <Text style={[styles.fieldSub, { color: childCurriculum === c ? gold : colors.textMuted }]}>{c}</Text>
-                        {childCurriculum === c && <Feather name="check" size={13} color={gold} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                {parentError ? <Text style={{ color: colors.accentRed, fontSize: 13 }}>{parentError}</Text> : null}
-                <View style={styles.modalBtns}>
-                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setParentModal(false)}>
-                    <Text style={styles.modalCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.modalSaveBtn} onPress={submitParentOnboarding} disabled={parentLoading}>
-                    {parentLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.modalSaveText}>Create & Link</Text>}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {parentStep === 'link' && (
-              <View style={{ gap: 10, marginTop: 8 }}>
-                <TouchableOpacity onPress={() => setParentStep('choose')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <Feather name="arrow-left" size={14} color={colors.textMuted} />
-                  <Text style={[styles.fieldSub, { color: colors.textMuted }]}>Back</Text>
-                </TouchableOpacity>
-                <Text style={styles.fieldLabel}>Child&apos;s Aivorah Email</Text>
-                <Text style={styles.fieldSub}>Enter the email address your child uses to log into Aivorah</Text>
-                <TextInput style={styles.modalTextInput} value={linkEmail} onChangeText={setLinkEmail} placeholder="child@example.com" placeholderTextColor={colors.textDim} keyboardType="email-address" autoCapitalize="none" />
-                {parentError ? <Text style={{ color: colors.accentRed, fontSize: 13 }}>{parentError}</Text> : null}
-                <View style={styles.modalBtns}>
-                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setParentModal(false)}>
-                    <Text style={styles.modalCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.modalSaveBtn} onPress={submitParentOnboarding} disabled={parentLoading}>
-                    {parentLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.modalSaveText}>Link Child</Text>}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
 
       {/* Sign Out Confirmation */}
       <Modal visible={signOutConfirm} transparent animationType="fade" onRequestClose={() => setSignOutConfirm(false)}>

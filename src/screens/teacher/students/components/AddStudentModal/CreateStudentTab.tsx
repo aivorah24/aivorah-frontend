@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
+import { isRealStudentEmail } from '../../utils/studentDisplay';
 
 interface Props {
   colors: AppColors;
@@ -26,6 +27,7 @@ export default function CreateStudentTab({
   newGrade, setNewGrade, newCurriculum, setNewCurriculum,
   creating, createError, onCancel, onSubmit,
 }: Props) {
+  const invite = isRealStudentEmail(newEmail);
   return (
     <View style={{ gap: 10 }}>
       <Text style={styles.modalFieldLabel}>Full Name *</Text>
@@ -52,17 +54,25 @@ export default function CreateStudentTab({
         />
       </View>
 
-      <Text style={styles.modalFieldLabel}>Password <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
-      <View style={styles.modalInput}>
-        <Feather name="lock" size={14} color={colors.textDim} />
-        <TextInput
-          testID="teacher-students-create-password-input"
-          style={styles.modalTextInput}
-          value={newPassword} onChangeText={setNewPassword}
-          placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim}
-          secureTextEntry
-        />
-      </View>
+      {invite ? (
+        <Text testID="teacher-students-create-invite-note" style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
+          We&apos;ll email this student an invite to set their password and verify their email. They can sign in once verified.
+        </Text>
+      ) : (
+        <>
+          <Text style={styles.modalFieldLabel}>Password <Text style={{ fontWeight: '400', color: colors.textDim }}>(optional)</Text></Text>
+          <View style={styles.modalInput}>
+            <Feather name="lock" size={14} color={colors.textDim} />
+            <TextInput
+              testID="teacher-students-create-password-input"
+              style={styles.modalTextInput}
+              value={newPassword} onChangeText={setNewPassword}
+              placeholder="Leave blank to auto-generate" placeholderTextColor={colors.textDim}
+              secureTextEntry
+            />
+          </View>
+        </>
+      )}
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>
@@ -108,7 +118,7 @@ export default function CreateStudentTab({
         <TouchableOpacity testID="teacher-students-create-submit-button" style={styles.modalSaveBtn} onPress={onSubmit} disabled={creating}>
           {creating
             ? <ActivityIndicator color="white" size="small" />
-            : <Text style={styles.modalSaveText}>Create Account</Text>}
+            : <Text style={styles.modalSaveText}>{invite ? 'Create & Send Invite' : 'Create Account'}</Text>}
         </TouchableOpacity>
       </View>
     </View>

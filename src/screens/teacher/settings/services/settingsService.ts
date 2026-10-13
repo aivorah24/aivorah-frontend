@@ -2,8 +2,7 @@
 // (2026-08-27). Verified each route's contract matches exactly before
 // switching (payload shapes unchanged):
 //   - PROFILE_SERVER_URL (aivorah-profile-service): /user/profile,
-//     /user/preferences, /user/upload-photo, /user/add-role,
-//     /parent/:email/children[/create-student], /branding/logo(s)
+//     /user/preferences, /user/upload-photo, /branding/logo(s)
 //   - AUTH_SERVER_URL (aivorah-auth-service): /user/email-otp/send+verify,
 //     /user/delete-account (email change: screens/shared/account)
 import AUTH_SERVER_URL from '../../../../config/authServerUrl';
@@ -74,38 +73,4 @@ export async function deleteAccount(email: string): Promise<{ ok?: boolean; erro
     body: JSON.stringify({ email }),
   });
   return res.json();
-}
-
-// ── Add a role (e.g. teacher adding a "parent" profile) ─────────────────────
-export async function addRole(email: string, role: string): Promise<{ ok?: boolean; roles?: string[]; error?: string }> {
-  const res = await fetch(`${PROFILE_SERVER_URL}/user/add-role`, {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, role }),
-  });
-  const data = await res.json();
-  if (!res.ok) return { error: data.error };
-  return data;
-}
-
-// ── Parent-child account creation/linking ────────────────────────────────────
-export async function createChildStudent(parentEmail: string, child: {
-  name: string; email?: string; password?: string; grade: string; curriculum: string; school?: string;
-}): Promise<{ success?: boolean; child?: any; error?: string }> {
-  const res = await fetch(`${PROFILE_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children/create-student`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(child),
-  });
-  const data = await res.json();
-  if (!res.ok) return { error: data.error };
-  return data;
-}
-
-export async function linkExistingChild(parentEmail: string, childEmail: string): Promise<{ success?: boolean; child?: any; error?: string }> {
-  const res = await fetch(`${PROFILE_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ childEmail }),
-  });
-  const data = await res.json();
-  if (!res.ok) return { error: data.error };
-  return data;
 }

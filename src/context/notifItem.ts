@@ -33,6 +33,17 @@ export function isEventType(n: V2Notification) {
   return n.type === 'event_scheduled';
 }
 
+// Settings toggles: Assignment Alerts gates assignments + non-challenge events,
+// Challenge Updates gates challenges + challenge events (same split as legacy).
+export interface CategoryPrefs { assign: boolean; challenge: boolean }
+
+export function isV2Allowed(n: V2Notification, p: CategoryPrefs) {
+  if (isClassPostType(n) || isAnnouncementType(n)) return true;
+  if (isAssignmentType(n)) return p.assign;
+  if (isEventType(n)) return n.data?.eventType === 'challenge' ? p.challenge : p.assign;
+  return p.challenge;
+}
+
 export function isClassPostType(n: V2Notification) {
   return n.type === 'class_post';
 }

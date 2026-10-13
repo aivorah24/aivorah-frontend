@@ -890,7 +890,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         roles:              Array.isArray(profile.roles) ? profile.roles as UserRole[] : [resolvedRole],
         grade:              profile.grade              || undefined,
         curriculum:         profile.curriculum         || undefined,
-        school:             profile.school             || 'Hyderabad International School',
+        school:             profile.school             || undefined,
         schoolId:           profile.schoolId           ?? null,
         location:           profile.location           || 'Hyderabad, India',
         onboardingComplete: profile.onboardingComplete === true || onboardingComplete,

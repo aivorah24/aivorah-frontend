@@ -9,6 +9,13 @@ export function toTitleCase(str: string) {
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// A real inbox (not blank / auto-generated @aivorah.student) gets an invite +
+// email verification instead of teacher-shared credentials.
+export function isRealStudentEmail(email: string) {
+  const e = email.trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && !e.endsWith('@aivorah.student');
+}
+
 export function avatarGradient(name: string): [string, string] {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_GRADIENTS.length;

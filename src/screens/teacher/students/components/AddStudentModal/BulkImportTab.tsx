@@ -39,7 +39,7 @@ export default function BulkImportTab({
       {!bulkResults ? (
         <>
           <Text style={styles.modalNote}>
-            Upload a CSV or Excel file with columns: <Text style={{ color: colors.textMain, fontWeight: '700' }}>Name</Text>, Email (optional), Grade, Curriculum, School, Parent Name, Parent Email, Parent Phone. When a Parent Name is filled in, the parent gets their own account too. Everyone is asked to set a new password on first sign-in.
+            Upload a CSV or Excel file with columns: <Text style={{ color: colors.textMain, fontWeight: '700' }}>Name</Text>, Email (optional), Grade, Curriculum, School, Parent Name, Parent Email, Parent Phone. When a Parent Name is filled in, the parent gets their own account too. Students with a real email get an invite to set their password and verify their email; everyone else is asked to set a new password on first sign-in.
           </Text>
 
           {/* Default Grade / Curriculum for rows without those columns */}

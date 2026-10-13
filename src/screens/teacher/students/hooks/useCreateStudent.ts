@@ -3,7 +3,12 @@ import { Platform, Share, Alert } from 'react-native';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut, updateProfile } from 'firebase/auth';
 import firebaseApp from '../../../../config/firebase';
-import { initStudentAuth, linkCreatedStudent } from '../services/studentsService';
+import { initStudentAuth, linkCreatedStudent, inviteStudent } from '../services/studentsService';
+import { isRealStudentEmail } from '../utils/studentDisplay';
+
+function frontendOrigin() {
+  return Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : undefined;
+}
 
 export function useCreateStudent(user: any, onCreated: () => void) {
   // Create new student fields
@@ -20,6 +25,9 @@ export function useCreateStudent(user: any, onCreated: () => void) {
   const [credsPassword, setCredsPassword] = useState('');
   const [credsName,     setCredsName]     = useState('');
   const [credsCopiedField, setCredsCopiedField] = useState('');
+  // Real-email students get an invite instead of credentials.
+  const [credsInvited,  setCredsInvited]  = useState(false);
+  const [inviteWarning, setInviteWarning] = useState('');
 
   function copyCredsField(text: string, field: string) {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -49,6 +57,24 @@ export function useCreateStudent(user: any, onCreated: () => void) {
     if (!newName.trim()) { setCreateError('Name is required.'); return; }
     setCreating(true); setCreateError('');
     try {
+      if (isRealStudentEmail(newEmail)) {
+        const res = await inviteStudent(user?.email || '', {
+          name: newName.trim(), email: newEmail.trim().toLowerCase(),
+          grade: newGrade, curriculum: newCurriculum, frontendOrigin: frontendOrigin(),
+        });
+        const data = await res.json();
+        if (!res.ok) { setCreateError(data.error || 'Failed to create student.'); return; }
+        setCredsEmail(data.student?.email || newEmail.trim().toLowerCase());
+        setCredsPassword('');
+        setCredsName(data.student?.name || newName.trim());
+        setCredsInvited(true);
+        setInviteWarning(data.inviteError || (data.verificationSent === false ? 'The verification email could not be sent — the student can request it again when signing in.' : ''));
+        closeAddModal();
+        setCredsModal(true);
+        onCreated();
+        return;
+      }
+
       // 1. Get credentials from server
       const initRes = await initStudentAuth({
         name: newName.trim(),
@@ -83,6 +109,7 @@ export function useCreateStudent(user: any, onCreated: () => void) {
       if (!linkRes.ok) { setCreateError(linkData.error || 'Failed to save student.'); return; }
 
       // 4. Show credentials popup
+      setCredsInvited(false); setInviteWarning('');
       setCredsEmail(finalEmail);
       setCredsPassword(finalPassword);
       setCredsName(newName.trim());
@@ -108,7 +135,7 @@ export function useCreateStudent(user: any, onCreated: () => void) {
     newName, setNewName, newEmail, setNewEmail, newPassword, setNewPassword,
     newGrade, setNewGrade, newCurriculum, setNewCurriculum,
     creating, createError, setCreateError,
-    credsModal, setCredsModal, credsEmail, credsPassword, credsName,
+    credsModal, setCredsModal, credsEmail, credsPassword, credsName, credsInvited, inviteWarning,
     credsCopiedField, copyCredsField, shareCredsToStudent,
     handleCreateStudent, resetCreateForm,
   };
