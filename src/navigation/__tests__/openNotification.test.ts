@@ -134,3 +134,29 @@ describe('class_post notifications', () => {
     expect(navigate).toHaveBeenCalledWith('ClassDetail', expect.objectContaining({ postId: 'post-7' }));
   });
 });
+
+describe('announcement notifications', () => {
+  const ann = (o: Partial<V2Notification> = {}) => v2({
+    type: 'announcement', entityType: 'announcement', entityId: 'ann-3', title: 'New announcement: Sports Day', body: 'Wear whites',
+    data: { announcementId: 'ann-3', severity: 'info', displayType: 'both' }, ...o,
+  });
+
+  test('maps to an announcement item', () => {
+    expect(toNotifItem(ann())).toMatchObject({ type: 'announcement', title: 'New announcement: Sports Day', subtitle: 'Wear whites' });
+  });
+
+  test.each([
+    ['student', 'Announcements'], ['parent', 'ParentAnnouncements'],
+    ['teacher', 'TeacherAnnouncements'], ['school_admin', 'SchoolAdminAnnouncements'],
+  ])('%s tap opens that announcement in their inbox', (role, screen) => {
+    expect(resolveNotificationTarget(toNotifItem(ann()), role)).toEqual({ screen, params: { openId: 'ann-3' } });
+  });
+
+  test('opening marks only that V2 row read', () => {
+    const actions = { markNotificationRead: jest.fn(), clearUnread: jest.fn(), clearUnreadAssignments: jest.fn(), clearUnreadChallenges: jest.fn(), clearUnreadEvents: jest.fn() };
+    const navigate = jest.fn();
+    openNotification(toNotifItem(ann()), { role: 'parent', navigate, actions });
+    expect(actions.markNotificationRead).toHaveBeenCalledWith('n1');
+    expect(navigate).toHaveBeenCalledWith('ParentAnnouncements', { openId: 'ann-3' });
+  });
+});

@@ -16,6 +16,11 @@ jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: mockUser, isAuthenticated: mockAuthed }),
 }));
 
+let mockToastItem: any = null;
+jest.mock('../../../../../context/NotificationContext', () => ({
+  useNotification: () => ({ toastItem: mockToastItem }),
+}));
+
 const mocked = api as jest.Mocked<typeof api>;
 
 function Probe() {
@@ -36,9 +41,32 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { email: 'a@x.com' };
   mockAuthed = true;
+  mockToastItem = null;
 });
 
 describe('AnnouncementProvider', () => {
+  it('refetches the banner as soon as an announcement notification arrives', async () => {
+    mocked.fetchActiveAnnouncements.mockResolvedValue([]);
+    const view = await render(<AnnouncementProvider><Probe /></AnnouncementProvider>);
+    await waitFor(() => expect(mocked.fetchActiveAnnouncements).toHaveBeenCalledTimes(1));
+
+    mocked.fetchActiveAnnouncements.mockResolvedValue([{ id: '9', title: 'Sports Day' } as any]);
+    mockToastItem = { id: 'n1', type: 'announcement' };
+    await view.rerender(<AnnouncementProvider><Probe /></AnnouncementProvider>);
+
+    await waitFor(() => expect(screen.getByText('Sports Day')).toBeTruthy());
+    expect(mocked.fetchActiveAnnouncements).toHaveBeenCalledTimes(2);
+  });
+
+  it('other notification types do not refetch', async () => {
+    mocked.fetchActiveAnnouncements.mockResolvedValue([]);
+    const view = await render(<AnnouncementProvider><Probe /></AnnouncementProvider>);
+    await waitFor(() => expect(mocked.fetchActiveAnnouncements).toHaveBeenCalledTimes(1));
+    mockToastItem = { id: 'n2', type: 'challenge' };
+    await view.rerender(<AnnouncementProvider><Probe /></AnnouncementProvider>);
+    expect(mocked.fetchActiveAnnouncements).toHaveBeenCalledTimes(1);
+  });
+
   it('fetches banner announcements for an authenticated user', async () => {
     mocked.fetchActiveAnnouncements.mockResolvedValue([{ id: '1', title: 'Notice' } as any]);
     await render(<AnnouncementProvider><Probe /></AnnouncementProvider>);

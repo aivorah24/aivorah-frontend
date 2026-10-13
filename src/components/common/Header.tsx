@@ -367,7 +367,7 @@ const [editingName, setEditingName] = useState(false);
                       const isTask = item.type === 'task';
                       const isMessage = item.type === 'message';
                       const accent = colors.accentYellow;
-                      const iconName = isMessage ? 'message-square' : isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
+                      const iconName = item.type === 'announcement' ? 'volume-2' : isMessage ? 'message-square' : isChallenge ? 'award' : isEvent ? 'calendar' : (isPortfolio ? 'image' : isTask ? 'check-circle' : (item.type === 'quiz' ? 'help-circle' : 'check-square'));
                       return (
                       <TouchableOpacity
                         key={item.id}
