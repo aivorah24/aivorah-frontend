@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Svg, { Circle } from 'react-native-svg';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, ActivityIndicator, Animated,
+  Switch, ActivityIndicator, Animated, useWindowDimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,8 @@ import { formatMinutes, formatHour } from './utils';
 import type { PickerMode } from './types';
 
 export default function ParentControlsScreen(_props: any) {
+  const { width } = useWindowDimensions();
+  const twoCol = width >= 1100;
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
@@ -127,7 +129,7 @@ export default function ParentControlsScreen(_props: any) {
     <ScreenLayout>
       <Header title="Parental Controls" subtitle="Manage your child's app usage" />
       <ScrollView style={s.screen} contentContainerStyle={{ padding: 20, paddingBottom: 40, alignItems: 'center' }}>
-        <View style={{ width: '100%', maxWidth: 640 }}>
+        <View style={{ width: '100%', maxWidth: twoCol ? 1040 : 640 }}>
 
           {children.length > 1 && (
             <View style={s.childRow}>
@@ -166,7 +168,8 @@ export default function ParentControlsScreen(_props: any) {
               </View>
 
               <Text style={s.sectionLabel}>SCREEN TIME</Text>
-              <View style={s.controlList}>
+              <View style={[s.controlList, twoCol && s.grid]} testID="parental-controls-screen-time-grid">
+                <View style={twoCol ? s.gridCell : undefined}>
                 <ControlRow testID="parental-controls-daily-limit-switch" title="Daily Limit" icon="clock" iconBg="#93B0AC20" iconColor="#93B0AC"
                   enabled={ctrl.isEnabled} onToggle={v => set({ isEnabled: v })} colors={colors}>
                   <View style={s.fieldFull}>
@@ -184,7 +187,9 @@ export default function ParentControlsScreen(_props: any) {
                     </View>
                   </View>
                 </ControlRow>
+                </View>
 
+                <View style={twoCol ? s.gridCell : undefined}>
                 <ControlRow testID="parental-controls-weekly-cap-switch" title="Weekly Cap" icon="calendar" iconBg="#C5BD9620" iconColor="#C5BD96"
                   enabled={ctrl.weeklyCapEnabled} onToggle={v => set({ weeklyCapEnabled: v })} colors={colors}>
                   <View style={s.fieldFull}>
@@ -196,7 +201,9 @@ export default function ParentControlsScreen(_props: any) {
                     </TouchableOpacity>
                   </View>
                 </ControlRow>
+                </View>
 
+                <View style={twoCol ? s.gridCell : undefined}>
                 <ControlRow testID="parental-controls-allowed-hours-switch" title="Allowed Hours" icon="sun" iconBg="#F0C27020" iconColor="#F0C270"
                   enabled={ctrl.allowedHoursEnabled} onToggle={v => set({ allowedHoursEnabled: v })} colors={colors}>
                   <View style={s.fieldRow}>
@@ -218,7 +225,9 @@ export default function ParentControlsScreen(_props: any) {
                     </View>
                   </View>
                 </ControlRow>
+                </View>
 
+                <View style={twoCol ? s.gridCell : undefined}>
                 <ControlRow testID="parental-controls-break-enforcer-switch" title="Break Enforcer" icon="coffee" iconBg="#93B0AC20" iconColor="#93B0AC"
                   enabled={ctrl.breakEnforcerEnabled} onToggle={v => set({ breakEnforcerEnabled: v })} colors={colors}>
                   <View style={s.fieldRow}>
@@ -240,6 +249,7 @@ export default function ParentControlsScreen(_props: any) {
                     </View>
                   </View>
                 </ControlRow>
+                </View>
               </View>
 
               <Text style={s.sectionLabel}>CONTENT</Text>
@@ -377,6 +387,9 @@ const makeStyles = (c: AppColors, _isDark: boolean) => StyleSheet.create({
   subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   subjectChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, borderWidth: 1, minWidth: '30%', justifyContent: 'center' },
   controlList: { gap: 6, marginBottom: 14 },
+  // Two columns on wide screens; cells keep their own height (rows never stretch to a sibling).
+  grid: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 10 },
+  gridCell: { flexBasis: '48%', flexGrow: 1 },
   fieldFull: { gap: 4 },
   fieldRow: { flexDirection: 'row', gap: 10 },
   fieldHalf: { flex: 1 },
