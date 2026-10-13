@@ -48,3 +48,11 @@ export function getIBPYPStaticSubjects(grade: string): SubjectData[] {
 
   return [...seeded, ...extras];
 }
+
+// Shared by the student screen and Parental Controls so both resolve a users-row curriculum the same way.
+export function curriculumFlags(curriculum: string) {
+  // Normalise IB PYP — stored value may have space or underscore
+  const isPYP = /^ib.?pyp$/i.test(curriculum.trim());
+  const isCBSE = !isPYP && (curriculum === 'NCERT' || curriculum === 'CBSE');
+  return { isPYP, isCBSE, label: isCBSE ? 'CBSE' : curriculum };
+}

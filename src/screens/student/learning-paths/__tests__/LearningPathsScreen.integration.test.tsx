@@ -139,6 +139,26 @@ describe('LearningPathsScreen', () => {
     expect(await screen.findByText('Blocked by parent')).toBeTruthy();
   });
 
+  test('a parent-blocked CBSE subject locks exactly that card (same subject key as Parental Controls)', async () => {
+    mockUser = { name: 'A Student', email: 'a@a.com', curriculum: 'CBSE', grade: 'Grade 8' };
+    const cbse = ['English', 'Mathematics', 'Science', 'Social Science', 'Hindi', 'Arts', 'Physical Education and Well Being'];
+    mockFetchByUrl({
+      subjects: () => Promise.resolve({ json: async () => ({ subjects: cbse.map((subject) => ({ subject, topicCount: 1, topics: [] })) }) }),
+      blocked: () => Promise.resolve({
+        json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: ['Social Science', 'Social Studies'] } }),
+      }),
+    });
+
+    await render(<LearningPathsScreen navigation={navProp()} />);
+
+    await screen.findByText('Blocked by parent');
+    expect(screen.getAllByText('Blocked by parent')).toHaveLength(1);
+    await userEvent.setup().press(screen.getByText('Social Science'));
+    expect(mockNavigate).not.toHaveBeenCalled();
+    await userEvent.setup().press(screen.getByText('Science'));
+    expect(mockNavigate).toHaveBeenCalledWith('SubjectSyllabus', { subject: 'Science', curriculum: 'CBSE', grade: 'Grade 8' });
+  });
+
   test('subjectFilter disabled -> no subject is blocked, even if blockedSubjects is non-empty', async () => {
     mockFetchByUrl({
       subjects: () => Promise.resolve({

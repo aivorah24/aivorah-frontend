@@ -13,9 +13,10 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useParentControlsData } from './hooks/useParentControlsData';
+import { useChildSubjects } from './hooks/useChildSubjects';
 import ControlRow from './components/ControlRow';
 import PickerModal from './components/PickerModal';
-import { TIME_OPTIONS, WEEKLY_OPTIONS, BREAK_INTERVALS, BREAK_DURATIONS, HOUR_OPTIONS, SUBJECTS } from './constants';
+import { TIME_OPTIONS, WEEKLY_OPTIONS, BREAK_INTERVALS, BREAK_DURATIONS, HOUR_OPTIONS } from './constants';
 import { formatMinutes, formatHour } from './utils';
 import type { PickerMode } from './types';
 
@@ -45,6 +46,13 @@ export default function ParentControlsScreen(_props: any) {
 
   const { children, selectedChild, setSelectedChild, loading, saving, ctrl, set, saveSettings, error } =
     useParentControlsData(parentEmail, showToast);
+
+  const { subjects, loading: subjectsLoading, notice: subjectsNotice } = useChildSubjects(selectedChild);
+  // Saved names not in this child's list stay stored (other curricula/old lists) but aren't shown or counted.
+  const visibleBlocked = useMemo(
+    () => ctrl.blockedSubjects.filter(sub => subjects.includes(sub)),
+    [ctrl.blockedSubjects, subjects],
+  );
 
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
@@ -238,8 +246,10 @@ export default function ParentControlsScreen(_props: any) {
               <View style={s.controlList}>
                 <ControlRow testID="parental-controls-subject-filter-switch" title="Subject Filter" subtitle="Blocked subjects are locked on the student's app" icon="filter" iconBg="#C5BD9620" iconColor="#C5BD96"
                   enabled={ctrl.subjectFilterEnabled} onToggle={v => set({ subjectFilterEnabled: v })} colors={colors}>
+                  {subjectsLoading && <ActivityIndicator testID="parental-controls-subjects-loading" size="small" color={colors.accentYellow} />}
+                  {subjectsNotice && <Text testID="parental-controls-subjects-notice" style={s.subjectNotice}>{subjectsNotice}</Text>}
                   <View style={s.subjectGrid}>
-                    {SUBJECTS.map(subject => {
+                    {subjects.map(subject => {
                       const blocked = ctrl.blockedSubjects.includes(subject);
                       return (
                         <TouchableOpacity
@@ -259,9 +269,9 @@ export default function ParentControlsScreen(_props: any) {
                       );
                     })}
                   </View>
-                  {ctrl.blockedSubjects.length > 0 && (
+                  {visibleBlocked.length > 0 && (
                     <Text style={{ color: '#EFD1D4', fontFamily: fonts.serif, fontSize: 11, marginTop: 10 }}>
-                      {ctrl.blockedSubjects.length} subject{ctrl.blockedSubjects.length > 1 ? 's' : ''} blocked
+                      {visibleBlocked.length} subject{visibleBlocked.length > 1 ? 's' : ''} blocked
                     </Text>
                   )}
                 </ControlRow>
@@ -363,6 +373,7 @@ const makeStyles = (c: AppColors, _isDark: boolean) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fieldLabel: { fontFamily: fonts.serif, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, marginTop: 6 },
   pickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9, borderWidth: 1.5, marginBottom: 4 },
+  subjectNotice: { color: c.textDim, fontFamily: fonts.serif, fontSize: 12, marginBottom: 4 },
   subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   subjectChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, borderWidth: 1, minWidth: '30%', justifyContent: 'center' },
   controlList: { gap: 6, marginBottom: 14 },

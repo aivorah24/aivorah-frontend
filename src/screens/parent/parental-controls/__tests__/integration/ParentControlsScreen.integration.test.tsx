@@ -20,7 +20,21 @@ jest.mock('../../services/parentControlsService', () => ({
   saveScreenTime: jest.fn(),
 }));
 
-const CHILD = { id: 'c1', name: 'Kiddo', email: 'kiddo@test.com', grade: 'Grade 4', studyTimeMinutes: 0 };
+const CHILD = { id: 'c1', name: 'Kiddo', email: 'kiddo@test.com', grade: 'Grade 4', curriculum: 'IB PYP', studyTimeMinutes: 0 };
+
+// Subject Filter reads the child's list from learning-paths-service (/curriculum/subjects), like My Learning Journey.
+const SUBJECTS_BY_CURRICULUM: Record<string, string[]> = {
+  CBSE: ['English', 'Mathematics', 'Science', 'Social Science', 'Hindi', 'Arts', 'Physical Education and Well Being'],
+  'IB PYP': ['Mathematics', 'Language', 'Science', 'Social Studies'],
+  'IB DP': ['Mathematics: Analysis and Approaches', 'Physics', 'English A: Language and Literature'],
+};
+beforeEach(() => {
+  global.fetch = jest.fn((url: string) => {
+    const curriculum = decodeURIComponent(String(url).match(/curriculum=([^&]*)/)?.[1] ?? '');
+    const list = SUBJECTS_BY_CURRICULUM[curriculum] ?? [];
+    return Promise.resolve({ json: async () => ({ subjects: list.map(subject => ({ subject, topicCount: 1, topics: [] })) }) });
+  }) as any;
+});
 
 const renderScreen = async () => {
   return await render(<ParentControlsScreen navigation={{ navigate: jest.fn() }} />);
@@ -135,6 +149,67 @@ describe('ParentControlsScreen Integration', () => {
       expect(parentControlsService.fetchScreenTime).toHaveBeenCalledWith('parent@example.com', 'c2');
     });
     expect(await screen.findByText('USAGE OVERVIEW — SECOND KID')).toBeTruthy();
+  });
+});
+
+describe('ParentControlsScreen — Subject Filter uses the child\'s real subjects', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const CBSE_KID = { id: 'c1', name: 'Asha', email: 'a@t.com', grade: 'Grade 8', curriculum: 'CBSE', profileGrade: 'Grade 8', profileCurriculum: 'CBSE', studyTimeMinutes: 0 };
+  const IB_KID = { id: 'c2', name: 'Ben', email: 'b@t.com', grade: 'Grade 11', curriculum: 'IB DP', profileGrade: 'Grade 11', profileCurriculum: 'IB DP', studyTimeMinutes: 0 };
+
+  it('a CBSE Grade 8 child gets the CBSE subjects, not the old static list', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CBSE_KID]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ subjectFilterEnabled: true, blockedSubjects: [] });
+
+    await renderScreen();
+
+    for (const name of SUBJECTS_BY_CURRICULUM.CBSE) expect(await screen.findByText(name)).toBeTruthy();
+    expect(screen.queryByText('Social Studies')).toBeNull();
+    expect(screen.queryByText('Physical Education')).toBeNull();
+  });
+
+  it('switching to an IB child refreshes the list to their IB subjects', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CBSE_KID, IB_KID]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ subjectFilterEnabled: true, blockedSubjects: [] });
+
+    await renderScreen();
+    expect(await screen.findByText('Social Science')).toBeTruthy();
+
+    await act(async () => { fireEvent.press(screen.getByText('Ben')); });
+
+    expect(await screen.findByText('Physics')).toBeTruthy();
+    expect(screen.queryByText('Social Science')).toBeNull();
+  });
+
+  it('a child with no curriculum on their profile sees a message instead of a list', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([{ ...CBSE_KID, curriculum: 'IB PYP', profileCurriculum: '' }]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ subjectFilterEnabled: true, blockedSubjects: [] });
+
+    await renderScreen();
+
+    expect(await screen.findByTestId('parental-controls-subjects-notice')).toBeTruthy();
+    expect(screen.getByText(/Asha's curriculum or grade isn't set/)).toBeTruthy();
+    expect(screen.queryByText('Mathematics')).toBeNull();
+  });
+
+  it('saved blocks still in the list show; ones not in the list are hidden but kept on save', async () => {
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CBSE_KID]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ subjectFilterEnabled: true, blockedSubjects: ['Mathematics', 'Social Studies'] });
+    (parentControlsService.saveScreenTime as jest.Mock).mockResolvedValue({ success: true });
+
+    await renderScreen();
+
+    expect(await screen.findByText('1 subject blocked')).toBeTruthy();
+    expect(screen.queryByText('Social Studies')).toBeNull();
+
+    await act(async () => { fireEvent.press(screen.getByText('Social Science')); });
+    expect(await screen.findByText('2 subjects blocked')).toBeTruthy();
+    await act(async () => { fireEvent.press(screen.getByText('Save All Settings')); });
+
+    await waitFor(() => expect(parentControlsService.saveScreenTime).toHaveBeenCalledWith(
+      'parent@example.com', 'c1', expect.objectContaining({ blockedSubjects: ['Mathematics', 'Social Studies', 'Social Science'], dailyLimitMinutes: 90 }),
+    ));
   });
 });
 
