@@ -1,15 +1,24 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react-native';
 import ParentControlsScreen from '../../ParentControlsScreen';
 
 jest.mock('../../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'parent@example.com', name: 'Jane Doe', uid: '123' }, role: 'parent' }),
+  getPendingReturnRole: () => null,
 }));
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
   useFocusEffect: jest.fn(),
   useRoute: () => ({ name: 'ParentControls' }),
+}));
+
+// Window width drives the Screen Time grid (2 columns at >= 1100). Default to a phone width.
+let mockWindowWidth = 390;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindowWidth, height: 900, scale: 1, fontScale: 1 }),
 }));
 
 import * as parentControlsService from '../../services/parentControlsService';
@@ -256,5 +265,65 @@ describe('ParentControlsScreen — server failures are visible (parental control
 
     await act(async () => { fireEvent.press(screen.getByText('Save All Settings')); });
     await waitFor(() => expect(screen.queryByTestId('parental-controls-error')).toBeNull());
+  });
+});
+
+describe('ParentControlsScreen — Screen Time grid layout', () => {
+  const SCREEN_TIME_SWITCHES = [
+    'parental-controls-daily-limit-switch',
+    'parental-controls-weekly-cap-switch',
+    'parental-controls-allowed-hours-switch',
+    'parental-controls-break-enforcer-switch',
+  ];
+
+  const renderWithWidth = async (width: number) => {
+    mockWindowWidth = width;
+    (parentControlsService.fetchChildren as jest.Mock).mockResolvedValue([CHILD]);
+    (parentControlsService.fetchScreenTime as jest.Mock).mockResolvedValue({ isEnabled: true, subjectFilterEnabled: true });
+    await renderScreen();
+    return screen.findByTestId('parental-controls-screen-time-grid');
+  };
+
+  // The direct wrappers around each Screen Time card (the grid cells).
+  const cellsOf = (grid: any) => grid.children.filter((c: any) => typeof c !== 'string');
+
+  beforeEach(() => jest.clearAllMocks());
+  afterAll(() => { mockWindowWidth = 390; });
+
+  it('wide screens lay the four Screen Time cards out in 2 columns that keep their own height', async () => {
+    const grid = await renderWithWidth(1280);
+    const gridStyle = StyleSheet.flatten(grid.props.style);
+    expect(gridStyle).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' });
+
+    const cells = cellsOf(grid);
+    expect(cells).toHaveLength(4);
+    cells.forEach((cell: any) => {
+      const cellStyle = StyleSheet.flatten(cell.props.style);
+      expect(cellStyle).toMatchObject({ flexBasis: '48%', flexGrow: 1 });
+      expect(cellStyle.alignSelf).toBeUndefined();
+      expect(cellStyle.height).toBeUndefined();
+    });
+    SCREEN_TIME_SWITCHES.forEach(id => expect(within(grid).getByTestId(id)).toBeTruthy());
+  });
+
+  it('mobile widths stack the cards in a single column', async () => {
+    const grid = await renderWithWidth(390);
+    const gridStyle = StyleSheet.flatten(grid.props.style);
+    expect(gridStyle.flexDirection).not.toBe('row');
+    expect(gridStyle.flexWrap).toBeUndefined();
+    cellsOf(grid).forEach((cell: any) => expect(StyleSheet.flatten(cell.props.style) ?? {}).not.toHaveProperty('flexBasis'));
+  });
+
+  it('just below the breakpoint (1099) is still a single column', async () => {
+    const grid = await renderWithWidth(1099);
+    expect(StyleSheet.flatten(grid.props.style).flexDirection).not.toBe('row');
+  });
+
+  it('Subject Filter stays outside the grid, full width below it, on wide screens', async () => {
+    const grid = await renderWithWidth(1280);
+    expect(within(grid).queryByTestId('parental-controls-subject-filter-switch')).toBeNull();
+    expect(within(grid).queryByText('Subject Filter')).toBeNull();
+    expect(await screen.findByTestId('parental-controls-subject-filter-switch')).toBeTruthy();
+    expect(await screen.findByText('Mathematics')).toBeTruthy();
   });
 });
