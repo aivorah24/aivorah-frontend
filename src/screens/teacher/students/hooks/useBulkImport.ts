@@ -78,6 +78,8 @@ export function useBulkImport(user: any, onImported: () => void) {
       formData.append('defaultGrade', bulkGrade);
       formData.append('defaultCurriculum', bulkCurriculum);
       formData.append('selectedRowIndexes', JSON.stringify(Array.from(selectedRows)));
+      // Real-email students get an invite that links back to this app.
+      if (Platform.OS === 'web' && typeof window !== 'undefined') formData.append('frontendOrigin', window.location.origin);
 
       const res = await bulkImportStudents(user?.email || '', formData);
       const data = await res.json();
@@ -96,8 +98,8 @@ export function useBulkImport(user: any, onImported: () => void) {
   }
 
   // Server-rendered templates (same style as the School Admin bulk import):
-  // branded header, borders, frozen row, sample rows visually marked, and
-  // pre-filled with this teacher's own existing students.
+  // branded header, borders, frozen row and fake sample rows only — never
+  // any real student or parent data.
   //
   // Use a same-origin anchor with the `download` attribute rather than
   // window.open — window.open can be popup-blocked or (in this SPA) open a

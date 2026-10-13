@@ -52,6 +52,21 @@ export function linkCreatedStudent(teacherEmail: string, payload: {
   );
 }
 
+// Real-email student: server creates the account, emails a set-password
+// invite and starts email verification (same flow as platform-admin Add user).
+export function inviteStudent(teacherEmail: string, payload: {
+  name: string; email: string; grade: string; curriculum: string; frontendOrigin?: string;
+}): Promise<Response> {
+  return fetch(
+    `${STUDENTS_SERVER_URL}/teacher/${encodeURIComponent(teacherEmail)}/students/invite`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
 export function linkExistingStudent(teacherEmail: string, studentEmail: string): Promise<Response> {
   return fetch(
     `${STUDENTS_SERVER_URL}/teacher/${encodeURIComponent(teacherEmail)}/students/link-existing`,
