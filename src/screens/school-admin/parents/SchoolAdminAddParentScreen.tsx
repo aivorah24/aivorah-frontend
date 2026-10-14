@@ -77,7 +77,7 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
                 <Text style={styles.summaryTitle}>Parent added</Text>
-                <Text style={styles.warnText}>Save these now — the password won't be shown again.</Text>
+                <Text style={styles.warnText}>Save these now — the password won&apos;t be shown again.</Text>
               </View>
 
               <View style={styles.card}>
@@ -130,11 +130,11 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
               <View style={[styles.card, openDropdown && { zIndex: 30 }]}>
                 <Text style={styles.cardTitle}>Link to Child</Text>
                 <Text style={styles.cardHint}>
-                  Enter the student's Admission No (fastest, exact match) — or their Name, Grade, and Section.
-                  We'll match this to their existing record in your school. A parent can be linked to more than one child.
+                  Enter the student&apos;s Admission No (fastest, exact match) — or their Name, Grade, and Section.
+                  We&apos;ll match this to their existing record in your school. A parent can be linked to more than one child.
                 </Text>
                 <ChildLinkEditor
-                  children={children} onUpdate={updateChild} onAdd={addChild} onRemove={removeChild}
+                  entries={children} onUpdate={updateChild} onAdd={addChild} onRemove={removeChild}
                   unresolved={unresolved} sectionsByGrade={sectionsByGrade} allSections={allSections}
                   schoolCurriculumBase={schoolCurriculumBase} colors={colors}
                   openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}

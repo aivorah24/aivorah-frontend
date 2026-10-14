@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, Easing, AccessibilityInfo, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../../theme';
@@ -23,7 +23,7 @@ function ChainCardView({ card, index, active, done, reduceMotion, colors }: {
   card: ChainCard; index: number; active: boolean; done: boolean; reduceMotion: boolean; colors: AppColors;
 }) {
   const accent = PALETTE[index % PALETTE.length];
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     if (!active) { Animated.timing(scale, { toValue: 1, duration: 200, useNativeDriver: true }).start(); return undefined; }
@@ -78,10 +78,11 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
   const initial: View_ = hasVisuals ? 'visual' : followsBook ? 'book' : 'chain';
   const [view, setView] = useState<View_>(initial);
   const reduceMotion = useReduceMotion();
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the tab when the step's default view changes
   useEffect(() => { setView(initial); }, [initial]);
   const reached = activeCard ?? -1;
 
-  const Tab = ({ id, label, icon }: { id: View_; label: string; icon: any }) => {
+  const renderTab = (id: View_, label: string, icon: any) => {
     const on = view === id;
     return (
       <TouchableOpacity
@@ -107,9 +108,9 @@ export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPa
     <View testID="listen-visual-board" style={{ gap: 12 }}>
       {(cards.length > 0 || hasVisuals) && (
         <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-          {hasVisuals && <Tab id="visual" label="See It" icon="image" />}
-          {cards.length > 0 && <Tab id="chain" label="Visual Logic Chain" icon="git-commit" />}
-          <Tab id="book" label="Book Follow-Along" icon="book-open" />
+          {hasVisuals && renderTab('visual', 'See It', 'image')}
+          {cards.length > 0 && renderTab('chain', 'Visual Logic Chain', 'git-commit')}
+          {renderTab('book', 'Book Follow-Along', 'book-open')}
         </View>
       )}
 

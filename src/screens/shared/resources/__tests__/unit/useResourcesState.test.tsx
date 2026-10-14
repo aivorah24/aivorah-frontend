@@ -29,6 +29,7 @@ let hookRef: ReturnType<typeof useResourcesState>;
 
 function Harness() {
   const h = useResourcesState();
+  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
   hookRef = h;
   return <Text testID="loading">{String(h.loading)}</Text>;
 }

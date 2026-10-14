@@ -36,7 +36,7 @@ export default function SchoolAdminAddTeacherScreen({ navigation }: any) {
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
                 <Text style={styles.summaryTitle}>Teacher added</Text>
-                <Text style={styles.warnText}>Save these now — the password won't be shown again.</Text>
+                <Text style={styles.warnText}>Save these now — the password won&apos;t be shown again.</Text>
               </View>
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Login credentials</Text>

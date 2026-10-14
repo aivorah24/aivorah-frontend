@@ -170,7 +170,7 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
     }
   }
 
-  function SortHeader({ label, sortKey: key, style }: { label: string; sortKey: SortKey; style?: any }) {
+  function renderSortHeader({ label, sortKey: key, style }: { label: string; sortKey: SortKey; style?: any }) {
     const active = sortKey === key;
     return (
       <Pressable
@@ -286,9 +286,9 @@ export default function SchoolAdminStudentsScreen({ navigation, route }: any) {
                     <Feather name={selected.size === items.length ? 'check-square' : 'square'} size={15} color={selected.size === items.length ? colors.accentYellow : colors.textDim} />
                   </Pressable>
                 </View>
-                <View style={styles.thNameCol}><SortHeader label="Student" sortKey="name" /></View>
-                <View style={styles.thAdmCol}><SortHeader label="Admission No" sortKey="admissionNumber" /></View>
-                <View style={styles.thGradeCol}><SortHeader label="Grade · Section" sortKey="grade" /></View>
+                <View style={styles.thNameCol}>{renderSortHeader({ label: 'Student', sortKey: 'name' })}</View>
+                <View style={styles.thAdmCol}>{renderSortHeader({ label: 'Admission No', sortKey: 'admissionNumber' })}</View>
+                <View style={styles.thGradeCol}>{renderSortHeader({ label: 'Grade · Section', sortKey: 'grade' })}</View>
                 <View style={styles.thStatusCol}><Text style={[styles.thText, styles.thStatic]}>Status</Text></View>
                 <View style={styles.thJoinedCol}><Text style={[styles.thText, styles.thStatic]}>Last Active</Text></View>
               </View>
@@ -384,6 +384,7 @@ function PromoteDialog({ visible, allStudents, preselectedIds, facetGrades, face
   const [err, setErr] = useState('');
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the form each time the modal opens
     if (visible) { setTargetGrade(''); setTargetSection(''); setTargetProgram(''); setErr(''); }
   }, [visible]);
 
