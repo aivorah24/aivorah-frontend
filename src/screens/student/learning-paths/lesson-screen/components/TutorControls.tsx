@@ -8,11 +8,13 @@ import type { ListenStep } from '../types';
 export function ExampleTabs({ steps, current, completed, onOpen, colors }: {
   steps: ListenStep[]; current: number; completed: Set<number>; onOpen: (i: number) => void; colors: AppColors;
 }) {
+  const labels: string[] = [];
   let n = 0;
+  for (const st of steps) labels.push(st.math ? `Example ${(n += 1)}` : 'Start');
   return (
     <View accessibilityRole="tablist" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginHorizontal: 24, marginTop: 4, marginBottom: 8 }}>
-      {steps.map((st, i) => {
-        const label = st.math ? `Example ${(n += 1)}` : 'Start';
+      {steps.map((_st, i) => {
+        const label = labels[i];
         const on = i === current;
         const done = completed.has(i);
         return (

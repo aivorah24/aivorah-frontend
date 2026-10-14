@@ -10,6 +10,7 @@ export function useSlowLoadMessage(loading: boolean, delayMs = 4000): boolean {
 
   useEffect(() => {
     if (!loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when loading ends; the timer below sets it
       setSlow(false);
       return;
     }

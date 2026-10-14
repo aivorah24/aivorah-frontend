@@ -325,6 +325,7 @@ describe('category toggles gate V2 rows (student + parent)', () => {
 
   test('muteCategory hides V2 rows immediately, before the next poll', async () => {
     let mute: (k: 'assignmentAlerts' | 'challengeUpdates') => void = () => {};
+    // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
     function Grab() { mute = useNotification().muteCategory; return null; }
     await render(<NotificationProvider><Harness /><Grab /></NotificationProvider>);
     await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1'));

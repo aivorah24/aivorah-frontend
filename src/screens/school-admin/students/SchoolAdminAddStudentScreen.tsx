@@ -247,8 +247,9 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
 
   const canSubmit = firstName.trim().length > 0 && lastName.trim().length > 0 && curriculum.trim().length > 0 && grade.trim().length > 0;
 
+  const adminEmail = user?.email;
   const submit = useCallback(async () => {
-    if (!user?.email || !canSubmit || submitting) return;
+    if (!adminEmail || !canSubmit || submitting) return;
     setSubmitting(true);
     setFormError('');
     try {
@@ -266,7 +267,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
       if (parentEmail.trim()) body.parentEmail = parentEmail.trim();
       if (notes.trim()) body.notes = notes.trim();
 
-      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students?adminEmail=${encodeURIComponent(user.email)}`, {
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/students?adminEmail=${encodeURIComponent(adminEmail)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -278,7 +279,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
     } finally {
       setSubmitting(false);
     }
-  }, [user?.email, canSubmit, submitting, firstName, lastName, curriculum, admissionNumber, grade, section, emailOverride, status, parentName, parentEmail, notes]);
+  }, [adminEmail, canSubmit, submitting, firstName, lastName, curriculum, admissionNumber, grade, section, emailOverride, status, parentName, parentEmail, notes]);
 
   function goToStudents() {
     navigation?.navigate?.('SchoolAdminStudents');
@@ -319,7 +320,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
                 <Text style={styles.summaryTitle}>Student added</Text>
-                <Text style={styles.warnText}>Save these now — passwords won't be shown again.</Text>
+                <Text style={styles.warnText}>Save these now — passwords won&apos;t be shown again.</Text>
               </View>
 
               <View style={styles.card}>

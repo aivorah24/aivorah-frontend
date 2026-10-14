@@ -106,7 +106,7 @@ export default function StudentAttendanceScreen({ navigation }: any) {
                 {!hasRecords && (
                   <View style={styles.noRecordsBanner}>
                     <Feather name="alert-circle" size={14} color={colors.accentYellow} style={{ marginRight: 6 }} />
-                    <Text style={styles.noRecordsText}>Your teacher hasn't marked attendance yet.</Text>
+                    <Text style={styles.noRecordsText}>Your teacher hasn&apos;t marked attendance yet.</Text>
                   </View>
                 )}
               </View>

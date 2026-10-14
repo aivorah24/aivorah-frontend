@@ -338,8 +338,8 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
               <Pressable ref={setDropNode as any} onPress={chooseFile} accessibilityRole="button" style={[styles.dropzone, dragActive && styles.dropzoneActive]}>
                 <View style={styles.dropzoneIconWrap}><Feather name="upload" size={22} color={colors.accentYellow} /></View>
                 <Text style={styles.dropzoneTitle}>Drop your CSV or Excel file here, or click to browse</Text>
-                <Text style={styles.dropzoneSub}>Up to 2,000 rows per import. Filled in the Excel template? Use "Save As → CSV" first.</Text>
-                <Text style={styles.dropzoneSub}>Teaching more than one grade? Use "|" in the Grade and Subjects cells, e.g. Grade "Grade 1 | Grade 3", Subjects "Social | Maths" — one row, one teacher.</Text>
+                <Text style={styles.dropzoneSub}>Up to 2,000 rows per import. Filled in the Excel template? Use &quot;Save As → CSV&quot; first.</Text>
+                <Text style={styles.dropzoneSub}>Teaching more than one grade? Use &quot;|&quot; in the Grade and Subjects cells, e.g. Grade &quot;Grade 1 | Grade 3&quot;, Subjects &quot;Social | Maths&quot; — one row, one teacher.</Text>
                 {!!fileName && (
                   <View style={styles.fileChip}><Feather name="file-text" size={14} color={colors.textMuted} /><Text style={styles.fileChipText} numberOfLines={1}>{fileName}</Text><Text style={styles.fileChipCount}>{rawGrid.length} row{rawGrid.length === 1 ? '' : 's'}</Text></View>
                 )}
@@ -370,7 +370,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
                     </View>
                   ))}
                 </View>
-                {!nameIsMapped && <View style={styles.warnBox}><Feather name="alert-triangle" size={14} color={colors.accentYellow} /><Text style={styles.warnBoxText}>Map at least one column to "Teacher Name" to continue.</Text></View>}
+                {!nameIsMapped && <View style={styles.warnBox}><Feather name="alert-triangle" size={14} color={colors.accentYellow} /><Text style={styles.warnBoxText}>Map at least one column to &quot;Teacher Name&quot; to continue.</Text></View>}
               </View>
               <View style={styles.footerRow}>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={() => setStep(1)}><Text style={styles.secondaryBtnText}>Back</Text></TouchableOpacity>
@@ -408,7 +408,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
               {mergedTeacherCount > 0 && (
                 <View style={styles.warnBox}>
                   <Feather name="info" size={14} color={colors.accentYellow} />
-                  <Text style={styles.warnBoxText}>{mergedRowCount} rows share an email with another row — they'll merge into {mergedTeacherCount} teacher account{mergedTeacherCount === 1 ? '' : 's'} with multiple grades, not separate teachers.</Text>
+                  <Text style={styles.warnBoxText}>{mergedRowCount} rows share an email with another row — they&apos;ll merge into {mergedTeacherCount} teacher account{mergedTeacherCount === 1 ? '' : 's'} with multiple grades, not separate teachers.</Text>
                 </View>
               )}
               <View style={styles.table}>
@@ -452,12 +452,12 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
                 </View>
               </View>
               {result.errors.length > 0 && (
-                <View style={styles.card}><Text style={styles.cardTitle}>Rows that couldn't be imported</Text><View style={styles.errorList}>{result.errors.map((e, i) => (<View key={i} style={styles.errorRow}><View style={styles.errorBadge}><Text style={styles.errorBadgeText}>Row {e.row}</Text></View><Text style={styles.errorMsg}>{e.error}</Text></View>))}</View></View>
+                <View style={styles.card}><Text style={styles.cardTitle}>Rows that couldn&apos;t be imported</Text><View style={styles.errorList}>{result.errors.map((e, i) => (<View key={i} style={styles.errorRow}><View style={styles.errorBadge}><Text style={styles.errorBadgeText}>Row {e.row}</Text></View><Text style={styles.errorMsg}>{e.error}</Text></View>))}</View></View>
               )}
               {result.credentials.length > 0 && (
                 <View style={styles.card}>
                   <View style={styles.credHeader}>
-                    <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.cardTitle}>Login credentials ({result.credentials.length})</Text><Text style={styles.warnText}>Save these now — passwords won't be shown again.</Text></View>
+                    <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.cardTitle}>Login credentials ({result.credentials.length})</Text><Text style={styles.warnText}>Save these now — passwords won&apos;t be shown again.</Text></View>
                     {Platform.OS === 'web' && <TouchableOpacity style={styles.secondaryBtn} onPress={downloadCredentials}><Feather name="download" size={14} color={colors.textHeading} /><Text style={styles.secondaryBtnText}>Download CSV</Text></TouchableOpacity>}
                   </View>
                   <View style={styles.table}>
