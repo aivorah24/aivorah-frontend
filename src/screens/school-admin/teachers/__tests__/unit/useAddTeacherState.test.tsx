@@ -16,8 +16,7 @@ let currentUnmount: (() => void) | undefined;
 
 function Harness({ email }: { email: string | undefined }) {
   const h = useAddTeacherState(email);
-  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="submitting">{String(h.submitting)}</Text>;
 }
 

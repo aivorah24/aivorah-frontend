@@ -12,7 +12,7 @@ export function useStudentAttendance(studentId: string) {
   useEffect(() => {
     if (!studentId) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/student change, external sync
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for the fetch below
     setLoading(true);
     setError(null);
     fetchStudentAttendanceSummary(studentId)

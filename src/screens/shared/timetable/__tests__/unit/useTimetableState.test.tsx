@@ -25,8 +25,7 @@ let hookRef: ReturnType<typeof useTimetableState>;
 
 function Harness(params: Parameters<typeof useTimetableState>[0]) {
   const h = useTimetableState(params);
-  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="loading">{String(h.loading)}</Text>;
 }
 

@@ -19,8 +19,7 @@ let hookRef: ReturnType<typeof useClassesState>;
 
 function Harness({ email, showToast }: { email: string | undefined; showToast: (opts: any) => void }) {
   const h = useClassesState(email, showToast);
-  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return (
     <>
       <Text testID="loading">{String(h.loading)}</Text>

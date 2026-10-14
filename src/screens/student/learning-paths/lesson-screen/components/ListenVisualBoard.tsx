@@ -68,49 +68,52 @@ function ChainCardView({ card, index, active, done, reduceMotion, colors }: {
   );
 }
 
+type BoardView = 'visual' | 'chain' | 'book';
+
+function BoardTab({ id, label, icon, view, setView, colors }: {
+  id: BoardView; label: string; icon: any; view: BoardView; setView: (v: BoardView) => void; colors: AppColors;
+}) {
+  const on = view === id;
+  return (
+    <TouchableOpacity
+      testID={`board-tab-${id}`}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: on }}
+      onPress={() => setView(id)}
+      activeOpacity={0.85}
+      style={{
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+        paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
+        borderColor: on ? colors.primary : colors.borderColor,
+        backgroundColor: on ? colors.primary + '1f' : colors.cardDark,
+      }}
+    >
+      <Feather name={icon} size={14} color={on ? colors.primary : colors.textMuted} />
+      <Text style={{ fontSize: 13, fontWeight: '700', color: on ? colors.primary : colors.textMuted }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 // Right-hand board for the Listen tab: follows the audio. `activeCard` is derived from the current listen step
 // (see buildReasoningListen); null means the narration is on an intro / book excerpt / key words step.
 export default function ListenVisualBoard({ cards, activeCard, bookQuote, bookPage, followsBook, sceneVisual, hasVisuals, topic, grade, subject, colors }: {
   cards: ChainCard[]; activeCard: number | null; bookQuote?: string; bookPage?: number; followsBook?: boolean;
   sceneVisual?: Visual; hasVisuals?: boolean; topic: any; grade: string; subject: string; colors: AppColors;
 }) {
-  type View_ = 'visual' | 'chain' | 'book';
-  const initial: View_ = hasVisuals ? 'visual' : followsBook ? 'book' : 'chain';
-  const [view, setView] = useState<View_>(initial);
+  const initial: BoardView = hasVisuals ? 'visual' : followsBook ? 'book' : 'chain';
+  const [view, setView] = useState<BoardView>(initial);
   const reduceMotion = useReduceMotion();
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the tab when the step's default view changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the tab when the lesson's content changes
   useEffect(() => { setView(initial); }, [initial]);
   const reached = activeCard ?? -1;
-
-  const renderTab = (id: View_, label: string, icon: any) => {
-    const on = view === id;
-    return (
-      <TouchableOpacity
-        testID={`board-tab-${id}`}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: on }}
-        onPress={() => setView(id)}
-        activeOpacity={0.85}
-        style={{
-          flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-          paddingVertical: 9, borderRadius: 12, borderWidth: 1.5,
-          borderColor: on ? colors.primary : colors.borderColor,
-          backgroundColor: on ? colors.primary + '1f' : colors.cardDark,
-        }}
-      >
-        <Feather name={icon} size={14} color={on ? colors.primary : colors.textMuted} />
-        <Text style={{ fontSize: 13, fontWeight: '700', color: on ? colors.primary : colors.textMuted }}>{label}</Text>
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <View testID="listen-visual-board" style={{ gap: 12 }}>
       {(cards.length > 0 || hasVisuals) && (
         <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-          {hasVisuals && renderTab('visual', 'See It', 'image')}
-          {cards.length > 0 && renderTab('chain', 'Visual Logic Chain', 'git-commit')}
-          {renderTab('book', 'Book Follow-Along', 'book-open')}
+          {hasVisuals && <BoardTab view={view} setView={setView} colors={colors} id="visual" label="See It" icon="image" />}
+          {cards.length > 0 && <BoardTab view={view} setView={setView} colors={colors} id="chain" label="Visual Logic Chain" icon="git-commit" />}
+          <BoardTab view={view} setView={setView} colors={colors} id="book" label="Book Follow-Along" icon="book-open" />
         </View>
       )}
 

@@ -134,7 +134,7 @@ export default function SchoolAdminAddParentScreen({ navigation }: any) {
                   We&apos;ll match this to their existing record in your school. A parent can be linked to more than one child.
                 </Text>
                 <ChildLinkEditor
-                  entries={children} onUpdate={updateChild} onAdd={addChild} onRemove={removeChild}
+                  childEntries={children} onUpdate={updateChild} onAdd={addChild} onRemove={removeChild}
                   unresolved={unresolved} sectionsByGrade={sectionsByGrade} allSections={allSections}
                   schoolCurriculumBase={schoolCurriculumBase} colors={colors}
                   openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}

@@ -45,7 +45,7 @@ function FormDropdown({ value, placeholder, options, onChange, colors, open, onT
 }
 
 interface Props {
-  entries: ChildEntry[];
+  childEntries: ChildEntry[];
   onUpdate: (key: string, patch: Partial<ChildEntry>) => void;
   onAdd: () => void;
   onRemove: (key: string) => void;
@@ -59,7 +59,7 @@ interface Props {
 }
 
 export default function ChildLinkEditor({
-  entries, onUpdate, onAdd, onRemove, unresolved,
+  childEntries, onUpdate, onAdd, onRemove, unresolved,
   sectionsByGrade, allSections, schoolCurriculumBase, colors, openDropdown, setOpenDropdown,
 }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -76,7 +76,7 @@ export default function ChildLinkEditor({
 
   return (
     <View>
-      {entries.map((c, idx) => {
+      {childEntries.map((c, idx) => {
         const rowIssue = unresolved.find((u) => u.index === idx);
         const curriculumOpen = openDropdown === `${c.key}:curriculum`;
         const gradeOpen = openDropdown === `${c.key}:grade`;
@@ -86,7 +86,7 @@ export default function ChildLinkEditor({
           <View key={c.key} style={[styles.childCard, { zIndex: rowZIndex }]}>
             <View style={styles.childCardHeader}>
               <Text style={styles.childCardTitle}>Child {idx + 1}</Text>
-              {entries.length > 1 && (
+              {childEntries.length > 1 && (
                 <TouchableOpacity onPress={() => onRemove(c.key)} accessibilityRole="button" accessibilityLabel="Remove this child">
                   <Feather name="x" size={16} color={colors.textDim} />
                 </TouchableOpacity>

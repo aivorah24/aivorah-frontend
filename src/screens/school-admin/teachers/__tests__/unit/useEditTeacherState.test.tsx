@@ -18,11 +18,8 @@ let currentUnmount: (() => void) | undefined;
 let onSaved: jest.Mock;
 
 function Harness({ teacher }: { teacher: EditTeacherParam | undefined }) {
-  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
-  onSaved = onSaved || jest.fn();
   const h = useEditTeacherState(teacher, 'admin@x.com', onSaved);
-  // eslint-disable-next-line react-hooks/globals -- test harness exposes the hook to assertions
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="saving">{String(h.saving)}</Text>;
 }
 

@@ -13,7 +13,7 @@ export function ExampleTabs({ steps, current, completed, onOpen, colors }: {
   for (const st of steps) labels.push(st.math ? `Example ${(n += 1)}` : 'Start');
   return (
     <View accessibilityRole="tablist" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginHorizontal: 24, marginTop: 4, marginBottom: 8 }}>
-      {steps.map((_st, i) => {
+      {steps.map((_, i) => {
         const label = labels[i];
         const on = i === current;
         const done = completed.has(i);

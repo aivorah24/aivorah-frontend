@@ -125,12 +125,12 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
 
   const countFor = (role: RoleTab) => role === 'all' ? people.length : people.filter((p) => p.role === role).length;
 
-  function renderSortHeader({ label, sortKey: key, style }: { label: string; sortKey: SortKey; style?: any }) {
+  function renderSortHeader(label: string, key: SortKey) {
     const active = sortKey === key;
     return (
       <Pressable
         style={({ hovered }: any) => [
-          styles.th, style,
+          styles.th,
           Platform.OS === 'web' && hovered && styles.thHovered,
         ]}
         onPress={() => toggleSort(key)}
@@ -230,11 +230,11 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
             // Desktop/tablet: real sortable table.
             <View style={styles.table}>
               <View style={styles.theadRow}>
-                <View style={styles.thNameCol}>{renderSortHeader({ label: 'Name', sortKey: 'name' })}</View>
-                <View style={styles.thEmailCol}>{renderSortHeader({ label: 'Email', sortKey: 'email' })}</View>
-                <View style={styles.thRoleCol}>{renderSortHeader({ label: 'Role', sortKey: 'role' })}</View>
+                <View style={styles.thNameCol}>{renderSortHeader('Name', 'name')}</View>
+                <View style={styles.thEmailCol}>{renderSortHeader('Email', 'email')}</View>
+                <View style={styles.thRoleCol}>{renderSortHeader('Role', 'role')}</View>
                 <View style={styles.thGradeCol}><Text style={[styles.thText, styles.thStatic]}>Grade</Text></View>
-                <View style={styles.thJoinedCol}>{renderSortHeader({ label: 'Joined', sortKey: 'joinedAt' })}</View>
+                <View style={styles.thJoinedCol}>{renderSortHeader('Joined', 'joinedAt')}</View>
               </View>
               {rows.map((p, i) => {
                 const tint = roleTint(colors, p.role);
