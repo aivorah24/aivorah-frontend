@@ -17,3 +17,14 @@ export function formatDate(dateStr: string) {
 export function stripGradePrefix(text: string): string {
   return (text || '').replace(/^\s*(PYP|Grade|Class)\s*:?\s*\d+\s*[:\-–]?\s*/i, '').trim();
 }
+
+// A worksheet's grade label ("PYP 4", "Grade 4", "4") → the grade pill to
+// select: one of the teacher's options when it matches, else "Grade N" (the
+// pill list always shows the selected grade, even one the teacher doesn't teach).
+export function gradeFromLabel(rawGrade: string, gradeOptions: string[]): string {
+  const raw = String(rawGrade || '').trim();
+  const digits = raw.replace(/[^0-9]/g, '');
+  const match = gradeOptions.find((g) => (digits && g.replace(/[^0-9]/g, '') === digits) || g.toLowerCase() === raw.toLowerCase());
+  if (match) return match;
+  return digits ? `Grade ${digits}` : raw;
+}
