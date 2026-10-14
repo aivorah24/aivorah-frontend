@@ -325,7 +325,7 @@ describe('category toggles gate V2 rows (student + parent)', () => {
 
   test('muteCategory hides V2 rows immediately, before the next poll', async () => {
     let mute: (k: 'assignmentAlerts' | 'challengeUpdates') => void = () => {};
-    function Grab() { mute = useNotification().muteCategory; return null; }
+    function Grab() { const { muteCategory } = useNotification(); React.useEffect(() => { mute = muteCategory; }); return null; }
     await render(<NotificationProvider><Harness /><Grab /></NotificationProvider>);
     await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1'));
     await act(async () => { mute('assignmentAlerts'); });

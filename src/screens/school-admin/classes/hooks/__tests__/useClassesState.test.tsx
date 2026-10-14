@@ -19,7 +19,7 @@ let hookRef: ReturnType<typeof useClassesState>;
 
 function Harness({ email, showToast }: { email: string | undefined; showToast: (opts: any) => void }) {
   const h = useClassesState(email, showToast);
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return (
     <>
       <Text testID="loading">{String(h.loading)}</Text>
