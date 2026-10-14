@@ -14,6 +14,8 @@ import {
 import SCHEDULE_SERVER_URL from '../../../../../config/scheduleServerUrl';
 import TEACHER_DASHBOARD_SERVER_URL from '../../../../../config/teacherDashboardServerUrl';
 
+jest.mock('../../../../../services/authHeader', () => ({ authHeader: jest.fn(async () => ({ Authorization: 'Bearer test-token' })) }));
+
 beforeEach(() => {
   global.fetch = jest.fn();
 });
@@ -23,7 +25,8 @@ describe('fetchEventsForDate', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => [{ id: 'e1' }] });
     const result = await fetchEventsForDate('2026-08-25', 'teacher@aivorah.test');
     expect(global.fetch).toHaveBeenCalledWith(
-      `${SCHEDULE_SERVER_URL}/schedule/teacher?date=2026-08-25&email=teacher%40aivorah.test`
+      `${SCHEDULE_SERVER_URL}/schedule/teacher?date=2026-08-25&email=teacher%40aivorah.test`,
+      { headers: { Authorization: 'Bearer test-token' } }
     );
     expect(result).toEqual([{ id: 'e1' }]);
   });
@@ -31,7 +34,7 @@ describe('fetchEventsForDate', () => {
   test('omits the email param when no email is passed', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => [] });
     await fetchEventsForDate('2026-08-25');
-    expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/teacher?date=2026-08-25`);
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/teacher?date=2026-08-25`, { headers: { Authorization: 'Bearer test-token' } });
   });
 
   test('a non-ok response resolves to an empty array', async () => {
@@ -70,7 +73,7 @@ describe('patchEventTimes', () => {
     await patchEventTimes('ev1', '09:00', '10:00');
     expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/ev1`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
       body: JSON.stringify({ startTime: '09:00', endTime: '10:00' }),
     });
   });
@@ -89,7 +92,7 @@ describe('createEvent', () => {
     const res = await createEvent(payload);
     expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     expect(res).toBe(fakeRes);
@@ -109,7 +112,7 @@ describe('updateEvent', () => {
     const res = await updateEvent('ev1', payload);
     expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/ev1`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     expect(res).toBe(fakeRes);
@@ -120,7 +123,7 @@ describe('deleteEvent', () => {
   test('DELETEs the event id', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({}) });
     await deleteEvent('ev1');
-    expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/ev1`, { method: 'DELETE' });
+    expect(global.fetch).toHaveBeenCalledWith(`${SCHEDULE_SERVER_URL}/schedule/ev1`, { method: 'DELETE', headers: { Authorization: 'Bearer test-token' } });
   });
 
   test('swallows a network failure without throwing', async () => {

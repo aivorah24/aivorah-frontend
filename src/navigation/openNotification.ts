@@ -47,6 +47,7 @@ function v2Target(item: NotifItem, role: Role): NotificationTarget | null {
       ? { screen: 'ParentAssignments', params: { childId: n.childId, highlightId } }
       : { screen: 'Assignments', params: { highlightId } };
   }
+  if (n.type === 'account_updated') return null; // informational; opening just marks it read
   if (n.type === 'class_post') {
     const grade = n.data?.grade;
     return {

@@ -85,6 +85,19 @@ test('student notifications route to the student screens', async () => {
   expect(mockNavigate).toHaveBeenCalledWith('Challenges', { highlightId: 'ch-c1', tab: 'assigned' });
 });
 
+test('account updates open a full-text detail card that can be closed', async () => {
+  mockRole = 'student';
+  const long = 'As per your request, an Aivorah administrator has updated your account (name: Manoharan). Please contact aivorah24@gmail.com if anything looks incorrect.';
+  ctx.notificationItems = [{ ...item(v2('acc1', { type: 'account_updated', entityType: 'user', childId: null, title: 'Your name has been updated', body: long })), type: 'account' }];
+  await openBell();
+  await fireEvent.press(screen.getByTestId('notif-item-acc1'));
+  expect(ctx.markNotificationRead).toHaveBeenCalledWith('acc1');
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(within(screen.getByTestId('notif-detail')).getByText(long)).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('notif-detail-close'));
+  expect(screen.queryByTestId('notif-detail')).toBeNull();
+});
+
 test('legacy chat items still open the conversation and clear chat unread', async () => {
   await openBell();
   await fireEvent.press(screen.getByTestId('notif-item-msg_m1'));

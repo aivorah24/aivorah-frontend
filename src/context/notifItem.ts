@@ -3,7 +3,7 @@ import type { V2Notification } from '../services/notificationsApi';
 
 export interface NotifItem {
   id: string;
-  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio' | 'announcement';
+  type: 'assignment' | 'quiz' | 'challenge' | 'message' | 'event' | 'task' | 'portfolio' | 'account' | 'announcement';
   senderEmail?: string;
   // For 'event' items, the source schedule type ('challenge' | 'deadline' | 'study' …).
   // A challenge's due-date event has srcType 'challenge' so it can be gated under the
@@ -33,12 +33,17 @@ export function isEventType(n: V2Notification) {
   return n.type === 'event_scheduled';
 }
 
+// Platform-admin edits to the user's own account (role, school, grade…).
+export function isAccountType(n: V2Notification) {
+  return n.type === 'account_updated';
+}
+
 // Settings toggles: Assignment Alerts gates assignments + non-challenge events,
 // Challenge Updates gates challenges + challenge events (same split as legacy).
 export interface CategoryPrefs { assign: boolean; challenge: boolean }
 
 export function isV2Allowed(n: V2Notification, p: CategoryPrefs) {
-  if (isClassPostType(n) || isAnnouncementType(n)) return true;
+  if (isClassPostType(n) || isAnnouncementType(n) || isAccountType(n)) return true;
   if (isAssignmentType(n)) return p.assign;
   if (isEventType(n)) return n.data?.eventType === 'challenge' ? p.challenge : p.assign;
   return p.challenge;
@@ -70,7 +75,9 @@ export function toNotifItem(n: V2Notification): NotifItem {
     return { id: n.id, type: 'announcement', title: n.title, subtitle: n.body || '', senderName: '', createdAt: n.createdAt, readAt: n.readAt, v2: n };
   }
   const isAssignment = isAssignmentType(n);
-  const type: NotifItem['type'] = isEventType(n)
+  const type: NotifItem['type'] = isAccountType(n)
+    ? 'account'
+    : isEventType(n)
     ? 'event'
     : isAssignment ? (n.data?.assignmentType === 'quiz' ? 'quiz' : 'assignment') : 'challenge';
   return {
