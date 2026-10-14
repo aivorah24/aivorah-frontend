@@ -378,6 +378,7 @@ export function useUploadWorksheet({
     if (!interactiveQuiz || interactiveQuiz._editMode) return;
     if ((interactiveQuiz.language || '') === selectedLanguage) return;
     const updated = { ...interactiveQuiz, language: selectedLanguage };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync quiz language with the picker
     setInteractiveQuiz(updated);
     fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: updated }),

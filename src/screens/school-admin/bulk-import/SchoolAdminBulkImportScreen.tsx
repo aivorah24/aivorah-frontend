@@ -664,7 +664,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
                 {!nameIsMapped && (
                   <View style={styles.warnBox}>
                     <Feather name="alert-triangle" size={14} color={colors.accentYellow} />
-                    <Text style={styles.warnBoxText}>Map at least one column to "Student Name" to continue.</Text>
+                    <Text style={styles.warnBoxText}>Map at least one column to &quot;Student Name&quot; to continue.</Text>
                   </View>
                 )}
               </View>
@@ -710,7 +710,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
               {invalidRows.length > 0 && (
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>Rows that will be skipped</Text>
-                  <Text style={styles.cardSub}>These won't be imported. Fix them in your file and re-upload, or continue without them.</Text>
+                  <Text style={styles.cardSub}>These won&apos;t be imported. Fix them in your file and re-upload, or continue without them.</Text>
                   <View style={styles.errorList}>
                     {invalidRows.map((e, i) => (
                       <View key={i} style={styles.errorRow}>
@@ -851,7 +851,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
 
               {result.errors.length > 0 && (
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Rows that couldn't be imported</Text>
+                  <Text style={styles.cardTitle}>Rows that couldn&apos;t be imported</Text>
                   <View style={styles.errorList}>
                     {result.errors.map((e, i) => (
                       <View key={i} style={styles.errorRow}>
@@ -868,7 +868,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
                   <View style={styles.credHeader}>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.cardTitle}>Login credentials ({result.credentials.length})</Text>
-                      <Text style={styles.warnText}>Save these now — passwords won't be shown again.</Text>
+                      <Text style={styles.warnText}>Save these now — passwords won&apos;t be shown again.</Text>
                     </View>
                     {Platform.OS === 'web' && (
                       <TouchableOpacity style={styles.secondaryBtn} onPress={downloadCredentials} accessibilityRole="button">
