@@ -175,7 +175,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     uploadStep, setUploadStep, uploadScrollRef,
     pickDoc, generateInteractiveQuiz, resetUploadState,
   } = useUploadWorksheet({
-    user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
+    user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum, setCurriculum,
     gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
     setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
     quizDifficulty, setQuizQuestions, setType,
@@ -234,13 +234,15 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [showInteractivePreview, interactiveQuiz]);
 
-  // Keep curriculum + grade in sync when user profile loads after initial render
+  // Keep curriculum + grade in sync when user profile loads after initial render.
+  // Keyed on the values, not the teaches[] array: a profile refresh with the
+  // same values must not reset a grade/curriculum detected from a worksheet.
+  const profileCurriculum = user?.teaches?.[0]?.curriculum || user?.curriculum;
+  const profileGrade = user?.teaches?.[0]?.grade;
   useEffect(() => {
-    const c = user?.teaches?.[0]?.curriculum || user?.curriculum;
-    if (c) setCurriculum(c);
-    const g = user?.teaches?.[0]?.grade;
-    if (g) setGrade(g);
-  }, [user?.curriculum, user?.teaches]);
+    if (profileCurriculum) setCurriculum(profileCurriculum);
+    if (profileGrade) setGrade(profileGrade);
+  }, [profileCurriculum, profileGrade]);
 
   // Re-fetch the student list on EVERY focus (not just mount) so a student the
   // teacher just added shows up in the assign picker instantly — no manual refresh.

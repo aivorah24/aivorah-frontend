@@ -1,4 +1,4 @@
-import { pollJob, extractViaQueue } from '../../services/jobsService';
+import { pollJob, extractViaQueue, detectWorksheetMeta } from '../../services/jobsService';
 
 describe('pollJob', () => {
   const realFetch = global.fetch;
@@ -83,5 +83,26 @@ describe('extractViaQueue', () => {
       return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'both paths down' }) });
     }) as any;
     await expect(extractViaQueue('https://server.test', { doc: 'x' })).rejects.toThrow('both paths down');
+  });
+});
+
+describe('detectWorksheetMeta', () => {
+  const realFetch = global.fetch;
+  afterEach(() => { global.fetch = realFetch; });
+  const file = { base64: 'PDF', mime: 'application/pdf', name: 'Revised_PYP4_-MHLE-29.pdf' };
+
+  test('sends the file and its name, returns the printed grade/curriculum/chapter', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ grade: 'Grade 4', curriculum: 'IB PYP', chapter: 'MHLE-29' }) }) as any;
+    await expect(detectWorksheetMeta(file, 'https://assignments.test')).resolves.toEqual({ grade: 'Grade 4', curriculum: 'IB PYP', chapter: 'MHLE-29' });
+    const [url, init] = (fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe('https://assignments.test/assignments/detect-meta');
+    expect(JSON.parse(init.body)).toEqual({ fileBase64: 'PDF', mimeType: 'application/pdf', fileName: 'Revised_PYP4_-MHLE-29.pdf' });
+  });
+
+  test('a server error or network failure is null — the AI extraction still fills the form', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }) as any;
+    await expect(detectWorksheetMeta(file, 'https://s.test')).resolves.toBeNull();
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as any;
+    await expect(detectWorksheetMeta(file, 'https://s.test')).resolves.toBeNull();
   });
 });
