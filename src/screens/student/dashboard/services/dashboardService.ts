@@ -2,7 +2,7 @@ import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
-import { isCbseCurriculum } from '../../../../utils/curriculum';
+import { isCbseCurriculum, isSyllabusOnlyCurriculum } from '../../../../utils/curriculum';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
 // Each function throws/rejects on failure; callers (useDashboardData) decide
@@ -27,7 +27,9 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
   // screen's useSubjects.ts). Every other curriculum unchanged.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
-  const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && parseInt(grade.replace(/\D/g, ''), 10) >= 6;
+  // ICSE + Cambridge (every grade) have no textbook: their syllabus outline
+  // is served by the learning-paths service (same as the Learning Path screen).
+  const isSyllabusOnly = isSyllabusOnlyCurriculum(curriculum);
   // CBSE (NCERT-book) chapter names come from the verified seed data in the same service;
   // the monolith still serves its own old copy of the titles.
   const isCbse = isCbseCurriculum(curriculum);
@@ -38,7 +40,7 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
       if (res.ok) return await res.json();
     } catch { /* fall back to the monolith below */ }
   }
-  const base = (isIBDP || isIBMYP || isCambridgeQdrant) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
+  const base = (isIBDP || isIBMYP || isSyllabusOnly) ? LEARNING_PATHS_SERVER_URL : SERVER_URL;
   const res = await fetch(`${base}${path}`);
   return res.json();
 }

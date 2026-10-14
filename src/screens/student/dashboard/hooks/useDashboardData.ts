@@ -10,7 +10,7 @@ import {
   fetchPerformance,
 } from '../services/dashboardService';
 import type { CurriculumData, CurriculumTopic, PerfData, SubjectChapters, UpcomingDeadline } from '../types';
-import { monolithContentCurriculum } from '../../../../utils/curriculum';
+import { monolithContentCurriculum, isSyllabusOnlyCurriculum } from '../../../../utils/curriculum';
 
 // Reshapes a /curriculum/subjects response (per-subject topic lists, used by
 // the Learning Path screen) into the flat CurriculumData shape this hook's
@@ -68,8 +68,8 @@ export function useDashboardData({
   // static Class 3 mock curriculum.
   const isIBDP = /^ib.?dp$/i.test((childCurriculum ?? '').trim());
   const isIBMYP = /^ib.?myp$/i.test((childCurriculum ?? '').trim());
-  const isCambridgeQdrant = /^cambridge$/i.test((childCurriculum ?? '').trim()) && parseInt(studentGrade.replace(/\D/g, ''), 10) >= 6;
-  const needsLearningPathsService = isIBDP || isIBMYP || isCambridgeQdrant;
+  // ICSE + Cambridge (every grade): syllabus-only boards served by the service.
+  const needsLearningPathsService = isIBDP || isIBMYP || isSyllabusOnlyCurriculum(childCurriculum);
   const CACHE_KEY = curriculumCacheKey(isIBPYP, studentGrade, childCurriculum);
   const prefetchedCurriculum = !childOverride ? getMemoryCurriculum(CACHE_KEY) : undefined;
   const prefetchedSubjects = !childOverride ? getMemorySubjectChapters(CACHE_KEY) : undefined;

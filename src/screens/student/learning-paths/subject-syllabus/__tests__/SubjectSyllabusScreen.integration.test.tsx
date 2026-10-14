@@ -277,3 +277,38 @@ describe('SubjectSyllabusScreen — teacher-published units', () => {
     }));
   });
 });
+
+describe('ICSE / Cambridge — browsable syllabus, every topic Coming soon', () => {
+  const units = [
+    { unitNo: 1, title: 'Numbers up to 1000', comingSoon: true, pending: false, topics: [
+      { id: 't1', name: 'Place Value', kind: 'coming_soon', page: '', comingSoon: true },
+      { id: 't2', name: 'Comparing Numbers', kind: 'coming_soon', page: '', comingSoon: true },
+    ] },
+    { unitNo: 2, title: 'Addition', comingSoon: true, pending: false, topics: [
+      { id: 't3', name: 'Adding with Carry', kind: 'coming_soon', page: '', comingSoon: true },
+    ] },
+  ];
+
+  test.each(['ICSE', 'Cambridge'])('%s: chapters and topics are listed; tapping a topic shows "Coming soon" and opens no lesson', async (curriculum) => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({ units })) as any;
+    const nav = navProp();
+    const user = userEvent.setup();
+    await render(<SubjectSyllabusScreen navigation={nav} route={routeProp({ subject: 'Mathematics', curriculum, grade: 'Grade 3' })} />);
+
+    expect(await screen.findByText(/Numbers up to 1000/)).toBeTruthy();
+    expect(screen.getByText(/Addition/)).toBeTruthy();
+    expect(screen.getByTestId('syllabus-only-note')).toHaveTextContent(new RegExp(`no official ${curriculum} textbook`));
+    expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('/curriculum/syllabus?');
+
+    await user.type(screen.getByPlaceholderText('Search chapters or topics…'), 'Place'); // forces the chapter open
+    const topic = await screen.findByText(/Place Value/);
+    expect(screen.getAllByText('Coming soon').length).toBeGreaterThan(0);
+    await user.press(topic);
+
+    expect(await screen.findByTestId('coming-soon-dialog')).toHaveTextContent(/Place Value/);
+    expect(nav.navigate).not.toHaveBeenCalledWith('LessonScreen', expect.anything());
+
+    await user.press(screen.getByTestId('coming-soon-close'));
+    await waitFor(() => expect(screen.queryByTestId('coming-soon-dialog')).toBeNull());
+  });
+});

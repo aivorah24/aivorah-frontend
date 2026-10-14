@@ -137,9 +137,11 @@ export default function ChapterCard({
               <TouchableOpacity
                 key={t.name}
                 style={[styles.topicItem, { backgroundColor: colors.bgDark, borderColor: colors.borderColor, opacity: topicComingSoon ? 0.6 : 1 }]}
-                activeOpacity={topicComingSoon ? 1 : 0.7}
-                disabled={!!topicComingSoon}
+                activeOpacity={0.7}
+                // Still tappable: the screen answers with a "Coming soon"
+                // dialog rather than silently ignoring the tap.
                 onPress={() => onOpenTopic(ti)}
+                testID={topicComingSoon ? `topic-coming-soon-${ti}` : undefined}
               >
                 <View style={[styles.topicDot, { backgroundColor: completedSet.has(t.name) ? colors.primary : colors.borderColor }]} />
                 <View style={{ flex: 1 }}>
