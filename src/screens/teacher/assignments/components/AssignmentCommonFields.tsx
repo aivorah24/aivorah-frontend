@@ -81,19 +81,21 @@ export function AssignmentCommonFields({
         ))}
       </View>
 
-      {/* Language picker (only for Language Acquisition) */}
-      {subject === 'Language Acquisition' && (
+      {/* Language picker — Language Acquisition, and every uploaded worksheet
+          (students type answers in this language; '' = auto-detect from the sheet) */}
+      {(subject === 'Language Acquisition' || createMode === 'upload') && (
         <>
-          <Text style={styles.fieldLabel}>Language</Text>
+          <Text style={styles.fieldLabel}>{createMode === 'upload' ? 'Worksheet language' : 'Language'}</Text>
           <View style={styles.chipRow}>
-            {LANGUAGES.map((lang) => (
+            {(createMode === 'upload' ? ['', ...LANGUAGES] : LANGUAGES).map((lang) => (
               <TouchableOpacity
-                key={lang}
-                style={[styles.chip, selectedLanguage === lang && { backgroundColor: '#BAA46720', borderColor: '#BAA467' }]}
+                key={lang || 'auto'}
+                testID={`assignment-language-${lang || 'auto'}`}
+                style={[styles.chip, selectedLanguage === lang && { backgroundColor: gold + '20', borderColor: gold }]}
                 onPress={() => setSelectedLanguage(lang)}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.chipText, selectedLanguage === lang && { color: '#BAA467' }]}>{lang}</Text>
+                <Text style={[styles.chipText, selectedLanguage === lang && { color: gold }]}>{lang || 'Auto-detect'}</Text>
               </TouchableOpacity>
             ))}
           </View>

@@ -2,8 +2,7 @@
 // screen wires useNotificationPreferences correctly end-to-end (JSX -> hook
 // -> AsyncStorage -> notification bell poll), not just the isolated hook in
 // isolation (see __tests__/unit/useNotificationPreferences.test.tsx for
-// that). Other sections (account settings, parent-child creation, teaching
-// entries) are still inline in the legacy code pending their own extraction
+// that). Other sections (account settings, teaching entries) are still inline in the legacy code pending their own extraction
 // pass — heavy dependencies they pull in (Firebase auth, TeachingEntriesEditor)
 // are stubbed here so this integration test stays scoped to the 4 concerns
 // already extracted this pass (Notifications, Teacher Prefs, Photo, Logo).
@@ -118,5 +117,16 @@ describe('TeacherSettingsScreen — Notifications integration', () => {
     expect(screen.queryByTestId('teacher-settings-notif-toggle-aiInsights')).toBeNull();
     expect(screen.getByText('Weekly Class Report')).toBeTruthy();
     expect(screen.getByText('AI Class Insights')).toBeTruthy();
+  });
+});
+
+describe('TeacherSettingsScreen — Parent profile removed', () => {
+  test('no Parent Profile row, Add button or onboarding modal', async () => {
+    await render(<TeacherSettingsScreen navigation={navProp()} />);
+    await waitFor(() => expect(screen.getByTestId('teacher-settings-notifications-section')).toBeTruthy());
+    expect(screen.queryByText('Parent Profile')).toBeNull();
+    expect(screen.queryByText('Add Parent Profile')).toBeNull();
+    expect(screen.queryByText(/Add a parent profile/i)).toBeNull();
+    expect(screen.queryByText('Add')).toBeNull();
   });
 });

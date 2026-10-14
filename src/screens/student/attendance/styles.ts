@@ -62,7 +62,8 @@ export function makeStyles(colors: AppColors) {
     calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
     calendarDayCell: { width: '14.28%', height: 44, alignItems: 'center', justifyContent: 'center', marginVertical: 1 },
     calendarDayText: { fontSize: 12.5, color: colors.textMain },
-    calendarDayUnderline: { width: 14, height: 2.5, borderRadius: 1.25, marginTop: 4 },
+    calendarDayDot: { width: 5, height: 5, borderRadius: 2.5, marginTop: 3 },
+    calendarDayUnderline: { width: 14, height: 2.5, borderRadius: 1.25, marginTop: 2 },
     activityLogsContainer: { marginTop: 8, gap: 12 },
     activityLogsTitle: { fontFamily: fonts.serif, fontSize: 14, fontWeight: '700', color: colors.textHeading },
     logList: { gap: 8 },
@@ -74,7 +75,7 @@ export function makeStyles(colors: AppColors) {
     logItemTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     logItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     logItemDate: { fontSize: 13, color: colors.textMain, fontWeight: '700' },
-    statusBadge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6 },
+    statusBadge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, borderWidth: 1 },
     statusBadgeText: { fontSize: 10.5, fontWeight: '700' },
     logItemComment: { fontSize: 12, color: colors.textMuted, lineHeight: 16, marginTop: 4 },
     emptyLogsCard: {

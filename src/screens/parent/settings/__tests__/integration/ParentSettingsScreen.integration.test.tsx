@@ -30,8 +30,10 @@ jest.mock('../../../../../context/ThemeContext', () => ({
   }),
 }));
 
+const mockMuteCategory = jest.fn();
+const mockTriggerPoll = jest.fn();
 jest.mock('../../../../../context/NotificationContext', () => ({
-  useNotification: () => ({ triggerPoll: jest.fn(), clearUnreadAssignments: jest.fn(), clearUnreadChallenges: jest.fn() }),
+  useNotification: () => ({ triggerPoll: mockTriggerPoll, clearUnreadAssignments: jest.fn(), clearUnreadChallenges: jest.fn(), muteCategory: mockMuteCategory }),
 }));
 
 jest.mock('../../../../../config/firebase', () => ({ auth: { currentUser: { email: 'parent@example.com', providerData: [] } } }));
@@ -107,6 +109,17 @@ describe('ParentSettingsScreen Integration', () => {
       const raw = await AsyncStorage.getItem('notifPrefs_parent@example.com');
       expect(JSON.parse(raw!).assignmentAlerts).toBe(false);
     });
+  });
+
+  it('turning Assignment Alerts OFF hides it from the bell and re-polls after the pref is saved', async () => {
+    await renderScreen();
+    await waitFor(() => expect(screen.getByText('Assignment Alerts')).toBeTruthy());
+    let savedAtPoll: Promise<string | null> | null = null;
+    mockTriggerPoll.mockImplementation(() => { savedAtPoll = AsyncStorage.getItem('notifPrefs_parent@example.com'); });
+    await act(async () => { fireEvent(screen.getAllByRole('switch')[0], 'valueChange', false); });
+    await waitFor(() => expect(mockTriggerPoll).toHaveBeenCalled());
+    expect(mockMuteCategory).toHaveBeenCalledWith('assignmentAlerts');
+    expect(JSON.parse((await savedAtPoll!)!).assignmentAlerts).toBe(false);
   });
 
   it('switching theme calls setThemeMode', async () => {

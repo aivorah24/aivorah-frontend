@@ -16,6 +16,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useParentAIProgressReport } from './hooks/useParentAIProgressReport';
 import ReportSection from './components/ReportSection';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function ParentAIProgressReportScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -216,7 +217,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...MUTED);
-    doc.text(`${student.grade}  ·  ${student.curriculum}${student.school ? `  ·  ${student.school}` : ''}`, ML + 33, y + 20);
+    doc.text(`${student.grade}  ·  ${normalizeCurriculum(student.curriculum)}${student.school ? `  ·  ${student.school}` : ''}`, ML + 33, y + 20);
 
     // Pattern badge — compact pill, auto-width, right-aligned
     const patLabel = (report.learning_pattern || '').replace(/_/g, ' ');
@@ -639,7 +640,7 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                   <View style={styles.reportHeader}>
                     <View>
                       <Text style={styles.reportName}>{reportData.student.name}</Text>
-                      <Text style={styles.reportMeta}>{reportData.student.grade} · {reportData.student.curriculum}</Text>
+                      <Text style={styles.reportMeta}>{reportData.student.grade} · {normalizeCurriculum(reportData.student.curriculum)}</Text>
                       <Text style={styles.reportDate}>
                         Generated {new Date(reportData.generatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </Text>

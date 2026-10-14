@@ -53,9 +53,10 @@ export function makeStyles(colors: AppColors) {
       paddingHorizontal: 8, paddingVertical: 6, borderRadius: radius.sm, minWidth: 46, justifyContent: 'center',
     },
     attendanceBtnLabel: { fontSize: 11, fontFamily: fonts.serif, color: colors.textMuted },
+    // Compact, centred (not full width).
     saveBtn: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentYellow,
-      paddingVertical: 12, borderRadius: radius.md, width: '100%', marginTop: 8,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: colors.accentYellow,
+      height: 44, paddingVertical: 0, paddingHorizontal: 24, borderRadius: 12, marginTop: 8,
     },
     saveBtnText: { fontFamily: fonts.serif, fontSize: 14, fontWeight: '700', color: '#241f16' },
     saveMessage: { fontFamily: fonts.serif, fontSize: 13, textAlign: 'center' },

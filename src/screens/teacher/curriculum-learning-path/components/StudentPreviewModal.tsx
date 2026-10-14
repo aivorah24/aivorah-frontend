@@ -5,9 +5,10 @@ import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import LearningBlocks from '../../../student/learning-paths/lesson-screen/components/LearningBlocks';
 import BookSidePane from './BookSidePane';
+import { isCbseCurriculum } from '../../../../utils/curriculum';
 
 // NCERT book sections can only be picked for curricula that follow the NCERT books (CBSE).
-const usesNcertBooks = (curriculum?: string) => /\b(cbse|ncert)\b/i.test(curriculum || 'CBSE');
+const usesNcertBooks = (curriculum?: string) => isCbseCurriculum(curriculum || 'CBSE');
 import LearnBlockEditor from './LearnBlockEditor';
 import MathTutorEditor from './MathTutorEditor';
 import type { SubtopicSectionPick } from '../services/curriculumLearningPathService';

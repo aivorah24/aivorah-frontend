@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { AccessRequest } from '../types';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 interface AccessRequestRailProps {
   accessRequests: AccessRequest[];
@@ -84,7 +85,7 @@ export default function AccessRequestRail({
               )}
               {(reqClass || r.curriculum) && (
                 <Text style={[styles.requestMeta, { color: colors.textDim }]} numberOfLines={1}>
-                  {[reqClass && `Requested: ${reqClass}`, r.curriculum].filter(Boolean).join('  ·  ')}
+                  {[reqClass && `Requested: ${reqClass}`, normalizeCurriculum(r.curriculum)].filter(Boolean).join('  ·  ')}
                 </Text>
               )}
               <View

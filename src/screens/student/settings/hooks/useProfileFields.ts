@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import { ALL_GRADES } from '../constants';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 // Name / Grade / Curriculum / Location edits - each saves independently on
 // its own PATCH, not a whole-form save.
@@ -68,17 +69,18 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
 
   async function handleSaveCurriculum() {
     if (!selectedCurriculum) return;
+    const curriculum = normalizeCurriculum(selectedCurriculum);
     setCurriculumLoading(true);
     try {
       await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email, curriculum: selectedCurriculum }),
+        body: JSON.stringify({ email: user?.email, curriculum }),
       });
-      updateUser({ curriculum: selectedCurriculum });
+      updateUser({ curriculum });
       closeModal();
     } catch {
-      updateUser({ curriculum: selectedCurriculum });
+      updateUser({ curriculum });
       closeModal();
     } finally {
       setCurriculumLoading(false);

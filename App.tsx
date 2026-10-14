@@ -127,6 +127,7 @@ import { StyleSheet, View, ActivityIndicator, Platform, Text, TextInput, Touchab
 import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 import { applyActionCode, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { applyDocumentChrome } from './src/utils/documentChrome';
 
 // Set browser tab title
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -137,16 +138,13 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 // scene view repaints its own themed background on every mount, so switching
 // sidebar items showed a one-frame white flash through the gap. Match the
 // app's background at the document level so there's nothing to flash to.
-// Starts from the saved theme (ThemeContext keeps it in sync after that).
+// Starts from the saved theme; ThemeProvider keeps it in sync and locks #root scrolling.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   let saved: string | null = null;
   try { saved = localStorage.getItem('@ai_mentor_theme'); } catch {}
   const systemDark = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
   const dark = saved === 'dark' || (saved === 'auto' && systemDark);
-  const bgFix = document.createElement('style');
-  bgFix.id = 'aivorah-page-bg';
-  bgFix.textContent = `html, body, #root { background-color: ${dark ? darkColors.bgDark : lightColors.bgDark}; }`;
-  document.head.appendChild(bgFix);
+  applyDocumentChrome(dark ? darkColors.bgDark : lightColors.bgDark);
 }
 
 // ── Aivorah global font: Plus Jakarta Sans ──

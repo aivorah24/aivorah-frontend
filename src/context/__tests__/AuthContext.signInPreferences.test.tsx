@@ -39,6 +39,7 @@ function TestConsumer() {
       <Text testID="avatar">{(user as any)?.avatarStyle ?? '(none)'}</Text>
       <Text testID="learning">{(user as any)?.learningStyle ?? '(none)'}</Text>
       <Text testID="photo">{(user as any)?.photoUrl ?? '(none)'}</Text>
+      <Text testID="school">{user?.school ?? '(none)'}</Text>
       <TouchableOpacity testID="signin-google" onPress={() => signInWithGoogle('student').catch(() => {})}>
         <Text>Google</Text>
       </TouchableOpacity>
@@ -93,3 +94,13 @@ test.each([['signin-email'], ['signin-google']])(
     expect(screen.getByTestId('photo').props.children).toBe('https://img.example/p.jpg');
   },
 );
+
+// Regression: email sign-in defaulted a blank school to "Hyderabad International
+// School", so teacher-created students showed the wrong school.
+test('email sign-in never invents a school for a student without one', async () => {
+  const user = userEvent.setup();
+  await render(<AuthProvider><TestConsumer /></AuthProvider>);
+  await user.press(screen.getByTestId('signin-email'));
+  await waitFor(() => expect(screen.getByTestId('avatar').props.children).toBe('casual'));
+  expect(screen.getByTestId('school').props.children).toBe('(none)');
+});

@@ -1,12 +1,13 @@
 import React from 'react';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import TeacherAttendanceScreen from '../../TeacherAttendanceScreen';
 
 jest.mock('../../../../../config/firebase', () => ({
   auth: { authStateReady: jest.fn().mockResolvedValue(undefined), currentUser: { getIdToken: jest.fn().mockResolvedValue('tok') } },
 }));
 jest.mock('../../../../../context/ThemeContext', () => ({
-  useTheme: () => ({ colors: { accentYellow: '#c90', accentRed: '#e33', textDim: '#999', textMain: '#111', textMuted: '#666', textHeading: '#000', borderColor: '#ddd', cardDark: '#fff', bgDark: '#fafafa' } }),
+  useTheme: () => ({ colors: { accentGreen: '#9a9', accentYellow: '#c90', accentRed: '#e33', textDim: '#999', textMain: '#111', textMuted: '#666', textHeading: '#000', borderColor: '#ddd', cardDark: '#fff', bgDark: '#fafafa' } }),
 }));
 jest.mock('../../../../../components/common/Header', () => {
   const { Text } = require('react-native');
@@ -59,6 +60,7 @@ describe('TeacherAttendanceScreen', () => {
     expect(screen.getByTestId('attendance-status-s2-late').props.accessibilityState).toEqual({ selected: true });
     await user.press(screen.getByTestId('attendance-save'));
     await waitFor(() => expect(screen.getByTestId('attendance-save-message').props.children).toMatch(/Saved/));
+    expect(StyleSheet.flatten(screen.getByTestId('attendance-save-message').props.style).color).toBe('#9a9');
     expect(saved.records).toEqual({ s1: 'present', s2: 'late' });
     expect(calls().filter((u) => u.includes('/attendance/class')).length).toBeGreaterThanOrEqual(2);
   });
@@ -82,5 +84,21 @@ describe('TeacherAttendanceScreen', () => {
     expect(screen.getByText('You are not the class teacher of this class')).toBeTruthy();
     expect(screen.queryByTestId('attendance-save')).toBeNull();
     expect(calls().some((u) => u.includes('section=B'))).toBe(true);
+  });
+
+  test('stat cards and pills use Aivorah status tokens; Save is a compact centred gold button', async () => {
+    mockApi((url) => (url.includes('/classes/mine') ? { body: CLASSES } : { body: ROSTER }));
+    await render(<TeacherAttendanceScreen navigation={{}} route={{ params: {} }} />);
+    await screen.findByTestId('attendance-row-s1');
+    const st = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style);
+    expect(st('attendance-stat-present').color).toBe('#9a9');
+    expect(st('attendance-stat-absent').color).toBe('#e33');
+    expect(st('attendance-stat-late').color).toBe('#c90');
+    expect(st('attendance-stat-unmarked').color).toBe('#999');
+    expect(st('attendance-stat-card-absent').borderLeftColor).toBe('#e33');
+    expect(st('attendance-status-s1-present').borderColor).toBe('#9a9');
+    const save = st('attendance-save');
+    expect(save).toMatchObject({ backgroundColor: '#c90', height: 44, paddingHorizontal: 24, borderRadius: 12, alignSelf: 'center' });
+    expect(save.width).toBeUndefined();
   });
 });

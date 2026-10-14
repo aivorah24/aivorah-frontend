@@ -7,6 +7,7 @@ import type { Student } from '../types';
 import { StudentStatusBadge } from '../../../../components/common/StudentStatusBadge';
 import { resolveStudentStatus } from '../../../../utils/studentStatus';
 import { initials, toTitleCase, avatarGradient, lastActiveLabel } from '../utils/studentDisplay';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 
 function StudentAvatarComponent({ photoUrl, name, grad, styles }: {
   photoUrl?: string; name: string; grad: [string, string]; styles: any;
@@ -68,7 +69,7 @@ export default function StudentCard({
         <StudentAvatar photoUrl={s.photoUrl} name={displayName} grad={grad} styles={styles} />
         <View style={styles.cardInfo}>
           <Text style={styles.studentName}>{displayName}</Text>
-          <Text style={styles.studentMeta}>{s.grade} · {s.curriculum}</Text>
+          <Text style={styles.studentMeta}>{s.grade} · {normalizeCurriculum(s.curriculum)}</Text>
         </View>
         <StudentStatusBadge status={resolveStudentStatus(s)} testID={`teacher-students-status-${s.id}`} />
         {!promoteMode && (
