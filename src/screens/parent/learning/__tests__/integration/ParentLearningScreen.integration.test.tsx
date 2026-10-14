@@ -51,10 +51,12 @@ describe('ParentLearningScreen Integration', () => {
 
     await renderScreen();
 
+    // Legacy "NCERT" child: queried and labelled as CBSE, never NCERT.
     await waitFor(() => {
-      expect(parentLearningService.fetchCurriculumSubjects).toHaveBeenCalledWith('Grade 3', 'NCERT');
+      expect(parentLearningService.fetchCurriculumSubjects).toHaveBeenCalledWith('Grade 3', 'CBSE');
     });
-    expect(await screen.findByText('NCERT · 1 Subjects')).toBeTruthy();
+    expect(await screen.findByText('CBSE · 1 Subjects')).toBeTruthy();
+    expect(screen.queryByText(/NCERT/)).toBeNull();
     expect(await screen.findByText('Mathematics')).toBeTruthy();
   });
 

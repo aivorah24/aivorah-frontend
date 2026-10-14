@@ -3,7 +3,8 @@ import { Text, View, Pressable } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 const MOCK_USER = { email: 'parent@test.ai', role: 'parent' };
-jest.mock('../AuthContext', () => ({ useAuth: () => ({ user: MOCK_USER }) }));
+const mockApplyAccountUpdate = jest.fn().mockResolvedValue(undefined);
+jest.mock('../AuthContext', () => ({ useAuth: () => ({ user: MOCK_USER, applyAccountUpdate: mockApplyAccountUpdate }) }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -251,5 +252,151 @@ describe('scheduled calendar events (V2 event_scheduled)', () => {
     await render(<NotificationProvider><Harness /></NotificationProvider>);
     await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent(/legacy\|ready/));
     expect(screen.getByTestId('order')).toHaveTextContent(/evt_ev_1.*evt_due/);
+  });
+});
+
+describe('platform-admin account updates (V2 account_updated)', () => {
+  const ACC = v2('acc1', '2026-09-25T12:00:00Z', {
+    type: 'account_updated', entityType: 'user', entityId: 'u-parent', childId: null,
+    title: 'Your name has been updated', data: {}, actorRole: 'platform_admin',
+  });
+
+  test('a new account_updated row (parent, no child) is listed, toasts and applies the update once', async () => {
+    await mount();
+    expect(mockApplyAccountUpdate).not.toHaveBeenCalled();
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('acc1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^acc1,/);
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+    await poll(); // already seen → not applied again
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test('other arrivals and account rows already present at mount do not trigger it', async () => {
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await mount();
+    const C2 = v2('c2', '2026-09-25T13:00:00Z');
+    page = [C2, ACC, C1, A1];
+    unread = [C2, ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('c2'));
+    expect(mockApplyAccountUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('category toggles gate V2 rows (student + parent)', () => {
+  const AsyncStorage = jest.requireMock('@react-native-async-storage/async-storage');
+  const E1 = v2('e1', '2026-09-25T09:45:00Z', {
+    type: 'event_scheduled', entityType: 'schedule_event', data: { eventId: 'ev_1', eventType: 'lesson' },
+  });
+  const setPrefs = (prefs: any) => AsyncStorage.getItem.mockImplementation(async (k: string) =>
+    (k.startsWith('notifPrefs_') ? JSON.stringify(prefs) : null));
+  afterEach(() => AsyncStorage.getItem.mockImplementation(async () => null));
+
+  test('Assignment Alerts OFF hides V2 assignment + event rows from the bell and badge', async () => {
+    page = [C1, E1, A1];
+    unread = [C1, E1, A1];
+    setPrefs({ assignmentAlerts: false });
+    await mount();
+    expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1');
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:0 c:1 m:1 e:0/);
+  });
+
+  test('Challenge Updates OFF hides V2 challenge rows from the bell and badge', async () => {
+    setPrefs({ challengeUpdates: false });
+    await mount();
+    expect(screen.getByTestId('order')).toHaveTextContent('msg_m1,a1');
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:0/);
+  });
+
+  test('a newly arrived row in a muted category does not toast', async () => {
+    setPrefs({ challengeUpdates: false });
+    await mount();
+    const C2 = v2('c2', '2026-09-25T11:00:00Z');
+    page = [C2, C1, A1];
+    unread = [C2, C1, A1];
+    await poll();
+    expect(screen.getByTestId('toast')).toHaveTextContent('hidden');
+    expect(screen.getByTestId('order')).not.toHaveTextContent('c2');
+  });
+
+  test('muteCategory hides V2 rows immediately, before the next poll', async () => {
+    let mute: (k: 'assignmentAlerts' | 'challengeUpdates') => void = () => {};
+    function Grab() { mute = useNotification().muteCategory; return null; }
+    await render(<NotificationProvider><Harness /><Grab /></NotificationProvider>);
+    await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1'));
+    await act(async () => { mute('assignmentAlerts'); });
+    expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1');
+  });
+
+  test('account updates are never muted by Challenge Updates OFF', async () => {
+    setPrefs({ challengeUpdates: false });
+    await mount();
+    const ACC = v2('acc2', '2026-09-25T12:00:00Z', {
+      type: 'account_updated', entityType: 'user', entityId: 'u-parent', childId: null, title: 'Your grade has been updated', data: {},
+    });
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent(/^acc2,/));
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test('turning the toggle back ON shows the category again', async () => {
+    setPrefs({ challengeUpdates: false });
+    await mount();
+    expect(screen.getByTestId('order')).not.toHaveTextContent('c1');
+    setPrefs({ challengeUpdates: true });
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1,a1'));
+  });
+});
+
+describe('V2 class posts', () => {
+  const P1 = v2('p1', '2026-09-25T11:00:00Z', {
+    type: 'class_post', entityType: 'class_post', entityId: 'post-1', title: 'New class post for Asha: Grade 5-A',
+    data: { postId: 'post-1', grade: 'Grade 5', section: 'A' },
+  });
+
+  test('a newly published class post shows in the bell and toasts', async () => {
+    await mount();
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('p1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^p1,c1/);
+  });
+
+  test('class posts never inflate the challenge badge', async () => {
+    page = [P1, C1, A1];
+    unread = [P1, C1, A1];
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1/);
+  });
+});
+
+describe('V2 announcements', () => {
+  const N1 = v2('n1', '2026-09-25T11:00:00Z', {
+    type: 'announcement', entityType: 'announcement', entityId: 'ann-1', title: 'New announcement: Sports Day',
+    data: { announcementId: 'ann-1', severity: 'info', displayType: 'both' },
+  });
+
+  test('a newly published announcement shows in the bell and toasts', async () => {
+    await mount();
+    page = [N1, C1, A1];
+    unread = [N1, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('n1'));
+    expect(screen.getByTestId('order')).toHaveTextContent(/^n1,c1/);
+  });
+
+  test('announcements never inflate the challenge badge', async () => {
+    page = [N1, C1, A1];
+    unread = [N1, C1, A1];
+    await mount();
+    expect(screen.getByTestId('counts')).toHaveTextContent(/a:1 c:1 m:1/);
   });
 });

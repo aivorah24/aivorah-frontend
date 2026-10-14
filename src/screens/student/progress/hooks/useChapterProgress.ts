@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { curriculumCacheKey, getMemorySubjectChapters } from '../../../../utils/curriculumPrefetch';
 import { fetchCurriculumSubjects, fetchPerformance } from '../../dashboard/services/dashboardService';
 import { computeAllBarTopics, type BarTopic, type PerfData, type SubjectChapters } from '../../utils/performanceStats';
+import { monolithContentCurriculum } from '../../../../utils/curriculum';
 
 const IB_PYP_GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'];
 const NO_CONTENT_GRADES = ['Nursery', 'LKG', 'UKG'];
@@ -26,7 +27,7 @@ export function useChapterProgress(
 
   useEffect(() => {
     if (noContent) return;
-    const curricParam = isIBPYP ? 'IB_PYP' : (userCurriculum ?? 'NCERT');
+    const curricParam = isIBPYP ? 'IB_PYP' : monolithContentCurriculum(userCurriculum);
     let cancelled = false;
     fetchCurriculumSubjects(curricParam, studentGrade)
       .then(d => {

@@ -199,6 +199,23 @@ describe('useGradesSections', () => {
     expect(global.fetch).toHaveBeenCalledTimes(3); // load + add-section + teachers — no class-teacher PATCH
   });
 
+  it('a failed teacher load shows an error in the assign prompt instead of an empty, silent list', async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ grades: SAMPLE_GRADES }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, grades: SAMPLE_GRADES }) })
+      .mockRejectedValueOnce(new Error('Network down')); // GET teachers
+    const user = userEvent.setup();
+    await render(<Harness email="admin@test.com" />);
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+
+    await user.press(screen.getByTestId('openAddSection'));
+    await user.press(screen.getByTestId('setValueC'));
+    await user.press(screen.getByTestId('submit'));
+
+    await waitFor(() => expect(screen.getByTestId('assignFor').props.children).toBe('Grade 6 · C'));
+    await waitFor(() => expect(String(screen.getByTestId('assignError').props.children)).not.toBe(''));
+  });
+
   it('toggles showArchived', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ grades: [] }) });
     const user = userEvent.setup();

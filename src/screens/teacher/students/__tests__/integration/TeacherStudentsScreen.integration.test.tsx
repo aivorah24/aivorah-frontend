@@ -168,6 +168,52 @@ describe('TeacherStudentsScreen integration', () => {
     expect(screen.getByText('Name is required.')).toBeTruthy();
   });
 
+  test('a REAL email sends an invite + verification (no password, no client Firebase signup)', async () => {
+    const { createUserWithEmailAndPassword } = jest.requireMock('firebase/auth');
+    (global.fetch as jest.Mock).mockImplementation((url: string, opts?: any) => (String(url).includes('/students/invite')
+      ? Promise.resolve({ ok: true, json: async () => ({ success: true, student: { name: 'Meera Rao', email: 'meera@real.com' }, inviteSent: true, verificationSent: true }) })
+      : jsonRes(url, opts)));
+    const user = userEvent.setup();
+    await render(<TeacherStudentsScreen navigation={navigation} route={{}} />);
+    await waitFor(() => expect(screen.getByText('Aarav Kapoor')).toBeTruthy());
+
+    await user.press(screen.getByTestId('teacher-students-add-button'));
+    await user.type(screen.getByTestId('teacher-students-create-name-input'), 'Meera Rao');
+    await user.type(screen.getByTestId('teacher-students-create-email-input'), 'Meera@Real.com');
+    expect(screen.queryByTestId('teacher-students-create-password-input')).toBeNull();
+    expect(screen.getByTestId('teacher-students-create-invite-note')).toBeTruthy();
+    await user.press(screen.getByTestId('teacher-students-create-submit-button'));
+
+    await waitFor(() => expect(screen.getByTestId('teacher-students-invite-sent')).toBeTruthy());
+    expect(screen.getByText('Invite Sent')).toBeTruthy();
+    const call = (global.fetch as jest.Mock).mock.calls.find(c => String(c[0]).includes('/students/invite'));
+    expect(call[0]).toContain('/teacher/teacher%40aivorah.test/students/invite');
+    expect(JSON.parse(call[1].body)).toMatchObject({ name: 'Meera Rao', email: 'meera@real.com', grade: 'Grade 4', curriculum: 'IB PYP' });
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+    expect((global.fetch as jest.Mock).mock.calls.some(c => String(c[0]).includes('/init-auth'))).toBe(false);
+  });
+
+  test('a blank email keeps the auto-generated credentials flow', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string, opts?: any) => {
+      if (String(url).includes('/init-auth')) return Promise.resolve({ ok: true, json: async () => ({ email: 's9@aivorah.student', password: 'Pw#12345' }) });
+      if (String(url).includes('/link-created')) return Promise.resolve({ ok: true, json: async () => ({ success: true }) });
+      return jsonRes(url, opts);
+    });
+    const user = userEvent.setup();
+    await render(<TeacherStudentsScreen navigation={navigation} route={{}} />);
+    await waitFor(() => expect(screen.getByText('Aarav Kapoor')).toBeTruthy());
+
+    await user.press(screen.getByTestId('teacher-students-add-button'));
+    await user.type(screen.getByTestId('teacher-students-create-name-input'), 'Kid One');
+    expect(screen.getByTestId('teacher-students-create-password-input')).toBeTruthy();
+    await user.press(screen.getByTestId('teacher-students-create-submit-button'));
+
+    await waitFor(() => expect(screen.getByTestId('teacher-students-creds-modal')).toBeTruthy());
+    expect(screen.getByText('Account Created')).toBeTruthy();
+    expect(screen.getByText('s9@aivorah.student')).toBeTruthy();
+    expect((global.fetch as jest.Mock).mock.calls.some(c => String(c[0]).includes('/students/invite'))).toBe(false);
+  });
+
   test('switching to the Link Existing tab fetches linkable students for the teacher\'s own grades', async () => {
     const user = userEvent.setup();
     await render(<TeacherStudentsScreen navigation={navigation} route={{}} />);

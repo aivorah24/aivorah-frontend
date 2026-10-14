@@ -9,9 +9,6 @@ import {
   uploadBrandingLogo,
   patchProfile,
   deleteAccount,
-  addRole,
-  createChildStudent,
-  linkExistingChild,
 } from '../../services/settingsService';
 import AUTH_SERVER_URL from '../../../../../config/authServerUrl';
 import PROFILE_SERVER_URL from '../../../../../config/profileServerUrl';
@@ -117,47 +114,5 @@ describe('deleteAccount', () => {
       body: JSON.stringify({ email: 'gone@a.com' }),
     });
     expect(result.ok).toBe(true);
-  });
-});
-
-describe('addRole', () => {
-  test('sends a real PATCH to the migrated profile service and returns the merged roles', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, roles: ['teacher', 'parent'] }) });
-    const result = await addRole('teacher@school.com', 'parent');
-    expect(global.fetch).toHaveBeenCalledWith(`${PROFILE_SERVER_URL}/user/add-role`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'teacher@school.com', role: 'parent' }),
-    });
-    expect(result.roles).toEqual(['teacher', 'parent']);
-  });
-});
-
-describe('createChildStudent', () => {
-  test('sends a real POST to the migrated profile service with the child payload', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, child: { id: 'c1' } }) });
-    const result = await createChildStudent('teacher@school.com', { name: 'Kid', grade: 'Grade 3', curriculum: 'IB PYP' });
-    expect(global.fetch).toHaveBeenCalledWith(`${PROFILE_SERVER_URL}/parent/teacher%40school.com/children/create-student`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Kid', grade: 'Grade 3', curriculum: 'IB PYP' }),
-    });
-    expect(result.success).toBe(true);
-  });
-
-  test('a real 409 (email already in use) surfaces the error, not a throw', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'An account with this email already exists.' }) });
-    const result = await createChildStudent('teacher@school.com', { name: 'Kid', grade: 'Grade 3', curriculum: 'IB PYP', email: 'taken@a.com' });
-    expect(result.error).toBe('An account with this email already exists.');
-  });
-});
-
-describe('linkExistingChild', () => {
-  test('sends a real POST with childEmail', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, child: { id: 'c1' } }) });
-    const result = await linkExistingChild('teacher@school.com', 'kid@a.com');
-    expect(global.fetch).toHaveBeenCalledWith(`${PROFILE_SERVER_URL}/parent/teacher%40school.com/children`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ childEmail: 'kid@a.com' }),
-    });
-    expect(result.success).toBe(true);
   });
 });

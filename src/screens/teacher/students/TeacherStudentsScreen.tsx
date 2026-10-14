@@ -275,6 +275,8 @@ export default function TeacherStudentsScreen({ navigation, route }: any) {
         credsCopiedField={create.credsCopiedField}
         copyCredsField={create.copyCredsField}
         shareCredsToStudent={create.shareCredsToStudent}
+        invited={create.credsInvited}
+        inviteWarning={create.inviteWarning}
       />
 
       <TeacherPromoteDialog

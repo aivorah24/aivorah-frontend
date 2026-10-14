@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Daily Habits backend base URL — routed to the standalone
@@ -13,6 +14,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-daily-habits-service-rdn9.onrender.com';
 
 const DAILY_HABITS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3012' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3012' : LIVE_SERVICE;
 
 export default DAILY_HABITS_SERVER_URL;

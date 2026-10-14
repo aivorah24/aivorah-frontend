@@ -59,7 +59,7 @@ jest.mock('../../../../features/classes/components/ConnectSchoolBanner', () => (
 // which transitively drags in a raw (non-Jest-transformed) firebase/app ESM
 // import chain. Mock just the constant this test tree actually needs.
 jest.mock('../../../onboarding/OnboardingScreen', () => ({
-  CURRICULA: ['IB PYP', 'NCERT', 'CBSE'],
+  CURRICULA: ['IB PYP', 'CBSE'],
 }));
 
 const mockResetForm = jest.fn();

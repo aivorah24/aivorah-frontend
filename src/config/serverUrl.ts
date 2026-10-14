@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { USE_LOCAL_SERVICES } from './localServices';
 
 // Backend base URL.
 // - Web (production): the LIVE backend. The frontend now deploys standalone
@@ -17,7 +18,7 @@ const LIVE_BACKEND = 'https://aivorah.ai';
 
 const SERVER_URL =
   Platform.OS === 'web'
-    ? (__DEV__ ? 'http://localhost:3007' : LIVE_BACKEND)
+    ? (USE_LOCAL_SERVICES ? 'http://localhost:3007' : LIVE_BACKEND)
     : LIVE_BACKEND;
 
 export default SERVER_URL;

@@ -56,6 +56,7 @@ const LINKING_SCREENS = {
   Subscription: 'subscription',
   Announcements: 'announcements',
   MyClasses: 'my-classes',
+  PlatformOverview: 'admin-login',
   ClassDetail: 'my-classes/class',
   // Teacher screens
   TeacherDashboard: 'teacher/dashboard',
@@ -126,6 +127,7 @@ import { StyleSheet, View, ActivityIndicator, Platform, Text, TextInput, Touchab
 import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 import { applyActionCode, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { applyDocumentChrome } from './src/utils/documentChrome';
 
 // Set browser tab title
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -135,11 +137,14 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 // html/body have no background by default (white). React Navigation's drawer
 // scene view repaints its own themed background on every mount, so switching
 // sidebar items showed a one-frame white flash through the gap. Match the
-// app's dark background at the document level so there's nothing to flash to.
+// app's background at the document level so there's nothing to flash to.
+// Starts from the saved theme; ThemeProvider keeps it in sync and locks #root scrolling.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const bgFix = document.createElement('style');
-  bgFix.textContent = `html, body, #root { background-color: #0B0B0B; }`;
-  document.head.appendChild(bgFix);
+  let saved: string | null = null;
+  try { saved = localStorage.getItem('@ai_mentor_theme'); } catch {}
+  const systemDark = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const dark = saved === 'dark' || (saved === 'auto' && systemDark);
+  applyDocumentChrome(dark ? darkColors.bgDark : lightColors.bgDark);
 }
 
 // ── Aivorah global font: Plus Jakarta Sans ──
@@ -189,6 +194,9 @@ import TeacherNavigator from './src/navigation/TeacherNavigator';
 import SuperAdminNavigator from './src/navigation/SuperAdminNavigator';
 import SchoolAdminNavigator from './src/navigation/SchoolAdminNavigator';
 import ParentNavigator from './src/navigation/ParentNavigator';
+import AdminNavigator from './src/navigation/AdminNavigator';
+import AdminLoginScreen from './src/screens/aivorah-admin/login/AdminLoginScreen';
+import { isAdminEmail } from './src/constants/adminEmails';
 import LandingScreen from './src/screens/auth/LandingScreen';
 import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
@@ -204,7 +212,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import NotificationBanner from './src/components/common/NotificationBanner';
 import { AnnouncementProvider } from './src/screens/shared/announcements/context/AnnouncementProvider';
-import { colors } from './src/theme';
+import { colors, darkColors, lightColors } from './src/theme';
 import { auth } from './src/config/firebase';
 import { isStudentLocked, subscribeStudentLocked } from './src/services/lockStatus';
 import { useNavigation } from '@react-navigation/native';
@@ -754,6 +762,8 @@ function RootNavigator() {
     !loading && isAuthenticated &&
     user?.onboardingComplete === false &&
     !(user?.email?.endsWith('@demo.com') || user?.email?.endsWith('@test.ai')) &&
+    // Admins never onboard, and /admin-login signs in without the explicit-login flag.
+    !isAdminEmail(user?.email) &&
     !isSpecialAuthLinkPath &&
     (typeof sessionStorage === 'undefined' || sessionStorage.getItem('aivorah_auth_this_session') !== '1') &&
     genuinelyStale;
@@ -855,8 +865,21 @@ function RootNavigator() {
     typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/reset-password');
 
+  // Dedicated Aivorah Admin sign-in -- only relevant while signed out; once
+  // signed in, isAdminEmail(user?.email) further below routes straight to
+  // AdminNavigator regardless of this path.
+  // !loading: while Firebase restores a session, isAuthenticated is briefly false —
+  // without this a refresh flashed the sign-in form before landing on the admin console.
+  const isAdminLoginPath =
+    !loading &&
+    !isAuthenticated &&
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/admin-login');
+
   if (isVerifySuccessPath) return <VerifySuccessPage onComplete={() => setVerifyDone(true)} />;
   if (isResetPasswordPath) return <ResetPasswordScreen />;
+  if (isAdminLoginPath) return <AdminLoginScreen />;
 
   // Demo mode — access via ?demo=onboarding-student, ?demo=onboarding-teacher,
   // or ?demo=onboarding-parent to preview the new "boxes" onboarding screens
@@ -920,6 +943,15 @@ function RootNavigator() {
   if (needsEmailVerification) {
     console.log('[Auth] Verification required, showing VerifyEmailScreen');
     return <VerifyEmailScreen />;
+  }
+
+  // Aivorah Admin -- a real, separate persona gated by email (ADMIN_EMAILS),
+  // not by users.role. Takes priority over the normal role routing below:
+  // an allowed email always lands here, whatever their underlying role is
+  // (the known admin accounts are role:'student' in the DB today -- there is
+  // no dedicated admin role to route on).
+  if (isAdminEmail(user?.email)) {
+    return <AdminNavigator key="admin" />;
   }
 
   // Onboarding gate — skip for demo/test accounts AND admin roles. The

@@ -28,11 +28,12 @@ describe('useParentLearningData', () => {
     const { result } = await renderHook(() => useParentLearningData('parent@test.com'));
 
     await waitFor(() => expect(result.current.child).toEqual(CHILD_A));
+    // A legacy "NCERT" child is a CBSE child — queried and shown as CBSE.
     await waitFor(() => {
-      expect(parentLearningService.fetchCurriculumSubjects).toHaveBeenCalledWith('Grade 3', 'NCERT');
+      expect(parentLearningService.fetchCurriculumSubjects).toHaveBeenCalledWith('Grade 3', 'CBSE');
     });
     expect(result.current.childGrade).toBe('Grade 3');
-    expect(result.current.childCurriculum).toBe('NCERT');
+    expect(result.current.childCurriculum).toBe('CBSE');
   });
 
   it('auto-selects the first child and loads its stats/report/subjects', async () => {

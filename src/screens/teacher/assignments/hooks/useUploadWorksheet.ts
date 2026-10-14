@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { SUBJECTS, LANGUAGES } from '../constants';
 import { pdfToImages, imagesToPdfBase64 } from '../utils/pdfHelpers';
@@ -20,6 +20,7 @@ interface UseUploadWorksheetArgs {
   gradeOptions: string[];
   effectiveGrade: string;
   effectiveCurriculum: string;
+  selectedLanguage: string;
   setSelectedLanguage: (v: string) => void;
   setSuccessCriteria: (v: string[]) => void;
   setTeacherNotes: React.Dispatch<React.SetStateAction<string>>;
@@ -38,7 +39,7 @@ interface UseUploadWorksheetArgs {
 // useBulkUpload's shape.
 export function useUploadWorksheet({
   user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
-  gradeOptions, effectiveGrade, effectiveCurriculum, setSelectedLanguage,
+  gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
   setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
   quizDifficulty, setQuizQuestions, setType,
 }: UseUploadWorksheetArgs) {
@@ -311,6 +312,7 @@ export function useUploadWorksheet({
         formData.append('grade', grade || effectiveGrade);
         formData.append('subject', subject || 'Mathematics');
         formData.append('school', user?.school || '');
+        if (selectedLanguage) formData.append('language', selectedLanguage);
         const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/generate-image`, { method: 'POST', body: formData });
         data = await res.json();
         if (!res.ok) data = { error: data.error || 'Failed to generate interactive quiz' };
@@ -324,6 +326,7 @@ export function useUploadWorksheet({
             fileBase64: file.base64, mimeType: file.mime, filename: file.name || 'worksheet.pdf',
             grade: grade || effectiveGrade, subject: subject || 'Mathematics', school: user?.school || '',
             structuredText: (file as any).structuredText,
+            language: selectedLanguage || undefined,
           }),
         });
         const jobData = await jobRes.json();
@@ -345,7 +348,9 @@ export function useUploadWorksheet({
         // if it changed — so a quiz can never be published against a different
         // worksheet than the one it was built from (the Telugu→Math class of bug).
         const sourceDocKey = docFiles.map(f => f.url || f.name).sort().join('|');
-        const quizData = { ...data.quiz, school: user?.school || '', curriculum: effectiveCurriculum, _editMode: false, _sourceDocKey: sourceDocKey };
+        // language: the teacher's pick (or the sheet's own, auto-detected server-side
+        // when blank) drives the students' answer keyboard/IME in the rendered quiz.
+        const quizData = { ...data.quiz, school: user?.school || '', curriculum: effectiveCurriculum, language: selectedLanguage || data.quiz.language || '', _editMode: false, _sourceDocKey: sourceDocKey };
         try {
           const previewRes = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: quizData }) });
           if (previewRes.ok) quizData._previewHTML = await previewRes.text();
@@ -361,6 +366,22 @@ export function useUploadWorksheet({
       setGeneratingInteractiveQuiz(false);
     }
   }
+
+  // Changing the worksheet language after generation re-renders the preview with it
+  // (it used to be ignored, so "change language" did nothing).
+  useEffect(() => {
+    if (!interactiveQuiz || interactiveQuiz._editMode) return;
+    if ((interactiveQuiz.language || '') === selectedLanguage) return;
+    const updated = { ...interactiveQuiz, language: selectedLanguage };
+    setInteractiveQuiz(updated);
+    fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: updated }),
+    })
+      .then(r => (r.ok ? r.text() : null))
+      .then(html => { if (html) setInteractiveQuiz((q: any) => (q && q.language === selectedLanguage ? { ...q, _previewHTML: html } : q)); })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-render only when the chosen language changes
+  }, [selectedLanguage]);
 
   // Generate MCQ quiz from extracted worksheet questions
   async function generateQuizFromExtracted() {

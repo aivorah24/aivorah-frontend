@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { spacing, radius } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
 import { resolveStudentStatus, STATUS_META } from '../../utils/studentStatus';
+import { normalizeCurriculum } from '../../utils/curriculum';
 
 const P = {
   rose:  '#BAA467',
@@ -152,7 +153,7 @@ export default function TeacherAIPanel() {
   }, [messages, loading]);
 
   const classSummary = students.map(s =>
-    `${s.name} (${s.grade}, ${s.curriculum}): ${s.progressPct || 0}% progress, ` +
+    `${s.name} (${s.grade}, ${normalizeCurriculum(s.curriculum)}): ${s.progressPct || 0}% progress, ` +
     `${(s.completedTopics || []).length} topics done [${(s.completedTopics || []).join(', ') || 'none'}], ` +
     `${s.currentStreak || 0}-day streak, ${s.assignmentsDone || 0} assignments, ` +
     `last active: ${s.lastActive ? new Date(s.lastActive).toDateString() : 'never'}, ` +

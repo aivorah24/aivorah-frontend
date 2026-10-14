@@ -2,6 +2,8 @@ import SERVER_URL from '../../../../config/serverUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
 import SCHEDULE_SERVER_URL from '../../../../config/scheduleServerUrl';
+import { authHeader } from '../../../../services/authHeader';
+import { isCbseCurriculum } from '../../../../utils/curriculum';
 
 // Raw API calls for the Dashboard feature — no state, no caching, no parsing.
 // Each function throws/rejects on failure; callers (useDashboardData) decide
@@ -27,11 +29,11 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
   const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && parseInt(grade.replace(/\D/g, ''), 10) >= 6;
-  // CBSE/NCERT chapter names come from the verified seed data in the same service;
+  // CBSE (NCERT-book) chapter names come from the verified seed data in the same service;
   // the monolith still serves its own old copy of the titles.
-  const isCbseNcert = /^(cbse|ncert)$/i.test(curriculum.trim());
+  const isCbse = isCbseCurriculum(curriculum);
   const path = `/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`;
-  if (isCbseNcert) {
+  if (isCbse) {
     try {
       const res = await fetch(`${LEARNING_PATHS_SERVER_URL}${path}`);
       if (res.ok) return await res.json();
@@ -43,7 +45,7 @@ export async function fetchCurriculumSubjects(curriculum: string, grade: string)
 }
 
 export async function fetchUpcomingDeadlines(studentId: string) {
-  const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=true`);
+  const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${studentId}&hideCompleted=true`, { headers: await authHeader() });
   return res.json();
 }
 

@@ -2,12 +2,12 @@
 // from the Firebase ID token, never from an email parameter.
 import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 
-export type V2NotificationType = 'challenge_assigned' | 'assignment_assigned' | 'challenge_due' | 'assignment_due' | 'event_scheduled';
+export type V2NotificationType = 'challenge_assigned' | 'assignment_assigned' | 'challenge_due' | 'assignment_due' | 'event_scheduled' | 'class_post' | 'announcement' | 'account_updated';
 
 export interface V2Notification {
   id: string;
   type: V2NotificationType;
-  entityType: 'challenge_assignment' | 'assignment' | 'schedule_event';
+  entityType: 'challenge_assignment' | 'assignment' | 'schedule_event' | 'class_post' | 'announcement' | 'user';
   entityId: string;
   childId: string | null;
   title: string;
@@ -25,6 +25,14 @@ export interface V2Notification {
     startTime?: string | null;
     eventType?: string | null;
     creatorRole?: string;
+    // class_post
+    postId?: string;
+    grade?: string;
+    section?: string;
+    // announcement
+    announcementId?: string;
+    severity?: 'info' | 'warning' | 'critical';
+    displayType?: 'banner' | 'inbox' | 'both';
   };
   actorRole: string | null;
   createdAt: string;

@@ -73,3 +73,23 @@ describe('stripInternalQuizFields', () => {
     expect(stripInternalQuizFields(quiz)).toEqual(quiz);
   });
 });
+
+describe('generateQuizHTMLPreview — worksheet pictures', () => {
+  const quizWith = (q: any) => ({ tasks: [{ title: 'T', tier: 'MUST DO', questions: [{ question: 'Look', answer: 1, ...q }] }] });
+
+  test('hosted and inline pictures are used as-is; only legacy relative paths get the server prefix', () => {
+    expect(generateQuizHTMLPreview(quizWith({ imageUrl: 'https://res.cloudinary.com/a.png' }))).toContain('src="https://res.cloudinary.com/a.png"');
+    expect(generateQuizHTMLPreview(quizWith({ imageUrl: 'data:image/png;base64,AAAA' }))).toContain('src="data:image/png;base64,AAAA"');
+    expect(generateQuizHTMLPreview(quizWith({ imageUrl: '/data/images/quiz/x.png' }))).toContain('src="https://server.test/data/images/quiz/x.png"');
+  });
+
+  test('pictures are responsive (aspect kept), escaped, and fall back to a note if they fail', () => {
+    const html = generateQuizHTMLPreview(quizWith({ imageUrl: 'https://x.test/a.png', diagramDescription: 'A "big" cat' }));
+    expect(html).toContain('class="wk-img"');
+    expect(html).toMatch(/\.wk-img\{[^}]*max-width:100%[^}]*\}/);
+    expect(html).toMatch(/\.wk-img\{[^}]*height:auto[^}]*\}/);
+    expect(html).toContain('alt="A &quot;big&quot; cat"');
+    expect(html).toContain('onerror="wkImgError(this)"');
+    expect(html.slice(0, html.indexOf('</head>'))).toContain('function wkImgError');
+  });
+});

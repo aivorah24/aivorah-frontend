@@ -30,6 +30,9 @@ import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
+import { friendlyAccountError } from '../shared/accountErrors';
+import FormSubmitError from '../shared/FormSubmitError';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
 interface Credentials {
   name: string;
@@ -114,7 +117,8 @@ function getGradesForCurriculum(curr: string): string[] {
 // options that belong to THIS school's base type. An IB school shows just the
 // three IB levels (PYP/MYP/DP); a CBSE school shows only CBSE; a school with
 // no base type set falls back to the full list.
-function curriculaForBase(base: string | null): string[] {
+function curriculaForBase(rawBase: string | null): string[] {
+  const base = normalizeCurriculum(rawBase) ?? null;
   if (base === 'IB') return ['IB PYP', 'IB MYP', 'IB DP'];
   if (base && CURRICULA.includes(base)) return [base];
   return CURRICULA;
@@ -123,7 +127,8 @@ function curriculaForBase(base: string | null): string[] {
 // For a school whose base type is already a single full curriculum (e.g. CBSE)
 // we pre-select it; for an IB school the exact level (PYP/MYP/DP) still depends
 // on the child, so we leave it unselected for the admin to choose.
-function defaultCurriculumForBase(base: string | null): string {
+function defaultCurriculumForBase(rawBase: string | null): string {
+  const base = normalizeCurriculum(rawBase);
   if (!base) return '';
   return CURRICULA.includes(base) ? base : '';
 }
@@ -266,7 +271,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setFormError(data?.error || 'Failed to add student'); return; }
+      if (!res.ok) { setFormError(friendlyAccountError(data?.error, 'Failed to add student')); return; }
       setResult(data as CreateResult);
     } catch {
       setFormError('Failed to add student. Check your connection.');
@@ -484,12 +489,7 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
                 )}
               </View>
 
-              {!!formError && (
-                <View style={styles.emptyBox}>
-                  <Feather name="alert-circle" size={22} color={colors.textDim} />
-                  <Text style={styles.emptyText}>{formError}</Text>
-                </View>
-              )}
+              <FormSubmitError message={formError} colors={colors} />
 
               <View style={styles.footerRow}>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={goToStudents} accessibilityRole="button" disabled={submitting}>
@@ -568,8 +568,6 @@ function makeStyles(colors: AppColors) {
     },
     secondaryBtnText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: colors.textHeading },
 
-    emptyBox: { alignItems: 'center', paddingTop: 12, paddingBottom: 12, gap: 10, paddingHorizontal: 24, marginBottom: spacing.md },
-    emptyText: { fontFamily: fonts.serif, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 },
 
     // ── Success state ────────────────────────────────────────────────────
     summaryCard: {

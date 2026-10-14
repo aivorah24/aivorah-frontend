@@ -32,11 +32,14 @@ import {
 } from './services/announcementsApi';
 import { SEVERITY_LABEL, severityColor } from './utils/severity';
 import { audienceLabel } from './utils/audience';
+import { displayStatus, DisplayStatus } from './utils/displayStatus';
 import { Announcement, AnnouncementAttachment } from './types';
 
 const STATUS_LABEL: Record<string, string> = {
-  draft: 'Draft', scheduled: 'Scheduled', published: 'Published', archived: 'Archived',
+  draft: 'Draft', scheduled: 'Scheduled', published: 'Published', expired: 'Expired', archived: 'Archived',
 };
+const STATUS_TABS = ['all', 'published', 'scheduled', 'expired', 'draft', 'archived'] as const;
+type StatusTab = typeof STATUS_TABS[number];
 const DISPLAY_LABEL: Record<string, string> = {
   inbox: 'Announcement Center', banner: 'Global Banner', both: 'Center + Banner',
 };
@@ -90,7 +93,7 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
   const [showComposer, setShowComposer] = useState(false);
   const [editTarget, setEditTarget] = useState<Announcement | null>(null);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
-  const [statusTab, setStatusTab] = useState<'all' | 'published' | 'scheduled' | 'draft' | 'archived'>(
+  const [statusTab, setStatusTab] = useState<StatusTab>(
     route?.params?.statusTab || 'all'
   );
 
@@ -122,8 +125,10 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const filteredItems = statusTab === 'all' ? items : items.filter((i) => i.status === statusTab);
-  const countFor = (status: typeof statusTab) => status === 'all' ? items.length : items.filter((i) => i.status === status).length;
+  const now = new Date();
+  const statusOf = (i: Announcement) => displayStatus(i, now);
+  const filteredItems = statusTab === 'all' ? items : items.filter((i) => statusOf(i) === statusTab);
+  const countFor = (status: StatusTab) => status === 'all' ? items.length : items.filter((i) => statusOf(i) === status).length;
 
   async function doPublish(item: Announcement) {
     setActionBusy(item.id);
@@ -156,13 +161,14 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabRow}>
-              {(['all', 'published', 'scheduled', 'draft', 'archived'] as const).map((s) => (
+              {STATUS_TABS.map((s) => (
                 <TouchableOpacity
                   key={s}
                   onPress={() => setStatusTab(s)}
                   style={[styles.statusTab, statusTab === s && styles.statusTabActive]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: statusTab === s }}
+                  testID={`announcement-tab-${s}`}
                 >
                   <Text style={[styles.statusTabText, statusTab === s && styles.statusTabTextActive]}>
                     {s === 'all' ? 'All' : STATUS_LABEL[s]} <Text style={styles.statusTabCount}>{countFor(s)}</Text>
@@ -198,30 +204,32 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
               </Text>
             </View>
           ) : (
-            filteredItems.map((item) => (
-              <View key={item.id} style={styles.card}>
+            filteredItems.map((item) => {
+              const shown = statusOf(item);
+              return (
+              <View key={item.id} style={styles.card} testID={`announcement-row-${item.id}`}>
                 <View style={styles.cardMain}>
                   <View style={styles.cardTitleRow}>
                     <View style={[styles.sevDot, { backgroundColor: severityColor(colors, item.severity) }]} />
                     <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={[styles.statusPill, statusPillStyle(item.status, colors)]}>
-                      <Text style={[styles.statusPillText, { color: statusPillStyle(item.status, colors).textColor }]}>
-                        {STATUS_LABEL[item.status] || item.status}
-                      </Text>
-                    </View>
                   </View>
                   <Text style={styles.cardMeta} numberOfLines={1}>
                     {audienceLabel(item)}  ·  {DISPLAY_LABEL[item.displayType] || item.displayType}  ·  {SEVERITY_LABEL[item.severity]}
                     {item.attachments.length > 0 ? `  ·  ${item.attachments.length} file${item.attachments.length > 1 ? 's' : ''}` : ''}
                   </Text>
                   <Text style={styles.cardDates} numberOfLines={1}>
-                    {item.status === 'scheduled' && item.startsAt
+                    {shown === 'scheduled' && item.startsAt
                       ? `Goes live ${toDateInput(item.startsAt)}`
                       : `Created ${toDateInput(item.createdAt)}`}
-                    {item.expiresAt ? `  ·  Expires ${toDateInput(item.expiresAt)}` : ''}
+                    {item.expiresAt ? `  ·  ${shown === 'expired' ? 'Expired' : 'Expires'} ${toDateInput(item.expiresAt)}` : ''}
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
+                  <View style={[styles.statusPill, statusPillStyle(shown, colors)]}>
+                    <Text style={[styles.statusPillText, { color: statusPillStyle(shown, colors).textColor }]} testID={`announcement-status-${item.id}`}>
+                      {STATUS_LABEL[shown]}
+                    </Text>
+                  </View>
                   {(item.status === 'draft' || item.status === 'scheduled') && (
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: colors.accentYellow }]}
@@ -255,7 +263,8 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
                   )}
                 </View>
               </View>
-            ))
+              );
+            })
           )}
         </ScrollView>
 
@@ -275,8 +284,9 @@ export default function AnnouncementManagerScreen({ navigation, route }: any) {
   );
 }
 
-function statusPillStyle(status: string, colors: AppColors): any {
+function statusPillStyle(status: DisplayStatus, colors: AppColors): any {
   if (status === 'published') return { backgroundColor: `${colors.accentGreen}22`, textColor: colors.accentGreen };
+  if (status === 'expired') return { backgroundColor: `${colors.accentRed}14`, textColor: colors.accentRed };
   if (status === 'scheduled') return { backgroundColor: `${colors.accentOrange}22`, textColor: colors.accentOrange };
   if (status === 'archived') return { backgroundColor: `${colors.textDim}22`, textColor: colors.textDim };
   return { backgroundColor: `${colors.textMuted}22`, textColor: colors.textMuted };
@@ -718,11 +728,11 @@ function makeStyles(colors: AppColors) {
     cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sevDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
     cardTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 14.5, fontWeight: '700', color: colors.textHeading },
-    statusPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+    statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, marginRight: 4 },
     statusPillText: { fontFamily: fonts.serif, fontSize: 10.5, fontWeight: '700' },
     cardMeta: { fontFamily: fonts.serif, fontSize: 12, color: colors.textMuted, marginTop: 5 },
     cardDates: { fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, marginTop: 3 },
-    cardActions: { flexDirection: 'row', gap: 8 },
+    cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     actionBtn: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: radius.sm },
     actionBtnOutline: { borderWidth: 1, borderColor: colors.borderColor },
     actionBtnText: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '700' },

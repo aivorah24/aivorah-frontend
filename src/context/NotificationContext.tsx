@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, toNotifItem, isAssignmentType, isEventType, isV2OwnedLegacy } from './notifItem';
+import { NotifItem, CategoryPrefs, toNotifItem, isAssignmentType, isEventType, isAccountType, isClassPostType, isAnnouncementType, isV2OwnedLegacy, isV2Allowed } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -31,6 +31,7 @@ interface NotificationState {
   unreadAssignments: number;
   unreadChallenges: number;
   unreadEvents: number;
+  unreadAccount: number;
   unreadJoinRequests: number; // pending B2C→B2B school-join requests (school-admin only)
   latestNotif: LatestNotif | null;
   notificationItems: NotifItem[]; // newest first, includes the latest unread chat message
@@ -58,6 +59,7 @@ const NotificationContext = createContext<NotificationState>({
   unreadAssignments: 0,
   unreadChallenges: 0,
   unreadEvents: 0,
+  unreadAccount: 0,
   unreadJoinRequests: 0,
   latestNotif: null,
   notificationItems: [],
@@ -172,12 +174,15 @@ function normalizeLatest(raw: any): LatestNotif | null {
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, applyAccountUpdate } = useAuth();
+  const applyAccountUpdateRef = useRef(applyAccountUpdate);
+  useEffect(() => { applyAccountUpdateRef.current = applyAccountUpdate; }, [applyAccountUpdate]);
 
   const [unreadCount,       setUnreadCount]       = useState(0);
   const [unreadAssignments, setUnreadAssignments] = useState(0);
   const [unreadChallenges,  setUnreadChallenges]  = useState(0);
   const [unreadEvents,      setUnreadEvents]      = useState(0);
+  const [unreadAccount,     setUnreadAccount]     = useState(0);
   const [unreadJoinRequests, setUnreadJoinRequests] = useState(0);
   const [latestNotif,       setLatestNotif]       = useState<LatestNotif | null>(null);
   // Legacy-derived items (whole feed in legacy mode; message/event/task/portfolio only in V2 mode).
@@ -202,16 +207,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const locallyReadRef  = useRef<Map<string, string>>(new Map());
   const [localReads,    setLocalReads]    = useState<Map<string, string>>(new Map());
   const syncLocalReads  = () => setLocalReads(new Map(locallyReadRef.current));
+  // Category toggles as of the last poll (or muteCategory), so V2 rows honour them in the bell.
+  const [catPrefs,      setCatPrefs]      = useState<CategoryPrefs>({ assign: true, challenge: true });
 
   const notificationItems = useMemo(() => {
     if (!v2Active) return legacyItems;
     const withLocalReads = (n: V2Notification) =>
       !n.readAt && localReads.has(n.id) ? { ...n, readAt: localReads.get(n.id)! } : n;
-    const v2 = mergeById(v2FirstPage, v2Older).map(withLocalReads).filter(n => !n.readAt).map(toNotifItem);
+    const v2 = mergeById(v2FirstPage, v2Older).map(withLocalReads)
+      .filter(n => !n.readAt && isV2Allowed(n, catPrefs)).map(toNotifItem);
     const others = legacyItems.filter(i => !isV2OwnedLegacy(i));
     const ts = (i: NotifItem) => Date.parse(i.createdAt) || 0;
     return [...v2, ...others].sort((a, b) => ts(b) - ts(a) || (b.id < a.id ? -1 : 1));
-  }, [v2Active, v2FirstPage, v2Older, legacyItems, localReads]);
+  }, [v2Active, v2FirstPage, v2Older, legacyItems, localReads, catPrefs]);
 
   const prevMsgRef       = useRef(0);
   const prevAssignRef    = useRef(0);
@@ -310,6 +318,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const allowAssign    = notifPrefs.assignmentAlerts   !== false;
       const allowMsg       = notifPrefs.teacherMessages     !== false;
       const allowChallenge = notifPrefs.challengeUpdates    !== false;
+      const prefsNow: CategoryPrefs = { assign: allowAssign, challenge: allowChallenge };
+      setCatPrefs(p => (p.assign === allowAssign && p.challenge === allowChallenge ? p : prefsNow));
 
       // A challenge's due-date event follows the Challenge Updates toggle, not
       // Assignment Alerts — so count it under challenges, never under events.
@@ -374,7 +384,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       watermarkRef.current = Math.max(watermarkRef.current, ...feed.map(ts));
 
       if (v2On && !v2PollFailed) {
-        const arrived = v2!.unread.filter(n => !v2SeenIdsRef.current.has(n.id) && !locallyReadRef.current.has(n.id));
+        const arrived = v2!.unread.filter(n => !v2SeenIdsRef.current.has(n.id) && !locallyReadRef.current.has(n.id) && isV2Allowed(n, prefsNow));
         v2!.page.forEach(n => v2SeenIdsRef.current.add(n.id));
         v2!.unread.forEach(n => v2SeenIdsRef.current.add(n.id));
         // Local reads the server no longer lists as unread are confirmed; forget them.
@@ -384,6 +394,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (v2BaselineRef.current && !markReadInFlight.current && arrived.length) {
           fresh = [...arrived.map(toNotifItem), ...fresh].sort((a, b) => ts(b) - ts(a));
         }
+        // A platform admin edited this account: re-read the profile once per poll.
+        if (v2BaselineRef.current && arrived.some(isAccountType)) applyAccountUpdateRef.current?.()?.catch(() => {});
         v2BaselineRef.current = true;
       }
 
@@ -410,15 +422,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setLegacyItems(feed);
 
       if (v2On) {
-        // V2 rows ignore the category toggles: those only gate push (Decision 7).
+        // Category toggles hide V2 rows from the bell, badge and toast, like legacy.
         const stillUnread = v2!.unread.filter(n => !locallyReadRef.current.has(n.id));
         const total = Math.max(0, v2!.unreadTotal - (v2!.unread.length - stillUnread.length));
         const assignUnread = stillUnread.filter(isAssignmentType).length;
         const eventUnread = stillUnread.filter(isEventType).length;
+        // Class posts and announcements have no badge category of their own; never count them as challenges.
+        const classPostUnread = stillUnread.filter(n => isClassPostType(n) || isAnnouncementType(n)).length;
+        const accountUnread = stillUnread.filter(isAccountType).length;
+        const allowedEvents = stillUnread.filter(n => isEventType(n) && isV2Allowed(n, prefsNow)).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
-        setUnreadAssignments(assignUnread);
-        setUnreadChallenges(Math.max(0, total - assignUnread - eventUnread) + (allowChallenge ? challengeEventCount : 0));
-        setUnreadEvents(eventUnread + (allowAssign ? autoDueEvents : 0));
+        setUnreadAssignments(allowAssign ? assignUnread : 0);
+        setUnreadAccount(accountUnread);
+        setUnreadChallenges(allowChallenge ? Math.max(0, total - assignUnread - eventUnread - classPostUnread - accountUnread) + challengeEventCount : 0);
+        setUnreadEvents(allowedEvents + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);
         setV2Active(true);
@@ -439,7 +456,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user?.email) {
       // reset tied to the same effect that owns the polling subscription below — external sync, see react-hooks/set-state-in-effect
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0);
+      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0); setUnreadAccount(0);
       setLatestNotif(null); setToastVisible(false);
       prevMsgRef.current = 0; prevAssignRef.current = 0; prevChallengeRef.current = 0; prevEventRef.current = 0;
       staleGuardUntil.current = 0; markReadCutoff.current = null;
@@ -606,6 +623,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // so the bell reflects the change instantly instead of waiting for the next poll.
   // (The poll itself already respects the saved preference on subsequent fetches.)
   const muteCategory = useCallback((key: 'assignmentAlerts' | 'challengeUpdates') => {
+    setCatPrefs(p => (key === 'challengeUpdates' ? { ...p, challenge: false } : { ...p, assign: false }));
     if (key === 'challengeUpdates') {
       setUnreadChallenges(0);
       prevChallengeRef.current = 0;
@@ -635,7 +653,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     locallyReadRef.current.set(id, new Date().toISOString());
     if (isAssignmentType(known)) setUnreadAssignments(c => Math.max(0, c - 1));
     else if (isEventType(known)) setUnreadEvents(c => Math.max(0, c - 1));
-    else setUnreadChallenges(c => Math.max(0, c - 1));
+    else if (isAccountType(known)) setUnreadAccount(c => Math.max(0, c - 1));
+    else if (!isClassPostType(known) && !isAnnouncementType(known)) setUnreadChallenges(c => Math.max(0, c - 1));
     syncLocalReads();
     try {
       await apiMarkRead(id);
@@ -653,6 +672,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       mergeById(v2FirstPage, v2Older).forEach(n => { if (!n.readAt) locallyReadRef.current.set(n.id, now); });
       setUnreadAssignments(0);
       setUnreadChallenges(0);
+      setUnreadAccount(0);
       setUnreadEvents(0);
       syncLocalReads();
       await markAllNotificationsRead().catch(err => { if (__DEV__) console.warn('[NotifCtx] read-all failed:', err); });
@@ -679,7 +699,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   return (
     <NotificationContext.Provider value={{
-      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadJoinRequests,
+      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadAccount, unreadJoinRequests,
       latestNotif, notificationItems, toastItem, toastVisible,
       dismissToast, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents, refresh, triggerPoll, muteCategory,
       notificationsV2Active: v2Active, feedStatus, hasMore: v2Active && !!v2Cursor, loadingMore, loadMore,

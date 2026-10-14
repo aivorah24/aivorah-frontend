@@ -30,21 +30,15 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
+import {
+  parseCsv, xlsxToGrid, guessStudentField, emptyStudentRow, csvEscape, downloadCsv, EMAIL_RE,
+  type StudentImportField, type StudentImportRow,
+} from '../../../utils/spreadsheet';
 import SCHOOL_ADMIN_SERVER_URL from '../../../config/schoolAdminServerUrl';
+import { normalizeCurriculum } from '../../../utils/curriculum';
 
-type FieldKey = 'studentName' | 'studentEmail' | 'admissionNo' | 'curriculum' | 'grade' | 'section' | 'parentName' | 'parentEmail' | 'parentPhone';
-
-interface ParsedRow {
-  studentName: string;
-  studentEmail: string;
-  admissionNo: string;
-  curriculum: string;
-  grade: string;
-  section: string;
-  parentName: string;
-  parentEmail: string;
-  parentPhone: string;
-}
+type FieldKey = StudentImportField;
+type ParsedRow = StudentImportRow;
 
 interface InvalidRow {
   rowNum: number;
@@ -102,105 +96,8 @@ const FIELD_OPTIONS: { value: FieldKey | ''; label: string }[] = [
   { value: 'parentPhone', label: 'Parent Phone' },
 ];
 
-// ── Robust CSV parsing ──────────────────────────────────────────────────────
-// Handles quoted cells containing commas and escaped double-quotes (""),
-// CRLF/LF line endings, and skips fully-empty lines.
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let field = '';
-  let row: string[] = [];
-  let inQuotes = false;
-  const src = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-  for (let i = 0; i < src.length; i++) {
-    const ch = src[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (src[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else {
-        field += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ',') {
-      row.push(field);
-      field = '';
-    } else if (ch === '\n') {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = '';
-    } else {
-      field += ch;
-    }
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows.filter((r) => r.some((c) => c.trim() !== ''));
-}
-
-// Excel cells come back as native strings/numbers/dates depending on how the
-// admin typed them (e.g. a grade like "3" as a real number) — force every
-// cell to a string so downstream mapping/validation matches the CSV path
-// exactly, which is all strings by construction.
-function xlsxToGrid(buffer: ArrayBuffer): string[][] {
-  const XLSX = require('xlsx');
-  const wb = XLSX.read(buffer, { type: 'array' });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
-  return rows.map((row) => row.map((cell) => String(cell ?? '').trim()));
-}
-
-// Header variants → default field guess (case-insensitive, trimmed). Used to
-// pre-select the mapping step so most admins never have to touch it.
-function guessField(header: string): FieldKey | '' {
-  const h = header.trim().toLowerCase();
-  switch (h) {
-    case 'student name': case 'name': return 'studentName';
-    case 'student email': case 'email': return 'studentEmail';
-    case 'admission no': case 'admission number': case 'admission #': return 'admissionNo';
-    case 'curriculum': case 'board': return 'curriculum';
-    case 'grade': return 'grade';
-    case 'section': return 'section';
-    case 'parent name': return 'parentName';
-    case 'parent email': return 'parentEmail';
-    case 'parent phone': case 'parent contact': return 'parentPhone';
-    default: return '';
-  }
-}
-
-function emptyRow(): ParsedRow {
-  return { studentName: '', studentEmail: '', admissionNo: '', curriculum: '', grade: '', section: '', parentName: '', parentEmail: '', parentPhone: '' };
-}
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// ── Web download helpers ────────────────────────────────────────────────────
-function csvEscape(value: string): string {
-  const v = value ?? '';
-  if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-  return v;
-}
-
-function downloadCsv(filename: string, content: string) {
-  if (Platform.OS !== 'web') return;
-  try {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch {
-    // no-op — non-web / restricted environments
-  }
-}
+const guessField = guessStudentField;
+const emptyRow = emptyStudentRow;
 
 // ── Step indicator ──────────────────────────────────────────────────────────
 function StepIndicator({ step, colors }: { step: number; colors: AppColors }) {
@@ -464,6 +361,7 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
         if (!field) return;
         rec[field] = (cells[c] ?? '').trim();
       });
+      rec.curriculum = normalizeCurriculum(rec.curriculum);
       const rowNum = i + 2; // +1 header, +1 to make it 1-indexed for the file
       if (!rec.studentName) {
         invalid.push({ rowNum, reason: 'Missing Student Name' });

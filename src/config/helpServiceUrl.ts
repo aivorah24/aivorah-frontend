@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Help Center microservice base URL (aivorah-help-center-service), deployed
@@ -13,6 +14,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-help-center-service-tmmh.onrender.com';
 
 const HELP_SERVICE_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3013' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3013' : LIVE_SERVICE;
 
 export default HELP_SERVICE_URL;
