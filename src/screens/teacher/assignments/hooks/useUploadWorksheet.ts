@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { SUBJECTS, LANGUAGES } from '../constants';
 import { pdfToImages, imagesToPdfBase64 } from '../utils/pdfHelpers';
-import { stripGradePrefix } from '../utils/helpers';
-import { pollJob } from '../services/jobsService';
+import { stripGradePrefix, gradeFromLabel } from '../utils/helpers';
+import { pollJob, detectWorksheetMeta } from '../services/jobsService';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 
 interface UseUploadWorksheetArgs {
@@ -17,6 +18,7 @@ interface UseUploadWorksheetArgs {
   grade: string;
   setGrade: (v: string) => void;
   curriculum: string;
+  setCurriculum: (v: string) => void;
   gradeOptions: string[];
   effectiveGrade: string;
   effectiveCurriculum: string;
@@ -38,7 +40,7 @@ interface UseUploadWorksheetArgs {
 // third step of its hooks/components decomposition (2026-08-25), mirroring
 // useBulkUpload's shape.
 export function useUploadWorksheet({
-  user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
+  user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum, setCurriculum,
   gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
   setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
   quizDifficulty, setQuizQuestions, setType,
@@ -82,6 +84,17 @@ export function useUploadWorksheet({
         });
 
       let fileDataArr = await Promise.all(files.map(readFile));
+
+      // Grade / curriculum / chapter from the printed header + file name — fast,
+      // so the form doesn't sit on the teacher's defaults while the AI
+      // extraction below runs. What it finds wins over the AI's later guess.
+      const detected: { grade?: string; curriculum?: string } = {};
+      const metaReady = detectWorksheetMeta(fileDataArr[0], ASSIGNMENTS_SERVER_URL).then((meta) => {
+        if (!meta) return;
+        if (meta.grade) { detected.grade = meta.grade; setGrade(gradeFromLabel(meta.grade, gradeOptions)); }
+        if (meta.curriculum) { detected.curriculum = meta.curriculum; setCurriculum(normalizeCurriculum(meta.curriculum)); }
+        if (meta.chapter) setChapter(prev => prev || meta.chapter);
+      });
 
       // Convert PDFs to per-page images for vision-based extraction
       console.log('[upload] Files before PDF conversion:', fileDataArr.map(f => `${f.name} (${f.mime})`));
@@ -183,13 +196,14 @@ export function useUploadWorksheet({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(
               allBase64.length === 1
-                ? { fileBase64: allBase64[0].base64, mimeType: allBase64[0].mimeType }
-                : { files: allBase64 }
+                ? { fileBase64: allBase64[0].base64, mimeType: allBase64[0].mimeType, fileName: files[0]?.name }
+                : { files: allBase64, fileName: files[0]?.name }
             ),
           });
           const jobData = await jobRes.json();
           if (!jobRes.ok || !jobData.jobId) throw new Error(jobData.error || 'Could not start extraction.');
           const eData = await pollJob(jobData.jobId, ASSIGNMENTS_SERVER_URL);
+          await metaReady;
           console.log('[extract] job done, data:', JSON.stringify(eData).slice(0, 500));
           if (eData.title && !title.trim()) setTitle(stripGradePrefix(eData.title));
             // Use chapter if available, otherwise fall back to title as chapter/topic
@@ -211,19 +225,10 @@ export function useUploadWorksheet({
               const matchLang = LANGUAGES.find(l => l.toLowerCase() === String(eData.language).toLowerCase());
               if (matchLang) setSelectedLanguage(matchLang);
             }
-            if (eData.grade) {
-              const rawGrade = String(eData.grade).trim();
-              const gradeStr = rawGrade.replace(/[^0-9]/g, '');
-              // gradeOptions at this exact moment still reflects the OLD grade
-              // (state hasn't updated yet), so searching only within it can never
-              // find a grade this teacher doesn't normally teach (e.g. Grade 4
-              // when they teach Grade 3/5) — it would silently no-op. Always fall
-              // back to the worksheet's own literal extracted grade instead.
-              const matchGrade = gradeOptions.find((g: string) => (gradeStr && g.includes(gradeStr)) || g.toLowerCase() === rawGrade.toLowerCase());
-              if (matchGrade) setGrade(matchGrade);
-              else if (gradeStr) setGrade(`Grade ${gradeStr}`);
-              else setGrade(rawGrade);
-            }
+            if (eData.grade && !detected.grade) setGrade(gradeFromLabel(String(eData.grade), gradeOptions));
+            // Was never applied: the form kept the teacher's own curriculum
+            // (e.g. CBSE) on an IB PYP worksheet.
+            if (eData.curriculum && !detected.curriculum) setCurriculum(normalizeCurriculum(String(eData.curriculum)));
             // Purpose and learning outcomes no longer auto-fill Note — teacher writes their own notes
             // if (eData.purpose) setNote(prev => prev || eData.purpose);
             // if (eData.learningOutcomes) ... removed to avoid duplication
