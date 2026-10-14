@@ -176,7 +176,7 @@ function normalizeLatest(raw: any): LatestNotif | null {
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, applyAccountUpdate } = useAuth();
   const applyAccountUpdateRef = useRef(applyAccountUpdate);
-  applyAccountUpdateRef.current = applyAccountUpdate;
+  useEffect(() => { applyAccountUpdateRef.current = applyAccountUpdate; }, [applyAccountUpdate]);
 
   const [unreadCount,       setUnreadCount]       = useState(0);
   const [unreadAssignments, setUnreadAssignments] = useState(0);

@@ -18,6 +18,7 @@ export function AcademicFields({ schoolId, value, onChange, s, colors }: {
 
   useEffect(() => {
     let live = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset before refetching for the new school
     setGrades([]);
     if (schoolId) fetchSchoolStructure(schoolId).then((g) => { if (live) setGrades(g); }).catch(() => {});
     return () => { live = false; };

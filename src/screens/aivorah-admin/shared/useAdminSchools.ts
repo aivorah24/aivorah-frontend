@@ -19,6 +19,7 @@ export function useAdminSchools() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch
   useEffect(() => { reload(); }, [reload]);
 
   // Placeholder text for a school dropdown in each state.

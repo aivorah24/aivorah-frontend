@@ -332,6 +332,19 @@ describe('category toggles gate V2 rows (student + parent)', () => {
     expect(screen.getByTestId('order')).toHaveTextContent('c1,msg_m1');
   });
 
+  test('account updates are never muted by Challenge Updates OFF', async () => {
+    setPrefs({ challengeUpdates: false });
+    await mount();
+    const ACC = v2('acc2', '2026-09-25T12:00:00Z', {
+      type: 'account_updated', entityType: 'user', entityId: 'u-parent', childId: null, title: 'Your grade has been updated', data: {},
+    });
+    page = [ACC, C1, A1];
+    unread = [ACC, C1, A1];
+    await poll();
+    await waitFor(() => expect(screen.getByTestId('order')).toHaveTextContent(/^acc2,/));
+    expect(mockApplyAccountUpdate).toHaveBeenCalledTimes(1);
+  });
+
   test('turning the toggle back ON shows the category again', async () => {
     setPrefs({ challengeUpdates: false });
     await mount();

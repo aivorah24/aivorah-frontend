@@ -9,6 +9,7 @@ export const DEFAULT_PAGE_SIZE = 10;
 export function usePaged<T>(rows: T[], pageSize = DEFAULT_PAGE_SIZE) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- clamp after the list shrinks
   useEffect(() => { if (page > pageCount - 1) setPage(0); }, [page, pageCount]);
   const pageRows = useMemo(() => rows.slice(page * pageSize, page * pageSize + pageSize), [rows, page, pageSize]);
   return { page, setPage, pageCount, pageRows, total: rows.length, pageSize };

@@ -113,7 +113,7 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
       <View style={s.field}>
         <Text style={s.label}>EMAIL</Text>
         <TextInput style={[s.input, s.inputReadOnly]} value={user.email} editable={false} />
-        <Text style={s.hint}>Email is the user's login. They change it themselves from Settings → Change email, which moves their data with it.</Text>
+        <Text style={s.hint}>Email is the user’s login. They change it themselves from Settings → Change email, which moves their data with it.</Text>
       </View>
       <SelectField testID="users-edit-role" label="Role" value={role} options={ROLE_OPTIONS} onChange={(v) => { setRole(v); setConfirmRole(false); }} minWidth={0} />
       <SelectField testID="users-edit-school" label="School" placeholder={schools.placeholder} value={school} options={schoolOptions} onChange={setSchool} minWidth={0} />
@@ -127,7 +127,7 @@ function EditBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: an
       {confirmRole && (
         <View style={[s.confirm, { borderColor: colors.accentYellow }]} testID="users-edit-role-confirm">
           <Text style={s.confirmText}>
-            Change role from {roleLabel(String(user.role))} to {roleLabel(role)}? They'll see a different app the next time they sign in. Press Save again to confirm.
+            Change role from {roleLabel(String(user.role))} to {roleLabel(role)}? They’ll see a different app the next time they sign in. Press Save again to confirm.
           </Text>
         </View>
       )}
@@ -189,7 +189,7 @@ function AddBody({ s, colors, onClose, onDone }: { s: any; colors: AppColors; on
         <Text style={[s.eyebrow, { color: colors.accentYellow }]}>ADD USER</Text>
         <Text style={s.title}>Invite a new user</Text>
       </View>
-      <Text style={s.hint}>They'll receive an email to set their password, then verify their email address before they can use Aivorah.</Text>
+      <Text style={s.hint}>They’ll receive an email to set their password, then verify their email address before they can use Aivorah.</Text>
       <View style={s.field}>
         <Text style={s.label}>FULL NAME</Text>
         <TextInput testID="users-add-name" style={s.input} value={name} onChangeText={setName} placeholder="e.g. Riya Shah" placeholderTextColor={colors.textDim} />

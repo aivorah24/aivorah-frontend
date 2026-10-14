@@ -92,6 +92,7 @@ export function StudentRosterTable({ students, selectedIds, onToggle, styles, co
   );
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   // A new filter/search can shrink the list below the current page.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- clamp after the list shrinks
   useEffect(() => { if (page > pageCount - 1) setPage(0); }, [page, pageCount]);
   const pageRows = rows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 

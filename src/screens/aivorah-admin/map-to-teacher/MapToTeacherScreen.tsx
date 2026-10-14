@@ -550,7 +550,7 @@ export default function MapToTeacherScreen({ navigation }: any) {
 
                   <View style={styles.infoNote}>
                     <Feather name="info" size={13} color={colors.accentBlue} />
-                    <Text style={styles.infoNoteText}>If no subject is selected, the students will be assigned as "General" only.</Text>
+                    <Text style={styles.infoNoteText}>If no subject is selected, the students will be assigned as “General” only.</Text>
                   </View>
                 </View>
               </View>
