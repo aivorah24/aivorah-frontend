@@ -29,7 +29,7 @@ let hookRef: ReturnType<typeof useResourcesState>;
 
 function Harness() {
   const h = useResourcesState();
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="loading">{String(h.loading)}</Text>;
 }
 

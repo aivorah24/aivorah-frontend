@@ -18,9 +18,8 @@ let currentUnmount: (() => void) | undefined;
 let onSaved: jest.Mock;
 
 function Harness({ teacher }: { teacher: EditTeacherParam | undefined }) {
-  onSaved = onSaved || jest.fn();
   const h = useEditTeacherState(teacher, 'admin@x.com', onSaved);
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="saving">{String(h.saving)}</Text>;
 }
 

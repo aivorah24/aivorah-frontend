@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Messages backend base URL — routed to the standalone
@@ -11,6 +12,6 @@ declare const __DEV__: boolean;
 const LIVE_MESSAGES_BACKEND = 'https://aivorah-messages-service-9qql.onrender.com';
 
 const MESSAGES_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3020' : LIVE_MESSAGES_BACKEND;
+  USE_LOCAL_SERVICES ? 'http://localhost:3020' : LIVE_MESSAGES_BACKEND;
 
 export default MESSAGES_SERVER_URL;

@@ -74,11 +74,12 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortAsc, setSortAsc] = useState(true);
 
+  const adminEmail = user?.email;
   const load = useCallback(async () => {
-    if (!user?.email) return;
+    if (!adminEmail) return;
     setError('');
     try {
-      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/people?adminEmail=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`${SCHOOL_ADMIN_SERVER_URL}/school-admin/people?adminEmail=${encodeURIComponent(adminEmail)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data?.error || 'Failed to load people'); return; }
       setPeople(Array.isArray(data) ? data : []);
@@ -88,7 +89,7 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.email]);
+  }, [adminEmail]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -124,12 +125,12 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
 
   const countFor = (role: RoleTab) => role === 'all' ? people.length : people.filter((p) => p.role === role).length;
 
-  function SortHeader({ label, sortKey: key, style }: { label: string; sortKey: SortKey; style?: any }) {
+  function renderSortHeader(label: string, key: SortKey) {
     const active = sortKey === key;
     return (
       <Pressable
         style={({ hovered }: any) => [
-          styles.th, style,
+          styles.th,
           Platform.OS === 'web' && hovered && styles.thHovered,
         ]}
         onPress={() => toggleSort(key)}
@@ -229,11 +230,11 @@ export default function SchoolAdminPeopleScreen({ navigation, route }: any) {
             // Desktop/tablet: real sortable table.
             <View style={styles.table}>
               <View style={styles.theadRow}>
-                <View style={styles.thNameCol}><SortHeader label="Name" sortKey="name" /></View>
-                <View style={styles.thEmailCol}><SortHeader label="Email" sortKey="email" /></View>
-                <View style={styles.thRoleCol}><SortHeader label="Role" sortKey="role" /></View>
+                <View style={styles.thNameCol}>{renderSortHeader('Name', 'name')}</View>
+                <View style={styles.thEmailCol}>{renderSortHeader('Email', 'email')}</View>
+                <View style={styles.thRoleCol}>{renderSortHeader('Role', 'role')}</View>
                 <View style={styles.thGradeCol}><Text style={[styles.thText, styles.thStatic]}>Grade</Text></View>
-                <View style={styles.thJoinedCol}><SortHeader label="Joined" sortKey="joinedAt" /></View>
+                <View style={styles.thJoinedCol}>{renderSortHeader('Joined', 'joinedAt')}</View>
               </View>
               {rows.map((p, i) => {
                 const tint = roleTint(colors, p.role);

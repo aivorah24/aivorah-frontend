@@ -27,6 +27,12 @@ export function useSubjects(curriculum: string, grade: string, isCBSE: boolean, 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError('');
+    // Never show the previous curriculum/grade's list while the new one loads (parent switching child).
+    setSubjects([]);
+    if (!curriculum || !grade) {
+      setLoading(false);
+      return;
+    }
 
     // For CBSE, query Qdrant with curriculum=CBSE
     const queryCurriculum = isCBSE ? 'CBSE' : curriculum;

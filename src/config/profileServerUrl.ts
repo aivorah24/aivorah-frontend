@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Profile microservice base URL (aivorah-profile-service) — student + parent
@@ -11,6 +12,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-profile-service-ug5c.onrender.com';
 
 const PROFILE_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:4002' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:4002' : LIVE_SERVICE;
 
 export default PROFILE_SERVER_URL;

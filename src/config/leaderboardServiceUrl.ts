@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Leaderboard microservice base URL (aivorah-leaderboard-service), deployed
@@ -13,6 +14,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-leaderboard-service-0nou.onrender.com';
 
 const LEADERBOARD_SERVICE_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:4003' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:4003' : LIVE_SERVICE;
 
 export default LEADERBOARD_SERVICE_URL;

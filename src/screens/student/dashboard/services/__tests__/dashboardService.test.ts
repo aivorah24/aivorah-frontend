@@ -4,6 +4,7 @@ jest.mock('../../../../../config/serverUrl', () => ({ __esModule: true, default:
 jest.mock('../../../../../config/learningPathsServerUrl', () => ({ __esModule: true, default: 'https://learning-paths.test' }));
 jest.mock('../../../../../config/leaderboardServiceUrl', () => ({ __esModule: true, default: 'https://lb.test' }));
 jest.mock('../../../../../config/scheduleServerUrl', () => ({ __esModule: true, default: 'https://schedule.test' }));
+jest.mock('../../../../../services/authHeader', () => ({ authHeader: jest.fn(async () => ({ Authorization: 'Bearer test-token' })) }));
 
 const ok = (body: unknown) => ({ ok: true, json: async () => body });
 

@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Teacher Students microservice (aivorah-students-service) — roster-management
@@ -15,6 +16,6 @@ declare const __DEV__: boolean;
 const LIVE_SERVICE = 'https://aivorah-students-service-h3se.onrender.com';
 
 const STUDENTS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3017' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3017' : LIVE_SERVICE;
 
 export default STUDENTS_SERVER_URL;
