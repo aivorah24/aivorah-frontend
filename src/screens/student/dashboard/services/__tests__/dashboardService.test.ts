@@ -20,6 +20,14 @@ describe('fetchCurriculumSubjects', () => {
     expect(data.subjects[0].chapters[0].title).toBe('Crop Production and Management');
   });
 
+  test.each([['ICSE', 'Grade 6'], ['Cambridge', 'Grade 3'], ['Cambridge', 'Grade 9']])('%s %s subjects come from the learning-paths service (syllabus-only board)', async (curriculum, grade) => {
+    (global.fetch as jest.Mock).mockResolvedValue(ok({ subjects: [] }));
+    await fetchCurriculumSubjects(curriculum, grade);
+    const url = String((global.fetch as jest.Mock).mock.calls[0][0]);
+    expect(url).toContain('learning-paths.test/curriculum/subjects');
+    expect(url).not.toContain('monolith.test');
+  });
+
   test('falls back to the monolith when the service is unreachable', async () => {
     (global.fetch as jest.Mock)
       .mockRejectedValueOnce(new Error('network'))
