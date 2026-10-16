@@ -270,6 +270,7 @@ export default function SettingsScreen({ navigation, route }: any) {
         setSelectedGrade={profileFields.setSelectedGrade}
         gradeLoading={profileFields.gradeLoading}
         onSave={profileFields.handleSaveGrade}
+        error={profileFields.gradeError}
         colors={colors}
         styles={styles}
       />
@@ -281,6 +282,10 @@ export default function SettingsScreen({ navigation, route }: any) {
         setSelectedCurriculum={profileFields.setSelectedCurriculum}
         curriculumLoading={profileFields.curriculumLoading}
         onSave={profileFields.handleSaveCurriculum}
+        error={profileFields.curriculumError}
+        needsGrade={profileFields.curriculumNeedsGrade}
+        selectedGrade={profileFields.selectedGrade}
+        setSelectedGrade={profileFields.setSelectedGrade}
         colors={colors}
         styles={styles}
       />

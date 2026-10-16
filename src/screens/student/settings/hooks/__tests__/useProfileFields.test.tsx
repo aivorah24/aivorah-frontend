@@ -25,6 +25,11 @@ function Harness({ user = { name: 'Aanya', grade: 'Grade 4', curriculum: 'IB PYP
       <Text testID="curriculumLoading">{String(hook.curriculumLoading)}</Text>
       <Text testID="newLocation">{hook.newLocation}</Text>
       <Text testID="locationLoading">{String(hook.locationLoading)}</Text>
+      <Text testID="gradeError">{hook.gradeError || ''}</Text>
+      <Text testID="curriculumError">{hook.curriculumError || ''}</Text>
+      <TouchableOpacity testID="setGrade7" onPress={() => hook.setSelectedGrade('Grade 7')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setGrade11" onPress={() => hook.setSelectedGrade('Grade 11')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setDP" onPress={() => hook.setSelectedCurriculum('IB DP')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setNameEmpty" onPress={() => hook.setNewName('  ')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="setNameValid" onPress={() => hook.setNewName('New Name')}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="saveName" onPress={() => hook.handleSaveName()}><Text>x</Text></TouchableOpacity>
@@ -194,5 +199,28 @@ describe('useProfileFields — resetForm', () => {
     await user.press(screen.getByTestId('reset'));
 
     expect(screen.getByTestId('newName').props.children).toBe('Aanya');
+  });
+});
+
+describe('useProfileFields — IB grade ranges', () => {
+  test('IB DP + Grade 7 shows the error and does not save', async () => {
+    const user = userEvent.setup();
+    await render(<Harness user={{ name: 'A', grade: 'Grade 11', curriculum: 'IB DP', email: 'a@a.com' }} />);
+    await user.press(screen.getByTestId('setGrade7'));
+    expect(screen.getByTestId('gradeError').props.children).toBe('IB DP is only for Grade 11–12. Please choose Grade 11 or 12, or switch to IB MYP for Grade 7.');
+    await user.press(screen.getByTestId('saveGrade'));
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('switching a Grade 7 student to IB DP needs a DP grade, then saves both together', async () => {
+    const user = userEvent.setup();
+    await render(<Harness user={{ name: 'A', grade: 'Grade 7', curriculum: 'IB MYP', email: 'a@a.com' }} />);
+    await user.press(screen.getByTestId('setDP'));
+    expect(screen.getByTestId('curriculumError').props.children).toMatch(/IB DP is only for Grade 11–12/);
+    await user.press(screen.getByTestId('saveCurriculum'));
+    expect(global.fetch).not.toHaveBeenCalled();
+    await user.press(screen.getByTestId('setGrade11'));
+    await user.press(screen.getByTestId('saveCurriculum'));
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith({ curriculum: 'IB DP', grade: 'Grade 11' }));
   });
 });

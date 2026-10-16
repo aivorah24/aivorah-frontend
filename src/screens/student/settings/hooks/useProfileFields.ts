@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PROFILE_SERVER_URL from '../../../../config/profileServerUrl';
 import { ALL_GRADES } from '../constants';
 import { normalizeCurriculum } from '../../../../utils/curriculum';
+import { curriculumGradeError } from '../../../../utils/curriculumGrades';
 
 // Name / Grade / Curriculum / Location edits - each saves independently on
 // its own PATCH, not a whole-form save.
@@ -20,6 +21,12 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
 
   const [selectedCurriculum, setSelectedCurriculum] = useState(user?.curriculum || '');
   const [curriculumLoading, setCurriculumLoading] = useState(false);
+  // IB programmes are grade-bound (PYP 1–5, MYP 6–10, DP 11–12): block a pair
+  // that would leave the student with no Learning Path.
+  const gradeError = curriculumGradeError(user?.curriculum, selectedGrade);
+  // A curriculum the current grade doesn't fit needs a new grade in the same save.
+  const curriculumNeedsGrade = !!curriculumGradeError(selectedCurriculum, user?.grade);
+  const curriculumError = curriculumGradeError(selectedCurriculum, curriculumNeedsGrade ? selectedGrade : user?.grade);
 
   const [newLocation, setNewLocation] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
@@ -48,7 +55,7 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
   }
 
   async function handleSaveGrade() {
-    if (!selectedGrade) return;
+    if (!selectedGrade || gradeError) return;
     setGradeLoading(true);
     try {
       await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
@@ -68,19 +75,20 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
   }
 
   async function handleSaveCurriculum() {
-    if (!selectedCurriculum) return;
+    if (!selectedCurriculum || curriculumError) return;
     const curriculum = normalizeCurriculum(selectedCurriculum);
+    const patch = curriculumNeedsGrade ? { curriculum, grade: selectedGrade } : { curriculum };
     setCurriculumLoading(true);
     try {
       await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email, curriculum }),
+        body: JSON.stringify({ email: user?.email, ...patch }),
       });
-      updateUser({ curriculum });
+      updateUser(patch);
       closeModal();
     } catch {
-      updateUser({ curriculum });
+      updateUser(patch);
       closeModal();
     } finally {
       setCurriculumLoading(false);
@@ -108,8 +116,8 @@ export function useProfileFields(user: any, updateUser: (patch: any) => void, cl
 
   return {
     newName, setNewName, nameError, setNameError, handleSaveName,
-    GRADES, selectedGrade, setSelectedGrade, gradeLoading, handleSaveGrade,
-    selectedCurriculum, setSelectedCurriculum, curriculumLoading, handleSaveCurriculum,
+    GRADES, selectedGrade, setSelectedGrade, gradeLoading, handleSaveGrade, gradeError,
+    selectedCurriculum, setSelectedCurriculum, curriculumLoading, handleSaveCurriculum, curriculumError, curriculumNeedsGrade,
     newLocation, setNewLocation, locationLoading, handleSaveLocation,
     resetForm,
   };
