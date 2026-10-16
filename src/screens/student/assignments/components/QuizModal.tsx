@@ -256,18 +256,18 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
               {result.perQuestion.filter((q: any) => q?.correct).length > 0 && (
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: '#9FB2A420', alignItems: 'center', justifyContent: 'center' }}>
-                      <Feather name="check-circle" size={15} color="#9FB2A4" />
+                    <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: colors.accentGreen + '20', alignItems: 'center', justifyContent: 'center' }}>
+                      <Feather name="check-circle" size={15} color={colors.accentGreen} />
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: colors.accentGreen }}>
                       Questions You Got Right ({result.perQuestion.filter((q: any) => q?.correct).length})
                     </Text>
                   </View>
                   {result.perQuestion.filter((q: any) => q?.correct).map((q: any, idx: number) => (
-                    <View key={idx} style={[styles.qRow, { borderColor: '#9FB2A430', backgroundColor: colors.cardDark, borderLeftWidth: 3, borderLeftColor: '#9FB2A4' }]}>
+                    <View key={idx} style={[styles.qRow, { borderColor: colors.accentGreen + '30', backgroundColor: colors.cardDark, borderLeftWidth: 3, borderLeftColor: colors.accentGreen }]}>
                       <View style={styles.qLeft}>
-                        <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: '#9FB2A420', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Feather name="check" size={13} color="#9FB2A4" />
+                        <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accentGreen + '20', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Feather name="check" size={13} color={colors.accentGreen} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.qText}>{q.question}</Text>

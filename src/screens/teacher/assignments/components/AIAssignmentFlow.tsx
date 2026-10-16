@@ -287,11 +287,11 @@ export function AIAssignmentFlow(props: {
             </View>
 
             {ibLinesOfInquiry.length > 0 && (
-              <View style={{ backgroundColor: colors.bgDark, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#C3DCD830' }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#3D7A74', marginBottom: 6 }}>LINES OF INQUIRY</Text>
+              <View style={{ backgroundColor: colors.bgDark, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#BAA46730' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 6 }}>LINES OF INQUIRY</Text>
                 {ibLinesOfInquiry.map((loi, i) => (
                   <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 4 }}>
-                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#3D7A74', marginTop: 7, flexShrink: 0 }} />
+                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#BAA467', marginTop: 7, flexShrink: 0 }} />
                     <Text style={{ flex: 1, fontSize: 12, color: colors.textMain, lineHeight: 18 }}>{loi}</Text>
                   </View>
                 ))}
@@ -313,8 +313,8 @@ export function AIAssignmentFlow(props: {
                   </View>
                 ) : null}
                 {ibKeyConcept ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#93B0AC18', borderWidth: 1, borderColor: '#93B0AC50' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#3D6B66' }}>Key Concept</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#BAA46718', borderWidth: 1, borderColor: '#BAA46750' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#BAA467' }}>Key Concept</Text>
                     <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{ibKeyConcept}</Text>
                   </View>
                 ) : null}

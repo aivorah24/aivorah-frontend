@@ -7,11 +7,11 @@ export const STEP_COLORS: Record<StepType, string> = {
   // Core
   brainstorm:           '#C5BD96',  // khaki gold
   drawing:              '#D4A898',  // warm peach
-  structured_writing:   '#9FB2A4',  // slate teal
-  problem_solving:      '#C3DCD8',  // sage mint
+  structured_writing:   '#D9C9A0',  // light gold
+  problem_solving:      '#D9C9A0',  // light gold
   // Maths
   tuning_in:            '#C5BD96',  // gold cream
-  math_reflection:      '#C3DCD8',  // sage mint
+  math_reflection:      '#D9C9A0',  // light gold
   // Science
   prior_knowledge:      '#EBD5B8',  // warm sand
   // English
@@ -20,7 +20,7 @@ export const STEP_COLORS: Record<StepType, string> = {
   writing_reflection:   '#C5BD96',  // khaki gold
   // Language Acquisition
   language_culture:     '#D4C4A8',  // linen
-  language_practice:    '#C3DCD8',  // sage mint
+  language_practice:    '#D9C9A0',  // light gold
   communication:        '#C8D4A8',  // sage green
   // Social Studies
   social_inquiry:       '#D8C8A8',  // wheat
@@ -32,27 +32,27 @@ export const STEP_COLORS: Record<StepType, string> = {
   artistic_reflection:  '#D4C4A8',  // linen
   // ICT
   digital_awareness:    '#C5BD96',  // gold cream
-  tech_skill_practice:  '#C3DCD8',  // sage mint
+  tech_skill_practice:  '#D9C9A0',  // light gold
   digital_citizenship:  '#C4D0C4',  // silver sage
   // PE
   movement_exploration: '#C8D8B8',  // fern
-  skill_practice:       '#C3DCD8',  // sage mint
+  skill_practice:       '#D9C9A0',  // light gold
   physical_reflection:  '#D0D8C0',  // sage
 };
 
 export const STEP_TEXT_COLORS: Record<StepType, string> = {
   brainstorm:           '#8A7E4A',
   drawing:              '#8C5A49',
-  structured_writing:   '#3D6B66',
-  problem_solving:      '#3D7A74',
+  structured_writing:   '#7A6420',
+  problem_solving:      '#7A6420',
   tuning_in:            '#8A7E4A',
-  math_reflection:      '#3D7A74',
+  math_reflection:      '#7A6420',
   prior_knowledge:      '#8A6030',
   text_connection:      '#7A6040',
   reading_comprehension:'#8A7E4A',
   writing_reflection:   '#8A7E4A',
   language_culture:     '#7A6040',
-  language_practice:    '#3D7A74',
+  language_practice:    '#7A6420',
   communication:        '#4A6A30',
   social_inquiry:       '#7A6030',
   research_notes:       '#8A7E4A',
@@ -61,10 +61,10 @@ export const STEP_TEXT_COLORS: Record<StepType, string> = {
   art_creation:         '#7A6040',
   artistic_reflection:  '#7A6040',
   digital_awareness:    '#8A7E4A',
-  tech_skill_practice:  '#3D7A74',
+  tech_skill_practice:  '#7A6420',
   digital_citizenship:  '#4A6050',
   movement_exploration: '#3A6040',
-  skill_practice:       '#3D7A74',
+  skill_practice:       '#7A6420',
   physical_reflection:  '#4A6030',
 };
 
@@ -104,8 +104,8 @@ export const SUBJECT_ICON: Record<string, string> = {
 };
 
 export const SUBJECT_COLOR: Record<string, string> = {
-  Mathematics:           '#9FB2A4',  // sage
-  Science:               '#C3DCD8',  // sage mint
+  Mathematics:           '#C9A24E',  // deep gold
+  Science:               '#BAA467',  // gold
   English:               '#E2D4B8',  // gold sand
   'Social Studies':      '#C5BD96',  // khaki gold
   'Language Acquisition':'#D4C4A8',  // linen

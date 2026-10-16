@@ -307,9 +307,9 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
               {assignment.keyConcept ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5,
                   paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-                  backgroundColor: '#9FB2A412', borderWidth: 1, borderColor: '#9FB2A450' }}>
-                  <Feather name="layers" size={11} color="#3D6B66" />
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#3D6B66' }}>Key Concept </Text>
+                  backgroundColor: '#BAA46712', borderWidth: 1, borderColor: '#BAA46750' }}>
+                  <Feather name="layers" size={11} color="#7A6420" />
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#7A6420' }}>Key Concept </Text>
                   <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{assignment.keyConcept}</Text>
                 </View>
               ) : null}

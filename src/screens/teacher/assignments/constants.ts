@@ -63,7 +63,7 @@ export const STEP_ICONS: Record<StepType, string> = {
   movement_exploration: 'activity', skill_practice: 'trending-up', physical_reflection: 'heart',
 };
 export const STEP_COLORS: Record<StepType, string> = {
-  brainstorm: '#C5BD96', drawing: '#D4A898', structured_writing: '#93B0AC', problem_solving: '#C3DCD8',
+  brainstorm: '#C5BD96', drawing: '#D4A898', structured_writing: '#D9C9A0', problem_solving: '#E2D4B8',
   tuning_in: '#D8C4E8', math_reflection: '#B8D4C8', prior_knowledge: '#EBD5B8',
   text_connection: '#EAD4D8', reading_comprehension: '#D8C4E8', writing_reflection: '#C5BD96',
   language_culture: '#D4C4A8', language_practice: '#B8CCD4', communication: '#C8D4A8',

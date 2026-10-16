@@ -35,7 +35,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, paddingHorizontal: 16, backgroundColor: '#161b22', borderBottomWidth: 1, borderBottomColor: '#30363d' }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: !(interactiveQuiz as any)._editMode ? '#93B0AC' : '#1c2129' }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: !(interactiveQuiz as any)._editMode ? '#BAA467' : '#1c2129' }}
               onPress={async () => {
                 // Fast path: we already hold the rendered HTML and nothing was edited
                 // since (edits null out _previewHTML on every keystroke), so switch back
@@ -213,10 +213,10 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
         )}
         {!(interactiveQuiz as any)._editMode && !(interactiveQuiz as any)._previewHTML && (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#93B0AC" />
+            <ActivityIndicator size="large" color="#BAA467" />
             <Text style={{ color: '#8b949e', marginTop: 12, fontSize: 14 }}>Loading preview...</Text>
             <TouchableOpacity
-              style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: '#93B0AC' }}
+              style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: '#BAA467' }}
               onPress={async () => {
                 try {
                   const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz: interactiveQuiz }) });
@@ -240,7 +240,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
               let globalQNum = 0;
               return interactiveQuiz.tasks?.map((task: any, ti: number) => {
                 const tierPalette: Record<string, { border: string; bg: string; label: string; labelBg: string }> = {
-                'MUST DO':   { border: '#93B0AC', bg: 'rgba(147,176,172,0.08)', label: '#93B0AC', labelBg: 'rgba(147,176,172,0.15)' },
+                'MUST DO':   { border: '#BAA467', bg: 'rgba(186,164,103,0.08)', label: '#BAA467', labelBg: 'rgba(186,164,103,0.15)' },
                 'COULD DO':  { border: '#C9A24E', bg: 'rgba(201,162,78,0.08)',  label: '#C9A24E', labelBg: 'rgba(201,162,78,0.15)' },
                 'ENRICHMENT':{ border: '#C98A8A', bg: 'rgba(201,138,138,0.08)', label: '#C98A8A', labelBg: 'rgba(201,138,138,0.15)' },
               };
@@ -314,7 +314,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                       return (
                         <View key={`tbl${tIdx}`} style={{ borderWidth: 1, borderColor: 'rgba(195,220,216,0.18)', borderRadius: 8, overflow: 'hidden', marginTop: 10 }}>
                           {headers.length > 0 && (
-                            <View style={{ flexDirection: 'row', backgroundColor: 'rgba(147,176,172,0.14)' }}>
+                            <View style={{ flexDirection: 'row', backgroundColor: 'rgba(186,164,103,0.14)' }}>
                               {headers.map((h: string, hi: number) => (
                                 <Text key={hi} style={{ flex: colFlex[hi] || 1, fontSize: 12, fontWeight: '700', color: '#D8E8E6', padding: 10, textAlign: 'center' }}>{String(h)}</Text>
                               ))}
@@ -328,7 +328,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                                   <View key={ci} style={{ flex: colFlex[ci] || 1, padding: 6, justifyContent: 'center' }}>
                                     {cell.input ? (
                                       <TextInput
-                                        style={{ borderWidth: 1.5, borderColor: 'rgba(147,176,172,0.45)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', textAlign: 'center' }}
+                                        style={{ borderWidth: 1.5, borderColor: 'rgba(186,164,103,0.45)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', textAlign: 'center' }}
                                         value={String(cell.answer ?? '')}
                                         onChangeText={(val) => {
                                           const u = { ...interactiveQuiz };
@@ -387,10 +387,10 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                           <Text style={{ fontSize: 12, color: '#A8B5B3', marginBottom: 8 }}>Type answer items separated by commas — shared items go in the middle overlap.</Text>
                           <View style={{ position: 'relative', width: '100%', maxWidth: 540, height: 300, alignSelf: 'center', marginBottom: 8 }}>
                             {/* two overlapping circles */}
-                            <View style={{ position: 'absolute', left: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#93B0AC', backgroundColor: 'rgba(147,176,172,0.10)' }} />
+                            <View style={{ position: 'absolute', left: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#BAA467', backgroundColor: 'rgba(186,164,103,0.10)' }} />
                             <View style={{ position: 'absolute', right: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#C5BD96', backgroundColor: 'rgba(197,189,150,0.10)' }} />
                             {/* circle labels */}
-                            <Text style={{ position: 'absolute', left: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#93B0AC' }}>{leftLabel}</Text>
+                            <Text style={{ position: 'absolute', left: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#BAA467' }}>{leftLabel}</Text>
                             <Text style={{ position: 'absolute', right: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#C5BD96' }}>{rightLabel}</Text>
                             {/* three editable regions */}
                             <TextInput multiline value={asText(ans.left)} onChangeText={(v) => setRegion('left', v)} placeholder={`${leftLabel} only`} placeholderTextColor="#6E736B" style={{ ...regionStyle, left: '2%', top: 92, width: '27%', height: 132 }} />
@@ -401,9 +401,9 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                             <Text style={{ fontSize: 11, fontWeight: '700', color: '#C5BD96', marginBottom: 4 }}>Hint:</Text>
                             <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
                           </View>
-                          <View style={{ backgroundColor: 'rgba(147,176,172,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#93B0AC' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#93B0AC', marginBottom: 4 }}>Solution:</Text>
-                            <TextInput style={{ borderWidth: 1, borderColor: 'rgba(147,176,172,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
+                          <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Solution:</Text>
+                            <TextInput style={{ borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
                           </View>
                         </View>
                       );
@@ -423,8 +423,8 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                           <Image source={{ uri: q.imageUrl.startsWith('http') ? q.imageUrl : `${SERVER_URL}${q.imageUrl}` }} style={{ width: '100%', height: 160, resizeMode: 'contain' }} />
                         </View>
                       )}
-                      <View style={{ flexDirection: answerIsLong ? 'column' : 'row', alignItems: answerIsLong ? 'stretch' : 'center', gap: 8, marginBottom: 10, backgroundColor: 'rgba(147,176,172,0.10)', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(147,176,172,0.3)' }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#93B0AC' }}>{/^-?\d+(\.\d+)?$/.test(answerText.trim()) || q.type === 'numeric' ? 'Answer =' : 'Answer:'}</Text>
+                      <View style={{ flexDirection: answerIsLong ? 'column' : 'row', alignItems: answerIsLong ? 'stretch' : 'center', gap: 8, marginBottom: 10, backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)' }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#BAA467' }}>{/^-?\d+(\.\d+)?$/.test(answerText.trim()) || q.type === 'numeric' ? 'Answer =' : 'Answer:'}</Text>
                         <TextInput style={{ flex: answerIsLong ? undefined : 1, borderWidth: 1.5, borderColor: 'rgba(195,220,216,0.25)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', minHeight: answerIsLong ? 72 : undefined, textAlignVertical: answerIsLong ? 'top' : 'center' }} value={answerText} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].answer = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Answer" placeholderTextColor="#6E736B" multiline={answerIsLong} />
                         {q.unit && <Text style={{ fontSize: 13, color: '#A8B5B3', fontWeight: '500' }}>{q.unit}</Text>}
                       </View>
@@ -432,9 +432,9 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#C5BD96', marginBottom: 4 }}>Hint:</Text>
                         <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
                       </View>
-                      <View style={{ backgroundColor: 'rgba(147,176,172,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#93B0AC' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#93B0AC', marginBottom: 4 }}>Solution:</Text>
-                        <TextInput style={{ borderWidth: 1, borderColor: 'rgba(147,176,172,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
+                      <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Solution:</Text>
+                        <TextInput style={{ borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
                       </View>
                       </View>
                     );
