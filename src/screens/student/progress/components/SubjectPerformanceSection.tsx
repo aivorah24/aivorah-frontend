@@ -26,11 +26,14 @@ export function SubjectPerformanceSection({ styles, subjectStats, navigation }: 
                 <Feather name={s.icon} size={18} color={s.color} />
               </View>
               <Text style={styles.subjectName}>{s.name}</Text>
-              <Text style={[styles.subjectScore, { color: s.color }]}>{s.pct}%</Text>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${s.pct}%` as any, backgroundColor: s.color }]} />
+              {/* Pinned to the card bottom so scores line up when names wrap. */}
+              <View style={styles.subjectStats}>
+                <Text style={[styles.subjectScore, { color: s.color }]}>{s.pct}%</Text>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${s.pct}%` as any, backgroundColor: s.color }]} />
+                </View>
+                <Text style={styles.subjectMeta}>{s.done} / {s.total} chapters</Text>
               </View>
-              <Text style={styles.subjectMeta}>{s.done} / {s.total} chapters</Text>
             </TouchableOpacity>
           ))}
         </View>
