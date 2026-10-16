@@ -7,7 +7,7 @@ import { useStudentData } from '../../../../context/StudentDataContext';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON, STEP_COLORS, STEP_TEXT_COLORS, STEP_ICONS } from '../constants';
-import { getStamp } from '../utils';
+import { getStamp, scoreBadge } from '../utils';
 import type { Assignment, StepType, StepAnswer, PerQ, GradeResult } from '../types';
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
@@ -184,7 +184,8 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                 <View style={{ gap: 6 }}>
                   <Text style={styles.feedbackTitle}>Step by Step</Text>
                   {result.perQuestion.map((q: any, idx: number) => {
-                    const sc = !q.answered ? colors.textDim : q.score >= 80 ? colors.accentGreen : q.score >= 50 ? colors.accentYellow : colors.accentRed;
+                    const badge = scoreBadge(q);
+                    const sc = colors[badge.colorKey];
                     const stepColor = STEP_COLORS[q.type as StepType] || color;
                     const isFullMarks = q.score >= 100;
                     return (
@@ -196,7 +197,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                           </View>
                           <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.stepLabel || `Step ${idx + 1}`}</Text>
                           <View style={{ backgroundColor: sc + '25', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '800', color: sc }}>{q.answered ? `${q.score}%` : '--'}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: sc }}>{badge.label}</Text>
                           </View>
                         </View>
                         {/* Body */}
@@ -214,7 +215,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                                 <Text style={{ flex: 1, fontSize: 11, color: colors.textMain, lineHeight: 16 }}>{q.comment}</Text>
                               </View>
                             ) : null}
-                            {!isFullMarks && q.answered ? (
+                            {!isFullMarks && q.answered && !q.needsReview ? (
                               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start', borderTopWidth: 1, borderTopColor: colors.borderColor, paddingTop: 6 }}>
                                 <Feather name="target" size={10} color={colors.accentYellow} style={{ marginTop: 2 }} />
                                 <Text style={{ flex: 1, fontSize: 11, color: colors.accentYellow, lineHeight: 16 }}>
