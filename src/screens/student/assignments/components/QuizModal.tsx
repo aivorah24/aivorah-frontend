@@ -72,7 +72,8 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
     try {
       const resp = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/validate-fill-blank`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentAnswer: currentInput, correctAnswer: q.correct }),
+        // The question lets the server's AI check judge a right word in other words.
+        body: JSON.stringify({ studentAnswer: currentInput, correctAnswer: q.correct, question: q.question }),
       });
       const { correct } = await resp.json();
       if (correct) {
