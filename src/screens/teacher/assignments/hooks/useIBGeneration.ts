@@ -38,8 +38,8 @@ export function useIBGeneration({
   const [generatingIB, setGeneratingIB] = useState(false);
 
   async function generateIBAssignment() {
-    const topic = (title || chapter || unitOfInquiry || '').trim();
-    if (!topic) { setFormError('Please fill in the Title or Chapter / Topic field before generating'); return; }
+    const topic = (chapter || unitOfInquiry || title || '').trim();
+    if (!topic) { setFormError('Pick or type a Chapter / Topic above before generating'); return; }
     setGeneratingIB(true); setFormError('');
     try {
       const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-ibpyp`, {

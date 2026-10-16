@@ -212,16 +212,19 @@ export function AIAssignmentFlow(props: {
           AI will generate a {isIBPYP ? 'complete IB PYP-style' : `${curriculum || 'curriculum'}-aligned`} assignment with Purpose, Learning Outcomes, Task Steps, Success Criteria, Word Bank, and Stamps — tailored to <Text style={{ fontWeight: '700' }}>{grade} · {subject}</Text>.
         </Text>
 
-        <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>
-          {isIBPYP ? 'Unit of Inquiry (optional)' : 'Theme / Unit (optional)'}
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder={isIBPYP ? 'e.g. How We Organise Ourselves / Sharing the Planet' : 'e.g. Chapter 3: Fractions / Unit: Living World'}
-          placeholderTextColor={colors.textDim}
-          value={unitOfInquiry}
-          onChangeText={setUnitOfInquiry}
-        />
+        {/* Non-IB generation uses the Chapter / Topic field above, so no second box. */}
+        {isIBPYP && (
+          <>
+            <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Unit of Inquiry (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. How We Organise Ourselves / Sharing the Planet"
+              placeholderTextColor={colors.textDim}
+              value={unitOfInquiry}
+              onChangeText={setUnitOfInquiry}
+            />
+          </>
+        )}
 
         {!!formError && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 8, backgroundColor: '#ef444418', borderWidth: 1, borderColor: '#ef444440' }}>

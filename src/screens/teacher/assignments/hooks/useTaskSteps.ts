@@ -35,10 +35,10 @@ export function useTaskSteps({ title, chapter, subject, effectiveGrade, effectiv
   }
 
   async function generateSteps() {
-    const topic = (title || chapter || subject || '').trim();
+    const topic = (chapter || title || subject || '').trim();
     setStepsError('');
     if (!topic) {
-      setStepsError('Enter a title above first (e.g. "Food Chain"), then tap Generate with AI.');
+      setStepsError('Pick or type a Chapter / Topic above first (e.g. "Food Chain").');
       return;
     }
     setGeneratingSteps(true);

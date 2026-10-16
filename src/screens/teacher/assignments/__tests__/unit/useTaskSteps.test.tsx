@@ -48,8 +48,17 @@ describe('useTaskSteps', () => {
     global.fetch = jest.fn();
     await render(<Harness title="" chapter="" subject="" />);
     await user.press(screen.getByTestId('generate'));
-    await waitFor(() => expect(screen.getByTestId('error').props.children).toMatch(/Enter a title/));
+    await waitFor(() => expect(screen.getByTestId('error').props.children).toMatch(/Chapter \/ Topic/));
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('generateSteps sends the chapter/topic, not the title, as the AI topic', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ steps: [] }) }) as any;
+    await render(<Harness title="Chapter 5 Worksheet" chapter="Photosynthesis" />);
+    await user.press(screen.getByTestId('generate'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).topic).toBe('Photosynthesis');
   });
 
   test('generateSteps populates taskSteps from a successful AI response', async () => {
