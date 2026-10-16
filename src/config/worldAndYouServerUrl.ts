@@ -11,7 +11,7 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-world-and-you-service-xmqw.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-world-and-you-service.onrender.com';
 
 const WORLD_AND_YOU_SERVER_URL =
   USE_LOCAL_SERVICES ? 'http://localhost:3010' : LIVE_SERVICE;

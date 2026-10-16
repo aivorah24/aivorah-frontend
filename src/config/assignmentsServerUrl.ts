@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_ASSIGNMENTS_BACKEND = 'https://aivorah-assignments-service-qd20.onrender.com';
+const LIVE_ASSIGNMENTS_BACKEND = 'https://aivorah-assignments-service.onrender.com';
 
 const ASSIGNMENTS_SERVER_URL =
   USE_LOCAL_SERVICES ? 'http://localhost:3015' : LIVE_ASSIGNMENTS_BACKEND;
