@@ -13,7 +13,7 @@ declare const __DEV__: boolean;
 // 2026-09-18: migrated to a new Render account (old account suspended for
 // billing). Temporary URL — Render appended a random suffix since the
 // original name is still claimed by the suspended account.
-const LIVE_SERVICE = 'https://aivorah-students-service-h3se.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-students-service.onrender.com';
 
 const STUDENTS_SERVER_URL =
   USE_LOCAL_SERVICES ? 'http://localhost:3017' : LIVE_SERVICE;

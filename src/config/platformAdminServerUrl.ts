@@ -5,7 +5,7 @@ import { USE_LOCAL_SERVICES } from './localServices';
 // signed-in replacement for the monolith's static /admin/panel.html.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-platform-admin-service.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-platform-admin-service-vaeu.onrender.com';
 
 // EXPO_PUBLIC_PLATFORM_ADMIN_URL points only the admin screens elsewhere (e.g. a
 // locally running service) while every other service stays on live.

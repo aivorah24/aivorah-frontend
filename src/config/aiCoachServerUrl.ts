@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-ai-coach-service-7ikx.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-ai-coach-service.onrender.com';
 
 const AI_COACH_SERVER_URL =
   USE_LOCAL_SERVICES ? 'http://localhost:3007' : LIVE_SERVICE;
