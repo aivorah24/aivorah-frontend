@@ -53,14 +53,25 @@ export function useTaskSteps({ title, chapter, subject, effectiveGrade, effectiv
       console.log('[generateSteps] response:', JSON.stringify(data));
       if (!res.ok) { setStepsError(data.error || 'Server returned an error'); return; }
       if (Array.isArray(data.steps) && data.steps.length > 0) {
-        setTaskSteps(data.steps.map((s: any) => ({
+        const aiSteps = data.steps.map((s: any) => ({
           id: Date.now().toString() + Math.random(),
           type: s.type as StepType,
           label: s.label,
           instructions: s.instructions,
           sections: s.type === 'structured_writing' ? ['Beginning', 'Middle', 'End'] : [],
           wordBank: [],
-        })));
+        }));
+        // Any step the AI still left out is filled from STEP_DEFAULTS, in the
+        // server's step order, so the teacher always gets the full set.
+        const expected: StepType[] = Array.isArray(data.stepTypes) ? data.stepTypes : [];
+        const filled = expected.length
+          ? expected.flatMap(type => {
+              const aiStep = aiSteps.find((s: TaskStep) => s.type === type);
+              if (aiStep) return [aiStep];
+              return STEP_DEFAULTS[type] ? [{ id: Date.now().toString() + Math.random(), type, ...STEP_DEFAULTS[type] } as TaskStep] : [];
+            })
+          : aiSteps;
+        setTaskSteps(filled);
       } else {
         setStepsError('AI returned no steps — check browser console (F12) for details.');
       }

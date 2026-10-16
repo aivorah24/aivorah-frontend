@@ -209,7 +209,10 @@ export function AIAssignmentFlow(props: {
           </Text>
         </View>
         <Text style={{ fontSize: 11, color: colors.textDim, lineHeight: 17 }}>
-          AI will generate a {isIBPYP ? 'complete IB PYP-style' : `${curriculum || 'curriculum'}-aligned`} assignment with Purpose, Learning Outcomes, Task Steps, Success Criteria, Word Bank, and Stamps — tailored to <Text style={{ fontWeight: '700' }}>{grade} · {subject}</Text>.
+          {/* Non-IB boards call generate-steps, which returns task steps only. */}
+          {isIBPYP
+            ? 'AI will generate a complete IB PYP-style assignment with Purpose, Learning Outcomes, Task Steps, Success Criteria, Word Bank, and Stamps'
+            : `AI will generate ${curriculum || 'curriculum'}-aligned Task Steps for your Chapter / Topic`} — tailored to <Text style={{ fontWeight: '700' }}>{grade} · {subject}</Text>.
         </Text>
 
         {/* Non-IB generation uses the Chapter / Topic field above, so no second box. */}

@@ -91,6 +91,30 @@ describe('useTaskSteps', () => {
     expect(captured.taskSteps[0].sections).toEqual(['Beginning', 'Middle', 'End']);
   });
 
+  test('steps the AI left out are filled from STEP_DEFAULTS, in the server step order', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        steps: [{ type: 'drawing', label: 'Draw a food chain', instructions: 'Draw it.' }],
+        stepTypes: ['brainstorm', 'drawing', 'structured_writing'],
+      }),
+    }) as any;
+    let captured: any;
+    function Capture() {
+      const h = useTaskSteps(ARGS);
+      React.useEffect(() => { captured = h; });
+      return <TouchableOpacity testID="gen" onPress={() => h.generateSteps()} />;
+    }
+    await render(<Capture />);
+    await user.press(screen.getByTestId('gen'));
+    await waitFor(() => expect(captured.taskSteps.length).toBe(3));
+    expect(captured.taskSteps.map((s: any) => s.type)).toEqual(['brainstorm', 'drawing', 'structured_writing']);
+    expect(captured.taskSteps[0].label).toBe('Thinking Clouds');
+    expect(captured.taskSteps[1].label).toBe('Draw a food chain');
+    expect(captured.taskSteps[2].sections).toEqual(['Beginning', 'Middle', 'End']);
+  });
+
   test('an AI response with an empty steps array surfaces an error, adds nothing', async () => {
     const user = userEvent.setup();
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ steps: [] }) }) as any;
