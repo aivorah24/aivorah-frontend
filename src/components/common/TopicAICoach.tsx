@@ -8,7 +8,6 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, Animated, ActivityIndicator, Keyboard,
   Platform, KeyboardAvoidingView, Image,
-  type StyleProp, type TextStyle,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,15 +15,10 @@ import { useAuth } from '../../context/AuthContext';
 import { askAIMentorStream, type ChatHistoryTurn, type AskImage } from '../../services/aiMentorApi';
 import { spacing, radius } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
-import { scriptRuns, speechLangCode, voiceFor } from '../../utils/speechLanguage';
+import { useReplyReader } from '../../hooks/useReplyReader';
+import AIReplyText from './AIReplyText';
 
 // ── Web Speech API helpers ──────────────────────────────────────────────────
-
-function stopSpeech() {
-  if (Platform.OS === 'web' && (window as any).speechSynthesis) {
-    try { (window as any).speechSynthesis.cancel(); } catch {}
-  }
-}
 
 function startSpeechRecognition(
   onResult: (text: string) => void,
@@ -108,10 +102,7 @@ interface Message {
 
 function sanitizeDisplayedAIText(text: string): string {
   return String(text || '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^\s*[-•]\s+/gm, '')
     .replace(/`{1,3}/g, '')
     .replace(/\r/g, '')
     // Insert newline before Step N: / Answer: / Try this: so they render as separate lines
@@ -120,26 +111,6 @@ function sanitizeDisplayedAIText(text: string): string {
     .replace(/\s+(Try this\s*:|Now,?\s*can you|Here'?s? a practice)/gi, '\n$1')
     .replace(/\bkeyboards and mice\b/gi, 'keyboards and a mouse')
     .replace(/\bmice\b/gi, 'mouse');
-}
-
-// Splits into non-empty lines, keeping each line's absolute start offset in
-// the full string — so a word inside a line can be matched against a global
-// TTS char-index (from the "Listen"-style karaoke highlight).
-function linesWithOffsets(text: string): { line: string; start: number }[] {
-  const out: { line: string; start: number }[] = [];
-  let idx = 0;
-  for (const raw of text.split('\n')) {
-    if (raw.trim()) out.push({ line: raw, start: idx });
-    idx += raw.length + 1; // +1 for the '\n' consumed by split
-  }
-  return out;
-}
-function wordsWithOffsets(text: string): { word: string; start: number }[] {
-  const out: { word: string; start: number }[] = [];
-  const re = /\S+/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) out.push({ word: m[0], start: m.index });
-  return out;
 }
 
 interface Props {
@@ -176,8 +147,7 @@ export default function TopicAICoach({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedbackByMsg, setFeedbackByMsg] = useState<Record<number, number>>({});
-  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
-  const [speakingCharIndex, setSpeakingCharIndex] = useState(0);
+  const { speakingKey: speakingIdx, position: readPosition, toggle: handleSpeak } = useReplyReader<number>();
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -225,45 +195,6 @@ export default function TopicAICoach({
       }]);
     }
   }, [open]);
-
-  // Reads a message aloud AND tracks word-boundary position (karaoke-style),
-  // same mechanism as the Listen tab. Speaks the text exactly as displayed —
-  // no fraction/decimal preprocessing — so char offsets line up with what's
-  // on screen for highlighting.
-  function handleSpeak(idx: number, text: string) {
-    if (speakingIdx === idx) {
-      stopSpeech();
-      setSpeakingIdx(null);
-      setSpeakingCharIndex(0);
-      return;
-    }
-    stopSpeech();
-    setSpeakingIdx(idx);
-    setSpeakingCharIndex(0);
-    if (Platform.OS !== 'web' || !(window as any).speechSynthesis) { setSpeakingIdx(null); return; }
-    const synth = (window as any).speechSynthesis as SpeechSynthesis;
-    synth.cancel();
-    const voices = synth.getVoices();
-    const english = voices.find(v => /zira/i.test(v.name))
-      || voices.find(v => /google.*en.*us/i.test(v.name))
-      || voices.find(v => /en[-_]US/i.test(v.lang));
-    // Each language part (English / Hindi / Urdu) is read by a voice for that language;
-    // its offset keeps the karaoke highlight lined up with the full message.
-    const runs = scriptRuns(text);
-    if (!runs.length) { setSpeakingIdx(null); return; }
-    const done = () => { setSpeakingIdx(null); setSpeakingCharIndex(0); };
-    runs.forEach((run, i) => {
-      const utter = new SpeechSynthesisUtterance(run.text);
-      utter.rate = 0.85; utter.pitch = 1.1; utter.volume = 1.0;
-      utter.lang = speechLangCode(run.lang);
-      const voice = run.lang === 'en' ? english : voiceFor(run.lang, voices);
-      if (voice) utter.voice = voice;
-      utter.onboundary = (e: any) => { if (e.name === 'word' || e.charIndex !== undefined) setSpeakingCharIndex(run.start + (e.charIndex ?? 0)); };
-      if (i === runs.length - 1) utter.onend = done;
-      utter.onerror = done;
-      synth.speak(utter);
-    });
-  }
 
   const pendingSendRef = useRef<string | null>(null);
 
@@ -455,46 +386,13 @@ export default function TopicAICoach({
                   ]}
                 >
                   {msg.role === 'ai' ? (
-                    <View style={{ gap: 5 }}>
-                      {linesWithOffsets(shownText).map(({ line, start }, li) => {
-                        const isStep     = /^step\s*\d+[:.→]/i.test(line.trim());
-                        const isAnswer   = /^answer[:.]/i.test(line.trim());
-                        const isPractice = /^(try this|practice|question)[:.]/i.test(line.trim());
-                        const lineStyle: StyleProp<TextStyle> = [
-                          styles.bubbleText,
-                          { color: colors.textMain },
-                          isStep     && { fontWeight: '700' as const, color: colors.accentYellow, marginTop: li > 0 ? 3 : 0 },
-                          isAnswer   && { fontWeight: '700' as const, color: '#4A9E70', marginTop: 3 },
-                          isPractice && { fontWeight: '600' as const, color: colors.textMuted, fontStyle: 'italic' as const, marginTop: 3 },
-                        ];
-                        // While this message is being read aloud, highlight the
-                        // word currently spoken — same karaoke-style highlight
-                        // as the Listen tab's read-along.
-                        if (speakingIdx === i) {
-                          const words = wordsWithOffsets(line);
-                          const curWordIdx = words.reduce(
-                            (best, w, wi) => (start + w.start <= speakingCharIndex ? wi : best), -1,
-                          );
-                          return (
-                            <Text key={li} style={lineStyle}>
-                              {words.map((w, wi) => (
-                                <Text
-                                  key={wi}
-                                  style={wi === curWordIdx ? { backgroundColor: colors.accentYellow + '30', color: colors.accentYellow, fontWeight: '700' } : undefined}
-                                >
-                                  {w.word + ' '}
-                                </Text>
-                              ))}
-                            </Text>
-                          );
-                        }
-                        return (
-                          <Text key={li} style={lineStyle}>
-                            {line}
-                          </Text>
-                        );
-                      })}
-                    </View>
+                    <AIReplyText
+                      text={shownText}
+                      colors={colors}
+                      position={speakingIdx === i ? readPosition : null}
+                      fontSize={13}
+                      lineHeight={19}
+                    />
                   ) : (
                     <Text style={[styles.bubbleText, { color: '#fff' }]}>{shownText}</Text>
                   )}
