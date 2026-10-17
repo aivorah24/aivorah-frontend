@@ -307,7 +307,7 @@ export function AIAssignmentFlow(props: {
                   </View>
                 ) : null}
                 {ibAtlSkill ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#C5BD9618', borderWidth: 1, borderColor: '#C5BD9650' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#BAA46718', borderWidth: 1, borderColor: '#BAA46750' }}>
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#8A7E4A' }}>ATL Skill</Text>
                     <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{ibAtlSkill}</Text>
                   </View>

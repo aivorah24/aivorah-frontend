@@ -62,7 +62,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
               <Text style={{ fontSize: 13, fontWeight: '700', color: !(interactiveQuiz as any)._editMode ? '#0f1117' : '#8b949e' }}>Preview</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: (interactiveQuiz as any)._editMode ? '#C5BD96' : '#1c2129' }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: (interactiveQuiz as any)._editMode ? '#BAA467' : '#1c2129' }}
               onPress={async () => {
                 // Edit Answers must show the same shape Preview does (e.g. a riddle
                 // task collapsed into a No./Riddle/Answer table) — that transform only
@@ -388,17 +388,17 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                           <View style={{ position: 'relative', width: '100%', maxWidth: 540, height: 300, alignSelf: 'center', marginBottom: 8 }}>
                             {/* two overlapping circles */}
                             <View style={{ position: 'absolute', left: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#BAA467', backgroundColor: 'rgba(186,164,103,0.10)' }} />
-                            <View style={{ position: 'absolute', right: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#C5BD96', backgroundColor: 'rgba(197,189,150,0.10)' }} />
+                            <View style={{ position: 'absolute', right: 0, top: 26, width: '60%', height: 248, borderRadius: 9999, borderWidth: 2.5, borderColor: '#BAA467', backgroundColor: 'rgba(197,189,150,0.10)' }} />
                             {/* circle labels */}
                             <Text style={{ position: 'absolute', left: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#BAA467' }}>{leftLabel}</Text>
-                            <Text style={{ position: 'absolute', right: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#C5BD96' }}>{rightLabel}</Text>
+                            <Text style={{ position: 'absolute', right: '10%', top: 0, fontSize: 15, fontWeight: '700', color: '#BAA467' }}>{rightLabel}</Text>
                             {/* three editable regions */}
                             <TextInput multiline value={asText(ans.left)} onChangeText={(v) => setRegion('left', v)} placeholder={`${leftLabel} only`} placeholderTextColor="#6E736B" style={{ ...regionStyle, left: '2%', top: 92, width: '27%', height: 132 }} />
                             <TextInput multiline value={asText(ans.center)} onChangeText={(v) => setRegion('center', v)} placeholder="Both" placeholderTextColor="#6E736B" style={{ ...regionStyle, left: '37%', top: 100, width: '26%', height: 118 }} />
                             <TextInput multiline value={asText(ans.right)} onChangeText={(v) => setRegion('right', v)} placeholder={`${rightLabel} only`} placeholderTextColor="#6E736B" style={{ ...regionStyle, right: '2%', top: 92, width: '27%', height: 132 }} />
                           </View>
-                          <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#C5BD96' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#C5BD96', marginBottom: 4 }}>Hint:</Text>
+                          <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Hint:</Text>
                             <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
                           </View>
                           <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
@@ -428,8 +428,8 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                         <TextInput style={{ flex: answerIsLong ? undefined : 1, borderWidth: 1.5, borderColor: 'rgba(195,220,216,0.25)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', minHeight: answerIsLong ? 72 : undefined, textAlignVertical: answerIsLong ? 'top' : 'center' }} value={answerText} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].answer = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Answer" placeholderTextColor="#6E736B" multiline={answerIsLong} />
                         {q.unit && <Text style={{ fontSize: 13, color: '#A8B5B3', fontWeight: '500' }}>{q.unit}</Text>}
                       </View>
-                      <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#C5BD96' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#C5BD96', marginBottom: 4 }}>Hint:</Text>
+                      <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Hint:</Text>
                         <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
                       </View>
                       <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>

@@ -2,70 +2,70 @@ import type { StepType } from './types';
 
 export const FILTERS = ['All', 'Pending', 'Completed', 'Quizzes'];
 
-// Aivorah Enchanting Forest pastel palette for step types
+// Every step uses Aivorah gold
 export const STEP_COLORS: Record<StepType, string> = {
   // Core
-  brainstorm:           '#C5BD96',  // khaki gold
-  drawing:              '#D4A898',  // warm peach
-  structured_writing:   '#D9C9A0',  // light gold
-  problem_solving:      '#D9C9A0',  // light gold
+  brainstorm:           '#BAA467',
+  drawing:              '#BAA467',
+  structured_writing:   '#BAA467',
+  problem_solving:      '#BAA467',
   // Maths
-  tuning_in:            '#C5BD96',  // gold cream
-  math_reflection:      '#D9C9A0',  // light gold
+  tuning_in:            '#BAA467',
+  math_reflection:      '#BAA467',
   // Science
-  prior_knowledge:      '#EBD5B8',  // warm sand
+  prior_knowledge:      '#BAA467',
   // English
-  text_connection:      '#E2D4B8',  // gold sand
-  reading_comprehension:'#C5BD96',  // gold cream
-  writing_reflection:   '#C5BD96',  // khaki gold
+  text_connection:      '#BAA467',
+  reading_comprehension:'#BAA467',
+  writing_reflection:   '#BAA467',
   // Language Acquisition
-  language_culture:     '#D4C4A8',  // linen
-  language_practice:    '#D9C9A0',  // light gold
-  communication:        '#C8D4A8',  // sage green
+  language_culture:     '#BAA467',
+  language_practice:    '#BAA467',
+  communication:        '#BAA467',
   // Social Studies
-  social_inquiry:       '#D8C8A8',  // wheat
-  research_notes:       '#C5BD96',  // gold cream
-  social_synthesis:     '#C4D0C4',  // silver sage
+  social_inquiry:       '#BAA467',
+  research_notes:       '#BAA467',
+  social_synthesis:     '#BAA467',
   // Visual Arts
-  artistic_exploration: '#E2D4B8',  // gold sand
-  art_creation:         '#D4C4A8',  // linen
-  artistic_reflection:  '#D4C4A8',  // linen
+  artistic_exploration: '#BAA467',
+  art_creation:         '#BAA467',
+  artistic_reflection:  '#BAA467',
   // ICT
-  digital_awareness:    '#C5BD96',  // gold cream
-  tech_skill_practice:  '#D9C9A0',  // light gold
-  digital_citizenship:  '#C4D0C4',  // silver sage
+  digital_awareness:    '#BAA467',
+  tech_skill_practice:  '#BAA467',
+  digital_citizenship:  '#BAA467',
   // PE
-  movement_exploration: '#C8D8B8',  // fern
-  skill_practice:       '#D9C9A0',  // light gold
-  physical_reflection:  '#D0D8C0',  // sage
+  movement_exploration: '#BAA467',
+  skill_practice:       '#BAA467',
+  physical_reflection:  '#BAA467',
 };
 
 export const STEP_TEXT_COLORS: Record<StepType, string> = {
-  brainstorm:           '#8A7E4A',
-  drawing:              '#8C5A49',
+  brainstorm:           '#7A6420',
+  drawing:              '#7A6420',
   structured_writing:   '#7A6420',
   problem_solving:      '#7A6420',
-  tuning_in:            '#8A7E4A',
+  tuning_in:            '#7A6420',
   math_reflection:      '#7A6420',
-  prior_knowledge:      '#8A6030',
-  text_connection:      '#7A6040',
-  reading_comprehension:'#8A7E4A',
-  writing_reflection:   '#8A7E4A',
-  language_culture:     '#7A6040',
+  prior_knowledge:      '#7A6420',
+  text_connection:      '#7A6420',
+  reading_comprehension:'#7A6420',
+  writing_reflection:   '#7A6420',
+  language_culture:     '#7A6420',
   language_practice:    '#7A6420',
-  communication:        '#4A6A30',
-  social_inquiry:       '#7A6030',
-  research_notes:       '#8A7E4A',
-  social_synthesis:     '#4A6050',
-  artistic_exploration: '#7A6040',
-  art_creation:         '#7A6040',
-  artistic_reflection:  '#7A6040',
-  digital_awareness:    '#8A7E4A',
+  communication:        '#7A6420',
+  social_inquiry:       '#7A6420',
+  research_notes:       '#7A6420',
+  social_synthesis:     '#7A6420',
+  artistic_exploration: '#7A6420',
+  art_creation:         '#7A6420',
+  artistic_reflection:  '#7A6420',
+  digital_awareness:    '#7A6420',
   tech_skill_practice:  '#7A6420',
-  digital_citizenship:  '#4A6050',
-  movement_exploration: '#3A6040',
+  digital_citizenship:  '#7A6420',
+  movement_exploration: '#7A6420',
   skill_practice:       '#7A6420',
-  physical_reflection:  '#4A6030',
+  physical_reflection:  '#7A6420',
 };
 
 export const STEP_ICONS: Record<StepType, string> = {
@@ -104,14 +104,14 @@ export const SUBJECT_ICON: Record<string, string> = {
 };
 
 export const SUBJECT_COLOR: Record<string, string> = {
-  Mathematics:           '#C9A24E',  // deep gold
-  Science:               '#BAA467',  // gold
-  English:               '#E2D4B8',  // gold sand
-  'Social Studies':      '#C5BD96',  // khaki gold
-  'Language Acquisition':'#D4C4A8',  // linen
-  'Visual Arts':         '#D4C4A8',  // linen
-  ICT:                   '#C5BD96',  // gold cream
-  'Physical Education':  '#C8D8B8',  // fern
+  Mathematics:           '#BAA467',
+  Science:               '#BAA467',
+  English:               '#BAA467',
+  'Social Studies':      '#BAA467',
+  'Language Acquisition':'#BAA467',
+  'Visual Arts':         '#BAA467',
+  ICT:                   '#BAA467',
+  'Physical Education':  '#BAA467',
 };
 
 // ── Stamp config ─────────────────────────────────────────────────────────────

@@ -63,12 +63,12 @@ export const STEP_ICONS: Record<StepType, string> = {
   movement_exploration: 'activity', skill_practice: 'trending-up', physical_reflection: 'heart',
 };
 export const STEP_COLORS: Record<StepType, string> = {
-  brainstorm: '#C5BD96', drawing: '#D4A898', structured_writing: '#D9C9A0', problem_solving: '#E2D4B8',
-  tuning_in: '#D8C4E8', math_reflection: '#B8D4C8', prior_knowledge: '#EBD5B8',
-  text_connection: '#EAD4D8', reading_comprehension: '#D8C4E8', writing_reflection: '#C5BD96',
-  language_culture: '#D4C4A8', language_practice: '#B8CCD4', communication: '#C8D4A8',
-  social_inquiry: '#D8C8A8', research_notes: '#B8C8D8', social_synthesis: '#C4D0C4',
-  artistic_exploration: '#E8D4C4', art_creation: '#D4A898', artistic_reflection: '#DCC8D4',
-  digital_awareness: '#C4D4E0', tech_skill_practice: '#B8D8D0', digital_citizenship: '#C0CCD8',
-  movement_exploration: '#C8D8B8', skill_practice: '#B8D4BC', physical_reflection: '#D0D8C0',
+  brainstorm: AIVORAH_GOLD, drawing: AIVORAH_GOLD, structured_writing: AIVORAH_GOLD, problem_solving: AIVORAH_GOLD,
+  tuning_in: AIVORAH_GOLD, math_reflection: AIVORAH_GOLD, prior_knowledge: AIVORAH_GOLD,
+  text_connection: AIVORAH_GOLD, reading_comprehension: AIVORAH_GOLD, writing_reflection: AIVORAH_GOLD,
+  language_culture: AIVORAH_GOLD, language_practice: AIVORAH_GOLD, communication: AIVORAH_GOLD,
+  social_inquiry: AIVORAH_GOLD, research_notes: AIVORAH_GOLD, social_synthesis: AIVORAH_GOLD,
+  artistic_exploration: AIVORAH_GOLD, art_creation: AIVORAH_GOLD, artistic_reflection: AIVORAH_GOLD,
+  digital_awareness: AIVORAH_GOLD, tech_skill_practice: AIVORAH_GOLD, digital_citizenship: AIVORAH_GOLD,
+  movement_exploration: AIVORAH_GOLD, skill_practice: AIVORAH_GOLD, physical_reflection: AIVORAH_GOLD,
 };

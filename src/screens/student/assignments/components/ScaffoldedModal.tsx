@@ -289,7 +289,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
               {assignment.learnerProfile ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5,
                   paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-                  backgroundColor: '#E2D4B812', borderWidth: 1, borderColor: '#E2D4B850' }}>
+                  backgroundColor: '#BAA46712', borderWidth: 1, borderColor: '#BAA46750' }}>
                   <Feather name="user" size={11} color="#8A6030" />
                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#8A6030' }}>Learner Profile </Text>
                   <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{assignment.learnerProfile}</Text>
@@ -298,7 +298,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
               {assignment.atlSkill ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5,
                   paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-                  backgroundColor: '#C5BD9612', borderWidth: 1, borderColor: '#C5BD9650' }}>
+                  backgroundColor: '#BAA46712', borderWidth: 1, borderColor: '#BAA46750' }}>
                   <Feather name="activity" size={11} color="#8A7E4A" />
                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#8A7E4A' }}>ATL </Text>
                   <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{assignment.atlSkill}</Text>
