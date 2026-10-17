@@ -5,6 +5,7 @@ import type { AppColors } from '../../../../theme';
 import type { Message } from '../types';
 import { sanitizeDisplayedAIText } from '../utils/textFormatting';
 import FormattedAIText from './FormattedAIText';
+import type { ReadPosition } from '../../../../hooks/useReplyReader';
 import ThinkingIndicator from './ThinkingIndicator';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   streamingMsgId: number | null;
   isTyping: boolean;
   speakingId: number | null;
+  readPosition?: ReadPosition | null;
   onSpeak: (msgId: number, text: string) => void;
   failedImages: Set<string>;
   onImageFail: (url: string) => void;
@@ -25,6 +27,7 @@ export default function MessageList({
   streamingMsgId,
   isTyping,
   speakingId,
+  readPosition,
   onSpeak,
   failedImages,
   onImageFail,
@@ -68,7 +71,7 @@ export default function MessageList({
                     {msg.isError ? (
                       <Text style={styles.errorText}>{shownText}</Text>
                     ) : (
-                      <FormattedAIText text={shownText} colors={colors} />
+                      <FormattedAIText text={shownText} colors={colors} position={speakingId === msg.id ? readPosition : null} />
                     )}
                     {/* Cursor while streaming */}
                     {isStreaming && (

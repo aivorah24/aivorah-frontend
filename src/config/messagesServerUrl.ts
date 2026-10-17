@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_MESSAGES_BACKEND = 'https://aivorah-messages-service-9qql.onrender.com';
+const LIVE_MESSAGES_BACKEND = 'https://aivorah-messages-service.onrender.com';
 
 const MESSAGES_SERVER_URL =
   USE_LOCAL_SERVICES ? 'http://localhost:3020' : LIVE_MESSAGES_BACKEND;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { speakWithBoundary, playClip, stopSpeaking, sentencesWithOffsets } from '../utils/audio';
 import { profileFor } from '../utils/playVoices';
 import { splitWords, buildBoundaries, wordWeight } from '../../../../../utils/wordTiming';
+import { spokenWord } from '../../../../../utils/aiReply';
 import type { ListenStep, PlayLine } from '../types';
 
 export type NarrationLine = ReturnType<typeof sentencesWithOffsets>[number] & { line?: PlayLine };
@@ -98,6 +99,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
         if (gap) setTimeout(() => { if (seq === playSeqRef.current) speakIdx(i + 1); }, gap);
         else speakIdx(i + 1);
       };
+      if (!text && !line?.audio) { next(); return; }
       const browserVoice = () => speakWithBoundary(
         text,
         follow.onWord,
@@ -129,9 +131,11 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
     const all = splitWords(text);
     const from = Math.min(Math.max(0, fromWord), all.length - 1);
     const tokens = all.slice(from);
+    // Dashes, markdown symbols and emoji stay on screen but are not spoken.
+    const spokenTokens = tokens.map((t) => { const w = spokenWord(t.trim()); return w ? w + (t.match(/\s*$/)?.[0] || ' ') : ''; });
     const starts: number[] = [];
     let at = 0;
-    for (const t of tokens) { starts.push(at); at += t.length; }
+    for (const t of spokenTokens) { starts.push(at); at += t.length; }
     const bounds = buildBoundaries(tokens);
     const estMs = tokens.reduce((a, t) => a + wordWeight(t), 0) * 220 / (playbackRateRef.current || 1);
     let fromVoice = false;
@@ -157,7 +161,7 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
       while (idx + 1 < starts.length && starts[idx + 1] <= charIndex) idx += 1;
       setWordIdx(from + idx);
     };
-    return { spoken: tokens.join('').trim(), estMs, onStart, onWord };
+    return { spoken: spokenTokens.join('').trim(), estMs, onStart, onWord };
   }
 
   function stopNarration() {
