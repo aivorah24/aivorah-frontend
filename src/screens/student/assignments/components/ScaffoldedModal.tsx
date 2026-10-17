@@ -243,7 +243,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
               <View style={{ flexDirection: 'row' }}>
                 <View style={{ flex: 1 }} />
                 <TouchableOpacity onPress={onClose} activeOpacity={0.85}
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, backgroundColor: color }}>
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14, backgroundColor: color }}>
                   <Feather name="check" size={16} color="#fff" />
                   <Text style={styles.submitBtnText}>Done</Text>
                 </TouchableOpacity>
@@ -802,16 +802,16 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
 
 
             {/* Navigation */}
-            <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'center', width: '100%', maxWidth: 480 }}>
+            <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'center', justifyContent: 'center' }}>
               {currentStep > 0 && (
-                <TouchableOpacity style={[styles.submitBtn, { flex: 1, backgroundColor: colors.borderColor }]}
+                <TouchableOpacity style={[styles.submitBtn, styles.compactBtn, { backgroundColor: colors.borderColor }]}
                   onPress={() => setCurrentStep(s => s - 1)} activeOpacity={0.85}>
                   <Feather name="chevron-left" size={16} color={colors.textMuted} />
                   <Text style={[styles.submitBtnText, { color: colors.textMuted }]}>Back</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.submitBtn, { flex: 2, backgroundColor: stepColor }]}
+                style={[styles.submitBtn, styles.compactBtn, { backgroundColor: stepColor }]}
                 onPress={() => setCurrentStep(s => s + 1)} activeOpacity={0.85}>
                 <Text style={styles.submitBtnText}>{isLastDataStep ? 'Check Yourself' : 'Next Step'}</Text>
                 <Feather name={isLastDataStep ? 'check-square' : 'chevron-right'} size={16} color="#fff" />

@@ -127,7 +127,7 @@ export function SubmittedResultModal({
             </View>
           ) : null}
           <TouchableOpacity onPress={onClose} activeOpacity={0.85}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: sc }}>
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 14, backgroundColor: sc }}>
             <Feather name="check" size={16} color="#fff" />
             <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>Done</Text>
           </TouchableOpacity>

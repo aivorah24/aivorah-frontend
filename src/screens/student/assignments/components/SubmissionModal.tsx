@@ -255,7 +255,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
                 <View style={{ flexDirection: 'row' }}>
                   <View style={{ flex: 1 }} />
                   <TouchableOpacity onPress={onClose} activeOpacity={0.85}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, backgroundColor: color }}>
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14, backgroundColor: color }}>
                     <Feather name="check" size={16} color="#fff" />
                     <Text style={styles.submitBtnText}>Done</Text>
                   </TouchableOpacity>
