@@ -62,3 +62,27 @@ export interface ReviewedRow {
   issues: string[];
   warnings: string[];
 }
+
+// ── Teacher spreadsheet import (POST /teachers/bulk-import) ──
+export type TeacherImportField = 'teacherName' | 'email' | 'phone' | 'grade' | 'subjects';
+
+export interface ReviewedTeacherRow {
+  rowNum: number;
+  values: Record<TeacherImportField, string>;
+  issues: string[];
+  warnings: string[];
+}
+
+export interface TeacherImportPayload {
+  schoolId: string;
+  fileName: string;
+  rows: Record<TeacherImportField, string>[];
+}
+
+export interface TeacherImportResult {
+  school: string;
+  created: number;
+  skipped: { row: number; name: string; email: string; reason: string }[];
+  errors: { row: number; error: string }[];
+  credentials: (ImportCredential & { subjects?: string[] })[];
+}

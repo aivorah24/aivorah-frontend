@@ -129,7 +129,7 @@ export default function AdminUsersScreen({ navigation }: any) {
                     <Text style={[s.th, { flex: 1 }]}>Role</Text>
                     <Text style={[s.th, { flex: 1.4 }]}>School</Text>
                     <Text style={[s.th, { flex: 1.3 }]}>Last active</Text>
-                    <Text style={[s.th, { flex: 1 }]}>Status</Text>
+                    <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Status</Text>
                     <Text style={[s.th, { flex: 1.5, textAlign: 'right', paddingRight: 16 }]}>Actions</Text>
                   </View>
 
@@ -157,8 +157,8 @@ export default function AdminUsersScreen({ navigation }: any) {
                         <Text style={[s.td, { flex: 1 }]}>{roleLabel(String(x.role))}</Text>
                         <Text style={[s.td, { flex: 1.4 }]} numberOfLines={1}>{x.school || 'Direct (B2C)'}</Text>
                         <Text style={[s.td, s.muted, { flex: 1.3 }]}>{blocked ? '—' : lastActiveLabel(x.last_active_at)}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.pill, blocked
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                          <Text style={[s.pill, { alignSelf: 'center' }, blocked
                             ? { color: colors.accentRed, borderColor: colors.accentRed, backgroundColor: colors.accentRed + '1F' }
                             : { color: sage, borderColor: sage, backgroundColor: sage + '1F' }]}>{blocked ? 'Blocked' : 'Active'}</Text>
                         </View>

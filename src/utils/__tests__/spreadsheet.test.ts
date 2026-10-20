@@ -36,3 +36,23 @@ test('EMAIL_RE accepts normal addresses and rejects malformed ones', () => {
   expect(EMAIL_RE.test('a@b')).toBe(false);
   expect(EMAIL_RE.test('a b@c.d')).toBe(false);
 });
+
+describe('guessStudentField header variants', () => {
+  test.each([
+    ["Parent's Name", 'parentName'],
+    ['Father Name', 'parentName'],
+    ['Guardian Email ID', 'parentEmail'],
+    ['Mother Mobile No', 'parentPhone'],
+    ['Parent Contact', 'parentPhone'],
+    ['Student Email', 'studentEmail'],
+    ['Email ID', 'studentEmail'],
+    ['Class', 'grade'],
+    ['Div', 'section'],
+    ['Adm No', 'admissionNo'],
+    ['Board', 'curriculum'],
+    ['Full Name', 'studentName'],
+    ['Phone', ''],
+  ])('%s -> %s', (header, field) => {
+    expect(guessStudentField(header)).toBe(field);
+  });
+});

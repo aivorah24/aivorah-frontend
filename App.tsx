@@ -57,6 +57,10 @@ const LINKING_SCREENS = {
   Announcements: 'announcements',
   MyClasses: 'my-classes',
   PlatformOverview: 'admin-login',
+  AdminUsers: 'admin-users',
+  MapToTeacher: 'admin-map-to-teacher',
+  BulkImport: 'admin-bulk-import',
+  LlmUsage: 'admin-llm-usage',
   ClassDetail: 'my-classes/class',
   // Teacher screens
   TeacherDashboard: 'teacher/dashboard',

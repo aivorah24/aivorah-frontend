@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { radius } from '../../../theme';
@@ -10,7 +10,11 @@ export type SelectOption = string | { value: string; label: string };
 const optValue = (o: SelectOption) => (typeof o === 'string' ? o : o.value);
 const optLabel = (o: SelectOption) => (typeof o === 'string' ? o : o.label);
 
-// Single-select dropdown anchored under its trigger. With `allLabel`, the first
+const ROW = 40;
+const MAX_MENU = 440;
+const EDGE = 12;
+
+// Single-select dropdown anchored to its trigger; opens upward when there's more room above. With `allLabel`, the first
 // option is "All …" and selecting it sets the value to 'all'.
 export function SelectField({ testID, label, allLabel, placeholder, value, options, onChange, minWidth = 160 }: {
   testID: string;
@@ -25,8 +29,10 @@ export function SelectField({ testID, label, allLabel, placeholder, value, optio
   const { colors } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<{ x: number; y: number; width: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ x: number; top: number; bottom: number; width: number } | null>(null);
   const triggerRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const { height: winH } = useWindowDimensions();
 
   const all = allLabel ? [{ value: 'all', label: allLabel }] : [];
   const list: SelectOption[] = [...all, ...options];
@@ -36,8 +42,16 @@ export function SelectField({ testID, label, allLabel, placeholder, value, optio
   function openMenu() {
     setAnchor(null);
     setOpen(true);
-    triggerRef.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y: y + height + 4, width }));
+    triggerRef.current?.measureInWindow((x, y, width, height) => setAnchor({ x, top: y, bottom: y + height, width }));
   }
+
+  const selectedIndex = list.findIndex((o) => optValue(o) === value);
+  const want = Math.min(list.length * ROW, MAX_MENU);
+  const below = anchor ? winH - anchor.bottom - 4 - EDGE : 0;
+  const above = anchor ? anchor.top - 4 - EDGE : 0;
+  const up = below < want && above > below;
+  const menuH = Math.max(ROW * 3, Math.min(want, up ? above : below));
+  const vertical = anchor ? (up ? { bottom: winH - anchor.top + 4 } : { top: anchor.bottom + 4 }) : { top: 0 };
 
   return (
     <View style={{ minWidth }}>
@@ -57,10 +71,16 @@ export function SelectField({ testID, label, allLabel, placeholder, value, optio
             onPress={() => {}}
             style={[
               s.dropdown,
-              { position: 'absolute', top: anchor?.y ?? 0, left: anchor?.x ?? 0, width: Math.max(anchor?.width ?? 0, 200), opacity: anchor ? 1 : 0 },
+              { position: 'absolute', ...vertical, left: anchor?.x ?? 0, width: Math.max(anchor?.width ?? 0, 200), opacity: anchor ? 1 : 0 },
             ]}
           >
-            <ScrollView style={{ maxHeight: 280 }}>
+            <ScrollView
+              ref={scrollRef}
+              style={{ maxHeight: menuH }}
+              onContentSizeChange={() => {
+                if (selectedIndex > 0) scrollRef.current?.scrollTo({ y: Math.max(0, (selectedIndex - 1) * ROW), animated: false });
+              }}
+            >
               {list.map((o) => {
                 const v = optValue(o);
                 const on = v === value;

@@ -5,7 +5,7 @@
  * underlying users.role — see App.tsx's role-routing.
  */
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useTheme } from '../context/ThemeContext';
 
@@ -26,14 +26,29 @@ export type AdminDrawerParamList = {
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 
+// Refresh keeps the admin on the page in the URL (old /AdminUsers-style links too).
+const ROUTE_BY_PATH: Record<string, keyof AdminDrawerParamList> = {
+  'admin-users': 'AdminUsers', adminusers: 'AdminUsers',
+  'admin-map-to-teacher': 'MapToTeacher', maptoteacher: 'MapToTeacher',
+  'admin-bulk-import': 'BulkImport', bulkimport: 'BulkImport',
+  'admin-llm-usage': 'LlmUsage', llmusage: 'LlmUsage',
+};
+
+export function adminRouteFromPath(path: string): keyof AdminDrawerParamList {
+  const seg = String(path || '').split('?')[0].replace(/^\/+|\/+$/g, '').toLowerCase();
+  return ROUTE_BY_PATH[seg] || 'PlatformOverview';
+}
+
 export default function AdminNavigator() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();
+  const [initialRoute] = React.useState(() =>
+    Platform.OS === 'web' && typeof window !== 'undefined' ? adminRouteFromPath(window.location.pathname) : 'PlatformOverview');
 
   return (
     <Drawer.Navigator
-      initialRouteName="PlatformOverview"
+      initialRouteName={initialRoute}
       backBehavior="history"
       drawerContent={(props) => <DrawerContent {...props} />}
       screenOptions={{
