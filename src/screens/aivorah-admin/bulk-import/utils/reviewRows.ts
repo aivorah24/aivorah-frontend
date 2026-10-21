@@ -11,6 +11,7 @@ export function reviewRows(
   columnMap: (StudentImportField | '')[],
   schoolBoard: string | null,
   sheetCurriculumCol = -1,
+  includeParents = true,
 ): ReviewedRow[] {
   const seenEmails = new Map<string, number>();
 
@@ -18,6 +19,7 @@ export function reviewRows(
     const v: Record<string, string> = emptyStudentRow();
     delete v.curriculum;
     columnMap.forEach((field, col) => { if (field && field !== 'curriculum') v[field] = String(cells[col] ?? '').trim(); });
+    if (!includeParents) { v.parentName = ''; v.parentEmail = ''; v.parentPhone = ''; }
     v.grade = normalizeGrade(v.grade);
     v.studentEmail = v.studentEmail.toLowerCase();
     v.parentEmail = v.parentEmail.toLowerCase();

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -13,17 +13,16 @@ import { SchoolCurriculumPicker } from './SchoolCurriculumPicker';
 
 // Curriculum comes from the school, so it's never a column.
 const IMPORT_FIELDS = STUDENT_IMPORT_FIELDS.filter((f) => f.value !== 'curriculum');
-const TEMPLATE_HEADERS = IMPORT_FIELDS.map((f) => f.label);
 const EXAMPLE: Record<string, string> = {
   studentName: 'Asha Rao', studentEmail: 'asha.rao@example.com', grade: 'Grade 4', section: 'A',
   parentName: 'Mona Rao', parentEmail: 'mona.rao@example.com', parentPhone: '9876543210',
 };
-const TEMPLATE_EXAMPLE = IMPORT_FIELDS.map((f) => EXAMPLE[f.value] || '');
+const fieldsFor = (withParents: boolean) => IMPORT_FIELDS.filter((f) => withParents || !f.value.startsWith('parent'));
 const NOT_IMPORTED = '__none__';
 
 // Review table columns — header and body cells share these so they stay aligned.
 const COL = StyleSheet.create({
-  row: { flex: 0, width: 56 },
+  row: { flexGrow: 0, flexShrink: 0, flexBasis: 44, width: 44, minWidth: 44 },
   student: { flex: 1.4 },
   grade: { flex: 1 },
   curriculum: { flex: 1 },
@@ -31,7 +30,22 @@ const COL = StyleSheet.create({
   check: { flex: 1.6 },
 });
 
-function pickFile(onLoad: (name: string, content: ArrayBuffer | string) => void) {
+function loginsTitle(creds: { role: string }[]) {
+  const parents = creds.filter((c) => c.role === 'parent').length;
+  const students = creds.length - parents;
+  const part = (n: number, w: string) => `${n} ${w}${n !== 1 ? 's' : ''}`;
+  return parents ? `Logins — ${part(students, 'student')} + ${part(parents, 'parent')}` : `Logins — ${part(students, 'student')}`;
+}
+
+const CRED = StyleSheet.create({
+  name: { flexGrow: 1.2, flexShrink: 1, flexBasis: 0, minWidth: 0 },
+  role: { flexGrow: 0, flexShrink: 0, flexBasis: 84, width: 84 },
+  email: { flexGrow: 1.8, flexShrink: 1, flexBasis: 0, minWidth: 0 },
+  password: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
+});
+const CRED_COLS = [['Name', CRED.name], ['Role', CRED.role], ['Login email', CRED.email], ['Password', CRED.password]] as const;
+
+export function pickFile(onLoad: (name: string, content: ArrayBuffer | string) => void) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   const input = document.createElement('input');
   input.type = 'file';
@@ -47,7 +61,7 @@ function pickFile(onLoad: (name: string, content: ArrayBuffer | string) => void)
   input.click();
 }
 
-function Step({ n, title, done, s, children, right }: { n: number; title: string; done?: boolean; s: any; children: React.ReactNode; right?: React.ReactNode }) {
+export function Step({ n, title, done, s, children, right }: { n: number; title: string; done?: boolean; s: any; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <View style={s.card}>
       <View style={s.stepHeader}>
@@ -62,10 +76,13 @@ function Step({ n, title, done, s, children, right }: { n: number; title: string
   );
 }
 
-export function SpreadsheetImportPanel() {
+export function SpreadsheetImportPanel({ includeParents = true }: { includeParents?: boolean }) {
   const { colors } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const imp = useSpreadsheetImport();
+  const { setIncludeParents } = imp;
+  useEffect(() => { setIncludeParents(includeParents); }, [includeParents, setIncludeParents]);
+  const fields = fieldsFor(includeParents);
   const page = usePaged(imp.reviewed, 10);
   const boardLabel = describeBoard(imp.board);
   const boardMissing = imp.needsBoard && !imp.chosenBoard;
@@ -104,7 +121,7 @@ export function SpreadsheetImportPanel() {
           <>
             <View style={s.credHead}>
               <View style={{ flex: 1 }}>
-                <Text style={s.subTitle}>Logins ({r.credentials.length})</Text>
+                <Text style={s.subTitle} testID="bulk-sheet-logins-title">{loginsTitle(r.credentials)}</Text>
                 <Text style={s.hint}>Passwords are shown only once — download them now. Students and parents with an email on file were also emailed theirs.</Text>
               </View>
               <TouchableOpacity testID="bulk-sheet-download-logins" style={s.btnPrimary} onPress={downloadLogins} activeOpacity={0.85}>
@@ -114,14 +131,14 @@ export function SpreadsheetImportPanel() {
             </View>
             <View style={s.tableBox}>
               <View style={[s.tr, s.thRow]}>
-                {['Name', 'Role', 'Login email', 'Password'].map((h) => <Text key={h} style={[s.th, h === 'Role' && s.tdNarrow]}>{h}</Text>)}
+                {CRED_COLS.map(([h, col]) => <Text key={h} style={[s.th, col]} numberOfLines={1}>{h}</Text>)}
               </View>
               {r.credentials.map((c) => (
                 <View key={c.email} style={s.tr} testID={`bulk-sheet-cred-${c.email}`}>
-                  <Text style={s.td} numberOfLines={1}>{c.name}</Text>
-                  <View style={[s.tdNarrow, { justifyContent: 'center' }]}><Text style={[s.rolePill, c.role === 'parent' && s.rolePillParent]}>{c.role}</Text></View>
-                  <Text style={s.td} numberOfLines={1}>{c.email}</Text>
-                  <Text style={[s.td, s.mono]}>{c.password}</Text>
+                  <Text style={[s.td, CRED.name]} numberOfLines={1}>{c.name}</Text>
+                  <View style={CRED.role}><Text style={[s.rolePill, c.role === 'parent' && s.rolePillParent]}>{c.role}</Text></View>
+                  <Text style={[s.td, CRED.email]} numberOfLines={1}>{c.email}</Text>
+                  <Text style={[s.td, s.mono, CRED.password]} numberOfLines={1} selectable>{c.password}</Text>
                 </View>
               ))}
             </View>
@@ -137,7 +154,7 @@ export function SpreadsheetImportPanel() {
   }
 
   const hasFile = imp.headers.length > 0;
-  const fieldOptions = [{ value: NOT_IMPORTED, label: "Don't import" }, ...IMPORT_FIELDS];
+  const fieldOptions = [{ value: NOT_IMPORTED, label: "Don't import" }, ...fields];
 
   return (
     <View style={{ gap: 16 }}>
@@ -166,6 +183,11 @@ export function SpreadsheetImportPanel() {
             <SchoolCurriculumPicker testID="bulk-sheet-curriculum" schoolName={imp.school.name} value={imp.chosenBoard} onChange={imp.setChosenBoard} />
           )}
         </View>
+        <Text style={s.hint} testID="bulk-sheet-accounts-hint">
+          {imp.includeParents
+            ? 'Rows with a Parent Name also get a parent account, linked to that student.'
+            : 'Only student accounts are created — parent columns in the file are ignored.'}
+        </Text>
         {!!imp.schoolsError && (
           <TouchableOpacity onPress={imp.loadSchools}><Text style={s.errorText}>{imp.schoolsError} Tap to retry.</Text></TouchableOpacity>
         )}
@@ -177,7 +199,7 @@ export function SpreadsheetImportPanel() {
         done={hasFile}
         s={s}
         right={(
-          <TouchableOpacity testID="bulk-sheet-template" style={[s.btnGhost, { marginLeft: 'auto' as any }]} onPress={() => downloadXlsxTemplate('aivorah-students-template.xlsx', TEMPLATE_HEADERS, [TEMPLATE_EXAMPLE])}>
+          <TouchableOpacity testID="bulk-sheet-template" style={[s.btnGhost, { marginLeft: 'auto' as any }]} onPress={() => downloadXlsxTemplate(includeParents ? 'aivorah-students-parents-template.xlsx' : 'aivorah-students-template.xlsx', fields.map((f) => f.label), [fields.map((f) => EXAMPLE[f.value] || '')])}>
             <Feather name="file-text" size={14} color={colors.accentYellow} />
             <Text style={s.btnGhostText}>Download template</Text>
           </TouchableOpacity>
@@ -234,16 +256,23 @@ export function SpreadsheetImportPanel() {
               {`All students will be enrolled in ${boardLabel} (from ${imp.school.name})`}
             </Text>
           )}
+          {imp.includeParents && (
+            <Text style={imp.parentMapped ? s.curriculumNote : s.warnText} testID="bulk-sheet-parent-note">
+              {imp.parentMapped
+                ? `${imp.parentCount} of ${imp.readyRows.length} students will also get a linked parent account`
+                : 'No Parent Name column found in this file, so no parent accounts will be created. Map one under "Columns" or add Parent Name / Parent Email / Parent Phone columns.'}
+            </Text>
+          )}
 
           <View style={s.tableBox}>
             <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={s.tableScroll}>
               <View style={{ flex: 1 }}>
                 <View style={[s.tr, s.thRow]}>
-                  <Text style={[s.th, s.cell, COL.row]}>Row</Text>
+                  <Text style={[s.th, s.cell, COL.row]} numberOfLines={1}>Row</Text>
                   <Text style={[s.th, s.cell, COL.student]}>Student</Text>
                   <Text style={[s.th, s.cell, COL.grade]}>Grade · Section</Text>
                   <Text style={[s.th, s.cell, COL.curriculum]}>Curriculum</Text>
-                  <Text style={[s.th, s.cell, COL.parent]}>Parent</Text>
+                  {imp.includeParents && <Text style={[s.th, s.cell, COL.parent]}>Parent</Text>}
                   <Text style={[s.th, s.cell, COL.check]}>Check</Text>
                 </View>
                 {page.pageRows.map((r) => {
@@ -251,14 +280,19 @@ export function SpreadsheetImportPanel() {
                   const bad = r.issues.length > 0;
                   return (
                     <View key={r.rowNum} style={[s.tr, bad && s.trBad]} testID={`bulk-sheet-row-${r.rowNum}`}>
-                      <Text style={[s.td, s.cell, COL.row]}>{r.rowNum}</Text>
+                      <Text style={[s.td, s.cell, COL.row]} numberOfLines={1}>{r.rowNum}</Text>
                       <View style={[s.cell, COL.student]}>
                         <Text style={s.tdStrong} numberOfLines={1}>{v.studentName || '—'}</Text>
                         <Text style={s.tdSub} numberOfLines={1}>{v.studentEmail || 'login generated'}</Text>
                       </View>
                       <Text style={[s.td, s.cell, COL.grade]} numberOfLines={1}>{[v.grade, v.section].filter(Boolean).join(' · ') || '—'}</Text>
                       <Text style={[s.td, s.cell, COL.curriculum]} numberOfLines={1} testID={`bulk-sheet-row-${r.rowNum}-curriculum`}>{r.curriculum || '—'}</Text>
-                      <Text style={[s.td, s.cell, COL.parent]} numberOfLines={1}>{v.parentName || '—'}</Text>
+                      {imp.includeParents && (
+                        <View style={[s.cell, COL.parent]} testID={`bulk-sheet-row-${r.rowNum}-parent`}>
+                          <Text style={s.tdStrong} numberOfLines={1}>{v.parentName || '—'}</Text>
+                          {!!v.parentName && <Text style={s.tdSub} numberOfLines={1}>{v.parentEmail || 'login generated'}{v.parentPhone ? ` · ${v.parentPhone}` : ''}</Text>}
+                        </View>
+                      )}
                       <View style={[s.cell, COL.check]}>
                         {bad
                           ? r.issues.map((t) => <Text key={t} style={s.issueText}>✕ {t}</Text>)
@@ -289,7 +323,7 @@ export function SpreadsheetImportPanel() {
                 <Feather name="upload" size={15} color="#0B0B0B" />
                 <Text style={s.btnPrimaryText}>
                   {boardMissing ? 'Choose a curriculum to import' : imp.school
-                    ? `Import ${imp.readyRows.length} student${imp.readyRows.length !== 1 ? 's' : ''} to ${imp.school.name}`
+                    ? `Import ${imp.readyRows.length} student${imp.readyRows.length !== 1 ? 's' : ''}`
                     : 'Choose a school to import'}
                 </Text>
               </>
@@ -301,7 +335,7 @@ export function SpreadsheetImportPanel() {
   );
 }
 
-function makeStyles(c: AppColors) {
+export function makeStyles(c: AppColors) {
   return StyleSheet.create({
     card: { backgroundColor: c.cardDark, borderWidth: 1, borderColor: c.borderColor, borderRadius: radius.md, padding: 20 },
     stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
@@ -341,7 +375,7 @@ function makeStyles(c: AppColors) {
     trBad: { backgroundColor: c.accentRed + '0D' },
     th: { flex: 1, fontSize: 11.5, fontWeight: '800', color: c.textMain },
     td: { flex: 1, fontSize: 12.5, color: c.textMain },
-    tdNarrow: { flex: 0, width: 56 },
+    tdNarrow: { flexGrow: 0, flexShrink: 0, flexBasis: 64, width: 64 },
     cell: { flexBasis: 0, minWidth: 0 },
     tableScroll: { flexGrow: 1, minWidth: 760 },
     tdStrong: { fontSize: 12.5, fontWeight: '700', color: c.textHeading },
@@ -351,8 +385,8 @@ function makeStyles(c: AppColors) {
     warnText: { fontSize: 11.5, color: c.accentOrange },
     okText: { fontSize: 11.5, fontWeight: '700', color: c.accentGreen },
     submitBtn: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16,
-      backgroundColor: c.accentYellow, borderRadius: radius.sm, paddingVertical: 13,
+      flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-end',
+      backgroundColor: c.accentYellow, borderRadius: radius.sm, paddingHorizontal: 18, paddingVertical: 10,
     },
     btnPrimary: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: c.accentYellow, borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 10 },
     btnPrimaryText: { fontSize: 13.5, fontWeight: '700', color: '#0B0B0B' },

@@ -211,3 +211,25 @@ describe('AdminUsersScreen', () => {
     expect(lastActiveLabel('2026-10-05T12:00:00Z', now)).toBe('5 days ago');
   });
 });
+
+describe('AdminUsersScreen slide-over close', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSvc.fetchAdminUsers.mockResolvedValue({ users: USERS, total: 3, pageSize: 50 } as any);
+  });
+
+  test('the X button closes the Add user panel', async () => {
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-add'));
+    expect(screen.getByTestId('users-add-name')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('users-panel-close'));
+    await waitFor(() => expect(screen.queryByTestId('users-add-name')).toBeNull());
+  });
+
+  test('the backdrop closes the panel too', async () => {
+    await render(<AdminUsersScreen navigation={{}} />);
+    await fireEvent.press(await screen.findByTestId('users-add'));
+    await fireEvent.press(screen.getByTestId('users-panel-backdrop'));
+    await waitFor(() => expect(screen.queryByTestId('users-add-name')).toBeNull());
+  });
+});

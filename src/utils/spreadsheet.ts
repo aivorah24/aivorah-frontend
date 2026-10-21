@@ -73,20 +73,26 @@ export function xlsxToGrid(buffer: ArrayBuffer): string[][] {
 }
 
 // Header text → field, so most spreadsheets need no manual mapping.
+// Tolerates real-world variants: "Parent's Name", "Father Name", "Guardian Email ID", "Mother Mobile", "Class".
 export function guessStudentField(header: string): StudentImportField | '' {
-  const h = header.trim().toLowerCase();
-  switch (h) {
-    case 'student name': case 'name': return 'studentName';
-    case 'student email': case 'email': return 'studentEmail';
-    case 'admission no': case 'admission number': case 'admission #': return 'admissionNo';
-    case 'curriculum': case 'board': return 'curriculum';
-    case 'grade': return 'grade';
-    case 'section': return 'section';
-    case 'parent name': return 'parentName';
-    case 'parent email': return 'parentEmail';
-    case 'parent phone': case 'parent contact': return 'parentPhone';
-    default: return '';
+  const h = String(header || '').toLowerCase().replace(/['’]s\b/g, '').replace(/[^a-z0-9#]+/g, ' ').trim();
+  if (!h) return '';
+  const has = (re: RegExp) => re.test(h);
+  const isEmail = has(/\b(e ?mail|mail)\b/);
+  const isPhone = has(/\b(phone|mobile|mob|contact|whatsapp|cell|tel)\b/);
+
+  if (has(/\b(parent|father|mother|guardian)\b/)) {
+    if (isEmail) return 'parentEmail';
+    if (isPhone) return 'parentPhone';
+    return 'parentName';
   }
+  if (has(/\badmission\b|\badm (no|number)\b/)) return 'admissionNo';
+  if (has(/\b(curriculum|board|syllabus)\b/)) return 'curriculum';
+  if (has(/\bsection\b|^sec$|\bdivision\b|^div$/)) return 'section';
+  if (has(/\b(grade|class|std|standard)\b/)) return 'grade';
+  if (isEmail) return 'studentEmail';
+  if (has(/^(student|student name|name|full name|student full name|pupil name)$/)) return 'studentName';
+  return '';
 }
 
 export function csvEscape(value: string): string {

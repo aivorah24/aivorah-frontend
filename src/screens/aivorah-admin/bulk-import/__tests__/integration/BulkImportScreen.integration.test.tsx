@@ -10,7 +10,7 @@ jest.mock('../../../../../components/common/Header', () => {
   return { __esModule: true, default: ({ title }: any) => <Text>{title}</Text> };
 });
 jest.mock('../../../../../components/common/ScreenLayout', () => ({ __esModule: true, default: ({ children }: any) => children }));
-jest.mock('../../services/bulkImportService', () => ({ bulkCreateStudents: jest.fn(), importSpreadsheet: jest.fn() }));
+jest.mock('../../services/bulkImportService', () => ({ importSpreadsheet: jest.fn(), importTeachers: jest.fn() }));
 jest.mock('../../../map-to-teacher/services/mapToTeacherService', () => ({
   fetchAdminSchools: jest.fn(async () => [
     { id: 'sch1', name: 'TSRA', curriculum: 'IB' },
@@ -19,174 +19,15 @@ jest.mock('../../../map-to-teacher/services/mapToTeacherService', () => ({
   ]),
 }));
 import { Platform } from 'react-native';
-import { bulkCreateStudents, importSpreadsheet } from '../../services/bulkImportService';
+import { importSpreadsheet, importTeachers } from '../../services/bulkImportService';
 import { fetchAdminSchools } from '../../../map-to-teacher/services/mapToTeacherService';
 
 const nav = { openDrawer: jest.fn() };
-
-async function openQuickAdd() {
-  const user = userEvent.setup();
-  await render(<BulkImportScreen navigation={nav} />);
-  await user.press(screen.getByTestId('bulk-tab-quick'));
-  return user;
-}
 
 async function choose(user: ReturnType<typeof userEvent.setup>, field: string, option: string) {
   await user.press(screen.getByTestId(field));
   await user.press(await screen.findByTestId(`${field}-option-${option}`));
 }
-
-describe('BulkImportScreen — Quick add', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  test('curriculum comes from the school (no curriculum field); an IB school offers Grades 1-12; created logins are shown', async () => {
-    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({
-      created: [{ name: 'Asha', email: 'asha.123@tsra.student', password: 'Abc123!@', grade: 'Grade 5', curriculum: 'IB PYP', school: 'TSRA' }],
-      errors: [], total: 1,
-    });
-    const user = await openQuickAdd();
-
-    await choose(user, 'bulk-school', 'sch1');
-    expect(screen.queryByTestId('bulk-curriculum')).toBeNull();
-    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('IB PYP / MYP / DP (by grade) (from TSRA)');
-
-    await user.press(screen.getByTestId('bulk-grade'));
-    expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
-    await user.press(screen.getByTestId('bulk-grade-option-Grade 5'));
-    await choose(user, 'bulk-section', 'B');
-
-    await user.type(screen.getByTestId('bulk-names'), 'Asha');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-
-    const payload = (bulkCreateStudents as jest.Mock).mock.calls[0][0];
-    expect(payload).toEqual({ schoolId: 'sch1', school: 'TSRA', grade: 'Grade 5', section: 'B', students: ['Asha'] });
-    expect(await screen.findByTestId('bulk-created-row-asha.123@tsra.student')).toBeTruthy();
-    expect(screen.getByText('Abc123!@')).toBeTruthy();
-  });
-
-  test('a single-board school shows its board as the curriculum', async () => {
-    const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'sch2');
-    expect(screen.getByTestId('bulk-curriculum-note').props.children).toBe('CBSE (from Seed Test School (CBSE))');
-    await user.press(screen.getByTestId('bulk-grade'));
-    expect(await screen.findByTestId('bulk-grade-option-Grade 12')).toBeTruthy();
-  });
-
-  test('shows a validation error instead of calling the API when a required field is missing', async () => {
-    const user = await openQuickAdd();
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    expect(await screen.findByTestId('bulk-import-error')).toBeTruthy();
-    expect(bulkCreateStudents).not.toHaveBeenCalled();
-  });
-
-  test('shows per-row errors alongside successes', async () => {
-    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [{ name: 'Dup', error: 'Email already exists' }], total: 0 });
-    const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'sch2');
-    await choose(user, 'bulk-grade', 'Grade 5');
-    await user.type(screen.getByTestId('bulk-names'), 'Dup');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    expect(await screen.findByTestId('bulk-error-row-0')).toBeTruthy();
-    expect(screen.getByText('Email already exists')).toBeTruthy();
-  });
-});
-
-jest.mock('../../../../../utils/spreadsheet', () => ({ ...jest.requireActual('../../../../../utils/spreadsheet'), downloadCsv: jest.fn() }));
-import { downloadCsv } from '../../../../../utils/spreadsheet';
-
-describe('BulkImportScreen — Quick add, share/download logins', () => {
-  const created = [
-    { name: 'Asha', email: 'asha.1@x.student', password: 'Pw1!', grade: 'Grade 5', section: 'B' },
-    { name: 'Ben', email: 'ben.2@x.student', password: 'Pw2!', grade: 'Grade 5', section: 'B' },
-  ];
-  let writeText: jest.Mock;
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.replaceProperty(Platform, 'OS', 'web');
-    writeText = jest.fn(async () => {});
-    (global as any).navigator = { clipboard: { writeText } }; // no navigator.share
-  });
-  afterEach(() => { delete (global as any).navigator; jest.restoreAllMocks(); });
-
-  async function createTwo() {
-    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created, errors: [], total: 2 });
-    const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'sch2');
-    await choose(user, 'bulk-grade', 'Grade 5');
-    await user.type(screen.getByTestId('bulk-names'), 'Asha\nBen');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    await screen.findByTestId('bulk-created-row-asha.1@x.student');
-    return user;
-  }
-
-  test('per-row share copies that login to the clipboard and shows the note', async () => {
-    const user = await createTwo();
-    expect(screen.queryByTestId('bulk-share-note')).toBeNull();
-    await user.press(screen.getByTestId('bulk-share-asha.1@x.student'));
-    expect(writeText).toHaveBeenCalledWith("Asha's Aivorah login:\nEmail: asha.1@x.student\nPassword: Pw1!\nSign in at https://aivorah.ai");
-    expect((await screen.findByTestId('bulk-share-note')).props.children).toMatch(/^Login details copied/);
-  });
-
-  test('share all copies every login; download writes a CSV named after the school', async () => {
-    const user = await createTwo();
-    await user.press(screen.getByTestId('bulk-quick-share-all'));
-    const text = writeText.mock.calls[0][0];
-    expect(text).toContain('Email: asha.1@x.student');
-    expect(text).toContain('Email: ben.2@x.student');
-
-    await user.press(screen.getByTestId('bulk-quick-download-logins'));
-    expect(downloadCsv).toHaveBeenCalledWith('aivorah-logins-seed-test-school-cbse-.csv', expect.stringContaining('Ben,ben.2@x.student,Pw2!,Grade 5,B'));
-  });
-
-  test('uses navigator.share when present instead of copying', async () => {
-    const share = jest.fn(async () => {});
-    (global as any).navigator.share = share;
-    const user = await createTwo();
-    await user.press(screen.getByTestId('bulk-share-ben.2@x.student'));
-    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining('Password: Pw2!') });
-    expect(writeText).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('bulk-share-note')).toBeNull();
-  });
-
-  test('download is web-only', async () => {
-    jest.replaceProperty(Platform, 'OS', 'ios');
-    await createTwo();
-    expect(screen.queryByTestId('bulk-quick-download-logins')).toBeNull();
-    expect(screen.getByTestId('bulk-quick-share-all')).toBeTruthy();
-  });
-});
-
-describe('BulkImportScreen — Quick add, school with no curriculum', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  test('requires a curriculum pick (button disabled), shows the hint, and sends it', async () => {
-    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [], total: 0 });
-    const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'sch3');
-    expect(screen.queryByTestId('bulk-curriculum-note')).toBeNull();
-    expect(screen.getByTestId('bulk-curriculum-hint').props.children).toBe('Blank School has no curriculum yet — choose one');
-    await user.type(screen.getByTestId('bulk-names'), 'Asha');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    expect(bulkCreateStudents).not.toHaveBeenCalled();
-
-    await choose(user, 'bulk-curriculum', 'IB');
-    expect(screen.getByTestId('bulk-curriculum-hint').props.children).toBe("This will set Blank School's curriculum to IB");
-    await choose(user, 'bulk-grade', 'Grade 7');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    expect(bulkCreateStudents).toHaveBeenCalledWith({ schoolId: 'sch3', school: 'Blank School', curriculum: 'IB', grade: 'Grade 7', section: '', students: ['Asha'] });
-  });
-
-  test('a school that already has a curriculum shows no picker and sends none', async () => {
-    (bulkCreateStudents as jest.Mock).mockResolvedValueOnce({ created: [], errors: [], total: 0 });
-    const user = await openQuickAdd();
-    await choose(user, 'bulk-school', 'sch2');
-    expect(screen.queryByTestId('bulk-curriculum')).toBeNull();
-    await choose(user, 'bulk-grade', 'Grade 5');
-    await user.type(screen.getByTestId('bulk-names'), 'Bo');
-    await user.press(screen.getByTestId('bulk-import-submit'));
-    expect((bulkCreateStudents as jest.Mock).mock.calls[0][0]).not.toHaveProperty('curriculum');
-  });
-});
 
 // Stubs the web file input + FileReader so "Choose file" loads `csv`.
 function stubFilePicker(csv: string) {
@@ -260,6 +101,49 @@ describe('BulkImportScreen — review table curriculum column', () => {
     expect(curriculumCells()).toEqual(['ICSE', 'ICSE', 'ICSE']);
   });
 
+  test('template rows with only a curriculum filled in are dropped, not flagged', async () => {
+    stubFilePicker('Student Name,Grade,Curriculum\nAsha,3,IB\n,,IB PYP\n,,\nBen,7,IB');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', 'sch1');
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+    await screen.findByTestId('bulk-sheet-row-1');
+    expect(screen.getByTestId('bulk-sheet-row-2')).toBeTruthy();
+    expect(screen.queryByTestId('bulk-sheet-row-3')).toBeNull();
+    expect(screen.queryByText(/need fixing/)).toBeNull();
+  });
+
+  test("'Students only' hides the Parent column and sends no parent fields", async () => {
+    (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'TSRA', created: 1, skipped: [], errors: [], credentials: [] });
+    stubFilePicker('Student Name,Grade,Parent Name,Parent Email\nAsha,3,Ravi,ravi@x.com');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', 'sch1');
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+    await screen.findByTestId('bulk-sheet-row-1');
+    expect(screen.getByText('Parent')).toBeTruthy();
+
+    await user.press(screen.getByTestId('bulk-kind-students'));
+    expect(screen.queryByText('Parent')).toBeNull();
+    await user.press(screen.getByTestId('bulk-sheet-import'));
+    const row = (importSpreadsheet as jest.Mock).mock.calls.at(-1)[0].rows[0];
+    expect(row).toEqual(expect.objectContaining({ studentName: 'Asha', parentName: '', parentEmail: '' }));
+  });
+
+  test('logins title splits students and parents; each row shows its role', async () => {
+    (importSpreadsheet as jest.Mock).mockResolvedValueOnce({
+      school: 'TSRA', created: 1, skipped: [], errors: [],
+      credentials: [
+        { name: 'Asha', role: 'student', email: 'asha@x.com', password: 'p1' },
+        { name: 'Ravi', role: 'parent', email: 'ravi@x.com', password: 'p2' },
+      ],
+    });
+    const user = await loadFor('sch1');
+    await user.press(screen.getByTestId('bulk-sheet-import'));
+    expect((await screen.findByTestId('bulk-sheet-logins-title')).props.children).toBe('Logins — 1 student + 1 parent');
+    expect(screen.getByTestId('bulk-sheet-cred-ravi@x.com')).toHaveTextContent(/parent/);
+  });
+
   test('BOARD block sits beside the selects with the same label and trigger height', async () => {
     await loadFor('sch1');
     const board = screen.getByTestId('bulk-sheet-board');
@@ -283,5 +167,71 @@ describe('BulkImportScreen — spreadsheet tab', () => {
     await render(<BulkImportScreen navigation={nav} />);
     expect(await screen.findByText("Couldn't load schools")).toBeTruthy();
     expect(screen.getByText('Failed to load schools Tap to retry.')).toBeTruthy();
+  });
+});
+
+describe('BulkImportScreen — parent details', () => {
+  afterEach(() => { delete (global as any).document; delete (global as any).FileReader; jest.restoreAllMocks(); });
+
+  test("real-world parent headers are matched and the parent's name + email show in review", async () => {
+    (importSpreadsheet as jest.Mock).mockResolvedValueOnce({ school: 'TSRA', created: 1, skipped: [], errors: [], credentials: [] });
+    stubFilePicker("Student Name,Class,Father's Name,Guardian Email ID,Mother Mobile\nAsha,3,Ravi Rao,Ravi@X.com,9000000001");
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', 'sch1');
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+    const parent = await screen.findByTestId('bulk-sheet-row-1-parent');
+    expect(parent).toHaveTextContent(/Ravi Rao/);
+    expect(parent).toHaveTextContent(/ravi@x\.com · 9000000001/);
+    expect(screen.getByTestId('bulk-sheet-parent-note')).toHaveTextContent('1 of 1 students will also get a linked parent account');
+    await user.press(screen.getByTestId('bulk-sheet-import'));
+    expect((importSpreadsheet as jest.Mock).mock.calls.at(-1)[0].rows[0]).toEqual(expect.objectContaining({
+      studentName: 'Asha', grade: 'Grade 3', parentName: 'Ravi Rao', parentEmail: 'ravi@x.com', parentPhone: '9000000001',
+    }));
+  });
+
+  test('a file with no parent column says so instead of silently creating students only', async () => {
+    stubFilePicker('Student Name,Grade\nAsha,3');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await choose(user, 'bulk-sheet-school', 'sch1');
+    await user.press(screen.getByTestId('bulk-sheet-choose'));
+    await screen.findByTestId('bulk-sheet-row-1');
+    expect(screen.getByTestId('bulk-sheet-parent-note')).toHaveTextContent(/No Parent Name column found/);
+  });
+});
+
+describe('BulkImportScreen — teachers', () => {
+  afterEach(() => { delete (global as any).document; delete (global as any).FileReader; jest.restoreAllMocks(); });
+
+  test('imports teachers from a sheet and shows their logins', async () => {
+    (importTeachers as jest.Mock).mockResolvedValueOnce({
+      school: 'TSRA', created: 2, skipped: [], errors: [],
+      credentials: [
+        { name: 'Priya Sharma', email: 'priya@real.com', password: 'Pw1', role: 'teacher', grade: 'Grade 3, Grade 4', subjects: ['Maths', 'Science'] },
+        { name: 'Rahul Sen', email: 'rahul.sen.x@tsra.teacher', password: 'Pw2', role: 'teacher', grade: 'Grade 7', subjects: ['Physics'] },
+      ],
+    });
+    stubFilePicker('Teacher Name,Email ID,Mobile,Classes,Subjects\nPriya Sharma,Priya@Real.com,98765,3 | 4,Maths | Science\nRahul Sen,,,7,Physics\n,bad,,,');
+    const user = userEvent.setup();
+    await render(<BulkImportScreen navigation={nav} />);
+    await user.press(screen.getByTestId('bulk-kind-teachers'));
+    await choose(user, 'bulk-teacher-school', 'sch1');
+    await user.press(screen.getByTestId('bulk-teacher-choose'));
+
+    expect(await screen.findByTestId('bulk-teacher-row-1')).toHaveTextContent(/priya@real\.com · 98765/);
+    expect(screen.getByTestId('bulk-teacher-row-2')).toHaveTextContent(/login generated/);
+    expect(screen.getByTestId('bulk-teacher-row-3')).toHaveTextContent(/Teacher Name is missing/);
+    expect(screen.getByTestId('bulk-teacher-ready-count')).toHaveTextContent('2 ready');
+
+    await user.press(screen.getByTestId('bulk-teacher-import'));
+    const payload = (importTeachers as jest.Mock).mock.calls[0][0];
+    expect(payload.schoolId).toBe('sch1');
+    expect(payload.rows).toEqual([
+      { teacherName: 'Priya Sharma', email: 'priya@real.com', phone: '98765', grade: 'Grade 3 | Grade 4', subjects: 'Maths | Science' },
+      { teacherName: 'Rahul Sen', email: '', phone: '', grade: 'Grade 7', subjects: 'Physics' },
+    ]);
+    expect(await screen.findByTestId('bulk-teacher-logins-title')).toHaveTextContent('Logins — 2 teachers');
+    expect(screen.getByTestId('bulk-teacher-cred-rahul.sen.x@tsra.teacher')).toHaveTextContent(/Grade 7 · Physics/);
   });
 });

@@ -2,11 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import type { AppColors } from '../../../../theme';
 import { SelectField } from '../../shared/SelectField';
+import { getGradesForCurriculum } from '../../../school-admin/teachers/utils/teachingEntries';
 import { fetchSchoolStructure } from '../services/usersService';
 import type { SchoolGrade } from '../types';
 
 export const CURRICULA = ['IB PYP', 'IB MYP', 'IB DP', 'CBSE', 'ICSE', 'Cambridge'];
 export const GRADES = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
+
+// IB PYP 1-5, MYP 6-10, DP 11-12; other boards (or none picked) 1-12.
+export const gradesFor = (curriculum: string) =>
+  curriculum ? getGradesForCurriculum(curriculum).filter((g) => GRADES.includes(g)) : GRADES;
 
 export interface AcademicValue { curriculum: string; grade: string; section: string }
 
@@ -30,9 +35,10 @@ export function AcademicFields({ schoolId, value, onChange, s, colors }: {
   return (
     <View style={{ gap: 14 }} testID="users-academics">
       <SelectField testID="users-field-curriculum" label="Curriculum" placeholder="Select a curriculum" value={value.curriculum}
-        options={CURRICULA} onChange={(curriculum) => set({ curriculum })} minWidth={0} />
+        options={CURRICULA} minWidth={0}
+        onChange={(curriculum) => set(gradesFor(curriculum).includes(value.grade) ? { curriculum } : { curriculum, grade: '', section: '' })} />
       <SelectField testID="users-field-grade" label="Grade" placeholder="Select a grade" value={value.grade}
-        options={GRADES} onChange={(grade) => set({ grade, section: '' })} minWidth={0} />
+        options={gradesFor(value.curriculum)} onChange={(grade) => set({ grade, section: '' })} minWidth={0} />
       {sections.length ? (
         <SelectField testID="users-field-section" label="Section (optional)" placeholder="Select a section" value={value.section}
           options={[{ value: '', label: 'No section' }, ...sections]} onChange={(section) => set({ section })} minWidth={0} />

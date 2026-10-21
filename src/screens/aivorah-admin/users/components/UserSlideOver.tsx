@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, ActivityIndicator, StyleSheet, Animated, Easing, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import type { AppColors } from '../../../../theme';
@@ -27,19 +27,53 @@ export function UserSlideOver({ mode, onClose, onDone }: { mode: SlideOverMode; 
   const { colors } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
   if (!mode) return null;
+  return <SlidePanel mode={mode} s={s} colors={colors} onClose={onClose} onDone={onDone} />;
+}
+
+const PANEL_WIDTH = 440;
+
+function SlidePanel({ mode, s, colors, onClose, onDone }: { mode: NonNullable<SlideOverMode>; s: any; colors: AppColors; onClose: () => void; onDone: (m: string) => void }) {
+  const [progress] = useState(() => new Animated.Value(0));
+  const closing = useRef(false);
+  const nativeDriver = Platform.OS !== 'web';
+
+  useEffect(() => {
+    Animated.timing(progress, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: nativeDriver }).start();
+  }, [progress, nativeDriver]);
+
+  const close = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
+    Animated.timing(progress, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: nativeDriver })
+      .start(() => onClose());
+  }, [progress, nativeDriver, onClose]);
+
+  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [PANEL_WIDTH, 0] });
+
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="none" onRequestClose={close}>
       <View style={s.backdrop}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} testID="users-panel-backdrop" />
-        <View style={s.panel}>
+        <Animated.View style={[StyleSheet.absoluteFill, s.scrim, { opacity: progress }]} />
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={close} testID="users-panel-backdrop" />
+        <Animated.View style={[s.panel, { transform: [{ translateX }] }]}>
+          <TouchableOpacity
+            style={s.closeBtn}
+            onPress={close}
+            testID="users-panel-close"
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={18} color={colors.textMain} />
+          </TouchableOpacity>
           <ScrollView contentContainerStyle={s.panelBody}>
             {mode.type === 'add'
-              ? <AddBody s={s} colors={colors} onClose={onClose} onDone={onDone} />
+              ? <AddBody s={s} colors={colors} onClose={close} onDone={onDone} />
               : mode.type === 'edit'
-              ? <EditBody user={mode.user} s={s} colors={colors} onClose={onClose} onDone={onDone} />
-              : <BlockBody user={mode.user} s={s} colors={colors} onClose={onClose} onDone={onDone} />}
+              ? <EditBody user={mode.user} s={s} colors={colors} onClose={close} onDone={onDone} />
+              : <BlockBody user={mode.user} s={s} colors={colors} onClose={close} onDone={onDone} />}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -270,8 +304,10 @@ function BlockBody({ user, s, colors, onClose, onDone }: { user: AdminUser; s: a
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
-    backdrop: { flex: 1, flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.5)' },
-    panel: { width: '100%', maxWidth: 440, height: '100%', backgroundColor: c.cardDark, borderLeftWidth: 1, borderLeftColor: c.borderColor },
+    backdrop: { flex: 1, flexDirection: 'row' },
+    scrim: { backgroundColor: 'rgba(0,0,0,0.5)' },
+    panel: { width: '100%', maxWidth: PANEL_WIDTH, height: '100%', backgroundColor: c.cardDark, borderLeftWidth: 1, borderLeftColor: c.borderColor },
+    closeBtn: { position: 'absolute', top: 16, right: 16, zIndex: 2, width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: c.borderColor, backgroundColor: c.cardDark, alignItems: 'center', justifyContent: 'center' },
     panelBody: { padding: 28, gap: 18, flexGrow: 1 },
     eyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
     title: { fontSize: 22, fontWeight: '800', color: c.textMain, marginTop: 4 },

@@ -11,6 +11,7 @@ export function useSpreadsheetImport() {
   const { schools, error: schoolsError, reload: loadSchools, placeholder: schoolPlaceholder } = useAdminSchools();
   const [schoolId, setSchoolIdState] = useState('');
   const [chosenBoard, setChosenBoard] = useState('');
+  const [includeParents, setIncludeParents] = useState(true);
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [dataRows, setDataRows] = useState<string[][]>([]);
@@ -37,7 +38,16 @@ export function useSpreadsheetImport() {
       setHeaders([]); setDataRows([]); setColumnMap([]);
       return;
     }
-    const [head, ...rows] = grid;
+    const [head, ...allRows] = grid;
+    const guessed = head.map(guessStudentField);
+    const curriculumCol = guessed.indexOf('curriculum');
+    // Template rows with only a curriculum filled in count as blank.
+    const rows = allRows.filter((r) => r.some((c, i) => i !== curriculumCol && String(c ?? '').trim() !== ''));
+    if (rows.length === 0) {
+      setFileError('This file has no student rows under the header row.');
+      setHeaders([]); setDataRows([]); setColumnMap([]);
+      return;
+    }
     if (rows.length > MAX_ROWS) {
       setFileError(`This file has ${rows.length} rows — import at most ${MAX_ROWS} at a time.`);
       setHeaders([]); setDataRows([]); setColumnMap([]);
@@ -48,8 +58,7 @@ export function useSpreadsheetImport() {
     setHeaders(head);
     setDataRows(rows);
     // Curriculum comes from the school — a curriculum column is never imported, only checked against it.
-    const guessed = head.map(guessStudentField);
-    setSheetCurriculumCol(guessed.indexOf('curriculum'));
+    setSheetCurriculumCol(curriculumCol);
     setColumnMap(guessed.map((f) => (f === 'curriculum' ? '' : f)));
     setEditingColumns(false);
   }, []);
@@ -68,12 +77,14 @@ export function useSpreadsheetImport() {
   }
 
   const reviewed = useMemo(
-    () => reviewRows(dataRows, columnMap, board, sheetCurriculumCol),
-    [dataRows, columnMap, board, sheetCurriculumCol],
+    () => reviewRows(dataRows, columnMap, board, sheetCurriculumCol, includeParents),
+    [dataRows, columnMap, board, sheetCurriculumCol, includeParents],
   );
   const readyRows = reviewed.filter((r) => r.issues.length === 0);
   const blockedRows = reviewed.filter((r) => r.issues.length > 0);
   const nameMapped = columnMap.includes('studentName');
+  const parentMapped = columnMap.includes('parentName');
+  const parentCount = readyRows.filter((r) => !!r.values.parentName).length;
   // Mapping card stays collapsed while every required column is matched.
   const columnsOpen = editingColumns || !nameMapped;
 
@@ -103,9 +114,9 @@ export function useSpreadsheetImport() {
 
   return {
     schools, schoolsError, loadSchools, schoolPlaceholder, schoolId, setSchoolId, school,
-    needsBoard, chosenBoard, setChosenBoard, board,
+    needsBoard, chosenBoard, setChosenBoard, board, includeParents, setIncludeParents,
     fileName, headers, columnMap, setColumnField, columnsOpen, setEditingColumns, fileError, loadGrid, loadFile,
-    reviewed, readyRows, blockedRows, nameMapped,
+    reviewed, readyRows, blockedRows, nameMapped, parentMapped, parentCount,
     submitting, submitError, result, submit, reset,
   };
 }
