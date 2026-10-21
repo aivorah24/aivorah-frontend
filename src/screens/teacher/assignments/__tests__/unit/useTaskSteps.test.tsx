@@ -48,8 +48,17 @@ describe('useTaskSteps', () => {
     global.fetch = jest.fn();
     await render(<Harness title="" chapter="" subject="" />);
     await user.press(screen.getByTestId('generate'));
-    await waitFor(() => expect(screen.getByTestId('error').props.children).toMatch(/Enter a title/));
+    await waitFor(() => expect(screen.getByTestId('error').props.children).toMatch(/Chapter \/ Topic/));
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('generateSteps sends the chapter/topic, not the title, as the AI topic', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ steps: [] }) }) as any;
+    await render(<Harness title="Chapter 5 Worksheet" chapter="Photosynthesis" />);
+    await user.press(screen.getByTestId('generate'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).topic).toBe('Photosynthesis');
   });
 
   test('generateSteps populates taskSteps from a successful AI response', async () => {
@@ -80,6 +89,32 @@ describe('useTaskSteps', () => {
     await user.press(screen.getByTestId('gen'));
     await waitFor(() => expect(captured.taskSteps.length).toBe(1));
     expect(captured.taskSteps[0].sections).toEqual(['Beginning', 'Middle', 'End']);
+  });
+
+  test('keeps exactly the steps the AI designed, with their fields', async () => {
+    const user = userEvent.setup();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        steps: [
+          { type: 'reading_comprehension', label: 'Read the story', instructions: 'Read and answer.', sections: ['Who', 'Why'] },
+          { type: 'problem_solving', label: 'Solve', instructions: 'Solve these.', problems: ['2+3'] },
+        ],
+        stepTypes: ['reading_comprehension', 'problem_solving'],
+      }),
+    }) as any;
+    let captured: any;
+    function Capture() {
+      const h = useTaskSteps(ARGS);
+      React.useEffect(() => { captured = h; });
+      return <TouchableOpacity testID="gen" onPress={() => h.generateSteps()} />;
+    }
+    await render(<Capture />);
+    await user.press(screen.getByTestId('gen'));
+    await waitFor(() => expect(captured.taskSteps.length).toBe(2));
+    expect(captured.taskSteps.map((s: any) => s.type)).toEqual(['reading_comprehension', 'problem_solving']);
+    expect(captured.taskSteps[0].sections).toEqual(['Who', 'Why']);
+    expect(captured.taskSteps[1].problems).toEqual(['2+3']);
   });
 
   test('an AI response with an empty steps array surfaces an error, adds nothing', async () => {

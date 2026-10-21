@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import type { AppColors } from '../../../../theme';
 import TransliterationInput, { langNameToCode } from '../../../../components/common/TransliterationInput';
 import DatePicker from '../../../../components/common/DatePicker';
-import { SUBJECTS, LANGUAGES } from '../constants';
+import { languagesForCurriculum, subjectsFor, subjectLabel } from '../constants';
 
 // The shared Title/Subject/Language/Grade/Curriculum/Chapter/Due-Date fields
 // used by BOTH the AI Assignment flow (always shown) and the Worksheet
@@ -51,6 +51,21 @@ export function AssignmentCommonFields({
   gold: string;
   styles: any;
 }) {
+  const boardCurriculum = effectiveCurriculum || teacherCurriculum || curriculum;
+  const offeredSubjects = subjectsFor(boardCurriculum, effectiveGrade);
+  // Uploads keep the subject read from the sheet even if the board list lacks it
+  const subjectOptions = createMode === 'upload' && subject && !offeredSubjects.includes(subject)
+    ? [...offeredSubjects, subject] : offeredSubjects;
+  React.useEffect(() => {
+    if (createMode !== 'upload' && subject && !offeredSubjects.includes(subject)) setSubject(offeredSubjects[0]);
+  }, [createMode, offeredSubjects, subject, setSubject]);
+  const offered = languagesForCurriculum(effectiveCurriculum || teacherCurriculum || curriculum);
+  // Uploads keep the language detected from the sheet even if the board doesn't offer it
+  const curriculumLanguages = createMode === 'upload' && selectedLanguage && !offered.includes(selectedLanguage)
+    ? [...offered, selectedLanguage] : offered;
+  React.useEffect(() => {
+    if (createMode !== 'upload' && selectedLanguage && !offered.includes(selectedLanguage)) setSelectedLanguage('');
+  }, [createMode, offered, selectedLanguage, setSelectedLanguage]);
   return (
     <>
       {showTitleDate && (<>
@@ -69,14 +84,14 @@ export function AssignmentCommonFields({
       {showDetails && (<>
       <Text style={styles.fieldLabel}>Subject{createMode === 'upload' && docFilesLength > 0 ? <Text style={{ fontSize: 10, color: colors.accentGreen, fontWeight: '600' }}> · auto-filled</Text> : null}</Text>
       <View style={styles.chipRow}>
-        {SUBJECTS.map((s) => (
+        {subjectOptions.map((s) => (
           <TouchableOpacity
             key={s}
             style={[styles.chip, subject === s && { backgroundColor: gold + '18', borderColor: gold }]}
             onPress={() => setSubject(s)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.chipText, subject === s && { color: gold }]}>{s}</Text>
+            <Text style={[styles.chipText, subject === s && { color: gold }]}>{subjectLabel(s, boardCurriculum, effectiveGrade)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -87,7 +102,7 @@ export function AssignmentCommonFields({
         <>
           <Text style={styles.fieldLabel}>{createMode === 'upload' ? 'Worksheet language' : 'Language'}</Text>
           <View style={styles.chipRow}>
-            {(createMode === 'upload' ? ['', ...LANGUAGES] : LANGUAGES).map((lang) => (
+            {(createMode === 'upload' ? ['', ...curriculumLanguages] : curriculumLanguages).map((lang) => (
               <TouchableOpacity
                 key={lang || 'auto'}
                 testID={`assignment-language-${lang || 'auto'}`}

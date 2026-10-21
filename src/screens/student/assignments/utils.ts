@@ -10,6 +10,15 @@ export function formatDueDate(iso: string) {
   return { label: `Due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`, colorKey: 'textMuted' as const, isOverdue: false };
 }
 
+// Per-question score badge. A blank answer scores 0% (it used to show "--"),
+// and one the AI could not grade waits for the teacher (it used to show "null%").
+export function scoreBadge(q: { answered?: boolean; score?: number | null; needsReview?: boolean }) {
+  if (q.needsReview) return { label: 'Review', colorKey: 'textDim' as const };
+  if (q.answered === false) return { label: '0%', colorKey: 'accentRed' as const };
+  const score = q.score ?? 0;
+  return { label: `${score}%`, colorKey: score >= 80 ? 'accentGreen' as const : score >= 50 ? 'accentYellow' as const : 'accentRed' as const };
+}
+
 export function getStamp(score: number | null) {
   if (score == null) return STAMPS[2];
   return STAMPS.find(s => score >= s.min) ?? STAMPS[2];
