@@ -18,7 +18,7 @@ export function DeleteAssignmentConfirm({ title, colors, onConfirm, onCancel }: 
             <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textMain }}>Delete assignment?</Text>
           </View>
           <Text style={{ fontSize: 14, color: colors.textMuted, lineHeight: 20 }}>
-            "{title}" will be removed for all students. This can't be undone.
+            {`"${title}" will be removed for all students. This can't be undone.`}
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
             <TouchableOpacity testID="delete-assignment-cancel" onPress={onCancel} activeOpacity={0.8}
