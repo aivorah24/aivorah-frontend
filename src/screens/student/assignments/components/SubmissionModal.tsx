@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Image, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Image, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON } from '../constants';
 import { getStamp, scoreBadge } from '../utils';
+import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
 import type { Assignment, PageAnswer, PerQ, GradeResult } from '../types';
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
@@ -434,7 +435,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
 
                       {/* Answer input */}
                       <View style={{ padding: 14, gap: 8 }}>
-                        <TextInput
+                        <TransliterationInput colors={colors} langCode={detectLangCodeFromText(`${assignment.title} ${qText}`)}
                           style={{
                             borderWidth: 1, borderColor: colors.borderColor, borderRadius: 10,
                             padding: 12, minHeight: 60, fontSize: 14, color: colors.textMain,

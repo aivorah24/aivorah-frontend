@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator,
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { BulkItem, StudentItem } from '../types';
-import { SUBJECTS, LANGUAGES } from '../constants';
+import { languagesForCurriculum, subjectsFor, subjectLabel } from '../constants';
 import DatePicker from '../../../../components/common/DatePicker';
 
 // The Bulk Upload 3-phase flow (BulkUploadStep -> ClassificationStep ->
@@ -15,7 +15,7 @@ import DatePicker from '../../../../components/common/DatePicker';
 export function BulkUploadFlow({
   bulkPhase, setBulkPhase, bulkItems, updateBulkItem, pickBulkDocs,
   generateAllBulkQuizzes, generateOneBulkQuiz, publishAllBulkItems,
-  gradeOptions, setFullscreenImage, setEditingBulkItemId, setInteractiveQuiz, setShowInteractivePreview,
+  gradeOptions, curriculum, setFullscreenImage, setEditingBulkItemId, setInteractiveQuiz, setShowInteractivePreview,
   bulkDueDate, setBulkDueDate, students, studentsLoaded,
   setShowModal, resetForm, colors, gold, styles,
   pendingImages, imageSelection, imageGroups,
@@ -30,6 +30,7 @@ export function BulkUploadFlow({
   generateOneBulkQuiz: (item: BulkItem) => void;
   publishAllBulkItems: () => void;
   gradeOptions: string[];
+  curriculum?: string;
   setFullscreenImage: (uri: string) => void;
   setEditingBulkItemId: (id: string | null) => void;
   setInteractiveQuiz: (v: any) => void;
@@ -223,9 +224,9 @@ export function BulkUploadFlow({
 
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textDim }}>Subject</Text>
                   <View style={styles.chipRow}>
-                    {SUBJECTS.map(s => (
+                    {(item.subject && !subjectsFor(curriculum, item.grade).includes(item.subject) ? [...subjectsFor(curriculum, item.grade), item.subject] : subjectsFor(curriculum, item.grade)).map(s => (
                       <TouchableOpacity key={s} style={[styles.chip, item.subject === s && { backgroundColor: gold + '18', borderColor: gold }]} onPress={() => updateBulkItem(item.id, { subject: s })} activeOpacity={0.75}>
-                        <Text style={[styles.chipText, item.subject === s && { color: gold }]}>{s}</Text>
+                        <Text style={[styles.chipText, item.subject === s && { color: gold }]}>{subjectLabel(s, curriculum, item.grade)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -250,7 +251,7 @@ export function BulkUploadFlow({
                     <>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textDim }}>Language</Text>
                       <View style={styles.chipRow}>
-                        {LANGUAGES.map(lang => (
+                        {(item.language && !languagesForCurriculum(curriculum).includes(item.language) ? [...languagesForCurriculum(curriculum), item.language] : languagesForCurriculum(curriculum)).map(lang => (
                           <TouchableOpacity key={lang} style={[styles.chip, item.language === lang && { backgroundColor: '#BAA46720', borderColor: '#BAA467' }]} onPress={() => updateBulkItem(item.id, { language: lang })} activeOpacity={0.75}>
                             <Text style={[styles.chipText, item.language === lang && { color: '#BAA467' }]}>{lang}</Text>
                           </TouchableOpacity>

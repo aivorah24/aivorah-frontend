@@ -20,8 +20,8 @@ const props = (over: any = {}) => ({
 });
 
 describe('AssignmentCommonFields — worksheet language', () => {
-  test('upload mode shows Auto-detect + every language for any subject, and picking one sets it', async () => {
-    const p = props();
+  test('upload mode shows Auto-detect + the board\'s languages for any subject, and picking one sets it', async () => {
+    const p = props({ curriculum: 'CBSE', effectiveCurriculum: 'CBSE', curriculumOptions: ['CBSE'], teacherCurriculum: 'CBSE' });
     await render(<AssignmentCommonFields {...p} />);
     expect(screen.getByText('Worksheet language')).toBeTruthy();
     expect(screen.getByText('Auto-detect')).toBeTruthy();

@@ -7,10 +7,98 @@ export const SUBJECTS = [
 ];
 export const ALL_GRADES = ['Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 export const IB_GRADES  = ['Grade 3', 'Grade 4', 'Grade 5'];
-export const LANGUAGES = [
-  'Telugu', 'Hindi', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Marathi', 'Punjabi', 'Odia',
-  'Urdu', 'Sanskrit', 'French', 'Spanish', 'German', 'Mandarin', 'Arabic',
+const INDIAN_LANGUAGES = [
+  'Hindi', 'Sanskrit', 'Telugu', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Assamese', 'Gujarati',
+  'Marathi', 'Punjabi', 'Odia', 'Urdu', 'Nepali',
 ];
+// Second languages each board offers (CBSE scheme of studies, CISCE Group I,
+// IB MYP eAssessment, Cambridge IGCSE foreign/second language syllabuses).
+export const LANGUAGES_BY_CURRICULUM: Record<string, string[]> = {
+  CBSE: [...INDIAN_LANGUAGES, 'Persian', 'Arabic', 'French', 'German', 'Spanish', 'Japanese', 'Russian', 'Thai'],
+  ICSE: [...INDIAN_LANGUAGES, 'French', 'German', 'Spanish'],
+  IB: ['Hindi', 'French', 'Spanish', 'German', 'Mandarin', 'Arabic', 'Urdu', 'Dutch', 'Japanese'],
+  Cambridge: ['Hindi', 'Urdu', 'French', 'German', 'Spanish', 'Mandarin', 'Arabic', 'Japanese', 'Italian', 'Portuguese', 'Dutch', 'Greek'],
+};
+export const LANGUAGES = Array.from(new Set(Object.values(LANGUAGES_BY_CURRICULUM).flat()));
+
+export function languagesForCurriculum(curriculum?: string | null): string[] {
+  const c = String(curriculum || '').trim().toUpperCase();
+  if (c.startsWith('IB')) return LANGUAGES_BY_CURRICULUM.IB;
+  if (c.startsWith('CAMBRIDGE') || c.includes('IGCSE')) return LANGUAGES_BY_CURRICULUM.Cambridge;
+  if (c === 'ICSE' || c === 'ISC' || c === 'CISCE') return LANGUAGES_BY_CURRICULUM.ICSE;
+  if (c === 'CBSE') return LANGUAGES_BY_CURRICULUM.CBSE;
+  return LANGUAGES;
+}
+// Subjects each board teaches at each stage. Values stay the app's canonical
+// names ('Language Acquisition' drives the language picker); boards' own names
+// are shown via subjectLabel().
+const LANG = 'Language Acquisition';
+type Board = 'CBSE' | 'ICSE' | 'IB' | 'Cambridge';
+const SUBJECTS_BY_STAGE: Record<Board, Array<{ upTo: number; subjects: string[] }>> = {
+  CBSE: [
+    { upTo: 2,  subjects: ['English', LANG, 'Mathematics', 'Visual Arts', 'Physical Education'] },
+    { upTo: 5,  subjects: ['English', LANG, 'Mathematics', 'Environmental Studies', 'Visual Arts', 'Physical Education'] },
+    { upTo: 8,  subjects: ['English', LANG, 'Mathematics', 'Science', 'Social Studies', 'ICT', 'Visual Arts', 'Physical Education'] },
+    { upTo: 10, subjects: ['English', LANG, 'Mathematics', 'Science', 'Social Studies', 'ICT', 'Physical Education'] },
+    { upTo: 12, subjects: ['English', LANG, 'Physics', 'Chemistry', 'Biology', 'Mathematics', 'Computer Science', 'Accountancy', 'Business Studies', 'Economics', 'History', 'Geography', 'Political Science', 'Physical Education'] },
+  ],
+  ICSE: [
+    { upTo: 5,  subjects: ['English', LANG, 'Mathematics', 'Environmental Studies', 'ICT', 'Visual Arts', 'Physical Education'] },
+    { upTo: 10, subjects: ['English', LANG, 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'History & Civics', 'Geography', 'ICT', 'Economics', 'Visual Arts', 'Physical Education'] },
+    { upTo: 12, subjects: ['English', LANG, 'Physics', 'Chemistry', 'Biology', 'Mathematics', 'Computer Science', 'Accountancy', 'Business Studies', 'Economics', 'History', 'Geography', 'Political Science', 'Physical Education'] },
+  ],
+  IB: [
+    { upTo: 5,  subjects: ['Mathematics', 'Science', 'English', 'Social Studies', LANG, 'Visual Arts', 'ICT', 'Physical Education'] },
+    { upTo: 10, subjects: ['English', LANG, 'Social Studies', 'Science', 'Mathematics', 'Visual Arts', 'Physical Education', 'Design'] },
+    { upTo: 12, subjects: ['English', LANG, 'Economics', 'History', 'Geography', 'Business Management', 'Psychology', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Mathematics', 'Visual Arts', 'Theory of Knowledge'] },
+  ],
+  Cambridge: [
+    { upTo: 9,  subjects: ['English', LANG, 'Mathematics', 'Science', 'Global Perspectives', 'ICT', 'Visual Arts', 'Physical Education'] },
+    { upTo: 12, subjects: ['English', LANG, 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Economics', 'Business Studies', 'History', 'Geography', 'Global Perspectives', 'Visual Arts'] },
+  ],
+};
+
+// Board-specific names for the canonical subjects (stage-aware where boards differ)
+const SUBJECT_LABELS: Record<Board, (s: string, g: number) => string | undefined> = {
+  CBSE: (s, g) => ({ [LANG]: 'Second Language', 'Social Studies': 'Social Science', ICT: g >= 9 ? 'Information Technology' : 'Computer Science', 'Visual Arts': 'Art Education', 'Environmental Studies': g >= 3 ? 'The World Around Us (EVS)' : undefined } as Record<string, string | undefined>)[s],
+  ICSE: (s, g) => ({ [LANG]: 'Second Language', ICT: g >= 9 ? 'Computer Applications' : 'Computer Studies', 'Visual Arts': 'Art', 'Environmental Studies': 'EVS' } as Record<string, string | undefined>)[s],
+  IB: (s, g) => (g <= 5 ? undefined : ({ English: 'Language and Literature', 'Social Studies': 'Individuals and Societies', Science: 'Sciences', 'Visual Arts': 'Arts', 'Physical Education': 'Physical and Health Education' } as Record<string, string>)[s]),
+  Cambridge: (s, g) => ({ [LANG]: 'Foreign Language', ICT: 'Computing', 'Visual Arts': 'Art & Design', ...(g >= 10 ? { ICT: 'Computer Science' } : {}) } as Record<string, string>)[s],
+};
+
+function boardOf(curriculum?: string | null): Board | null {
+  const c = String(curriculum || '').trim().toUpperCase();
+  if (c.startsWith('IB')) return 'IB';
+  if (c.startsWith('CAMBRIDGE') || c.includes('IGCSE')) return 'Cambridge';
+  if (c === 'ICSE' || c === 'ISC' || c === 'CISCE') return 'ICSE';
+  if (c === 'CBSE' || c.includes('NCERT')) return 'CBSE';
+  return null;
+}
+
+// 'Grade 7' → 7; LKG/UKG/Nursery → 0
+export function gradeNumber(grade?: string | null): number | null {
+  const g = String(grade || '').trim();
+  if (/^(nursery|pre|lkg|ukg|kg)/i.test(g)) return 0;
+  const n = parseInt(g.replace(/\D/g, ''), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function subjectsFor(curriculum?: string | null, grade?: string | null): string[] {
+  const board = boardOf(curriculum);
+  if (!board) return SUBJECTS;
+  const stages = SUBJECTS_BY_STAGE[board];
+  const g = gradeNumber(grade);
+  // Unknown grade → the youngest stage
+  const stage = g === null ? stages[0] : (stages.find(s => g <= s.upTo) || stages[stages.length - 1]);
+  return stage.subjects;
+}
+
+export function subjectLabel(subject: string, curriculum?: string | null, grade?: string | null): string {
+  const board = boardOf(curriculum);
+  if (!board) return subject;
+  return SUBJECT_LABELS[board](subject, gradeNumber(grade) ?? 0) || subject;
+}
+
 export const TYPES = ['assignment', 'quiz'];
 // Aivorah gold — matches the gold theme applied across teacher/parent/student screens
 export const AIVORAH_GOLD = '#BAA467';

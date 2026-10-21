@@ -91,14 +91,14 @@ export function SubmittedResultModal({
           {/* Per question breakdown */}
           {pq.length > 0 && (
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Step by Step</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Question by Question · {pq.filter((q: any) => q && q.answered !== false).length} of {pq.filter(Boolean).length} answered</Text>
               {pq.filter(Boolean).map((q: any, idx: number) => {
                 const badge = scoreBadge(q);
                 const qsc = colors[badge.colorKey];
                 return (
                   <View key={idx} style={{ borderRadius: 10, borderWidth: 1, borderColor: qsc + '40', backgroundColor: colors.cardDark, overflow: 'hidden' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, backgroundColor: qsc + '0A' }}>
-                      <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.question || q.stepLabel || `Step ${idx + 1}`}</Text>
+                      <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={2}>Q{idx + 1}. {q.stepLabel || q.question || 'Question'}</Text>
                       <View style={{ backgroundColor: qsc + '25', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
                         <Text style={{ fontSize: 12, fontWeight: '800', color: qsc }}>{badge.label}</Text>
                       </View>

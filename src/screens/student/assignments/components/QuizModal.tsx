@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
@@ -10,6 +10,7 @@ import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR } from '../constants';
 import { getStamp } from '../utils';
+import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
 import type { Assignment, QuizQuestion, PerQ, GradeResult } from '../types';
 import { AssignmentErrorBoundary } from './AssignmentErrorBoundary';
 import { ModalTopBar } from './ModalTopBar';
@@ -46,6 +47,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
   const [showCheckNudge,   setShowCheckNudge]   = useState(false);
 
   const q         = questions[currentQ];
+  const langCode  = detectLangCodeFromText(`${assignment.title} ${q?.question ?? ''}`);
   const isLast    = currentQ === questions.length - 1;
   const isFillQ   = q?.type === 'fill_blank';
   const answered  = answers[currentQ] !== undefined;
@@ -519,7 +521,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
                   </View>
                 ) : (
                   <View style={{ gap: 8 }}>
-                    <TextInput
+                    <TransliterationInput langCode={langCode} colors={colors}
                       style={{ borderWidth: 1.5, borderColor: color + '60', borderRadius: 12, padding: 14,
                         fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark,
                         minHeight: 90, textAlignVertical: 'top', lineHeight: 24 }}
@@ -581,7 +583,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
               return (
                 <View style={{ gap: 10, width: '100%' }}>
                   {/* Question with blank highlighted */}
-                  <TextInput
+                  <TransliterationInput langCode={langCode} colors={colors}
                     style={{ borderWidth: 1.5, borderColor: fb ? '#C98A8A60' : color + '60', borderRadius: 12,
                       padding: 14, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark, width: '100%' }}
                     placeholder="Type your answer here..."

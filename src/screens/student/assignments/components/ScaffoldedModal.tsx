@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
@@ -12,6 +12,7 @@ import type { Assignment, StepType, StepAnswer, PerQ, GradeResult } from '../typ
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
 import { PhotoUploadStep } from './PhotoUploadStep';
+import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
 
 // ── Scaffolded Submission Modal ───────────────────────────────────────────────
 // Flow: Step 1 (brainstorm/drawing/writing/photo) → ... → Self-Assessment → Submit → Results
@@ -182,7 +183,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
               ) : null}
               {result.perQuestion.length > 0 && (
                 <View style={{ gap: 6 }}>
-                  <Text style={styles.feedbackTitle}>Step by Step</Text>
+                  <Text style={styles.feedbackTitle}>Question by Question · {result.perQuestion.filter((q: any) => q.answered !== false).length} of {result.perQuestion.length} answered</Text>
                   {result.perQuestion.map((q: any, idx: number) => {
                     const badge = scoreBadge(q);
                     const sc = colors[badge.colorKey];
@@ -195,7 +196,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                           <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: stepColor, alignItems: 'center', justifyContent: 'center' }}>
                             <Feather name={(STEP_ICONS[q.type as StepType] as any) || 'check'} size={11} color="#fff" />
                           </View>
-                          <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>{q.stepLabel || `Step ${idx + 1}`}</Text>
+                          <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: colors.textMain }} numberOfLines={2}>Q{idx + 1}. {q.stepLabel || q.question || 'Question'}</Text>
                           <View style={{ backgroundColor: sc + '25', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
                             <Text style={{ fontSize: 12, fontWeight: '800', color: sc }}>{badge.label}</Text>
                           </View>
@@ -493,6 +494,8 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
   // ── Step UI ──
   if (!step) return null;
   const stepColor = STEP_COLORS[step.type as StepType] ?? '#BAA467';
+  // Native-script assignments (Telugu, Hindi…) get English→script typing
+  const langCode = detectLangCodeFromText(`${assignment.title} ${step.label} ${step.instructions ?? ''}`);
   return (
     <Modal visible animationType="slide" transparent onRequestClose={() => setShowConfirm(true)}>
       <View style={styles.overlay}>
@@ -561,9 +564,10 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                   </View>
                 )}
                 {/* Input */}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TextInput
-                    style={[styles.content, { flex: 1, borderWidth: 1.5, borderColor: stepColor + '60', borderRadius: 12,
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                  <TransliterationInput langCode={langCode} colors={colors}
+                    style={[styles.content, { borderWidth: 1.5, borderColor: stepColor + '60', borderRadius: 12,
                       paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark }]}
                     placeholder="Type a keyword and press Add..."
                     placeholderTextColor={colors.textDim}
@@ -572,8 +576,9 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                     onSubmitEditing={addKeyword}
                     returnKeyType="done"
                   />
+                  </View>
                   <TouchableOpacity onPress={addKeyword} activeOpacity={0.8}
-                    style={{ paddingHorizontal: 16, borderRadius: 12, backgroundColor: stepColor, alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: stepColor, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -610,7 +615,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                         </View>
                         <Text style={{ flex: 1, fontSize: 15, color: colors.textMain, lineHeight: 23, fontWeight: '500' }}>{problem}</Text>
                       </View>
-                      <TextInput
+                      <TransliterationInput langCode={langCode} colors={colors}
                         style={{ borderWidth: 1.5, borderColor: stepColor + '50', borderRadius: 12,
                           paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textMain,
                           backgroundColor: colors.bgDark, minHeight: 60, textAlignVertical: 'top' }}
@@ -654,7 +659,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                     ] as const).map(({ key, label, placeholder }) => (
                       <View key={key} style={{ gap: 4 }}>
                         <Text style={{ fontSize: 12, fontWeight: '700', color: stepColor }}>{label}</Text>
-                        <TextInput
+                        <TransliterationInput langCode={langCode} colors={colors}
                           style={{ borderWidth: 1.5, borderColor: stepColor + '40', borderRadius: 10,
                             paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.textMain,
                             backgroundColor: colors.bgDark, minHeight: 52, textAlignVertical: 'top', lineHeight: 20 }}
@@ -672,7 +677,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                   // Generic open text for other hook types (language_culture, artistic_exploration, etc.)
                   <View style={{ gap: 8 }}>
                     <Text style={[styles.sectionLabel, { color: stepColor }]}>My Initial Thinking</Text>
-                    <TextInput
+                    <TransliterationInput langCode={langCode} colors={colors}
                       style={{ borderWidth: 1.5, borderColor: stepColor + '50', borderRadius: 12,
                         padding: 14, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark,
                         minHeight: 110, textAlignVertical: 'top', lineHeight: 24 }}
@@ -698,7 +703,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                       <Feather name={icon as any} size={13} color={stepColor} />
                       <Text style={{ fontSize: 12, fontWeight: '700', color: stepColor }}>{label}</Text>
                     </View>
-                    <TextInput
+                    <TransliterationInput langCode={langCode} colors={colors}
                       style={{ borderWidth: 1.5, borderColor: stepColor + '50', borderRadius: 12,
                         padding: 14, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark,
                         minHeight: 90, textAlignVertical: 'top', lineHeight: 22 }}
@@ -734,7 +739,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                         <Text style={{ fontSize: 12, fontWeight: '700', color: stepColor }}>{sectionLabel}</Text>
                       </View>
                       <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 19, marginLeft: 28 }}>{prompt}</Text>
-                      <TextInput
+                      <TransliterationInput langCode={langCode} colors={colors}
                         style={{ borderWidth: 1.5, borderColor: stepColor + '40', borderRadius: 12,
                           padding: 14, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark,
                           minHeight: 80, textAlignVertical: 'top', lineHeight: 22 }}
@@ -758,6 +763,15 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                         tech_skill_practice, skill_practice (+ existing structured_writing) */}
             {(['structured_writing','reading_comprehension','research_notes','language_practice','tech_skill_practice','skill_practice'] as StepType[]).includes(step.type) && (
               <View style={{ gap: 12 }}>
+                {step.provocation ? (
+                  <View testID="reading-passage" style={{ padding: 16, borderRadius: 14, backgroundColor: colors.bgDark, borderWidth: 1.5, borderColor: stepColor + '40', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Feather name="book-open" size={14} color={stepColor} />
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: stepColor, textTransform: 'uppercase', letterSpacing: 0.8 }}>Read this passage</Text>
+                    </View>
+                    <Text style={{ fontSize: 15, color: colors.textMain, lineHeight: 25 }}>{step.provocation}</Text>
+                  </View>
+                ) : null}
                 {(step.wordBank?.length ?? 0) > 0 && (
                   <View style={{ gap: 6 }}>
                     <Text style={[styles.sectionLabel, { color: stepColor }]}>Word Bank — tap to insert</Text>
@@ -767,7 +781,9 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                           onPress={() => {
                             const si = focusedSectionIdx.current;
                             const cur = ans.sections[si]?.text ?? '';
-                            const appended = cur ? cur + ' ' + word : word;
+                            // "అమ్మ (amma) – mother" inserts just the word
+                            const bare = word.split(/\s+[(–-]/)[0].trim() || word;
+                            const appended = cur ? cur + ' ' + bare : bare;
                             patchAns({ sections: ans.sections.map((s, j) => j === si ? { ...s, text: appended } : s) });
                           }}
                           style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: stepColor + '15', borderWidth: 1, borderColor: stepColor + '40' }}>
@@ -779,16 +795,21 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
                 )}
                 {ans.sections.map((sec, si) => (
                   <View key={si} style={{ gap: 6 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, backgroundColor: stepColor }}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>{sec.label}</Text>
+                    {sec.label.length > 30 ? (
+                      // Long labels are real questions — show them as readable text
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textMain, lineHeight: 21 }}>{si + 1}. {sec.label}</Text>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, backgroundColor: stepColor }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>{sec.label}</Text>
+                        </View>
                       </View>
-                    </View>
-                    <TextInput
+                    )}
+                    <TransliterationInput langCode={langCode} colors={colors}
                       style={{ borderWidth: 1.5, borderColor: stepColor + '40', borderRadius: 12,
                         padding: 14, fontSize: 15, color: colors.textMain, backgroundColor: colors.bgDark,
                         minHeight: 90, textAlignVertical: 'top', lineHeight: 24 }}
-                      placeholder={`Write your ${sec.label.toLowerCase()} here...`}
+                      placeholder={sec.label.length > 30 ? 'Write your answer here...' : `Write your ${sec.label.toLowerCase()} here...`}
                       placeholderTextColor={colors.textDim}
                       value={sec.text}
                       onFocus={() => { focusedSectionIdx.current = si; }}

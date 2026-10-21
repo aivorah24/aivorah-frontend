@@ -54,13 +54,18 @@ export async function uploadBrandingLogo(kind: 'school' | 'curriculum', name: st
 
 // ── Profile fields (name / school / curriculum+grades) ─────────────────────
 export async function patchProfile(fields: { email: string; name?: string; school?: string; curriculum?: string; grade?: string; teaches?: any[] }): Promise<{ ok?: boolean; error?: string }> {
-  const res = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(fields),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return { error: data.error || 'Failed to save' };
-  return { ok: true, ...data };
+  try {
+    const res = await fetch(`${PROFILE_SERVER_URL}/user/profile`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.error || 'Failed to save' };
+    return { ok: true, ...data };
+  } catch {
+    // Network/CORS failure — surface it instead of leaving the Save spinner running
+    return { error: 'Could not reach the server. Check your connection and try again.' };
+  }
 }
 
 // ── Account identity (delete; email change lives in screens/shared/account) ──────────────────────

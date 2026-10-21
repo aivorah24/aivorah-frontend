@@ -8,12 +8,15 @@ import ASSIGNMENTS_SERVER_URL from '../../../config/assignmentsServerUrl';
 const colors = { textDim: '#999', textMain: '#fff', cardDark: '#111', borderColor: '#333', accentYellow: '#fa0' };
 
 describe('detectLangCodeFromText / langNameToCode', () => {
-  test.each([['అమ్మ', 'te'], ['माँ', 'hi'], ['அம்மா', 'ta'], ['ಅಮ್ಮ', 'kn'], ['അമ്മ', 'ml'], ['মা', 'bn'], ['ମା', 'or'], ['Mom', null]])(
+  test.each([['అమ్మ', 'te'], ['माँ', 'hi'], ['அம்மா', 'ta'], ['ಅಮ್ಮ', 'kn'], ['അമ്മ', 'ml'], ['মা', 'bn'], ['ମା', 'or'], ['Mom', null],
+    ['你好', 'zh'], ['ありがとう', 'ja'], ['привет', 'ru'], ['καλημέρα', 'el'], ['สวัสดี', 'th'], ['مرحبا', 'ar'], ['شکریہ', 'ur']])(
     '%s → %s', (text, code) => expect(detectLangCodeFromText(text)).toBe(code),
   );
   test('names map to IME codes', () => {
     expect(langNameToCode('Tamil')).toBe('ta');
     expect(langNameToCode('French')).toBeNull();
+    expect(langNameToCode('Mandarin')).toBe('zh');
+    expect(langNameToCode('Assamese')).toBe('as');
   });
 });
 
