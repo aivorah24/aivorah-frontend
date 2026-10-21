@@ -6,6 +6,7 @@ import { useScheduleEvents } from '../useScheduleEvents';
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => void | (() => void)) => { const React = require('react'); React.useEffect(cb, []); },
 }));
+jest.mock('../../../../../services/authHeader', () => ({ authHeader: jest.fn(async () => ({ Authorization: 'Bearer test-token' })) }));
 
 const WEEK = [
   { iso: '2026-04-13', day: 'MON', date: 13 },

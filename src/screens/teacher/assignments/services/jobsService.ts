@@ -58,3 +58,26 @@ export async function extractViaQueue(serverUrl: string, body: any): Promise<any
     return fallbackData;
   }
 }
+
+export type WorksheetMeta = { grade: string; curriculum: string; chapter: string };
+
+// Grade / curriculum / chapter code printed on the worksheet (or in its file
+// name) — answered in about a second by assignments-service, so the upload
+// form fills these before the slow AI extraction finishes. null on failure.
+export async function detectWorksheetMeta(
+  file: { base64: string; mime: string; name: string },
+  serverUrl: string,
+): Promise<WorksheetMeta | null> {
+  try {
+    const res = await fetch(`${serverUrl}/assignments/detect-meta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64: file.base64, mimeType: file.mime, fileName: file.name }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { grade: String(data?.grade || ''), curriculum: String(data?.curriculum || ''), chapter: String(data?.chapter || '') };
+  } catch {
+    return null;
+  }
+}

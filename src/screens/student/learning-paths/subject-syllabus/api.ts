@@ -1,6 +1,7 @@
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { type SyllabusChapter } from '../../../../data/cbseG6EnglishSyllabus';
 import { getSubjectSyllabus } from '../../../../data/syllabusRegistry';
+import { isSyllabusOnlyCurriculum } from '../../../../utils/curriculum';
 import type { DbUnit } from './types';
 
 // Curated (chapter-accurate) syllabi, shared with LessonScreen via
@@ -19,8 +20,9 @@ export async function fetchPublishedSyllabus(curriculum: string, grade: string, 
   // a different endpoint. Every other curriculum is unchanged.
   const isIBDP = /^ib.?dp$/i.test(curriculum.trim());
   const isIBMYP = /^ib.?myp$/i.test(curriculum.trim());
-  const isCambridgeQdrant = /^cambridge$/i.test(curriculum.trim()) && parseInt(grade.replace(/\D/g, ''), 10) >= 6;
-  const path = (isIBDP || isIBMYP || isCambridgeQdrant)
+  // ICSE and Cambridge (every grade) have no textbook yet: the service
+  // returns their syllabus outline with each topic marked comingSoon.
+  const path = (isIBDP || isIBMYP || isSyllabusOnlyCurriculum(curriculum))
     ? `/curriculum/syllabus?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`
     : `/teacher/syllabus/current?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`;
   const res = await fetch(`${LEARNING_PATHS_SERVER_URL}${path}`);

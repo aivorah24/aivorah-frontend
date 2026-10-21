@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Teacher Students microservice (aivorah-students-service) — roster-management
@@ -12,9 +13,9 @@ declare const __DEV__: boolean;
 // 2026-09-18: migrated to a new Render account (old account suspended for
 // billing). Temporary URL — Render appended a random suffix since the
 // original name is still claimed by the suspended account.
-const LIVE_SERVICE = 'https://aivorah-students-service-h3se.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-students-service.onrender.com';
 
 const STUDENTS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3017' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3017' : LIVE_SERVICE;
 
 export default STUDENTS_SERVER_URL;

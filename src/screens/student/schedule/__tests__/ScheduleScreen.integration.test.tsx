@@ -49,6 +49,7 @@ jest.mock('../hooks/useScheduleEvents', () => ({
   useScheduleEvents: (...args: any[]) => (global as any).__mockUseScheduleEvents(...args),
 }));
 jest.mock('../hooks/useBrowserNotifications', () => ({ useBrowserNotifications: () => {} }));
+jest.mock('../../../../services/authHeader', () => ({ authHeader: jest.fn(async () => ({ Authorization: 'Bearer test-token' })) }));
 
 const WEEK = [
   { iso: '2026-04-13', day: 'MON', date: 13 }, { iso: '2026-04-14', day: 'TUE', date: 14 },

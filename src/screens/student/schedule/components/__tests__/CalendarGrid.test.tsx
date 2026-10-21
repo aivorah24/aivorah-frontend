@@ -14,12 +14,12 @@ function ev(overrides: Partial<ScheduleEvent> = {}): ScheduleEvent {
 
 function baseProps(overrides: Partial<React.ComponentProps<typeof CalendarGrid>> = {}) {
   return {
-    loading: false, week, todayISO: '2026-04-13', eventDates: new Set<string>(),
+    loading: false, week, todayISO: '2026-04-13',
     eventsMap: {}, hideCompleted: false, filterType: 'all', passesTagFilter: () => true,
     allDayHeight: 40, gridHeight: 100, colWidth: 140,
     hScrollRef: { current: null }, didInitialScrollRef: { current: true }, scrollToToday: jest.fn(),
     dragPreview: null, onColMouseDown: jest.fn(), onAllDaySlotPress: jest.fn(),
-    onEventPress: jest.fn(), onRemoveEvent: jest.fn(), onAddEventPress: jest.fn(),
+    onEventPress: jest.fn(), onRemoveEvent: jest.fn(),
     styles: {}, colors,
     ...overrides,
   } as React.ComponentProps<typeof CalendarGrid>;
@@ -119,15 +119,25 @@ describe('CalendarGrid — all-day lane', () => {
   });
 });
 
-describe('CalendarGrid — add event button', () => {
-  test('pressing "Add Event" calls onAddEventPress', async () => {
-    const onAddEventPress = jest.fn();
-    const user = userEvent.setup();
-    await render(<CalendarGrid {...baseProps({ onAddEventPress })} />);
+describe('CalendarGrid — shared table', () => {
+  test('the add-event button lives in the screen header now, not in the grid', async () => {
+    await render(<CalendarGrid {...baseProps()} />);
+    expect(screen.queryByTestId('schedule-add-event-button')).toBeNull();
+  });
 
-    await user.press(screen.getByTestId('schedule-add-event-button'));
+  test('the current-time line shows in the week that contains today', async () => {
+    await render(<CalendarGrid {...baseProps()} />);
+    expect(screen.getByTestId('schedule-now-line')).toBeTruthy();
+  });
 
-    expect(onAddEventPress).toHaveBeenCalled();
+  test('no current-time line in a week without today', async () => {
+    await render(<CalendarGrid {...baseProps({ todayISO: '2026-05-01' })} />);
+    expect(screen.queryByTestId('schedule-now-line')).toBeNull();
+  });
+
+  test('day headers use the teacher format ("13 Mon")', async () => {
+    await render(<CalendarGrid {...baseProps()} />);
+    expect(screen.getByText('13 Mon')).toBeTruthy();
   });
 });
 

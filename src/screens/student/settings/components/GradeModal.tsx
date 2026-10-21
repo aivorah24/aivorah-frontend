@@ -10,11 +10,12 @@ interface GradeModalProps {
   setSelectedGrade: (v: string) => void;
   gradeLoading: boolean;
   onSave: () => void;
+  error?: string | null;
   colors: any;
   styles: any;
 }
 
-export default function GradeModal({ visible, onClose, grades, selectedGrade, setSelectedGrade, gradeLoading, onSave, colors, styles }: GradeModalProps) {
+export default function GradeModal({ visible, onClose, grades, selectedGrade, setSelectedGrade, gradeLoading, onSave, error, colors, styles }: GradeModalProps) {
   return (
     <AppModal visible={visible} title="Update Grade / Year" onClose={onClose} styles={styles} colors={colors} testID="settings-modal-grade">
       <Text style={[styles.modalNote, { marginBottom: 12 }]}>Select your current grade. The dashboard will update automatically.</Text>
@@ -41,15 +42,18 @@ export default function GradeModal({ visible, onClose, grades, selectedGrade, se
           );
         })}
       </View>
+      {!!error && (
+        <Text testID="settings-modal-grade-error" style={{ color: colors.accentRed || '#D9534F', fontSize: 12.5, marginTop: -8, marginBottom: 14 }}>{error}</Text>
+      )}
       <View style={styles.modalBtns}>
         <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose} testID="settings-modal-grade-cancel-button">
           <Text style={styles.modalCancelText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
           testID="settings-modal-grade-save-button"
-          style={[styles.modalSaveBtn, (!selectedGrade || gradeLoading) && { opacity: 0.6 }]}
+          style={[styles.modalSaveBtn, (!selectedGrade || gradeLoading || !!error) && { opacity: 0.6 }]}
           onPress={onSave}
-          disabled={!selectedGrade || gradeLoading}
+          disabled={!selectedGrade || gradeLoading || !!error}
         >
           {gradeLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.modalSaveText}>Save</Text>}
         </TouchableOpacity>

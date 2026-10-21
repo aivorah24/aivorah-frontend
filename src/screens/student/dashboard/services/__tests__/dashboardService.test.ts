@@ -4,6 +4,7 @@ jest.mock('../../../../../config/serverUrl', () => ({ __esModule: true, default:
 jest.mock('../../../../../config/learningPathsServerUrl', () => ({ __esModule: true, default: 'https://learning-paths.test' }));
 jest.mock('../../../../../config/leaderboardServiceUrl', () => ({ __esModule: true, default: 'https://lb.test' }));
 jest.mock('../../../../../config/scheduleServerUrl', () => ({ __esModule: true, default: 'https://schedule.test' }));
+jest.mock('../../../../../services/authHeader', () => ({ authHeader: jest.fn(async () => ({ Authorization: 'Bearer test-token' })) }));
 
 const ok = (body: unknown) => ({ ok: true, json: async () => body });
 
@@ -17,6 +18,14 @@ describe('fetchCurriculumSubjects', () => {
     expect(url).toContain('learning-paths.test/curriculum/subjects');
     expect(url).not.toContain('monolith.test');
     expect(data.subjects[0].chapters[0].title).toBe('Crop Production and Management');
+  });
+
+  test.each([['ICSE', 'Grade 6'], ['Cambridge', 'Grade 3'], ['Cambridge', 'Grade 9']])('%s %s subjects come from the learning-paths service (syllabus-only board)', async (curriculum, grade) => {
+    (global.fetch as jest.Mock).mockResolvedValue(ok({ subjects: [] }));
+    await fetchCurriculumSubjects(curriculum, grade);
+    const url = String((global.fetch as jest.Mock).mock.calls[0][0]);
+    expect(url).toContain('learning-paths.test/curriculum/subjects');
+    expect(url).not.toContain('monolith.test');
   });
 
   test('falls back to the monolith when the service is unreachable', async () => {

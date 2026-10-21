@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Schedule microservice base URL (aivorah-schedule-service). Deployed live on
@@ -8,9 +9,9 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-schedule-service-5lxh.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-schedule-service.onrender.com';
 
 const SCHEDULE_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3009' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3009' : LIVE_SERVICE;
 
 export default SCHEDULE_SERVER_URL;

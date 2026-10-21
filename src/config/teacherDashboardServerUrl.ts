@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Teacher Dashboard microservice (aivorah-teacher-dashboard-service) —
@@ -10,9 +11,9 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-teacher-dashboard-service-e8bh.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-teacher-dashboard-service.onrender.com';
 
 const TEACHER_DASHBOARD_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3016' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3016' : LIVE_SERVICE;
 
 export default TEACHER_DASHBOARD_SERVER_URL;

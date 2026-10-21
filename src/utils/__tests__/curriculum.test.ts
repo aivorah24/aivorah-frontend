@@ -1,5 +1,5 @@
 import {
-  normalizeCurriculum, isCbseCurriculum, monolithContentCurriculum, normalizeUserCurricula, NCERT_CONTENT_KEY,
+  normalizeCurriculum, isCbseCurriculum, monolithContentCurriculum, normalizeUserCurricula, NCERT_CONTENT_KEY, isSyllabusOnlyCurriculum,
 } from '../curriculum';
 
 describe('normalizeCurriculum', () => {
@@ -52,5 +52,15 @@ describe('normalizeUserCurricula', () => {
     const user = { curriculum: 'CBSE', teaches: [{ curriculum: 'IB PYP' }] };
     expect(normalizeUserCurricula(user)).toBe(user);
     expect(normalizeUserCurricula(null)).toBeNull();
+  });
+});
+
+describe('isSyllabusOnlyCurriculum', () => {
+  test('ICSE and Cambridge (any case/spacing) have no textbook yet', () => {
+    expect(isSyllabusOnlyCurriculum('ICSE')).toBe(true);
+    expect(isSyllabusOnlyCurriculum(' cambridge ')).toBe(true);
+  });
+  test('every other curriculum keeps its textbook flow', () => {
+    ['CBSE', 'NCERT', 'IB PYP', 'IB DP', '', null, undefined].forEach((c) => expect(isSyllabusOnlyCurriculum(c as any)).toBe(false));
   });
 });

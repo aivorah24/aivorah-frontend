@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Parental Controls microservice (aivorah-parental-controls-service) -
@@ -7,9 +8,12 @@ import { Platform } from 'react-native';
 // deployment.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-parental-controls-service.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-parental-controls-service-okqy.onrender.com';
+
+// EXPO_PUBLIC_PARENTAL_CONTROLS_URL points only this service elsewhere (e.g. a local copy).
+const OVERRIDE = process.env.EXPO_PUBLIC_PARENTAL_CONTROLS_URL;
 
 const PARENTAL_CONTROLS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3018' : LIVE_SERVICE;
+  OVERRIDE || (USE_LOCAL_SERVICES ? 'http://localhost:3018' : LIVE_SERVICE);
 
 export default PARENTAL_CONTROLS_SERVER_URL;

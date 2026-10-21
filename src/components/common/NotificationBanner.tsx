@@ -83,6 +83,7 @@ export default function NotificationBanner({ onNavigate }: Props) {
       quiz:       { icon: 'clipboard', title: `New quiz: ${it.title}`, screen: assignScreen, params: { highlightId: it.id } },
       task:       { icon: 'check-circle', title: 'New daily task', screen: 'DailyHabits' },
       portfolio:  { icon: 'image', title: it.title, screen: 'ClassDetail', params: { grade: (it as any).grade, section: (it as any).section, postId: (it as any).postId, label: `${(it as any).grade || 'Class'} Portfolio` } },
+      account:    { icon: 'user-check', title: it.title, screen: msgScreen },
       announcement: { icon: 'volume-2', title: it.title, screen: msgScreen },
       event:      { icon: 'calendar', title: it.title, screen: role === 'parent' ? 'ParentSchedule' : role === 'teacher' ? 'TeacherSchedule' : 'Schedule', params: { highlightId: String(it.id).replace(/^evt_/, '') } },
     };

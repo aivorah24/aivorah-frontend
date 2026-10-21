@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Image, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Image, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
@@ -8,7 +8,8 @@ import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import * as ImagePicker from 'expo-image-picker';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON } from '../constants';
-import { getStamp } from '../utils';
+import { getStamp, scoreBadge } from '../utils';
+import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
 import type { Assignment, PageAnswer, PerQ, GradeResult } from '../types';
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
@@ -222,8 +223,8 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
                   <View style={{ gap: 8 }}>
                     <Text style={styles.feedbackTitle}>Page by Page</Text>
                     {result.perQuestion.map((q, idx) => {
-                      const qColor = !q.answered ? colors.textDim : q.correct ? colors.accentGreen : q.score >= 50 ? colors.accentYellow : colors.accentRed;
-                      const qIcon = !q.answered ? 'minus-circle' : q.correct ? 'check-circle' : q.score >= 50 ? 'alert-circle' : 'x-circle';
+                      const qColor = !q.answered || q.needsReview ? colors.textDim : q.correct ? colors.accentGreen : (q.score ?? 0) >= 50 ? colors.accentYellow : colors.accentRed;
+                      const qIcon = !q.answered ? 'minus-circle' : q.correct ? 'check-circle' : (q.score ?? 0) >= 50 ? 'alert-circle' : 'x-circle';
                       return (
                         <View key={idx} style={[styles.qRow, { borderColor: qColor + '40', backgroundColor: qColor + '08' }]}>
                           <View style={styles.qLeft}>
@@ -236,7 +237,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
                             </View>
                           </View>
                           <View style={[styles.qScore, { backgroundColor: qColor + '20' }]}>
-                            <Text style={[styles.qScoreText, { color: qColor }]}>{q.answered ? `${q.score}%` : '--'}</Text>
+                            <Text style={[styles.qScoreText, { color: qColor }]}>{scoreBadge(q).label}</Text>
                           </View>
                         </View>
                       );
@@ -255,7 +256,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
                 <View style={{ flexDirection: 'row' }}>
                   <View style={{ flex: 1 }} />
                   <TouchableOpacity onPress={onClose} activeOpacity={0.85}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, backgroundColor: color }}>
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14, backgroundColor: color }}>
                     <Feather name="check" size={16} color="#fff" />
                     <Text style={styles.submitBtnText}>Done</Text>
                   </TouchableOpacity>
@@ -434,7 +435,7 @@ export function SubmissionModal({ assignment, colors, onClose, onSubmitted }: {
 
                       {/* Answer input */}
                       <View style={{ padding: 14, gap: 8 }}>
-                        <TextInput
+                        <TransliterationInput colors={colors} langCode={detectLangCodeFromText(`${assignment.title} ${qText}`)}
                           style={{
                             borderWidth: 1, borderColor: colors.borderColor, borderRadius: 10,
                             padding: 12, minHeight: 60, fontSize: 14, color: colors.textMain,

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import Header from '../../../components/common/Header';
@@ -8,6 +9,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useStudentData } from '../../../context/StudentDataContext';
 import { useNotification } from '../../../context/NotificationContext';
 import SCHEDULE_SERVER_URL from '../../../config/scheduleServerUrl';
+import { authHeader } from '../../../services/authHeader';
 
 import type { ScheduleEvent, SelectedEventDetail } from './types';
 import { useScheduleEvents } from './hooks/useScheduleEvents';
@@ -106,7 +108,7 @@ export default function ScheduleScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!highlightId) return;
     let cancelled = false;
-    fetch(`${SCHEDULE_SERVER_URL}/schedule/event/${highlightId}`)
+    authHeader().then(headers => fetch(`${SCHEDULE_SERVER_URL}/schedule/event/${highlightId}`, { headers }))
       .then(r => (r.ok ? r.json() : null))
       .then((event: ScheduleEvent | null) => {
         if (cancelled || !event) return;
@@ -120,12 +122,27 @@ export default function ScheduleScreen({ navigation, route }: any) {
   return (
     <ScreenLayout>
       <View style={styles.screen}>
-        <Header
-          title="My Schedule"
-          subtitle="Stay organized and hit your goals."
-          searchPlaceholder="Search schedule or tasks..."
-          onMenuPress={() => navigation.openDrawer()}
-        />
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Header
+              title="My Schedule"
+              subtitle="Stay organized and hit your goals."
+              searchPlaceholder="Search schedule or tasks..."
+              onMenuPress={() => navigation.openDrawer()}
+            />
+          </View>
+          <TouchableOpacity
+            testID="schedule-add-event-button"
+            accessibilityRole="button"
+            accessibilityLabel="Add Event"
+            style={styles.addEventBtnTop}
+            onPress={openNewEventModal}
+            activeOpacity={0.8}
+          >
+            <Feather name="plus" size={15} color="white" />
+            <Text style={styles.addEventBtnTopText}>New Event</Text>
+          </TouchableOpacity>
+        </View>
 
         <ScrollView ref={scheduleScrollRef} style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -152,7 +169,6 @@ export default function ScheduleScreen({ navigation, route }: any) {
               loading={loading}
               week={week}
               todayISO={todayISO}
-              eventDates={eventDates}
               eventsMap={eventsMap}
               hideCompleted={hideCompleted}
               filterType={filterType}
@@ -168,7 +184,6 @@ export default function ScheduleScreen({ navigation, route }: any) {
               onAllDaySlotPress={(dayIso) => openSlotModal(dayIso, undefined, true, 'Holidays and vacations')}
               onEventPress={handleEventPress}
               onRemoveEvent={removeEvent}
-              onAddEventPress={openNewEventModal}
               styles={styles}
               colors={colors}
             />
@@ -328,14 +343,13 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   eventTime:  { fontSize: 10, color: 'rgba(255,255,255,0.8)' },
   deleteBtn:  { position: 'absolute', top: 3, right: 3 },
 
-  addEventBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginTop: spacing.lg, paddingVertical: 12, paddingHorizontal: spacing.lg,
-    backgroundColor: c.accentYellow + '15', borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)', borderRadius: radius.md,
-    borderStyle: 'dashed', justifyContent: 'center',
+  headerRow: { flexDirection: 'row', alignItems: 'center', paddingRight: spacing.xl },
+  addEventBtnTop: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: c.accentYellow, paddingHorizontal: spacing.lg,
+    paddingVertical: 9, borderRadius: radius.lg,
   },
-  addEventText: { fontSize: 13, fontWeight: '600', color: c.accentYellow },
+  addEventBtnTopText: { fontSize: 13, fontWeight: '700', color: 'white' },
   emptyText:    { fontSize: 12, color: c.textMuted, marginTop: 8 },
 
   // Sidebar

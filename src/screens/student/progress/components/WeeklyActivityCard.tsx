@@ -5,7 +5,6 @@ import { spacing } from '../../../../theme';
 import { formatStudyTime } from '../../../../context/StudentDataContext';
 import type { DayActivity } from '../types';
 
-const HIGHLIGHT = '#C9A24E';
 
 export function WeeklyActivityCard({
   styles, colors, weeklyDays, maxMinutes,
@@ -30,19 +29,22 @@ export function WeeklyActivityCard({
           {weeklyDays.map((d) => {
             const heightPct = maxMinutes > 0 ? (d.studyMinutes / maxMinutes) * 100 : 0;
             const isToday = d.date === new Date().toISOString().split('T')[0];
+            const active = d.studyMinutes > 0;
             return (
               <View key={d.date} style={styles.barItem}>
-                <Text style={[styles.barMinute, isToday && { color: HIGHLIGHT }]}>
-                  {d.studyMinutes > 0 ? `${d.studyMinutes}m` : ''}
+                <Text style={[styles.barMinute, active && { color: colors.accentOrange }]}>
+                  {active ? `${d.studyMinutes}m` : ''}
                 </Text>
                 <View style={styles.barWrapper}>
+                  {/* Yellow = studied that day; today is marked by an outline + dot, not a different fill. */}
                   <View style={[
                     styles.bar,
-                    { height: `${Math.max(heightPct, 6)}%` as any, backgroundColor: isToday ? HIGHLIGHT : colors.borderColor },
-                    isToday && styles.barActive,
+                    { height: `${Math.max(heightPct, 6)}%` as any, backgroundColor: active ? colors.accentYellow : colors.borderColor },
+                    isToday && { borderWidth: 2, borderColor: colors.accentOrange },
                   ]} />
                 </View>
-                <Text style={[styles.barLabel, isToday && { color: HIGHLIGHT, fontWeight: '700' }]}>{d.day}</Text>
+                <Text style={[styles.barLabel, isToday && { color: colors.accentOrange, fontWeight: '700' }]}>{d.day}</Text>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isToday ? colors.accentOrange : 'transparent' }} />
               </View>
             );
           })}
@@ -53,7 +55,7 @@ export function WeeklyActivityCard({
         {[
           { label: 'Total Study', val: formatStudyTime(weeklyDays.reduce((s, d) => s + d.studyMinutes, 0)), color: '#BAA467' },
           { label: 'XP Earned',   val: `+${weeklyDays.reduce((s, d) => s + d.xp, 0)}`,                      color: '#8A8358' },
-          { label: 'Topics',       val: String(weeklyDays.reduce((s, d) => s + d.topicsCompleted, 0)),       color: HIGHLIGHT },
+          { label: 'Topics',       val: String(weeklyDays.reduce((s, d) => s + d.topicsCompleted, 0)),       color: colors.accentOrange },
         ].map(s => (
           <View key={s.label} style={styles.weekTotal}>
             <Text style={[styles.weekTotalVal, { color: s.color }]}>{s.val}</Text>

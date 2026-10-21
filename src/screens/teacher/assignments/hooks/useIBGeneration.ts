@@ -38,8 +38,8 @@ export function useIBGeneration({
   const [generatingIB, setGeneratingIB] = useState(false);
 
   async function generateIBAssignment() {
-    const topic = (title || chapter || unitOfInquiry || '').trim();
-    if (!topic) { setFormError('Please fill in the Title or Chapter / Topic field before generating'); return; }
+    const topic = (chapter || unitOfInquiry || title || '').trim();
+    if (!topic) { setFormError('Pick or type a Chapter / Topic above before generating'); return; }
     setGeneratingIB(true); setFormError('');
     try {
       const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/generate-ibpyp`, {
@@ -66,19 +66,9 @@ export function useIBGeneration({
         setIbLearningOutcomes(data.learningOutcomes);
       }
       if (Array.isArray(data.taskSteps) && data.taskSteps.length > 0) {
-        const SUBJECT_STEP_MAP: Record<string, StepType[]> = {
-          'Mathematics':          ['tuning_in', 'problem_solving', 'math_reflection'],
-          'Science':              ['prior_knowledge', 'drawing', 'structured_writing'],
-          'English':              ['text_connection', 'reading_comprehension', 'writing_reflection'],
-          'Language Acquisition': ['language_culture', 'language_practice'],
-          'Social Studies':       ['social_inquiry', 'research_notes', 'social_synthesis'],
-          'Visual Arts':          ['artistic_exploration', 'art_creation', 'artistic_reflection'],
-          'ICT':                  ['digital_awareness', 'tech_skill_practice', 'digital_citizenship'],
-          'Physical Education':   ['movement_exploration', 'skill_practice', 'physical_reflection'],
-        };
-        const stepMap: StepType[] = SUBJECT_STEP_MAP[subject] || ['brainstorm', 'drawing', 'structured_writing'];
-        setTaskSteps(data.taskSteps.slice(0, 3).map((s: any, idx: number) => {
-          const enforcedType: StepType = stepMap[idx] || s.type || 'brainstorm';
+        // The server designs the steps (count + kinds); keep them as sent
+        setTaskSteps(data.taskSteps.slice(0, 5).map((s: any) => {
+          const enforcedType: StepType = s.type;
           const defaults = STEP_DEFAULTS[enforcedType] || {};
           const sections = Array.isArray(s.sections) && s.sections.length ? s.sections : (defaults.sections || []);
           const HOOK_TYPES: StepType[] = ['tuning_in','text_connection','social_inquiry','language_culture','artistic_exploration','digital_awareness','movement_exploration'];

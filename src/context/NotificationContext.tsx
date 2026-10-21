@@ -9,7 +9,7 @@ import {
   V2Notification, NotificationsUnavailableError,
   fetchNotifications, fetchUnreadCount, markNotificationRead as apiMarkRead, markAllNotificationsRead,
 } from '../services/notificationsApi';
-import { NotifItem, CategoryPrefs, toNotifItem, isAssignmentType, isEventType, isClassPostType, isAnnouncementType, isV2OwnedLegacy, isV2Allowed } from './notifItem';
+import { NotifItem, CategoryPrefs, toNotifItem, isAssignmentType, isEventType, isAccountType, isClassPostType, isAnnouncementType, isV2OwnedLegacy, isV2Allowed } from './notifItem';
 
 export type { NotifItem } from './notifItem';
 export { toNotifItem } from './notifItem';
@@ -31,6 +31,7 @@ interface NotificationState {
   unreadAssignments: number;
   unreadChallenges: number;
   unreadEvents: number;
+  unreadAccount: number;
   unreadJoinRequests: number; // pending B2C→B2B school-join requests (school-admin only)
   latestNotif: LatestNotif | null;
   notificationItems: NotifItem[]; // newest first, includes the latest unread chat message
@@ -58,6 +59,7 @@ const NotificationContext = createContext<NotificationState>({
   unreadAssignments: 0,
   unreadChallenges: 0,
   unreadEvents: 0,
+  unreadAccount: 0,
   unreadJoinRequests: 0,
   latestNotif: null,
   notificationItems: [],
@@ -172,12 +174,15 @@ function normalizeLatest(raw: any): LatestNotif | null {
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, applyAccountUpdate } = useAuth();
+  const applyAccountUpdateRef = useRef(applyAccountUpdate);
+  useEffect(() => { applyAccountUpdateRef.current = applyAccountUpdate; }, [applyAccountUpdate]);
 
   const [unreadCount,       setUnreadCount]       = useState(0);
   const [unreadAssignments, setUnreadAssignments] = useState(0);
   const [unreadChallenges,  setUnreadChallenges]  = useState(0);
   const [unreadEvents,      setUnreadEvents]      = useState(0);
+  const [unreadAccount,     setUnreadAccount]     = useState(0);
   const [unreadJoinRequests, setUnreadJoinRequests] = useState(0);
   const [latestNotif,       setLatestNotif]       = useState<LatestNotif | null>(null);
   // Legacy-derived items (whole feed in legacy mode; message/event/task/portfolio only in V2 mode).
@@ -389,6 +394,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (v2BaselineRef.current && !markReadInFlight.current && arrived.length) {
           fresh = [...arrived.map(toNotifItem), ...fresh].sort((a, b) => ts(b) - ts(a));
         }
+        // A platform admin edited this account: re-read the profile once per poll.
+        if (v2BaselineRef.current && arrived.some(isAccountType)) applyAccountUpdateRef.current?.()?.catch(() => {});
         v2BaselineRef.current = true;
       }
 
@@ -422,10 +429,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const eventUnread = stillUnread.filter(isEventType).length;
         // Class posts and announcements have no badge category of their own; never count them as challenges.
         const classPostUnread = stillUnread.filter(n => isClassPostType(n) || isAnnouncementType(n)).length;
+        const accountUnread = stillUnread.filter(isAccountType).length;
         const allowedEvents = stillUnread.filter(n => isEventType(n) && isV2Allowed(n, prefsNow)).length;
         const autoDueEvents = feed.filter(i => i.type === 'event' && !isV2OwnedLegacy(i) && i.srcType !== 'challenge').length;
         setUnreadAssignments(allowAssign ? assignUnread : 0);
-        setUnreadChallenges(allowChallenge ? Math.max(0, total - assignUnread - eventUnread - classPostUnread) + challengeEventCount : 0);
+        setUnreadAccount(accountUnread);
+        setUnreadChallenges(allowChallenge ? Math.max(0, total - assignUnread - eventUnread - classPostUnread - accountUnread) + challengeEventCount : 0);
         setUnreadEvents(allowedEvents + (allowAssign ? autoDueEvents : 0));
         setV2FirstPage(v2!.page);
         if (!v2OlderLoadedRef.current) setV2Cursor(v2!.nextCursor);
@@ -447,7 +456,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user?.email) {
       // reset tied to the same effect that owns the polling subscription below — external sync, see react-hooks/set-state-in-effect
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0);
+      setUnreadCount(0); setUnreadAssignments(0); setUnreadChallenges(0); setUnreadEvents(0); setUnreadAccount(0);
       setLatestNotif(null); setToastVisible(false);
       prevMsgRef.current = 0; prevAssignRef.current = 0; prevChallengeRef.current = 0; prevEventRef.current = 0;
       staleGuardUntil.current = 0; markReadCutoff.current = null;
@@ -644,6 +653,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     locallyReadRef.current.set(id, new Date().toISOString());
     if (isAssignmentType(known)) setUnreadAssignments(c => Math.max(0, c - 1));
     else if (isEventType(known)) setUnreadEvents(c => Math.max(0, c - 1));
+    else if (isAccountType(known)) setUnreadAccount(c => Math.max(0, c - 1));
     else if (!isClassPostType(known) && !isAnnouncementType(known)) setUnreadChallenges(c => Math.max(0, c - 1));
     syncLocalReads();
     try {
@@ -662,6 +672,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       mergeById(v2FirstPage, v2Older).forEach(n => { if (!n.readAt) locallyReadRef.current.set(n.id, now); });
       setUnreadAssignments(0);
       setUnreadChallenges(0);
+      setUnreadAccount(0);
       setUnreadEvents(0);
       syncLocalReads();
       await markAllNotificationsRead().catch(err => { if (__DEV__) console.warn('[NotifCtx] read-all failed:', err); });
@@ -688,7 +699,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   return (
     <NotificationContext.Provider value={{
-      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadJoinRequests,
+      unreadCount, unreadAssignments, unreadChallenges, unreadEvents, unreadAccount, unreadJoinRequests,
       latestNotif, notificationItems, toastItem, toastVisible,
       dismissToast, clearUnread, clearUnreadAssignments, clearUnreadChallenges, clearUnreadEvents, refresh, triggerPoll, muteCategory,
       notificationsV2Active: v2Active, feedStatus, hasMore: v2Active && !!v2Cursor, loadingMore, loadMore,

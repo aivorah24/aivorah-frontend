@@ -47,13 +47,16 @@ export default function ChapterCard({
   // datasets, which are always considered complete).
   const serverPending = (chapter as any).pending;
   const isPending = serverPending !== undefined ? !!serverPending : chapter.topics.length === 0;
+  // Syllabus-only boards (e.g. ICSE Classes I–VIII) list chapters without topics;
+  // the server sends the chapter as its own single topic. Show just the chapter.
+  const chapterOnly = chapter.topics.length === 1 && chapter.topics[0].name === chapter.title;
   const subtopicNames: string[] = (chapter as any).subtopics || [];
   // A teacher's own units read "Unit N" like the teacher's document; their topics stay "Topic N".
   const chapterWord = isUnitShaped || (chapter as any).teacherUnit ? 'Unit' : 'Chapter';
 
   return (
     <View style={[styles.chapterCard, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
-      <TouchableOpacity style={styles.chapterHead} activeOpacity={0.7} onPress={onToggle}>
+      <TouchableOpacity style={styles.chapterHead} activeOpacity={0.7} onPress={chapterOnly ? () => onOpenTopic(0) : onToggle}>
         <Feather
           name="chevron-right"
           size={18}
@@ -88,7 +91,9 @@ export default function ChapterCard({
               ? `${subtopicNames.length || 0} sub-topic${subtopicNames.length === 1 ? '' : 's'} in the textbook`
               : isUnitShaped
                 ? `${chapter.topics.length} chapter${chapter.topics.length === 1 ? '' : 's'}`
-                : `${chapter.topics.length} topic${chapter.topics.length === 1 ? '' : 's'}`}
+                : chapterOnly
+                  ? 'Lessons coming soon'
+                  : `${chapter.topics.length} topic${chapter.topics.length === 1 ? '' : 's'}`}
           </Text>
         </View>
         <View style={styles.chapterProgress}>
@@ -125,7 +130,7 @@ export default function ChapterCard({
         </View>
       )}
 
-      {isOpen && !isPending && (
+      {isOpen && !isPending && !chapterOnly && (
         <View style={styles.topicGrid}>
           {topics.map((t) => {
             const ti = chapter.topics.indexOf(t);
@@ -137,9 +142,11 @@ export default function ChapterCard({
               <TouchableOpacity
                 key={t.name}
                 style={[styles.topicItem, { backgroundColor: colors.bgDark, borderColor: colors.borderColor, opacity: topicComingSoon ? 0.6 : 1 }]}
-                activeOpacity={topicComingSoon ? 1 : 0.7}
-                disabled={!!topicComingSoon}
+                activeOpacity={0.7}
+                // Still tappable: the screen answers with a "Coming soon"
+                // dialog rather than silently ignoring the tap.
                 onPress={() => onOpenTopic(ti)}
+                testID={topicComingSoon ? `topic-coming-soon-${ti}` : undefined}
               >
                 <View style={[styles.topicDot, { backgroundColor: completedSet.has(t.name) ? colors.primary : colors.borderColor }]} />
                 <View style={{ flex: 1 }}>

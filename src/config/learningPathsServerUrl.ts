@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Learning Path backend base URL — routed to the standalone
@@ -9,9 +10,9 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_LEARNING_PATHS_BACKEND = 'https://aivorah-learning-paths-service-b5bv.onrender.com';
+const LIVE_LEARNING_PATHS_BACKEND = 'https://aivorah-learning-paths-service.onrender.com';
 
 const LEARNING_PATHS_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3014' : LIVE_LEARNING_PATHS_BACKEND;
+  USE_LOCAL_SERVICES ? 'http://localhost:3015' : LIVE_LEARNING_PATHS_BACKEND;
 
 export default LEARNING_PATHS_SERVER_URL;
