@@ -42,10 +42,10 @@ export function findNextTopic(syl: SubjectSyllabusData, topic: string, ctx: { su
 
 export function useNextTopic(subject: string, curriculum: string, grade: string, topic: string) {
   const [next, setNext] = useState<NextTopic | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!(subject && topic));
 
   useEffect(() => {
-    if (!subject || !topic) { setLoading(false); return; }
+    if (!subject || !topic) return;
     let cancelled = false;
     fetchSubjectSyllabus(curriculum, grade, subject)
       .then(syl => { if (!cancelled) setNext(findNextTopic(syl, topic, { subject, curriculum, grade })); })

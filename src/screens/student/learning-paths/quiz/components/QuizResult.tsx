@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../../../components/common/Header';
@@ -70,7 +70,7 @@ export default function QuizResult({
   const grid = { flexDirection: 'row' as const, flexWrap: 'wrap' as const, justifyContent: 'space-between' as const, alignItems: 'stretch' as const };
 
   // Soft pulsing glow on the Next topic button.
-  const glow = useRef(new Animated.Value(0)).current;
+  const [glow] = React.useState(() => new Animated.Value(0));
   useEffect(() => {
     if (!passed || !nextTopic) return;
     const loop = Animated.loop(Animated.sequence([
