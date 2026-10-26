@@ -33,3 +33,25 @@ export interface SubjectMeta {
   bgFromDark: string; bgToDark: string;
   bgFromLight: string; bgToLight: string;
 }
+
+export interface AttemptQuestion {
+  question: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  timeSeconds: number | null;
+}
+
+export interface TopicAttempt {
+  id: string;
+  topic: string;
+  subject: string;
+  attemptNumber: number | null;
+  score: number;
+  passed: boolean;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeSpentSeconds: number;
+  createdAt: string;
+  questions: AttemptQuestion[];
+}

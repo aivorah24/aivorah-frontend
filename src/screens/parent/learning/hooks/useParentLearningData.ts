@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchChildren, fetchStudentStats, fetchChildReport, fetchCurriculumSubjects } from '../services/parentLearningService';
+import { fetchChildren, fetchStudentStats, fetchChildReport, fetchCurriculumSubjects, fetchSubjectTopics } from '../services/parentLearningService';
 import type { Child, ChildReport } from '../types';
 import { normalizeCurriculum } from '../../../../utils/curriculum';
 
@@ -10,6 +10,20 @@ import { normalizeCurriculum } from '../../../../utils/curriculum';
 // fetch resolved, the screen queried curriculum content for the WRONG
 // child's grade - a real bug, not a data-seeding gap. The real fetch below
 // is the only source of truth.
+// /curriculum/subjects returns no topic names, so per-subject progress always
+// read 0. Fill topics from the Learning Paths syllabus — the names progress is saved under.
+async function withSyllabusTopics(subs: any[], curriculum: string, grade: string): Promise<any[]> {
+  return Promise.all(subs.map(async (sub) => {
+    if ((sub.topics ?? []).length > 0) return sub;
+    try {
+      const topics = (await fetchSubjectTopics(curriculum, grade, sub.subject)) ?? [];
+      return topics.length > 0 ? { ...sub, topics } : sub;
+    } catch {
+      return sub;
+    }
+  }));
+}
+
 export function useParentLearningData(parentEmail: string, targetChildId?: string) {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -53,6 +67,7 @@ export function useParentLearningData(parentEmail: string, targetChildId?: strin
 
       const subs = await fetchCurriculumSubjects(childGrade, childCurriculum);
       setSubjects(subs);
+      setSubjects(await withSyllabusTopics(subs, childCurriculum, childGrade));
     } finally {
       setLoading(false);
       setRefreshing(false);

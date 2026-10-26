@@ -1,4 +1,5 @@
 import React from 'react';
+import { clearQuizResults } from '../../resultCache';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import { useQuiz } from '../useQuiz';
@@ -80,6 +81,7 @@ function Harness({ questions, studentId, practiceQuiz }: { questions?: any; stud
 }
 
 beforeEach(() => {
+  clearQuizResults();
   jest.clearAllMocks();
   mockFetchRoutes();
 });

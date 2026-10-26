@@ -68,7 +68,7 @@ export const makeStyles = (c: AppColors, isDark: boolean) => StyleSheet.create({
   nudgeText: { fontSize: 13, fontWeight: '600' },
   fillResultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10, borderWidth: 1 },
   fillCorrectText: { fontSize: 14, fontWeight: '700', flex: 1 },
-  checkBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 11, borderRadius: radius.lg },
+  checkBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10, paddingHorizontal: 20, borderRadius: radius.lg, alignSelf: 'flex-start' },
   checkBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   hintBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 9, borderWidth: 1 },
   hintText: { flex: 1, fontSize: 13, lineHeight: 18 },

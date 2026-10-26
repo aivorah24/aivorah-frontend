@@ -4,6 +4,7 @@
 // covered by useQuiz's hook tests and would just duplicate that coverage here.
 
 import React from 'react';
+import { clearQuizResults, saveQuizResult } from '../resultCache';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import QuizScreen from '../QuizScreen';
 
@@ -52,6 +53,7 @@ function routeProp(params: any = {}) {
 }
 
 beforeEach(() => {
+  clearQuizResults();
   global.fetch = jest.fn((url: string) => {
     if (url.includes('/ibpyp/quiz')) return jsonRes({ questions: [
       { type: 'mcq', question: 'What is 1/2 + 1/2?', options: ['1', '2', '3', '4'], correct: 0, hint: 'h', explanation: 'e' },
@@ -73,6 +75,50 @@ describe('QuizScreen — phase routing', () => {
 
     await waitFor(() => expect(screen.getByTestId('quiz-question')).toBeTruthy());
     expect(screen.getByText('What is 1/2 + 1/2?')).toBeTruthy();
+  });
+});
+
+describe('QuizScreen — revisiting', () => {
+  const quizCalls = () => (global.fetch as jest.Mock).mock.calls.filter(([u]) => String(u).includes('/ibpyp/quiz')).length;
+
+  test('reopening Practice for a topic already tried shows its last result, not a new test', async () => {
+    saveQuizResult('real-resolved-student-id', 'Mathematics', 'Fractions', {
+      questions: [{ question: 'Q1' }, { question: 'Q2' }], perQuestionResults: [], score: 2,
+      attemptNumber: 1, timeSpentSeconds: 30, explanations: {},
+    });
+    await render(<QuizScreen navigation={navProp()} route={routeProp()} />);
+    expect(await screen.findByText('score:2')).toBeTruthy();
+    expect(quizCalls()).toBe(0);
+  });
+
+  test('after a reload the last result comes from the server', async () => {
+    global.fetch = jest.fn((url: string) => {
+      if (url.includes('/attempts')) return jsonRes({ attempts: [
+        { topic: 'Fractions', attemptNumber: 2, timeSpentSeconds: 40, questions: [
+          { question: 'Q1', studentAnswer: '1', correctAnswer: '1', isCorrect: true },
+          { question: 'Q2', studentAnswer: '3', correctAnswer: '2', isCorrect: false },
+        ] },
+      ] });
+      return jsonRes({});
+    }) as any;
+    await render(<QuizScreen navigation={navProp()} route={routeProp()} />);
+    expect(await screen.findByText('score:1')).toBeTruthy();
+    expect(quizCalls()).toBe(0);
+  });
+
+  test('a topic never tried, revisited after leaving, starts a test', async () => {
+    const listeners: Record<string, () => void> = {};
+    const nav = { ...navProp(), addListener: jest.fn((evt: string, cb: () => void) => { listeners[evt] = cb; return () => {}; }) };
+    const { act } = require('@testing-library/react-native');
+    await render(<QuizScreen navigation={nav} route={routeProp()} />);
+    await waitFor(() => expect(screen.getByTestId('quiz-question')).toBeTruthy());
+    expect(quizCalls()).toBe(1);
+
+    await act(async () => { listeners.focus(); }); // initial focus, never left: no refetch
+    expect(quizCalls()).toBe(1);
+    await act(async () => { listeners.blur(); listeners.focus(); }); // left, then came back
+    await waitFor(() => expect(quizCalls()).toBe(2));
+    expect(await screen.findByTestId('quiz-question')).toBeTruthy();
   });
 });
 

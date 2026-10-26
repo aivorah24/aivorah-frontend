@@ -5,7 +5,7 @@
  * - MCQ wrong → hint available → retry (up to 2 attempts) → explanation
  * - Fill-blank: 3-attempt nudge logic (wrong1 → retry, wrong2 → hint, wrong3 → reveal)
  */
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useAuth } from '../../../../context/AuthContext';
@@ -15,9 +15,27 @@ import ScreenLayout from '../../../../components/common/ScreenLayout';
 import { makeStyles } from './styles';
 import { useQuiz } from './hooks/useQuiz';
 import QuizResult from './components/QuizResult';
+import { useNextTopic } from './hooks/useNextTopic';
 import QuizQuestion from './components/QuizQuestion';
 
+// The drawer keeps this screen mounted, so coming back would show the last test's
+// questions/results. Each new visit gets a fresh session (new questions).
 export default function QuizScreen({ navigation, route }: any) {
+  const [visit, setVisit] = useState(0);
+  const left = useRef(false);
+  useEffect(() => {
+    const offBlur = navigation.addListener?.('blur', () => { left.current = true; });
+    const offFocus = navigation.addListener?.('focus', () => {
+      if (!left.current) return;
+      left.current = false;
+      setVisit(v => v + 1);
+    });
+    return () => { offBlur?.(); offFocus?.(); };
+  }, [navigation]);
+  return <QuizSession key={visit} navigation={navigation} route={route} />;
+}
+
+function QuizSession({ navigation, route }: any) {
   const { topic, grade = 'Grade 3', subject = 'Mathematics', curriculum = 'IB PYP', returnTo, returnParams, passageText, topicId, practiceQuiz } = route?.params ?? {};
   // Whoever launched this quiz — SubjectTopics by default, but LessonScreen's
   // Practice tab passes its own returnTo/returnParams so back lands there
@@ -51,6 +69,8 @@ export default function QuizScreen({ navigation, route }: any) {
     navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult,
   });
 
+  const nextTopic = useNextTopic(subject, curriculum, grade, topic);
+
   // ── Loading ────────────────────────────────────────────────────
   if (quiz.phase === 'loading') return (
     <ScreenLayout>
@@ -79,6 +99,9 @@ export default function QuizScreen({ navigation, route }: any) {
         onRetry={() => quiz.fetchQuiz(true)}
         onBack={goBackToOrigin}
         onMenuPress={() => navigation.openDrawer()}
+        nextTopic={nextTopic.next}
+        nextTopicLoading={nextTopic.loading}
+        onNextTopic={(next) => navigation.navigate('LessonScreen', next.params)}
       />
     );
   }

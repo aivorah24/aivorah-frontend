@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../../../components/common/Header';
 import ScreenLayout from '../../../../../components/common/ScreenLayout';
 import Confetti from '../../../../../components/common/Confetti';
 import TrophyIcon from '../../../../../components/common/TrophyIcon';
 import type { AppColors } from '../../../../../theme';
+import { useResponsive } from '../../../../../hooks/useResponsive';
+import type { NextTopic } from '../hooks/useNextTopic';
 import { makeStyles } from '../styles';
 
 export default function QuizResult({
@@ -23,6 +25,9 @@ export default function QuizResult({
   onRetry,
   onBack,
   onMenuPress,
+  nextTopic,
+  nextTopicLoading,
+  onNextTopic,
 }: {
   topic: string;
   score: number;
@@ -38,6 +43,9 @@ export default function QuizResult({
   onRetry: () => void;
   onBack: () => void;
   onMenuPress: () => void;
+  nextTopic?: NextTopic | null;
+  nextTopicLoading?: boolean;
+  onNextTopic?: (next: NextTopic) => void;
 }) {
   const accent = colors.accentYellow;
   const gold = colors.accentYellow;
@@ -55,6 +63,23 @@ export default function QuizResult({
     : pct >= 80 ? 'Excellent! You really understand this topic!'
     : pct >= 60 ? 'Good job! A little more practice and you will master this!'
     : 'Keep going! Review what you missed below and try again.';
+
+  const { isMobile } = useResponsive();
+  // Two columns of question cards on wider screens; cards in a row share the taller one's height.
+  const cardWidth = isMobile ? '100%' : '49.2%';
+  const grid = { flexDirection: 'row' as const, flexWrap: 'wrap' as const, justifyContent: 'space-between' as const, alignItems: 'stretch' as const };
+
+  // Soft pulsing glow on the Next topic button.
+  const glow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!passed || !nextTopic) return;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(glow, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(glow, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [passed, nextTopic, glow]);
 
   const correctQs = perQuestionResults.filter(r => r.isCorrect);
   const wrongQs = perQuestionResults.map((r, i) => ({ ...r, idx: i })).filter(r => !r.isCorrect);
@@ -102,6 +127,46 @@ export default function QuizResult({
             </TouchableOpacity>
           </View>
 
+          {passed && nextTopic && onNextTopic && (
+            <Animated.View style={{
+              width: '100%', marginTop: 12, borderRadius: 14,
+              shadowColor: gold, shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.8] }) as any,
+              shadowRadius: glow.interpolate({ inputRange: [0, 1], outputRange: [6, 18] }) as any,
+              transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }],
+            }}>
+              <TouchableOpacity
+                testID="quiz-next-topic"
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: gold, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18 }}
+                onPress={() => onNextTopic(nextTopic)}
+                activeOpacity={0.85}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#0B0B0BAA', letterSpacing: 0.6 }}>NEXT TOPIC</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0B0B0B' }} numberOfLines={1}>{nextTopic.name}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#0B0B0BAA' }} numberOfLines={1}>{nextTopic.chapterTitle}</Text>
+                </View>
+                <Feather name="arrow-right" size={20} color="#0B0B0B" />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+          {passed && !nextTopic && !nextTopicLoading && onNextTopic && (
+            <Text testID="quiz-subject-finished" style={{ marginTop: 12, fontSize: 13, fontWeight: '700', color: gold, textAlign: 'center' }}>
+              That was the last topic in this subject. Well done!
+            </Text>
+          )}
+          {!passed && (
+            <View testID="quiz-next-locked" style={{ width: '100%', marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.cardDark }}>
+              <Feather name="lock" size={16} color={colors.textMuted} />
+              <Text style={{ flex: 1, fontSize: 13, color: colors.textMuted, lineHeight: 19 }}>
+                Score 60% or more to unlock the next topic. Look at the mistakes below, then retake.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={{ width: '100%', maxWidth: 1040, alignSelf: 'center' }}>
+
           {/* ── What you got RIGHT ── */}
           {correctQs.length > 0 && (
             <View style={styles.reviewSection}>
@@ -113,8 +178,9 @@ export default function QuizResult({
                   Questions You Got Right ({correctQs.length})
                 </Text>
               </View>
+              <View style={grid}>
               {correctQs.map((r, i) => (
-                <View key={i} style={[styles.reviewCard, {
+                <View key={i} testID="quiz-review-card" style={[styles.reviewCard, { width: cardWidth }, {
                   backgroundColor: colors.cardDark,
                   borderColor: '#9FB2A430',
                   borderLeftColor: '#9FB2A4',
@@ -133,6 +199,7 @@ export default function QuizResult({
                   </View>
                 </View>
               ))}
+              </View>
             </View>
           )}
 
@@ -147,10 +214,11 @@ export default function QuizResult({
                   Questions You Got Wrong ({wrongQs.length})
                 </Text>
               </View>
+              <View style={grid}>
               {wrongQs.map((r) => {
                 const expl = resultExplanations[r.idx];
                 return (
-                  <View key={r.idx} style={[styles.reviewCard, {
+                  <View key={r.idx} testID="quiz-review-card" style={[styles.reviewCard, { width: cardWidth }, {
                     backgroundColor: colors.cardDark,
                     borderColor: '#C5BD9630',
                     borderLeftColor: '#C5BD96',
@@ -196,6 +264,7 @@ export default function QuizResult({
                   </View>
                 );
               })}
+              </View>
             </View>
           )}
 

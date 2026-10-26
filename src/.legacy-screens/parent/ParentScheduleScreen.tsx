@@ -25,12 +25,12 @@ import PARENT_SERVER_URL from '../../config/parentServerUrl';
 import SCHEDULE_SERVER_URL from '../../config/scheduleServerUrl';
 import { authHeader } from '../../services/authHeader';
 import TimePicker from '../../components/common/TimePicker';
+import WeekGrid, { makeGridStyles, GRID_TIME_LABEL_WIDTH } from '../../components/schedule/WeekGrid';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const DAYS_SHORT = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const TIMES = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`);
 const CAL_DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const DURATIONS = ['30 min', '45 min', '1 hr', '1.5 hrs', '2 hrs', '2.5 hrs', '3 hrs'];
 const DURATION_MINS: Record<string, number> = {
   '30 min': 30, '45 min': 45, '1 hr': 60,
   '1.5 hrs': 90, '2 hrs': 120, '2.5 hrs': 150, '3 hrs': 180,
@@ -48,7 +48,6 @@ const PARENT_EVENT_TYPES = [
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const HOUR_HEIGHT = 56;
 const DAY_COL_WIDTH = 140;
-const TIME_LABEL_WIDTH = 52;
 const TIMELINE_START_HOUR = Number(TIMES[0].split(':')[0]);
 
 function calcEventTop(startTime: string): number {
@@ -71,13 +70,6 @@ function calcEndTime(startTime: string, duration: string): string {
   const [h, m] = startTime.split(':').map(Number);
   const total = h * 60 + m + (DURATION_MINS[duration] ?? 60);
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function fmtHour12(hhmm: string): string {
-  const h = Number(hhmm.split(':')[0]);
-  const ampm = h >= 12 ? 'pm' : 'am';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12} ${ampm}`;
 }
 
 function dateISO(d: Date): string {
@@ -139,11 +131,18 @@ interface ScheduleEvent {
   isAllDay?: boolean;
   assignmentId?: string | null;
   createdAt?: string;
+  isCompleted?: boolean;
+  startDate?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-// Web keeps the header row in view with CSS sticky; the page's vertical ScrollView is its scroll container.
-const PINNED: any = Platform.OS === 'web' ? { position: 'sticky', top: 0 } : null;
+const ALL_DAY_TAGS = ['holiday', 'vacation', 'assembly', 'timeline', 'whole school', 'rotation', 'cycle'];
+
+// Deadline/challenge items (stored at 23:59) and whole-day tags go in the all-day lane.
+function isAllDayEvent(e: ScheduleEvent): boolean {
+  const tagLower = (e.tag || '').toLowerCase();
+  return e.startTime === '23:59' || !!e.isAllDay || e.type === 'deadline' || e.type === 'challenge' || ALL_DAY_TAGS.some(k => tagLower.includes(k));
+}
 
 export default function ParentScheduleScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -177,11 +176,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     const max = Math.max(
       1,
       ...week.map((d) =>
-        (eventsMap[d.iso] ?? []).filter((e) => {
-          const tagLower = (e.tag || '').toLowerCase();
-          const isEventTag = ['holiday', 'vacation', 'assembly', 'timeline', 'whole school', 'rotation', 'cycle'].some((k) => tagLower.includes(k));
-          return e.startTime === '23:59' || e.isAllDay || e.type === 'deadline' || e.type === 'challenge' || isEventTag;
-        }).length
+        (eventsMap[d.iso] ?? []).filter(isAllDayEvent).length
       )
     );
     return Math.max(36, max * 26 + 10);
@@ -336,7 +331,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   function nextWeek() { const d = new Date(weekBase); d.setDate(d.getDate() + 7); setWeekBase(d); }
 
   const horizScrollRef = useRef<ScrollView>(null);
-  const headerScrollRef = useRef<ScrollView>(null);
+  const g = useMemo(() => makeGridStyles(colors), [colors]);
 
   // Scroll horizontally to show today's column (0-indexed day of week, Mon=0)
   function scrollToToday(cw: number) {
@@ -353,7 +348,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   const { width: screenWidth } = useWindowDimensions();
   // The calendar's measured width, so the 7 day columns fill it exactly (the window size is only a first guess).
   const [gridWidth, setGridWidth] = useState<number | null>(null);
-  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor(((gridWidth || screenWidth - 300) - TIME_LABEL_WIDTH) / 7));
+  const colWidth = Math.max(DAY_COL_WIDTH, Math.floor(((gridWidth || screenWidth - 300) - GRID_TIME_LABEL_WIDTH) / 7));
 
   // Auto-scroll to today on mount and when weekBase changes to current week
   useEffect(() => {
@@ -364,7 +359,36 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
   }, [weekBase, colWidth]);
   const gridHeight = TIMES.length * HOUR_HEIGHT;
   const scheduleScroll = useScheduleScroll({ ready: !loading, allDayHeight, hourHeight: HOUR_HEIGHT, headerHeight: 56, pinnedHeader: Platform.OS === 'web' });
-  const totalGridWidth = TIME_LABEL_WIDTH + colWidth * 7;
+
+  // Drag down a day column to pick a time range, then open Add Event with it (web).
+  function onColMouseDown(e: any, dayIso: string) {
+    if (e.button !== 0) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const startY = e.clientY - rect.top;
+    const yToT = (y: number) => {
+      const mins = Math.round((Math.max(0, Math.min(y, gridHeight)) / HOUR_HEIGHT * 60 + TIMELINE_START_HOUR * 60) / 15) * 15;
+      return `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+    };
+    setDragPreview({ dayIso, top: startY, height: 0, startT: yToT(startY), endT: yToT(startY) });
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) => {
+      const curY = ev.clientY - rect.top;
+      setDragPreview({ dayIso, top: Math.min(startY, curY), height: Math.abs(curY - startY), startT: yToT(Math.min(startY, curY)), endT: yToT(Math.max(startY, curY)) });
+    };
+    const onUp = (ev: MouseEvent) => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setDragPreview(null);
+      const curY = ev.clientY - rect.top;
+      if (!child) return;
+      setModalDate(dayIso);
+      setNewStartTime(yToT(Math.min(startY, curY)));
+      setNewEndTime(yToT(Math.max(startY, curY)));
+      setModalVisible(true);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 
   return (
     <ScreenLayout>
@@ -414,223 +438,75 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
           <View style={styles.mainLayout} onLayout={(e) => { scheduleScroll.onGridLayout(e); setGridWidth(e.nativeEvent.layout.width); }}>
             {/* ── Left: Week Calendar Grid ── */}
             <View style={styles.calendarContainer}>
-              {/* Sticky time label column + scrollable day columns */}
-              {/* Pinned: dates and the all-day row stay at the top while the hours scroll under them (like Teams). */}
-              <View style={[{ flexDirection: 'row', zIndex: 5, backgroundColor: colors.bgDark }, PINNED]}>
-                <View style={{ width: TIME_LABEL_WIDTH }}>
-                  {/* Spacer matching day header height with GMT label */}
-                  <View style={[styles.timeColHeader, { justifyContent: 'flex-end', paddingBottom: 6, alignItems: 'center' }]}>
-                    <Text style={{ fontSize: 8.5, fontWeight: '700', color: colors.textDim, textAlign: 'center', lineHeight: 11 }}>GMT{'\n'}+05:30</Text>
-                  </View>
-                  {/* All-day gutter label matching Toddle */}
-                  <View style={[styles.allDayGutter, { height: allDayHeight }]}>
-                    <Text style={styles.allDayGutterText}>All{'\n'}day</Text>
-                  </View>
-                </View>
-                <ScrollView ref={headerScrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                  <View style={{ width: colWidth * 7 }}>
-                  {/* Day header row — inside scroll */}
-                  <View style={[styles.dayHeaderRow, { marginLeft: 0 }]}>
-                    {week.map((d) => {
-                      const isToday = d.iso === todayISO;
-                      const hasDot  = eventDates.has(d.iso);
-                      return (
-                        <View key={d.iso} style={[styles.dayHeader, { width: colWidth }]}>
-                          <Text style={[styles.dayHeaderLabel, isToday && styles.dayHeaderLabelToday]}>{d.day}</Text>
-                          <View style={[styles.dayHeaderCircle, isToday && styles.dayHeaderCircleToday]}>
-                            <Text style={[styles.dayHeaderDate, isToday && styles.dayHeaderDateToday]}>{d.date}</Text>
-                          </View>
-                          {hasDot && <View style={[styles.dayDot, isToday && { backgroundColor: colors.accentYellow }]} />}
-                        </View>
-                      );
-                    })}
-                  </View>
-                    {!loading && (
-                      <>
-                    {/* All-day row — deadline/challenge items (stored at 23:59) are excluded
-                        from the hourly grid below since a 1-minute-tall block there would be
-                        invisible; show them here instead. */}
-                    <View style={[styles.allDayRow, { height: allDayHeight }]}>
-                      {week.map((d) => {
-                        const allDayEvents = (eventsMap[d.iso] ?? []).filter(e => {
-                          const tagLower = (e.tag || '').toLowerCase();
-                          const isEventTag = ['holiday', 'vacation', 'assembly', 'timeline', 'whole school', 'rotation', 'cycle'].some(k => tagLower.includes(k));
-                          return e.startTime === '23:59' || e.isAllDay || e.type === 'deadline' || e.type === 'challenge' || isEventTag;
-                        });
-                        return (
-                          <View key={d.iso} style={[styles.allDayCol, { width: colWidth, height: allDayHeight }]}>
-                            {allDayEvents.map(e => {
-                              const [accent, fill, textCol] = typeColors(e.type);
-                              return (
-                                <TouchableOpacity
-                                  key={e.id}
-                                  style={[styles.allDayChip, { backgroundColor: fill, borderLeftColor: accent }]}
-                                  onPress={() => setSelectedEvent({ ...e, accent, fill, textCol })}
-                                  activeOpacity={0.75}
-                                >
-                                  <Text style={[styles.allDayChipText, { color: textCol }]} numberOfLines={1}>{e.title}</Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        );
-                      })}
-                    </View>
-                      </>
-                    )}
-                  </View>
-                </ScrollView>
-              </View>
-
               {loading ? (
-                    <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                      <ActivityIndicator size="small" color={colors.accentYellow} />
-                      <Text style={styles.emptyText}>Loading schedule…</Text>
-                    </View>
-              ) : (
-              <View style={{ flexDirection: 'row', height: gridHeight }}>
-                <View style={{ width: TIME_LABEL_WIDTH }}>
-                  {TIMES.map((t) => (
-                    <View key={t} style={{ height: HOUR_HEIGHT, justifyContent: 'flex-start', paddingTop: 4 }}>
-                      <Text style={styles.timeLabel}>{fmtHour12(t)}</Text>
-                    </View>
-                  ))}
+                <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                  <ActivityIndicator size="small" color={colors.accentYellow} />
+                  <Text style={styles.emptyText}>Loading schedule…</Text>
                 </View>
-                <ScrollView
-                  ref={horizScrollRef}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ flex: 1 }}
-                  onScroll={(e) => headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}
-                  scrollEventThrottle={16}
-                >
-                  <View style={{ width: colWidth * 7 }}>
-                    <View style={{ flexDirection: 'row' }}>
-                      {/* Day columns */}
-                      {week.map((d) => {
-                        const dayEvents = (eventsMap[d.iso] ?? []).filter(e => {
-                          const tagLower = (e.tag || '').toLowerCase();
-                          const isEventTag = ['holiday', 'vacation', 'assembly', 'timeline', 'whole school', 'rotation', 'cycle'].some(k => tagLower.includes(k));
-                          return e.startTime !== '23:59' && !e.isAllDay && e.type !== 'deadline' && e.type !== 'challenge' && !isEventTag;
-                        });
-                        return (
-                          <View
-                            key={d.iso}
-                            style={[styles.dayCol, { width: colWidth, height: gridHeight }]}
-                            // @ts-ignore
-                            onMouseDown={(e: any) => {
-                              if (e.button !== 0) return;
-                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              const startY = e.clientY - rect.top;
-                              const gh = gridHeight;
-                              const yToT = (y: number) => {
-                                const mins = Math.round((Math.max(0, Math.min(y, gh)) / HOUR_HEIGHT * 60 + TIMELINE_START_HOUR * 60) / 15) * 15;
-                                return `${String(Math.floor(mins/60)%24).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`;
-                              };
-                              setDragPreview({ dayIso: d.iso, top: startY, height: 0, startT: yToT(startY), endT: yToT(startY) });
-                              e.preventDefault();
-                              const onMove = (ev: MouseEvent) => {
-                                const curY = ev.clientY - rect.top;
-                                setDragPreview({ dayIso: d.iso, top: Math.min(startY, curY), height: Math.abs(curY - startY), startT: yToT(Math.min(startY, curY)), endT: yToT(Math.max(startY, curY)) });
-                              };
-                              const onUp = (ev: MouseEvent) => {
-                                window.removeEventListener('mousemove', onMove);
-                                window.removeEventListener('mouseup', onUp);
-                                setDragPreview(null);
-                                const curY = ev.clientY - rect.top;
-                                const startT = yToT(Math.min(startY, curY));
-                                const endT = yToT(Math.max(startY, curY));
-                                const [sh, sm] = startT.split(':').map(Number);
-                                const [eh, em] = endT.split(':').map(Number);
-                                const dur = (eh * 60 + em) - (sh * 60 + sm);
-                                const closest = DURATIONS.reduce((best, lbl) => Math.abs((DURATION_MINS[lbl]??60)-dur) < Math.abs((DURATION_MINS[best]??60)-dur) ? lbl : best, '1 hr');
-                                if (!child) return;
-                                setModalDate(d.iso);
-                                setNewStartTime(startT);
-                                setNewEndTime(endT);
-                                setModalVisible(true);
-                              };
-                              window.addEventListener('mousemove', onMove);
-                              window.addEventListener('mouseup', onUp);
-                            }}
-                          >
-                            {/* Hour grid lines */}
-                            {TIMES.map((t, idx) => (
-                              <TouchableOpacity
-                                key={t}
-                                style={[styles.hourCell, { top: idx * HOUR_HEIGHT }]}
-                                onPress={() => openSlotModal(d.iso, t)}
-                                activeOpacity={0.3}
-                              />
-                            ))}
-                            {/* Drag preview */}
-                            {dragPreview?.dayIso === d.iso && dragPreview.height > 8 && (
-                              <View style={{
-                                position: 'absolute', left: 2, right: 2,
-                                top: dragPreview.top, height: Math.max(dragPreview.height, 20),
-                                backgroundColor: colors.accentYellow + '28',
-                                borderLeftWidth: 3, borderLeftColor: colors.accentYellow,
-                                borderRadius: 4, paddingHorizontal: 5, paddingVertical: 3,
-                                zIndex: 10, // @ts-ignore
-                                pointerEvents: 'none',
-                              }}>
-                                <Text style={{ fontFamily: fonts.serif, fontSize: 11, fontWeight: '700', color: colors.accentYellow }}>
-                                  {dragPreview.startT} – {dragPreview.endT}
-                                </Text>
-                              </View>
-                            )}
-                            {/* Absolutely positioned events */}
-                            {dayEvents.map(event => {
-                              const top    = calcEventTop(event.startTime);
-                              const height = calcEventHeight(event.startTime, event.endTime);
-                              const [accent, fill, textCol] = typeColors(event.type);
-                              return (
-                                <TouchableOpacity
-                                  key={event.id}
-                                  style={[styles.eventBlock, {
-                                    top, height,
-                                    backgroundColor: fill,
-                                    borderLeftColor: accent,
-                                    borderLeftWidth: 4,
-                                  }]}
-                                  activeOpacity={0.82}
-                                  onPress={() => setSelectedEvent({ ...event, accent, fill, textCol })}
-                                  // @ts-ignore — stop the day column's drag-to-create mousedown handler
-                                  // from also firing (it bubbles from this chip otherwise), which was
-                                  // opening the Add Event modal on top of/behind this tap.
-                                  onMouseDown={(e: any) => e.stopPropagation?.()}
-                                >
-                                  <Text style={[styles.eventTitle, { color: textCol }]}>{toTitleCase(event.title)}</Text>
-                                  <Text style={[styles.eventTime, { color: accent }]}>{event.startTime}{event.endTime ? `–${event.endTime}` : ''}</Text>
-                                  <TouchableOpacity
-                                    style={styles.deleteBtn}
-                                    onPress={() => removeEvent(event.id, d.iso)}
-                                    // @ts-ignore
-                                    onMouseDown={(e: any) => e.stopPropagation?.()}
-                                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                                  >
-                                    <Feather name="x" size={10} color={colors.textDim} />
-                                  </TouchableOpacity>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </View>
-                </ScrollView>
-              </View>
+              ) : (
+              <WeekGrid<ScheduleEvent>
+                colors={colors}
+                testIdPrefix="parent-schedule"
+                week={week}
+                todayISO={todayISO}
+                allDayHeight={allDayHeight}
+                colWidth={colWidth}
+                gridHeight={gridHeight}
+                hScrollRef={horizScrollRef}
+                accent={colors.accentYellow}
+                dragPreview={dragPreview}
+                onColMouseDown={onColMouseDown}
+                onSlotPress={openSlotModal}
+                onAllDayPress={() => {}}
+                allDayEvents={(iso) => (eventsMap[iso] ?? []).filter(isAllDayEvent)}
+                timedEvents={(iso) => (eventsMap[iso] ?? []).filter(e => !isAllDayEvent(e))}
+                renderAllDayChip={(e) => {
+                  const [accent, fill, textCol] = typeColors(e.type);
+                  const isCompleted = !!e.isCompleted;
+                  const chipTextCol = isCompleted ? '#137333' : textCol;
+                  const isMultiDay = e.startDate && e.startDate !== e.date;
+                  return (
+                    <TouchableOpacity
+                      style={[g.allDayChip, { backgroundColor: isCompleted ? '#E6F4EA' : fill, borderLeftColor: isCompleted ? '#137333' : accent }]}
+                      onPress={(evt) => { evt.stopPropagation(); setSelectedEvent({ ...e, accent, fill, textCol }); }}
+                      activeOpacity={0.75}
+                    >
+                      <Feather name={isCompleted ? 'check' : e.type === 'challenge' ? 'award' : 'flag'} size={11} color={chipTextCol} style={{ marginRight: 5, flexShrink: 0 }} />
+                      <Text style={[g.allDayChipText, { color: chipTextCol, textDecorationLine: isCompleted ? 'line-through' : 'none' }]} numberOfLines={1}>
+                        {isMultiDay ? `Due ${e.date.slice(5)} · ` : ''}{e.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+                renderTimedEvent={(event, iso) => {
+                  const [accent, fill, textCol] = typeColors(event.type);
+                  return (
+                    <TouchableOpacity
+                      style={[g.eventBlock, { top: calcEventTop(event.startTime), height: calcEventHeight(event.startTime, event.endTime), backgroundColor: fill, borderLeftColor: accent, borderLeftWidth: 4, zIndex: 2 }]}
+                      activeOpacity={0.82}
+                      onPress={() => setSelectedEvent({ ...event, accent, fill, textCol })}
+                      // @ts-ignore — stop the day column's drag-to-create mousedown from also firing
+                      onMouseDown={(e: any) => e.stopPropagation?.()}
+                    >
+                      <Text style={[g.eventTitle, { color: textCol }]}>{toTitleCase(event.title)}</Text>
+                      <Text style={[g.eventTime, { color: accent }]}>{event.startTime}{event.endTime ? `–${event.endTime}` : ''}</Text>
+                      <TouchableOpacity
+                        style={g.deleteBtn}
+                        onPress={() => removeEvent(event.id, iso)}
+                        // @ts-ignore
+                        onMouseDown={(e: any) => e.stopPropagation?.()}
+                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                      >
+                        <Feather name="x" size={10} color={accent} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
               )}
 
 
-              {/* Add event button */}
-              {child ? (
-                <TouchableOpacity style={styles.addEventBtn} onPress={() => { setModalDate(todayISO); setNewStartTime('09:00'); setNewEndTime('10:00'); setModalVisible(true); }} activeOpacity={0.8}>
-                  <Feather name="plus" size={16} color={colors.accentYellow} />
-                  <Text style={styles.addEventText}>Add Event for {child.name}</Text>
-                </TouchableOpacity>
-              ) : childrenLoaded ? (
+              {!child && childrenLoaded ? (
                 <TouchableOpacity style={styles.addEventBtn} onPress={() => navigation.navigate('ParentMyKids')} activeOpacity={0.8} testID="schedule-link-child">
                   <Feather name="user-plus" size={16} color={colors.accentYellow} />
                   <Text style={styles.addEventText}>Link your child in My Kids to plan their schedule</Text>

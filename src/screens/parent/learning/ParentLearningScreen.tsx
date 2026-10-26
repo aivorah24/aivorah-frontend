@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { spacing, radius, fonts } from '../../../theme';
@@ -23,17 +23,33 @@ export default function ParentLearningScreen({ navigation, route }: any) {
   const parentEmail = user?.email || '';
 
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  // Tapping a subject scrolls its details (rendered below the grid) into view; closing returns to the grid.
+  const scrollRef = useRef<ScrollView>(null);
+  const gridY = useRef(0);
+  const scrollToPanel = useRef(false);
+  const toggleSubject = (subject: string) => {
+    const opening = expandedSubject !== subject;
+    scrollToPanel.current = opening;
+    setExpandedSubject(opening ? subject : null);
+  };
+  const closePanel = () => {
+    setExpandedSubject(null);
+    scrollRef.current?.scrollTo({ y: Math.max(0, gridY.current - 12), animated: true });
+  };
 
   const {
-    children, selectedIdx, setSelectedIdx, childCurriculum, childGrade,
+    children, selectedIdx, setSelectedIdx, child, childCurriculum, childGrade,
     subjects, completedTopics, completedSet, loading, refreshing, analyticsReport, refresh,
   } = useParentLearningData(parentEmail, route?.params?.childId);
 
   const isIBPYP = childCurriculum === 'IB_PYP' || childCurriculum === 'IB PYP';
 
   const { totalItems, doneItems, overallPct, curriculumLabel } = useMemo(() => {
-    const total = subjects.reduce((s, sub) => s + (sub.topicCount ?? 0), 0);
-    const done  = Math.min(completedTopics.length, total);
+    // Same per-subject topic lists the cards count against, so the totals agree.
+    const total = subjects.reduce((s, sub) => s + ((sub.topics ?? []).length || sub.topicCount || 0), 0);
+    const topicNames = new Set(subjects.flatMap(sub => (sub.topics ?? []).map((t: any) => (typeof t === 'string' ? t : t.topic))));
+    const matched = completedTopics.filter(t => topicNames.has(t)).length;
+    const done  = Math.min(topicNames.size > 0 ? matched : completedTopics.length, total);
     const currLabel = isIBPYP ? 'IB PYP' : (normalizeCurriculum(childCurriculum) || 'CBSE');
     return {
       totalItems: total,
@@ -59,6 +75,7 @@ export default function ParentLearningScreen({ navigation, route }: any) {
         />
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -112,28 +129,38 @@ export default function ParentLearningScreen({ navigation, route }: any) {
                 </View>
               ) : (
                 <>
-                  <View style={styles.subjectGrid}>
+                  <View style={styles.subjectGrid} onLayout={(e) => { gridY.current = e.nativeEvent.layout.y; }}>
                     {subjects.map((sub) => (
                       <SubjectCard
                         key={sub.subject}
                         sub={sub}
                         completedSet={completedSet}
                         isExpanded={expandedSubject === sub.subject}
-                        onToggle={() => setExpandedSubject(prev => prev === sub.subject ? null : sub.subject)}
+                        onToggle={() => toggleSubject(sub.subject)}
                         width={cardWidth}
                       />
                     ))}
                   </View>
 
                   {expandedSubject && subjects.find(s => s.subject === expandedSubject) && (
+                    <View
+                      key={expandedSubject}
+                      testID="subject-detail-anchor"
+                      onLayout={(e) => {
+                        if (!scrollToPanel.current) return;
+                        scrollToPanel.current = false;
+                        scrollRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 12), animated: true });
+                      }}
+                    >
                     <SubjectDetailPanel
                       sub={subjects.find(s => s.subject === expandedSubject)}
+                      childId={child?.id}
                       completedSet={completedSet}
-                      analyticsReport={analyticsReport}
                       colors={colors}
-                      onClose={() => setExpandedSubject(null)}
+                      onClose={closePanel}
                       isMobile={isMobile}
                     />
+                    </View>
                   )}
                 </>
               )}
@@ -150,7 +177,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   scroll:  { flex: 1 },
   content: { padding: spacing.xl, paddingBottom: 48, gap: spacing.lg },
 
-  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
+  subjectGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   childRow: { flexDirection: 'row' },
   childTab: {
     alignItems: 'center', marginRight: spacing.md,

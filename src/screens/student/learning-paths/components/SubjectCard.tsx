@@ -13,12 +13,15 @@ export default function SubjectCard({
   onPress,
   width,
   isBlocked,
+  selected,
 }: {
   data: SubjectData;
   completedSet: Set<string>;
   onPress: () => void;
   width: `${number}%` | number;
   isBlocked?: boolean;
+  /** Parent view: marks the subject whose details are open. */
+  selected?: boolean;
 }) {
   const { isDark } = useTheme();
   const meta = subjectMeta(data.subject);
@@ -42,7 +45,7 @@ export default function SubjectCard({
         colors={[meta.bgFromDark, meta.bgToDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[cardStyles.gradient, { borderColor: accent + '40' }]}
+        style={[cardStyles.gradient, { borderColor: accent + '40' }, selected && { borderColor: accent, borderWidth: 2 }]}
       >
         <View style={cardStyles.topRow}>
           <View style={[cardStyles.iconWrap, { backgroundColor: '#ffffff50' }]}>
