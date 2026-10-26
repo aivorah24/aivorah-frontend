@@ -9,8 +9,8 @@ import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR } from '../constants';
-import { getStamp } from '../utils';
-import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
+import { getStamp, assignmentLanguageText } from '../utils';
+import TransliterationInput, { resolveTypingLang } from '../../../../components/common/TransliterationInput';
 import type { Assignment, QuizQuestion, PerQ, GradeResult } from '../types';
 import { AssignmentErrorBoundary } from './AssignmentErrorBoundary';
 import { ModalTopBar } from './ModalTopBar';
@@ -47,7 +47,7 @@ export function QuizModal({ assignment, colors, onClose, onSubmitted }: {
   const [showCheckNudge,   setShowCheckNudge]   = useState(false);
 
   const q         = questions[currentQ];
-  const langCode  = detectLangCodeFromText(`${assignment.title} ${q?.question ?? ''}`);
+  const langCode  = resolveTypingLang(assignment.subject, q?.question, assignmentLanguageText(assignment));
   const isLast    = currentQ === questions.length - 1;
   const isFillQ   = q?.type === 'fill_blank';
   const answered  = answers[currentQ] !== undefined;

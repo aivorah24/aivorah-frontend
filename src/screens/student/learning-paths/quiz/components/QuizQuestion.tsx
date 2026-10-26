@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import { Feather } from '@expo/vector-icons';
 import Header from '../../../../../components/common/Header';
 import ScreenLayout from '../../../../../components/common/ScreenLayout';
-import TransliterationInput, { detectLangCodeFromText } from '../../../../../components/common/TransliterationInput';
+import TransliterationInput, { resolveTypingLang } from '../../../../../components/common/TransliterationInput';
 import type { AppColors } from '../../../../../theme';
 import { SUBJECT_ICON } from '../constants';
 import { makeStyles } from '../styles';
@@ -194,7 +194,7 @@ export default function QuizQuestion({
                     onChangeText={setFillInput}
                     // Language-Acquisition answers: if the question is in a native
                     // script (e.g. Devanagari), let the student type it via English.
-                    langCode={subject === 'Language Acquisition' ? detectLangCodeFromText(q.question as string) : null}
+                    langCode={resolveTypingLang(subject, q.question as string, topic)}
                   />
                   {fillFeedback === 'wrong1' && (
                     <View style={styles.nudgeRow}>

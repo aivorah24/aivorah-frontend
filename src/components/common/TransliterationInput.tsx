@@ -61,6 +61,24 @@ export function detectLangCodeFromText(text?: string | null): string | null {
   return null;
 }
 
+const LANG_NAME_RE = new RegExp(`\\b(${Object.keys(LANG_NAME_TO_CODE).join('|')})\\b`, 'i');
+const MULTI_LANGUAGE_SUBJECTS = ['language acquisition', 'second language'];
+
+// Which language a student answer box should type in. Assignments don't store the
+// teacher's language, so: a language subject (e.g. "Telugu"); for Language
+// Acquisition / Second Language the language named in the text (beats script, so
+// Marathi isn't typed as Hindi); else native script found in the question.
+export function resolveTypingLang(subject: string | null | undefined, ...texts: (string | null | undefined)[]): string | null {
+  const bySubject = langNameToCode(subject);
+  if (bySubject) return bySubject;
+  const text = texts.filter(Boolean).join(' ');
+  if (MULTI_LANGUAGE_SUBJECTS.includes(subject?.trim().toLowerCase() ?? '')) {
+    const named = text.match(LANG_NAME_RE);
+    if (named) return langNameToCode(named[1]);
+  }
+  return detectLangCodeFromText(text);
+}
+
 // A representative native-script glyph per language, shown on the IME toggle
 // when transliteration is ON (tap it to switch to 'EN' for plain English).
 const IME_LABEL: Record<string, string> = {
