@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Challenges microservice base URL (aivorah-challenges-service). Deployed
@@ -8,9 +9,9 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-const LIVE_SERVICE = 'https://aivorah-challenges-service-qf47.onrender.com';
+const LIVE_SERVICE = 'https://aivorah-challenges-service.onrender.com';
 
 const CHALLENGES_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:3008' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:3008' : LIVE_SERVICE;
 
 export default CHALLENGES_SERVER_URL;

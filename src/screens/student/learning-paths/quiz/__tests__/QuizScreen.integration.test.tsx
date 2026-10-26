@@ -4,7 +4,7 @@
 // covered by useQuiz's hook tests and would just duplicate that coverage here.
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import QuizScreen from '../QuizScreen';
 
 jest.setTimeout(15000);
@@ -36,7 +36,7 @@ jest.mock('../components/QuizResult', () => {
 
 jest.mock('../components/QuizQuestion', () => {
   const { Text } = require('react-native');
-  return { __esModule: true, default: (props: any) => <Text testID="quiz-question">{props.q?.question}</Text> };
+  return { __esModule: true, default: (props: any) => <Text testID="quiz-question" onPress={props.onBack}>{props.q?.question}</Text> };
 });
 
 function jsonRes(data: any, ok = true) {
@@ -73,5 +73,34 @@ describe('QuizScreen — phase routing', () => {
 
     await waitFor(() => expect(screen.getByTestId('quiz-question')).toBeTruthy());
     expect(screen.getByText('What is 1/2 + 1/2?')).toBeTruthy();
+  });
+});
+
+describe('QuizScreen — back navigation', () => {
+  const lessonParams = { returnTo: 'LessonScreen', returnParams: { topicId: 't1' } };
+  const navWithHistory = (prevName: string) => ({
+    ...navProp(),
+    getState: () => ({
+      routes: [{ key: 'a', name: prevName }, { key: 'q', name: 'Quiz' }],
+      history: [{ type: 'route', key: 'a' }, { type: 'route', key: 'q' }],
+    }),
+  });
+
+  test('pops back to the origin instead of pushing it, so origin back does not reopen the quiz', async () => {
+    const nav = navWithHistory('LessonScreen');
+    await render(<QuizScreen navigation={nav} route={routeProp(lessonParams)} />);
+    fireEvent.press(await screen.findByTestId('quiz-question'));
+
+    expect(nav.goBack).toHaveBeenCalled();
+    expect(nav.navigate).not.toHaveBeenCalled();
+  });
+
+  test('navigates to the origin when it is not the previous history entry', async () => {
+    const nav = navWithHistory('Dashboard');
+    await render(<QuizScreen navigation={nav} route={routeProp(lessonParams)} />);
+    fireEvent.press(await screen.findByTestId('quiz-question'));
+
+    expect(nav.navigate).toHaveBeenCalledWith('LessonScreen', { topicId: 't1' });
+    expect(nav.goBack).not.toHaveBeenCalled();
   });
 });

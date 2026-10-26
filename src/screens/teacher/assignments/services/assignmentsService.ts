@@ -90,7 +90,8 @@ export function buildAssignmentPayload(args: BuildAssignmentPayloadArgs) {
     questions: (() => {
       const plain = questions.filter(q => q.trim());
       if (uploadedExtracted.length > 0) return uploadedExtracted;
-      return plain;
+      // Stepped assignments never show plain questions to students
+      return taskSteps.length > 0 ? [] : plain;
     })(),
     // Include expected answers from extracted questions for AI validation
     questionAnswers: extractedQuestions.filter(q => q.answer.trim()).reduce((acc, q) => {

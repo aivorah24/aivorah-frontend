@@ -314,7 +314,7 @@ export function useQuiz(params: {
     try {
       const resp = await fetch(`${ASSIGNMENTS_SERVER_URL}/assignments/validate-fill-blank`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentAnswer: fillInput.trim(), correctAnswer: questions[currentQ].correct }),
+        body: JSON.stringify({ studentAnswer: fillInput.trim(), correctAnswer: questions[currentQ].correct, question: questions[currentQ].question }),
       });
       const { correct } = await resp.json();
       if (correct) {

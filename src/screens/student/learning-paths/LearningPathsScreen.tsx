@@ -19,7 +19,7 @@ import { useSubjectTopics } from './hooks/useSubjectTopics';
 import SubjectCard from './components/SubjectCard';
 import { useTeacherPaths } from './teacher-learning-paths/hooks/useTeacherPaths';
 import { mergeTeacherSubjects } from './mergeTeacherSubjects';
-import { isCbseCurriculum } from '../../../utils/curriculum';
+import { curriculumFlags } from './utils';
 
 export default function LearningPathsScreen({ navigation }: any) {
   const { colors } = useTheme();
@@ -36,9 +36,7 @@ export default function LearningPathsScreen({ navigation }: any) {
   // until the student happened to visit Dashboard/Settings first (same fix
   // already applied there and in Challenges).
   useFocusEffect(useCallback(() => { refreshProfile().catch(() => {}); }, [refreshProfile]));
-  // Normalise IB PYP — stored value may have space or underscore
-  const isPYP = /^ib.?pyp$/i.test(curriculum.trim());
-  const isCBSE = !isPYP && isCbseCurriculum(curriculum);
+  const { isPYP, isCBSE } = curriculumFlags(curriculum);
 
   const { subjects: courseSubjects, loading, error } = useSubjects(curriculum, grade, isCBSE, isPYP);
   // Teacher-published units count as chapters of their subject; a subject the curriculum has no card for (IB has

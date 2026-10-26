@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import SERVER_URL from '../../config/serverUrl';
 import PARENT_SERVER_URL from '../../config/parentServerUrl';
 import SCHEDULE_SERVER_URL from '../../config/scheduleServerUrl';
+import { authHeader } from '../../services/authHeader';
 import TimePicker from '../../components/common/TimePicker';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -236,16 +237,17 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     // otherwise the schedule blanked out and reappeared every 30s ("blinking").
     if (!firstLoadDoneRef.current) setLoading(true);
     try {
+      const headers = await authHeader();
       const weekDates = week.map(d => d.iso);
       const dayFetches = weekDates.map(d =>
-        fetch(`${SCHEDULE_SERVER_URL}/schedule?studentId=${child.id}&date=${d}`)
+        fetch(`${SCHEDULE_SERVER_URL}/schedule?studentId=${child.id}&date=${d}`, { headers })
           .then(r => r.ok ? r.json() : [])
           .then((evs: ScheduleEvent[]) => ({ date: d, events: evs }))
           .catch(() => ({ date: d, events: [] }))
       );
       const [dlRes, monthRes, ...dayResults] = await Promise.all([
-        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${child.id}&hideCompleted=true`),
-        fetch(`${SCHEDULE_SERVER_URL}/schedule/month?studentId=${child.id}&year=${calYear}&month=${calMonth}`),
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/upcoming?studentId=${child.id}&hideCompleted=true`, { headers }),
+        fetch(`${SCHEDULE_SERVER_URL}/schedule/month?studentId=${child.id}&year=${calYear}&month=${calMonth}`, { headers }),
         ...dayFetches,
       ]);
 
@@ -291,7 +293,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
     try {
       const res = await fetch(`${SCHEDULE_SERVER_URL}/schedule`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...(await authHeader()), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title:     newTitle,
           date:      modalDate,
@@ -322,7 +324,7 @@ export default function ParentScheduleScreen({ navigation, route }: any) {
 
   async function removeEvent(id: string, dateStr: string) {
     try {
-      await fetch(`${SCHEDULE_SERVER_URL}/schedule/${id}`, { method: 'DELETE' });
+      await fetch(`${SCHEDULE_SERVER_URL}/schedule/${id}`, { method: 'DELETE', headers: await authHeader() });
       setEventsMap(prev => ({
         ...prev,
         [dateStr]: (prev[dateStr] ?? []).filter(e => e.id !== id),

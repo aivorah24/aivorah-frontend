@@ -176,7 +176,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   emptyText: { fontSize: 12, color: c.textMuted, textAlign: 'center', lineHeight: 18 },
 
   barChart: { flexDirection: 'row', height: 120, alignItems: 'flex-end', gap: 6, marginBottom: spacing.lg },
-  barItem: { flex: 1, alignItems: 'center', gap: 2 },
+  barItem: { flex: 1, alignSelf: 'stretch', alignItems: 'center', gap: 2 },
   barMinute: { fontSize: 9, color: c.textDim, fontWeight: '600', height: 14 },
   barWrapper: { flex: 1, width: '100%', justifyContent: 'flex-end' },
   bar: { width: '100%', borderRadius: 4, minHeight: 4 },
@@ -205,8 +205,9 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   },
   subjectIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   subjectName: { fontSize: 13, fontWeight: '600', color: c.textMain },
+  subjectStats: { marginTop: 'auto', gap: 6 },
   subjectScore: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  progressTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' },
+  progressTrack: { height: 4, backgroundColor: c.borderColor, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 2 },
   subjectMeta: { fontSize: 11, color: c.textMuted },
 

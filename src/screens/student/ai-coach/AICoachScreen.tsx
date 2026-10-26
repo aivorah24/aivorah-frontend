@@ -40,7 +40,7 @@ export default function AICoachScreen({ navigation }: any) {
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   const suggestions = useSuggestions(userGrade, userCurriculum);
-  const { speakingId, speakMessage } = useTextToSpeech();
+  const { speakingId, position: readPosition, speakMessage } = useTextToSpeech();
 
   const [zoomedImage, setZoomedImage] = useState<{ url: string; caption: string } | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -114,6 +114,7 @@ export default function AICoachScreen({ navigation }: any) {
             streamingMsgId={streamingMsgId}
             isTyping={isTyping}
             speakingId={speakingId}
+            readPosition={readPosition}
             onSpeak={speakMessage}
             failedImages={failedImages}
             onImageFail={(url) => setFailedImages(prev => new Set(prev).add(url))}

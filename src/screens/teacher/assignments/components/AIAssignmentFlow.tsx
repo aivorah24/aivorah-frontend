@@ -3,10 +3,15 @@ import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'reac
 import { Feather } from '@expo/vector-icons';
 import type { AppColors } from '../../../../theme';
 import type { StepType, TaskStep, StudentItem } from '../types';
-import { STEP_ICONS, STEP_COLORS } from '../constants';
+import { STEP_ICONS, STEP_COLORS, subjectLabel } from '../constants';
 import TransliterationInput, { langNameToCode } from '../../../../components/common/TransliterationInput';
 import { AssignmentCommonFields } from './AssignmentCommonFields';
+import { StepListEditor } from './StepListEditor';
+import { findIncompleteTaskStep } from '../utils/validation';
 import { AssignToPicker } from './AssignToPicker';
+
+const SECTION_STEP_TYPES: StepType[] = ['structured_writing', 'reading_comprehension', 'research_notes', 'language_practice', 'tech_skill_practice', 'skill_practice'];
+const REFLECTION_STEP_TYPES: StepType[] = ['math_reflection', 'writing_reflection', 'social_synthesis', 'communication', 'artistic_reflection', 'digital_citizenship', 'physical_reflection'];
 
 // The AI / IB PYP Assignment flow — AssignmentTypeSelector (assignment vs
 // quiz), AssignmentDetails (shared common fields), and GenerationSection
@@ -51,6 +56,8 @@ export function AIAssignmentFlow(props: {
   addTaskStep: (t: StepType) => void;
   updateTaskStep: (id: string, patch: Partial<TaskStep>) => void;
   removeTaskStep: (id: string) => void;
+  fillStepWithAI: (id: string) => void;
+  fillingStepId: string | null;
   questions: string[]; setQuestions: React.Dispatch<React.SetStateAction<string[]>>;
   quizQuestions: any[]; setQuizQuestions: React.Dispatch<React.SetStateAction<any[]>>;
   successCriteria: string[]; setSuccessCriteria: React.Dispatch<React.SetStateAction<string[]>>;
@@ -62,6 +69,7 @@ export function AIAssignmentFlow(props: {
   setShowPreview: (v: boolean) => void;
   colors: AppColors; gold: string; styles: any;
 }) {
+  const [showStepPicker, setShowStepPicker] = React.useState(false);
   const {
     type, setType, curriculum, isIBPYP,
     createMode, docFilesLength, title, setTitle, subject, setSubject, selectedLanguage, setSelectedLanguage,
@@ -73,7 +81,7 @@ export function AIAssignmentFlow(props: {
     ibPurpose, setIbPurpose, ibCentralIdea, setIbCentralIdea, ibLinesOfInquiry,
     ibLearnerProfile, ibAtlSkill, ibKeyConcept, ibLearningOutcomes, setIbLearningOutcomes,
     ibWordBank, setIbWordBank, ibStamps, setIbStamps,
-    taskSteps, addTaskStep, updateTaskStep, removeTaskStep,
+    taskSteps, addTaskStep, updateTaskStep, removeTaskStep, fillStepWithAI, fillingStepId,
     questions, setQuestions, quizQuestions, setQuizQuestions,
     successCriteria, setSuccessCriteria, note, setNote,
     assignTo, setAssignTo, selectedStudent, setSelectedStudent, studentSearch, setStudentSearch,
@@ -209,19 +217,25 @@ export function AIAssignmentFlow(props: {
           </Text>
         </View>
         <Text style={{ fontSize: 11, color: colors.textDim, lineHeight: 17 }}>
-          AI will generate a {isIBPYP ? 'complete IB PYP-style' : `${curriculum || 'curriculum'}-aligned`} assignment with Purpose, Learning Outcomes, Task Steps, Success Criteria, Word Bank, and Stamps — tailored to <Text style={{ fontWeight: '700' }}>{grade} · {subject}</Text>.
+          {/* Non-IB boards call generate-steps, which returns task steps only. */}
+          {isIBPYP
+            ? 'AI will generate a complete IB PYP-style assignment with Purpose, Learning Outcomes, Task Steps, Success Criteria, Word Bank, and Stamps'
+            : `AI will generate ${curriculum || 'curriculum'}-aligned questions for your Chapter / Topic`} — tailored to <Text style={{ fontWeight: '700' }}>{grade} · {subjectLabel(subject, curriculum, grade)}</Text>.
         </Text>
 
-        <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>
-          {isIBPYP ? 'Unit of Inquiry (optional)' : 'Theme / Unit (optional)'}
-        </Text>
-        <TextInput
-          style={styles.input}
-          placeholder={isIBPYP ? 'e.g. How We Organise Ourselves / Sharing the Planet' : 'e.g. Chapter 3: Fractions / Unit: Living World'}
-          placeholderTextColor={colors.textDim}
-          value={unitOfInquiry}
-          onChangeText={setUnitOfInquiry}
-        />
+        {/* Non-IB generation uses the Chapter / Topic field above, so no second box. */}
+        {isIBPYP && (
+          <>
+            <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Unit of Inquiry (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. How We Organise Ourselves / Sharing the Planet"
+              placeholderTextColor={colors.textDim}
+              value={unitOfInquiry}
+              onChangeText={setUnitOfInquiry}
+            />
+          </>
+        )}
 
         {!!formError && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 8, backgroundColor: '#ef444418', borderWidth: 1, borderColor: '#ef444440' }}>
@@ -281,11 +295,11 @@ export function AIAssignmentFlow(props: {
             </View>
 
             {ibLinesOfInquiry.length > 0 && (
-              <View style={{ backgroundColor: colors.bgDark, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#C3DCD830' }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#3D7A74', marginBottom: 6 }}>LINES OF INQUIRY</Text>
+              <View style={{ backgroundColor: colors.bgDark, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#BAA46730' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 6 }}>LINES OF INQUIRY</Text>
                 {ibLinesOfInquiry.map((loi, i) => (
                   <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 4 }}>
-                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#3D7A74', marginTop: 7, flexShrink: 0 }} />
+                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#BAA467', marginTop: 7, flexShrink: 0 }} />
                     <Text style={{ flex: 1, fontSize: 12, color: colors.textMain, lineHeight: 18 }}>{loi}</Text>
                   </View>
                 ))}
@@ -301,14 +315,14 @@ export function AIAssignmentFlow(props: {
                   </View>
                 ) : null}
                 {ibAtlSkill ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#C5BD9618', borderWidth: 1, borderColor: '#C5BD9650' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#BAA46718', borderWidth: 1, borderColor: '#BAA46750' }}>
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#8A7E4A' }}>ATL Skill</Text>
                     <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{ibAtlSkill}</Text>
                   </View>
                 ) : null}
                 {ibKeyConcept ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#93B0AC18', borderWidth: 1, borderColor: '#93B0AC50' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#3D6B66' }}>Key Concept</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#BAA46718', borderWidth: 1, borderColor: '#BAA46750' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#BAA467' }}>Key Concept</Text>
                     <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMain }}>{ibKeyConcept}</Text>
                   </View>
                 ) : null}
@@ -388,26 +402,15 @@ export function AIAssignmentFlow(props: {
 
       {/* ── Task Steps label (AI mode, assignment type only) ── */}
       {type === 'assignment' && taskSteps.length > 0 && (
-        <Text style={styles.fieldLabel}>Task Steps</Text>
+        <Text style={styles.fieldLabel}>Questions</Text>
       )}
 
-      {/* Step type picker — subject-appropriate options per IB PYP pedagogy */}
+      {/* Add a step manually — any type the student app supports (no per-subject template) */}
       {type === 'assignment' && (() => {
-        const SUBJECT_STEP_PICKER: Record<string, StepType[]> = {
-          'Mathematics':          ['tuning_in', 'problem_solving', 'math_reflection'],
-          'Science':              ['prior_knowledge', 'drawing', 'structured_writing'],
-          'English':              ['text_connection', 'reading_comprehension', 'writing_reflection'],
-          'Language Acquisition': ['language_culture', 'language_practice'],
-          'Social Studies':       ['social_inquiry', 'research_notes', 'social_synthesis'],
-          'Visual Arts':          ['artistic_exploration', 'art_creation', 'artistic_reflection'],
-          'ICT':                  ['digital_awareness', 'tech_skill_practice', 'digital_citizenship'],
-          'Physical Education':   ['movement_exploration', 'skill_practice', 'physical_reflection'],
-        };
-        const pickerTypes: StepType[] = SUBJECT_STEP_PICKER[subject] || ['brainstorm', 'drawing', 'structured_writing'];
         const typeLabels: Record<StepType, string> = {
           brainstorm: 'Brainstorm', drawing: 'Drawing', structured_writing: 'Writing',
           problem_solving: 'Problems', tuning_in: 'Tuning In',
-          math_reflection: 'Reflection', prior_knowledge: 'Prior Knowledge',
+          math_reflection: 'Math Reflection', prior_knowledge: 'Prior Knowledge',
           text_connection: 'Text Connection', reading_comprehension: 'Reading',
           writing_reflection: 'Writing Reflection', language_culture: 'Lang & Culture',
           language_practice: 'Language Practice', communication: 'Communication',
@@ -418,21 +421,35 @@ export function AIAssignmentFlow(props: {
           digital_citizenship: 'Digital Citizenship', movement_exploration: 'Movement',
           skill_practice: 'Skill Practice', physical_reflection: 'PE Reflection',
         };
+        const pickerTypes = (Object.keys(typeLabels) as StepType[])
+          .filter(t => !(subject === 'Language Acquisition' && (t === 'drawing' || t === 'art_creation')));
         return (
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {pickerTypes.map(t => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => addTaskStep(t)}
-            activeOpacity={0.75}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: STEP_COLORS[t] + '60', backgroundColor: STEP_COLORS[t] + '12' }}
-          >
-            <Feather name={STEP_ICONS[t] as any} size={13} color={STEP_COLORS[t]} />
-            <Text style={{ fontSize: 12, color: STEP_COLORS[t], fontWeight: '600' }}>
-              + {typeLabels[t]}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ gap: 8 }}>
+        <TouchableOpacity
+          testID="add-step-toggle"
+          onPress={() => setShowStepPicker(v => !v)}
+          activeOpacity={0.75}
+          style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: gold + '80' }}
+        >
+          <Feather name={showStepPicker ? 'chevron-up' : 'plus'} size={13} color={gold} />
+          <Text style={{ fontSize: 12, color: gold, fontWeight: '600' }}>Add a question</Text>
+        </TouchableOpacity>
+        {showStepPicker && (<>
+          <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600' }}>Choose a question type</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {pickerTypes.map(t => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => { addTaskStep(t); setShowStepPicker(false); }}
+                activeOpacity={0.75}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: STEP_COLORS[t] + '60', backgroundColor: STEP_COLORS[t] + '12' }}
+              >
+                <Feather name={STEP_ICONS[t] as any} size={13} color={STEP_COLORS[t]} />
+                <Text style={{ fontSize: 12, color: STEP_COLORS[t], fontWeight: '600' }}>{typeLabels[t]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>)}
       </View>
         );
       })()}
@@ -442,7 +459,7 @@ export function AIAssignmentFlow(props: {
         <View key={step.id} style={{ borderWidth: 1, borderColor: STEP_COLORS[step.type] + '40', borderRadius: 12, padding: 12, gap: 8, backgroundColor: STEP_COLORS[step.type] + '06' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: STEP_COLORS[step.type], alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: '#fff' }}>{idx + 1}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>Q{idx + 1}</Text>
             </View>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Feather name={STEP_ICONS[step.type] as any} size={13} color={STEP_COLORS[step.type]} />
@@ -463,21 +480,35 @@ export function AIAssignmentFlow(props: {
                 } as Record<StepType, string>)[step.type] || step.type}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => removeTaskStep(step.id)} activeOpacity={0.7}>
-              <Feather name="x" size={16} color={colors.accentRed} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity
+                testID={`fill-step-${step.id}`}
+                onPress={() => fillStepWithAI(step.id)}
+                disabled={fillingStepId !== null}
+                activeOpacity={0.75}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: gold + '70', opacity: fillingStepId && fillingStepId !== step.id ? 0.5 : 1 }}
+              >
+                {fillingStepId === step.id
+                  ? <ActivityIndicator size="small" color={gold} />
+                  : <Feather name="zap" size={12} color={gold} />}
+                <Text style={{ fontSize: 11, fontWeight: '700', color: gold }}>{fillingStepId === step.id ? 'Writing…' : 'Fill with AI'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => removeTaskStep(step.id)} activeOpacity={0.7}>
+                <Feather name="x" size={16} color={colors.accentRed} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TextInput
             style={[styles.input, { borderColor: STEP_COLORS[step.type] + '40' }]}
-            placeholder="Step label..."
+            placeholder="Question title, e.g. Draw the air flow around a wing"
             placeholderTextColor={colors.textDim}
             value={step.label}
             onChangeText={t => updateTaskStep(step.id, { label: t })}
           />
           {step.provocation !== undefined && (
             <>
-              <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600' }}>Scenario / Provocation</Text>
+              <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600' }}>{step.type === 'reading_comprehension' ? 'Reading passage (students read this)' : 'Scenario / Provocation'}</Text>
               <TransliterationInput
                 style={[styles.input, styles.inputMulti, { borderColor: STEP_COLORS[step.type] + '60', minHeight: 72 }]}
                 placeholder="Write the scenario or provocation text the student will read..."
@@ -492,7 +523,7 @@ export function AIAssignmentFlow(props: {
           )}
           <TransliterationInput
             style={[styles.input, styles.inputMulti, { borderColor: STEP_COLORS[step.type] + '40' }]}
-            placeholder="Instructions for student..."
+            placeholder="Exactly what the student should do — or tap Fill with AI to write it from the title"
             placeholderTextColor={colors.textDim}
             colors={colors}
             value={step.instructions}
@@ -501,9 +532,29 @@ export function AIAssignmentFlow(props: {
             langCode={subject === 'Language Acquisition' ? langNameToCode(selectedLanguage) : null}
           />
 
-          {step.type === 'structured_writing' && (
+          {step.type === 'problem_solving' && (
+            <StepListEditor
+              testID={`step-problems-${step.id}`}
+              title="Problems" items={step.problems || []}
+              onChange={next => updateTaskStep(step.id, { problems: next })}
+              placeholder="Write a problem with all the numbers it needs..." addLabel="+ Problem"
+              color={STEP_COLORS[step.type]} colors={colors} styles={styles}
+            />
+          )}
+
+          {REFLECTION_STEP_TYPES.includes(step.type) && (
+            <StepListEditor
+              testID={`step-prompts-${step.id}`}
+              title="Reflection questions" items={step.reflectionPrompts || []}
+              onChange={next => updateTaskStep(step.id, { reflectionPrompts: next })}
+              placeholder="Question the student answers..." addLabel="+ Question"
+              color={STEP_COLORS[step.type]} colors={colors} styles={styles}
+            />
+          )}
+
+          {SECTION_STEP_TYPES.includes(step.type) && (
             <>
-              <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600' }}>Sections</Text>
+              <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '600' }}>Sections (one answer box each)</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {step.sections.map((sec, si) => (
                   <View key={si} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, backgroundColor: STEP_COLORS[step.type] + '18', borderWidth: 1, borderColor: STEP_COLORS[step.type] + '40' }}>
@@ -550,43 +601,6 @@ export function AIAssignmentFlow(props: {
           )}
         </View>
       ))}
-
-      {/* Questions for Students — only in AI assignment mode */}
-      {type === 'assignment' && (<>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.fieldLabel}>Questions for Students</Text>
-        {questions.length < 10 && (
-          <TouchableOpacity
-            onPress={() => setQuestions(prev => [...prev, ''])}
-            activeOpacity={0.75}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-          >
-            <Feather name="plus-circle" size={14} color={gold} />
-            <Text style={{ fontSize: 12, color: gold, fontWeight: '600' }}>Add</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      {questions.map((q, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ flex: 1 }}>
-          <TransliterationInput
-            style={styles.input}
-            placeholder={`Question ${i + 1}...`}
-            placeholderTextColor={colors.textDim}
-            colors={colors}
-            value={q}
-            onChangeText={(t) => setQuestions(prev => prev.map((x, j) => j === i ? t : x))}
-            langCode={subject === 'Language Acquisition' ? langNameToCode(selectedLanguage) : null}
-          />
-          </View>
-          {questions.length > 1 && (
-            <TouchableOpacity onPress={() => setQuestions(prev => prev.filter((_, j) => j !== i))} activeOpacity={0.75}>
-              <Feather name="trash-2" size={16} color={colors.accentRed} />
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
-      </>)}
 
       {/* Quiz Questions — editable with options + correct answer (quiz mode) */}
       {type === 'quiz' && quizQuestions.length > 0 && (<>
@@ -728,6 +742,8 @@ export function AIAssignmentFlow(props: {
           if (!title.trim()) { setFormError('Title is required'); return; }
           if (!dueDate.trim()) { setFormError('Due date is required'); return; }
           if (type === 'quiz' && quizQuestions.length === 0) { setFormError('Generate quiz questions first.'); return; }
+          const incomplete = type === 'assignment' ? findIncompleteTaskStep(taskSteps) : null;
+          if (incomplete) { setFormError(incomplete); return; }
           setFormError('');
           setShowPreview(true);
         }}

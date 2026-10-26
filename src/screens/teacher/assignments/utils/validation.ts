@@ -1,3 +1,5 @@
+import { STEP_DEFAULTS } from '../constants';
+import type { TaskStep } from '../types';
 /** Flatten a question answer (which may be a plain string, number, array, or a
  *  structured object like { table: [...] } for "organise the data" activity tasks)
  *  into readable, editable text for the Edit Answers screen. Prevents structured
@@ -66,4 +68,24 @@ export function validateInteractiveQuizForPublish(
   }
 
   return { ok: true };
+}
+
+const BUILTIN_INSTRUCTIONS = new Set(
+  Object.values(STEP_DEFAULTS).map(d => String(d.instructions || '').trim().toLowerCase()).filter(Boolean),
+);
+
+/** First task step a student couldn't act on (blank/default instructions or
+ *  missing problems/questions/passage), as a teacher-facing message; null if all fine. */
+export function findIncompleteTaskStep(steps: TaskStep[]): string | null {
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    const name = `Question ${i + 1}${s.label?.trim() ? ` ("${s.label.trim()}")` : ''}`;
+    const instr = String(s.instructions || '').trim();
+    if (!instr || BUILTIN_INSTRUCTIONS.has(instr.toLowerCase())) {
+      return `${name} needs instructions that say exactly what to do — write them or tap "Fill with AI".`;
+    }
+    if (s.type === 'problem_solving' && !(s.problems || []).some(p => p.trim())) return `${name} has no problems — add them or tap "Fill with AI".`;
+    if (s.type === 'reading_comprehension' && !String(s.provocation || '').trim()) return `${name} has no reading passage — add one or tap "Fill with AI".`;
+  }
+  return null;
 }

@@ -35,7 +35,8 @@ jest.mock('../../../../../features/channels/api/channelsApi', () => ({
 
 jest.mock('../../../../../features/channels/components/CreateChannelModal', () => {
   const { View } = require('react-native');
-  return () => <View testID="create-channel-modal-stub" />;
+  const CreateChannelModalStub = () => <View testID="create-channel-modal-stub" />;
+  return CreateChannelModalStub;
 });
 
 jest.mock('../../services/messagesService', () => ({

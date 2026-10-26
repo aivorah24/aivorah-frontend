@@ -12,6 +12,13 @@ export function isCbseCurriculum(value: string | null | undefined): boolean {
   return normalizeCurriculum(value) === 'CBSE';
 }
 
+// Boards with no official textbook in Aivorah yet (ICSE, Cambridge): their
+// Learning Path is a browsable syllabus from aivorah-learning-paths-service
+// (/curriculum/subjects + /curriculum/syllabus), with every topic "Coming soon".
+export function isSyllabusOnlyCurriculum(value: string | null | undefined): boolean {
+  return /^(icse|cambridge)$/i.test(String(value ?? '').trim());
+}
+
 // The monolith's /curriculum + /curriculum/subjects content for CBSE is keyed
 // "NCERT" (the book series) — a content key, never a curriculum. This is the
 // one place CBSE maps back to it; an unset curriculum keeps the old default.

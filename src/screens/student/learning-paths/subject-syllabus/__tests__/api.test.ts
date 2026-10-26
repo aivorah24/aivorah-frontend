@@ -55,3 +55,23 @@ describe('fetchPublishedSyllabus', () => {
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('grade=Grade%206&subject=English&curriculum=CBSE'));
   });
 });
+
+describe('fetchPublishedSyllabus — ICSE / Cambridge (no textbook yet)', () => {
+  test.each([
+    ['ICSE', 'Grade 6'],
+    ['ICSE', 'Grade 1'],
+    ['Cambridge', 'Grade 3'],
+    ['Cambridge', 'Grade 9'],
+  ])('%s %s reads the syllabus outline from /curriculum/syllabus', async (curriculum, grade) => {
+    await fetchPublishedSyllabus(curriculum, grade, 'English');
+    const url = String((global.fetch as jest.Mock).mock.calls[0][0]);
+    expect(url).toContain('/curriculum/syllabus?');
+    expect(url).toContain(`curriculum=${curriculum}`);
+    expect(url).not.toContain('/teacher/syllabus/current');
+  });
+
+  test('CBSE is unchanged (teacher-published syllabus)', async () => {
+    await fetchPublishedSyllabus('CBSE', 'Grade 6', 'English');
+    expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('/teacher/syllabus/current?');
+  });
+});

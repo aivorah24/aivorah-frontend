@@ -1,4 +1,4 @@
-import { formatDueDate, getStamp } from '../utils';
+import { formatDueDate, getStamp, scoreBadge } from '../utils';
 
 describe('formatDueDate', () => {
   beforeEach(() => {
@@ -52,5 +52,21 @@ describe('getStamp', () => {
 
   test('a score of 0 still gets the real "Keep Going!" stamp, not undefined', () => {
     expect(getStamp(0).id).toBe('keepgoing');
+  });
+});
+
+describe('scoreBadge', () => {
+  test('a blank answer shows 0%, not "--"', () => {
+    expect(scoreBadge({ answered: false, score: 0 })).toEqual({ label: '0%', colorKey: 'accentRed' });
+  });
+
+  test('an answer waiting for the teacher shows Review, not "null%"', () => {
+    expect(scoreBadge({ answered: true, score: null, needsReview: true }).label).toBe('Review');
+  });
+
+  test('graded answers show their score with the matching colour', () => {
+    expect(scoreBadge({ answered: true, score: 90 })).toEqual({ label: '90%', colorKey: 'accentGreen' });
+    expect(scoreBadge({ answered: true, score: 60 })).toEqual({ label: '60%', colorKey: 'accentYellow' });
+    expect(scoreBadge({ answered: true, score: 0 })).toEqual({ label: '0%', colorKey: 'accentRed' });
   });
 });

@@ -1,3 +1,4 @@
+import { USE_LOCAL_SERVICES } from './localServices';
 import { Platform } from 'react-native';
 
 // Auth microservice base URL (aivorah-auth-service) — /user/sync, /user/role,
@@ -11,9 +12,9 @@ import { Platform } from 'react-native';
 // original name is still claimed by the suspended account.
 declare const __DEV__: boolean;
 
-export const LIVE_SERVICE = 'https://aivorah-auth-service-g27s.onrender.com';
+export const LIVE_SERVICE = 'https://aivorah-auth-service.onrender.com';
 
 const AUTH_SERVER_URL =
-  Platform.OS === 'web' && __DEV__ ? 'http://localhost:4001' : LIVE_SERVICE;
+  USE_LOCAL_SERVICES ? 'http://localhost:4001' : LIVE_SERVICE;
 
 export default AUTH_SERVER_URL;

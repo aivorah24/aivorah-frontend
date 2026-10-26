@@ -43,7 +43,7 @@ export const STUDENT_EVENT_TAGS = [
 
 export const HOUR_HEIGHT = 56;
 export const DAY_COL_WIDTH = 140;
-export const TIME_LABEL_WIDTH = 52;
+export const TIME_LABEL_WIDTH = 64;
 export const TIMELINE_START_HOUR = Number(TIMES[0].split(':')[0]);
 export const DURATION_MINS: Record<string, number> = {
   '30 min': 30, '45 min': 45, '1 hr': 60,

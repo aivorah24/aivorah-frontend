@@ -19,7 +19,7 @@ import {
   TABS, SUBJECTS, ALL_GRADES,
   SUBJECT_COLORS,
 } from './constants';
-import { validateInteractiveQuizForPublish } from './utils/validation';
+import { validateInteractiveQuizForPublish, findIncompleteTaskStep } from './utils/validation';
 import { stripInternalQuizFields } from './utils/quizHtml';
 import { buildUploadedExtractedQuestions, buildAssignmentPayload, postCreateAssignment } from './services/assignmentsService';
 import { daysUntil, formatDate } from './utils/helpers';
@@ -34,6 +34,7 @@ import { useAssignmentsList } from './hooks/useAssignmentsList';
 import { useAssignmentDetail } from './hooks/useAssignmentDetail';
 import { QuizLibraryPreviewModal } from './components/QuizLibraryPreviewModal';
 import { AssignmentDetailModal } from './components/AssignmentDetailModal';
+import { DeleteAssignmentConfirm } from './components/DeleteAssignmentConfirm';
 import { FullscreenImageViewer } from './components/FullscreenImageViewer';
 import { StudentPreviewOverlay } from './components/StudentPreviewOverlay';
 import { ReuseQuizModal } from './components/ReuseQuizModal';
@@ -148,6 +149,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     assignments, setAssignments, loading, refreshing, setRefreshing,
     load, markComplete, deleteAssignment,
   } = useAssignmentsList({ teacherEmail });
+  const [pendingDelete, setPendingDelete] = useState<Assignment | null>(null);
+  const requestDelete = (id: string) => setPendingDelete(assignments.find(a => a.id === id) ?? null);
 
   const {
     detailAssignment, setDetailAssignment, detailTab, setDetailTab,
@@ -175,7 +178,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     uploadStep, setUploadStep, uploadScrollRef,
     pickDoc, generateInteractiveQuiz, resetUploadState,
   } = useUploadWorksheet({
-    user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum,
+    user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum, setCurriculum,
     gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
     setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
     quizDifficulty, setQuizQuestions, setType,
@@ -190,8 +193,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
 
   const {
     taskSteps, setTaskSteps, generatingSteps, stepsError,
-    addTaskStep, updateTaskStep, removeTaskStep, generateSteps,
-  } = useTaskSteps({ title, chapter, subject, effectiveGrade, effectiveCurriculum });
+    addTaskStep, updateTaskStep, removeTaskStep, generateSteps, fillStepWithAI, fillingStepId,
+  } = useTaskSteps({ title, chapter, subject, effectiveGrade, effectiveCurriculum, selectedLanguage });
 
   const { generatingIB, generateIBAssignment } = useIBGeneration({
     title, chapter, unitOfInquiry, subject, effectiveGrade, effectiveCurriculum, selectedLanguage,
@@ -234,13 +237,15 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [showInteractivePreview, interactiveQuiz]);
 
-  // Keep curriculum + grade in sync when user profile loads after initial render
+  // Keep curriculum + grade in sync when user profile loads after initial render.
+  // Keyed on the values, not the teaches[] array: a profile refresh with the
+  // same values must not reset a grade/curriculum detected from a worksheet.
+  const profileCurriculum = user?.teaches?.[0]?.curriculum || user?.curriculum;
+  const profileGrade = user?.teaches?.[0]?.grade;
   useEffect(() => {
-    const c = user?.teaches?.[0]?.curriculum || user?.curriculum;
-    if (c) setCurriculum(c);
-    const g = user?.teaches?.[0]?.grade;
-    if (g) setGrade(g);
-  }, [user?.curriculum, user?.teaches]);
+    if (profileCurriculum) setCurriculum(profileCurriculum);
+    if (profileGrade) setGrade(profileGrade);
+  }, [profileCurriculum, profileGrade]);
 
   // Re-fetch the student list on EVERY focus (not just mount) so a student the
   // teacher just added shows up in the assign picker instantly — no manual refresh.
@@ -280,6 +285,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     if (!title.trim()) { setFormError('Title is required'); return; }
     if (!dueDate.trim()) { setFormError('Due date is required'); return; }
     if (type === 'quiz' && quizQuestions.length === 0) { setFormError('Generate quiz questions first before assigning this quiz.'); return; }
+    const incompleteStep = type === 'assignment' ? findIncompleteTaskStep(taskSteps) : null;
+    if (incompleteStep) { setFormError(incompleteStep); return; }
     // ── Pre-publish validation gate (issue #6) — never publish a wrong/incomplete
     //    interactive quiz. Blocks on: wrong worksheet, empty task cards. ──
     if (interactiveQuiz) {
@@ -589,7 +596,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                             <Feather name="check" size={13} color={colors.accentGreen} />
                           </TouchableOpacity>
                         )}
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => deleteAssignment(a.id)} activeOpacity={0.75}>
+                        <TouchableOpacity testID={`delete-assignment-${a.id}`} style={styles.actionBtn} onPress={() => requestDelete(a.id)} activeOpacity={0.75}>
                           <Feather name="trash-2" size={13} color={colors.accentRed} />
                         </TouchableOpacity>
                       </View>
@@ -633,6 +640,13 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
           />
         )}
 
+        <DeleteAssignmentConfirm
+          title={pendingDelete ? pendingDelete.title : null}
+          colors={colors}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => { if (pendingDelete) deleteAssignment(pendingDelete.id); setPendingDelete(null); }}
+        />
+
         {/* Assignment Detail Modal */}
         {detailAssignment && (
           <AssignmentDetailModal
@@ -643,7 +657,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
             expandedStudent={expandedStudent} setExpandedStudent={setExpandedStudent}
             teacherFeedback={teacherFeedback} setTeacherFeedback={setTeacherFeedback}
             sendingFeedback={sendingFeedback} sendFeedback={sendFeedback}
-            markComplete={markComplete} deleteAssignment={deleteAssignment}
+            markComplete={markComplete} deleteAssignment={requestDelete}
             onClose={() => setDetailAssignment(null)}
             onImagePress={(uri) => setFullscreenImage(uri)}
             onPreviewHtml={(html) => setStudentPreviewHtml(html)}
@@ -788,7 +802,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                       toggleImageSelection={toggleImageSelection} confirmImageGroup={confirmImageGroup}
                       dissolveImageGroup={dissolveImageGroup} groupedImageIds={groupedImageIds}
                       finishImageGrouping={finishImageGrouping}
-                      gradeOptions={gradeOptions} setFullscreenImage={setFullscreenImage}
+                      gradeOptions={gradeOptions} curriculum={effectiveCurriculum} setFullscreenImage={setFullscreenImage}
                       setEditingBulkItemId={setEditingBulkItemId} setInteractiveQuiz={setInteractiveQuiz}
                       setShowInteractivePreview={setShowInteractivePreview}
                       bulkDueDate={bulkDueDate} setBulkDueDate={setBulkDueDate}
@@ -851,6 +865,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                       ibWordBank={ibWordBank} setIbWordBank={setIbWordBank}
                       ibStamps={ibStamps} setIbStamps={setIbStamps}
                       taskSteps={taskSteps} addTaskStep={addTaskStep} updateTaskStep={updateTaskStep} removeTaskStep={removeTaskStep}
+                      fillStepWithAI={fillStepWithAI} fillingStepId={fillingStepId}
                       questions={questions} setQuestions={setQuestions}
                       quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions}
                       successCriteria={successCriteria} setSuccessCriteria={setSuccessCriteria}

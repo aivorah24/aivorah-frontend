@@ -1,5 +1,6 @@
 import { SUBJECT_META, IB_PYP_TOPIC_BANK, IB_PYP_SUBJECTS_BY_GRADE } from './constants';
 import type { CurriculumTopic, SubjectData, SubjectMeta, TopicItem } from './types';
+import { isCbseCurriculum } from '../../../utils/curriculum';
 
 export function subjectMeta(subject: string): SubjectMeta {
   // Same gold treatment as every mapped subject (see SUBJECT_META) — an
@@ -47,4 +48,12 @@ export function getIBPYPStaticSubjects(grade: string): SubjectData[] {
     .map((item) => ({ ...item }));
 
   return [...seeded, ...extras];
+}
+
+// Shared by the student screen and Parental Controls so both resolve a users-row curriculum the same way.
+export function curriculumFlags(curriculum: string) {
+  // Normalise IB PYP — stored value may have space or underscore
+  const isPYP = /^ib.?pyp$/i.test(curriculum.trim());
+  const isCBSE = !isPYP && isCbseCurriculum(curriculum);
+  return { isPYP, isCBSE, label: isCBSE ? 'CBSE' : curriculum };
 }

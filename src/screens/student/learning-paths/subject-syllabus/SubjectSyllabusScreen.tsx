@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
-  Platform, UIManager,
+  Platform, UIManager, Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -31,6 +31,7 @@ import { useStudentSubjectEdits } from './hooks/useStudentSubjectEdits';
 import { useRefreshOnFocus } from './hooks/useRefreshOnFocus';
 import { applySubjectEdits, lessonAsTeacherContent } from './subjectEdits';
 import { syllabusLessonParams } from '../../utils/lessonNavigation';
+import { isSyllabusOnlyCurriculum } from '../../../../utils/curriculum';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -76,6 +77,10 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
   const wantChapterTitle = route?.params?.chapterTitle as string | undefined;
   const { openChapters, toggleChapter } = useChapterExpansion(chapters, wantChapterTitle);
   const [query, setQuery] = useState('');
+  // ICSE/Cambridge (no textbook yet) and any topic the syllabus marks
+  // comingSoon: tapping it explains that instead of opening an empty lesson.
+  const [comingSoonTopic, setComingSoonTopic] = useState<string | null>(null);
+  const syllabusOnly = isSyllabusOnlyCurriculum(curriculum);
 
   function openLesson(chapter: SyllabusChapter, chapterIndex: number, topicIndex: number) {
     const topic = chapter.topics[topicIndex] as any;
@@ -97,6 +102,10 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
         topicName: topic.name,
         teacherContent: topic.teacherContent,
       });
+      return;
+    }
+    if (syllabusOnly || (topic?.comingSoon ?? chapter.comingSoon)) {
+      setComingSoonTopic(topic?.name || chapter.title);
       return;
     }
     navigation.navigate('LessonScreen', {
@@ -204,9 +213,15 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
               <Text style={[styles.progressSub, { color: colors.textMuted }]}>
                 {grade} {subject} · {chapters.length} {isUnitShaped ? 'units' : 'chapters'} · {totalTopicsCount} {isUnitShaped ? 'chapters' : 'topics'} total
               </Text>
-              <Text testID="completion-rule" style={[styles.progressSub, { color: colors.textMuted, marginTop: 4 }]}>
-                A topic is done when you finish Learn or Listen, then pass its Practice test (60% or more).
-              </Text>
+              {syllabusOnly ? (
+                <Text testID="syllabus-only-note" style={[styles.progressSub, { color: colors.textMuted, marginTop: 4 }]}>
+                  There&apos;s no official {curriculum} textbook in Aivorah yet — browse the full syllabus here. Lessons for each topic are coming soon.
+                </Text>
+              ) : (
+                <Text testID="completion-rule" style={[styles.progressSub, { color: colors.textMuted, marginTop: 4 }]}>
+                  A topic is done when you finish Learn or Listen, then pass its Practice test (60% or more).
+                </Text>
+              )}
             </View>
           </View>
 
@@ -228,6 +243,26 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
             />
           ))}
         </ScrollView>
+
+        <Modal visible={!!comingSoonTopic} transparent animationType="fade" onRequestClose={() => setComingSoonTopic(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <View testID="coming-soon-dialog" style={{ width: '100%', maxWidth: 420, borderRadius: 18, padding: 22, gap: 10, alignItems: 'center', backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor }}>
+              <Feather name="book-open" size={30} color={colors.primary} />
+              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textMain, textAlign: 'center' }}>Coming soon</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19 }}>
+                The lesson for &quot;{comingSoonTopic}&quot; is being prepared. This topic is on your {curriculum} syllabus and will unlock here as soon as it&apos;s ready.
+              </Text>
+              <TouchableOpacity
+                testID="coming-soon-close"
+                style={[styles.emptyBtn, { backgroundColor: colors.primary, marginTop: 6 }]}
+                onPress={() => setComingSoonTopic(null)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.emptyBtnText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScreenLayout>
   );

@@ -54,3 +54,15 @@ describe('Approve & Save on web', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe('how the worksheet was read', () => {
+  test('a text-only conversion (no vision AI) says so in the review banner', async () => {
+    await render(<InteractiveQuizPreviewModal quiz={{ ...PARTIAL_QUIZ, visualUnderstandingAvailable: false }} setQuiz={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByTestId('quiz-preview-text-only-note')).toBeTruthy();
+  });
+
+  test('a vision conversion shows no such note', async () => {
+    await render(<InteractiveQuizPreviewModal quiz={{ ...PARTIAL_QUIZ, visualUnderstandingAvailable: true }} setQuiz={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.queryByTestId('quiz-preview-text-only-note')).toBeNull();
+  });
+});

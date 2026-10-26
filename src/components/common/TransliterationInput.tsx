@@ -13,7 +13,7 @@
  * the chosen script. Everything already in the target script is left untouched.
  */
 import React, { useCallback, useRef, useState } from 'react';
-import { View, TextInput, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, TextInput, Text, Pressable, StyleSheet, ActivityIndicator, type TextInputProps } from 'react-native';
 import ASSIGNMENTS_SERVER_URL from '../../config/assignmentsServerUrl';
 
 // Human language name (as stored on assignments) → Google Input Tools code.
@@ -21,9 +21,11 @@ import ASSIGNMENTS_SERVER_URL from '../../config/assignmentsServerUrl';
 const LANG_NAME_TO_CODE: Record<string, string> = {
   hindi: 'hi', telugu: 'te', tamil: 'ta', kannada: 'kn', malayalam: 'ml',
   marathi: 'mr', gujarati: 'gu', bengali: 'bn', punjabi: 'pa', odia: 'or',
-  urdu: 'ur', sanskrit: 'sa', nepali: 'ne', arabic: 'ar',
-  // French, Spanish, Mandarin etc. use Latin/other input — intentionally omitted
-  // so the field stays a plain TextInput (no transliteration needed/available).
+  urdu: 'ur', sanskrit: 'sa', nepali: 'ne', arabic: 'ar', persian: 'fa', hebrew: 'he',
+  sinhala: 'si', amharic: 'am', thai: 'th', russian: 'ru', ukrainian: 'uk', greek: 'el',
+  mandarin: 'zh', chinese: 'zh', japanese: 'ja', assamese: 'as',
+  // Latin-script languages (French, Spanish…) type normally. Korean has no
+  // Google Input Tools transliteration, so it stays a plain TextInput.
 };
 export function langNameToCode(name?: string | null): string | null {
   if (!name) return null;
@@ -45,7 +47,17 @@ export function detectLangCodeFromText(text?: string | null): string | null {
   if (/[ঀ-৿]/.test(text)) return 'bn'; // Bengali
   if (/[਀-੿]/.test(text)) return 'pa'; // Gurmukhi (Punjabi)
   if (/[଀-୿]/.test(text)) return 'or'; // Odia
-  if (/[؀-ۿ]/.test(text)) return 'ar'; // Arabic/Urdu
+  if (/[ٹڈڑںےہھ]/.test(text)) return 'ur'; // Urdu-only letters
+  if (/[پچژگ]/.test(text)) return 'fa'; // Persian-only letters
+  if (/[؀-ۿ]/.test(text)) return 'ar'; // Arabic
+  if (/[֐-׿]/.test(text)) return 'he'; // Hebrew
+  if (/[඀-෿]/.test(text)) return 'si'; // Sinhala
+  if (/[ሀ-፿]/.test(text)) return 'am'; // Ethiopic (Amharic)
+  if (/[฀-๿]/.test(text)) return 'th'; // Thai
+  if (/[Ѐ-ӿ]/.test(text)) return 'ru'; // Cyrillic
+  if (/[Ͱ-Ͽ]/.test(text)) return 'el'; // Greek
+  if (/[぀-ヿ]/.test(text)) return 'ja'; // Japanese kana (before Han)
+  if (/[一-鿿]/.test(text)) return 'zh'; // Han (Chinese)
   return null;
 }
 
@@ -54,6 +66,7 @@ export function detectLangCodeFromText(text?: string | null): string | null {
 const IME_LABEL: Record<string, string> = {
   hi: 'हि', mr: 'हि', sa: 'सं', ne: 'ने', te: 'తె', ta: 'த', kn: 'ಕ',
   ml: 'മ', gu: 'ગુ', bn: 'বা', pa: 'ਪੰ', or: 'ଓ', ur: 'اُ', ar: 'ع',
+  as: 'অ', fa: 'فا', he: 'א', si: 'සි', am: 'አ', th: 'ท', ru: 'Ру', uk: 'Ук', el: 'Ελ', zh: '中', ja: 'あ',
 };
 
 type Props = {
@@ -66,10 +79,15 @@ type Props = {
   style?: any;
   multiline?: boolean;
   autoFocus?: boolean;
+  onFocus?: TextInputProps['onFocus'];
+  onSubmitEditing?: TextInputProps['onSubmitEditing'];
+  returnKeyType?: TextInputProps['returnKeyType'];
+  editable?: boolean;
 };
 
 export default function TransliterationInput({
   value, onChangeText, langCode, placeholder, placeholderTextColor, colors, style, multiline, autoFocus,
+  onFocus, onSubmitEditing, returnKeyType, editable,
 }: Props) {
   const langSupported = !!langCode && langCode !== 'en';
   // Teachers/students need to type ENGLISH too (names, "Basics of…", brackets),
@@ -131,6 +149,10 @@ export default function TransliterationInput({
           style={[style, { flex: 1 }]}
           multiline={multiline}
           autoFocus={autoFocus}
+          onFocus={onFocus}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          editable={editable}
           // Space commits the top suggestion (fast typing flow) when one exists.
           onKeyPress={active ? (e: any) => {
             if (e.nativeEvent?.key === ' ' && suggestions.length > 0) {

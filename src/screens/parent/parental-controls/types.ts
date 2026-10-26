@@ -3,6 +3,10 @@ export interface Child {
   name: string;
   email: string;
   grade: string;
+  curriculum?: string;
+  // Raw users-row values (students-service); `grade`/`curriculum` above fall back to defaults when unset.
+  profileGrade?: string;
+  profileCurriculum?: string;
   studyTimeMinutes: number;
 }
 

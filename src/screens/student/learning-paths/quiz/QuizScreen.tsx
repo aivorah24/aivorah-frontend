@@ -22,8 +22,16 @@ export default function QuizScreen({ navigation, route }: any) {
   // Whoever launched this quiz — SubjectTopics by default, but LessonScreen's
   // Practice tab passes its own returnTo/returnParams so back lands there
   // instead of always dumping the student back on the topic list.
+  // Drawer uses backBehavior="history": navigate() would push the origin on top
+  // of Quiz, so the origin's own back button would reopen these results.
   const goBackToOrigin = () => {
-    if (returnTo) navigation.navigate(returnTo, returnParams);
+    const target = returnTo ?? 'SubjectTopics';
+    const state = navigation.getState?.();
+    const history = (state?.history ?? []).filter((h: any) => h.type === 'route');
+    const prevKey = history[history.length - 2]?.key;
+    const prevName = state?.routes?.find((r: any) => r.key === prevKey)?.name;
+    if (prevName === target) navigation.goBack();
+    else if (returnTo) navigation.navigate(returnTo, returnParams);
     else navigation.navigate('SubjectTopics', { subject, grade, curriculum });
   };
   const { colors, isDark } = useTheme();

@@ -77,5 +77,5 @@ export type StepAnswer = {
 };
 
 export type PageAnswer = { preview: string | null; base64: string | null; mime: string };
-export type PerQ = { number: number; question: string; answered: boolean; score: number; studentAnswer: string | null; correct: boolean; comment: string };
+export type PerQ = { number: number; question: string; answered: boolean; score: number | null; needsReview?: boolean; studentAnswer: string | null; correct: boolean; comment: string };
 export type GradeResult = { score: number | null; feedback: string; stamp: string; wellDone: string; improve: string; perQuestion: PerQ[]; teacherFeedback?: string };

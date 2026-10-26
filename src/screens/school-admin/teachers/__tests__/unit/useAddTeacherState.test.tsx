@@ -16,7 +16,7 @@ let currentUnmount: (() => void) | undefined;
 
 function Harness({ email }: { email: string | undefined }) {
   const h = useAddTeacherState(email);
-  hookRef = h;
+  React.useEffect(() => { hookRef = h; });
   return <Text testID="submitting">{String(h.submitting)}</Text>;
 }
 

@@ -95,6 +95,8 @@ function makeNavigation() {
 }
 
 beforeEach(() => {
+  // Weekly consistency counts "today" as active; pin it to the fixture's day.
+  jest.useFakeTimers({ now: new Date('2026-10-13T10:00:00.000Z'), advanceTimers: true });
   mockActivity = {};
   mockPerf = {
     topics: {
@@ -111,6 +113,8 @@ beforeEach(() => {
   ] };
   global.fetch = jest.fn((url: string) => routeFetch(String(url))) as any;
 });
+
+afterEach(() => { jest.useRealTimers(); });
 
 describe('DashboardScreen — Learning Path progress sync', () => {
   test('chapters, mastery, quiz score, consistency, continue learning and chapter status all reflect Learning Path progress', async () => {
