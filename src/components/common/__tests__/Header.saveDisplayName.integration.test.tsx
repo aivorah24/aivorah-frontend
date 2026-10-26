@@ -64,7 +64,7 @@ describe('Header — Edit display name (Bug #2 regression)', () => {
     await render(<Header title="Dashboard" />);
 
     await user.press(screen.getByTestId('header-profile-button'));
-    await user.press(await screen.findByText('Edit display name'));
+    await user.press(await screen.findByLabelText('Edit display name'));
 
     const input = await screen.findByPlaceholderText('Enter name...');
     await user.clear(input);
