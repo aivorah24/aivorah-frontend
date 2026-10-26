@@ -583,8 +583,40 @@ const [editingName, setEditingName] = useState(false);
                       }
                     </View>
                   </TouchableOpacity>
-                  <View style={{ gap: 4 }}>
-                    <Text style={styles.profileName} numberOfLines={1}>{user?.name}</Text>
+                  <View style={{ gap: 4, flex: 1 }}>
+                    {editingName ? (
+                      <View style={styles.nameEditRow}>
+                        <TextInput
+                          style={styles.nameInput}
+                          value={nameInput}
+                          onChangeText={setNameInput}
+                          placeholder="Enter name..."
+                          placeholderTextColor={colors.textDim}
+                          autoFocus
+                          autoCapitalize="words"
+                        />
+                        <TouchableOpacity onPress={handleSaveName} activeOpacity={0.8} style={styles.nameSaveBtn} testID="header-name-save-button" disabled={savingName}>
+                          {savingName ? <ActivityIndicator size="small" color="#0B0B0B" /> : <Feather name="check" size={14} color="#0B0B0B" />}
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setEditingName(false)} activeOpacity={0.8} disabled={savingName}>
+                          <Feather name="x" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={styles.profileNameRow}>
+                        <Text style={styles.profileName} numberOfLines={1}>{user?.name}</Text>
+                        <TouchableOpacity
+                          onPress={() => { setNameInput(user?.name || ''); setEditingName(true); }}
+                          activeOpacity={0.7}
+                          style={styles.nameEditBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel="Edit display name"
+                          testID="header-name-edit-button"
+                        >
+                          <Feather name="edit-2" size={13} color={colors.accentYellow} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <Text style={styles.profileRole}>{user?.role}</Text>
                     <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                       {user?.role === 'student' && user?.grade && (
@@ -646,36 +678,6 @@ const [editingName, setEditingName] = useState(false);
                   </View>
                 )}
 
-                {/* Edit display name */}
-                {editingName ? (
-                  <View style={styles.nameEditRow}>
-                    <TextInput
-                      style={styles.nameInput}
-                      value={nameInput}
-                      onChangeText={setNameInput}
-                      placeholder="Enter name..."
-                      placeholderTextColor={colors.textDim}
-                      autoFocus
-                      autoCapitalize="words"
-                    />
-                    <TouchableOpacity onPress={handleSaveName} activeOpacity={0.8} style={styles.nameSaveBtn} testID="header-name-save-button" disabled={savingName}>
-                      {savingName ? <ActivityIndicator size="small" color="#0B0B0B" /> : <Feather name="check" size={14} color="#0B0B0B" />}
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setEditingName(false)} activeOpacity={0.8} disabled={savingName}>
-                      <Feather name="x" size={14} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.editNameCard}
-                    onPress={() => { setNameInput(user?.name || ''); setEditingName(true); }}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="edit-2" size={15} color={colors.accentYellow} />
-                    <Text style={styles.editNameText}>Edit display name</Text>
-                    <Feather name="chevron-right" size={15} color={colors.accentYellow} style={{ marginLeft: 'auto' as any }} />
-                  </TouchableOpacity>
-                )}
 
                 {/* Logout */}
                 <TouchableOpacity
@@ -868,7 +870,7 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
     backgroundColor: c.cardDark, borderWidth: 1.5, borderColor: c.accentYellow + '60',
     alignItems: 'center', justifyContent: 'center',
   },
-  profileName: { fontSize: 16, fontWeight: '800', color: c.textMain },
+  profileName: { fontSize: 16, fontWeight: '800', color: c.textMain, flexShrink: 1 },
   profileRole: { fontSize: 12, color: c.accentYellow, textTransform: 'capitalize' },
   premiumBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -901,13 +903,11 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   },
   profileTeachChipText: { fontSize: 10, fontWeight: '600', color: c.accentYellow },
   profileTeachNoSubjects: { fontSize: 11, color: c.textDim, fontStyle: 'italic' },
-  editNameCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: c.bgDark, borderRadius: 12,
-    borderWidth: 1, borderColor: c.accentYellow + '40',
-    paddingHorizontal: spacing.md, paddingVertical: 10,
+  profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameEditBtn: {
+    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.accentYellow + '18',
   },
-  editNameText: { fontSize: 12, color: c.accentYellow, fontWeight: '600', flex: 1 },
   nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nameInput: {
     flex: 1, height: 40, backgroundColor: c.bgDark,
