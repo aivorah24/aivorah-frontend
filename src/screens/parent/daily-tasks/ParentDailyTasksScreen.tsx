@@ -10,6 +10,7 @@ import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useResponsive } from '../../../hooks/useResponsive';
 import { useDailyTasks } from './hooks/useDailyTasks';
 import { GOLD, GOLD_BG, GOLD_BORDER, ICONS, COIN_OPTIONS, TASK_SUGGESTIONS } from './constants';
 
@@ -17,6 +18,7 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { isMobile } = useResponsive();
   const parentEmail = user?.email || '';
 
   const {
@@ -123,7 +125,7 @@ export default function ParentDailyTasksScreen({ navigation }: any) {
                 ) : (
                   <View style={styles.taskList}>
                     {tasks.map(task => (
-                      <View key={task.id} style={styles.taskRow}>
+                      <View key={task.id} testID={`task-card-${task.id}`} style={[styles.taskRow, !isMobile && styles.taskRowHalf]}>
                         <View style={styles.taskIconWrap}>
                           <Feather name={(task.icon as any) || 'check-circle'} size={15} color={GOLD} />
                         </View>
@@ -285,15 +287,16 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   emptyBox: { alignItems: 'center', paddingVertical: 32, gap: 10 },
   emptyText: { fontFamily: fonts.serif, fontSize: 13, color: c.textMuted, textAlign: 'center' },
 
-  taskList: {
-    backgroundColor: c.cardDark, borderWidth: 1,
-    borderColor: c.borderColor, borderRadius: radius.xl, overflow: 'hidden',
-  },
+  taskList: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   taskRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1, borderBottomColor: c.borderColor,
+    backgroundColor: c.cardDark, borderWidth: 1,
+    borderColor: c.borderColor, borderRadius: radius.xl,
+    width: '100%',
   },
+  // Fixed half width, so a lone task stays one column wide.
+  taskRowHalf: { width: '48.5%' },
   taskIconWrap: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: GOLD_BG, alignItems: 'center', justifyContent: 'center',

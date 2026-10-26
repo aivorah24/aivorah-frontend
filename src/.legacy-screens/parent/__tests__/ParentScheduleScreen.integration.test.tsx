@@ -46,7 +46,7 @@ function postBody() {
 
 beforeEach(() => jest.clearAllMocks());
 
-test('a parent with no linked child is pointed to My Kids instead of a dead Add Event button', async () => {
+test('a parent with no linked child is pointed to My Kids instead of an empty calendar', async () => {
   mockApi({ children: [] });
   const user = userEvent.setup();
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
@@ -60,7 +60,7 @@ test('a parent with no linked child is pointed to My Kids instead of a dead Add 
 test("the child's upcoming deadlines exclude completed work", async () => {
   mockApi({ children: [CHILD] });
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
-  await screen.findByText('Add Event for Aanya');
+  await screen.findAllByTestId(/^parent-schedule-slot-/);
 
   await waitFor(() => {
     const urls = (global.fetch as jest.Mock).mock.calls.map(([u]) => String(u));
@@ -72,7 +72,7 @@ test('every schedule-service call (reads and the save) carries the signed-in tok
   mockApi({ children: [CHILD] });
   const user = userEvent.setup();
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
-  await user.press(await screen.findByText('Add Event for Aanya'));
+  await user.press((await screen.findAllByTestId(/^parent-schedule-slot-.*-09:00$/))[0]);
   await user.type(screen.getByPlaceholderText(/title/i), 'Reading');
   await user.press(screen.getByText('Add Event'));
   await waitFor(() => expect(postBody()).not.toBeNull());
@@ -86,7 +86,7 @@ test('offers the parent event types, including Challenge, with no emoji', async 
   mockApi({ children: [CHILD] });
   const user = userEvent.setup();
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
-  await user.press(await screen.findByText('Add Event for Aanya'));
+  await user.press((await screen.findAllByTestId(/^parent-schedule-slot-.*-09:00$/))[0]);
 
   const labels = screen.getAllByLabelText(/^Type: /).map(n => n.props.accessibilityLabel.replace('Type: ', ''));
   expect(labels).toEqual(['Study', 'Class', 'Homework', 'Assignment', 'Challenge', 'Activity', 'Break', 'Other']);
@@ -97,7 +97,7 @@ test('saving a Challenge sends a timed practice event with its tag for the linke
   mockApi({ children: [CHILD] });
   const user = userEvent.setup();
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
-  await user.press(await screen.findByText('Add Event for Aanya'));
+  await user.press((await screen.findAllByTestId(/^parent-schedule-slot-.*-09:00$/))[0]);
 
   await user.type(screen.getByPlaceholderText(/title/i), 'Fractions practice');
   await user.press(screen.getByLabelText('Type: Challenge'));
@@ -113,7 +113,7 @@ test('a failed save keeps the form open with an error instead of silently closin
   mockApi({ children: [CHILD], saveOk: false });
   const user = userEvent.setup();
   await render(<ParentScheduleScreen navigation={navigation} route={{}} />);
-  await user.press(await screen.findByText('Add Event for Aanya'));
+  await user.press((await screen.findAllByTestId(/^parent-schedule-slot-.*-09:00$/))[0]);
 
   await user.type(screen.getByPlaceholderText(/title/i), 'Reading');
   await user.press(screen.getByText('Add Event'));

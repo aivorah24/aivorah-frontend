@@ -6,6 +6,7 @@ import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl
 import { computeCappedQuizSeconds } from '../../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound } from '../utils';
 import type { Question, QuizPhase } from '../types';
+import { loadQuizResult, saveQuizResult } from '../resultCache';
 
 export function useQuiz(params: {
   topic: string; grade: string; subject: string; curriculum: string;
@@ -127,10 +128,23 @@ export function useQuiz(params: {
     }
   }, [topic, grade, subject, curriculum, passageText, userEmail, practiceQuiz]);
 
+  // Reopening Practice for a topic already tried shows its last result; otherwise a new test.
   useEffect(() => {
-    // data fetching effect — setState happens inside fetchQuiz, not synchronously here
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchQuiz();
+    let cancelled = false;
+    (async () => {
+      const saved = await loadQuizResult(studentId, subject, topic);
+      if (cancelled) return;
+      if (!saved) { fetchQuiz(); return; }
+      perQuestionResultsRef.current = saved.perQuestionResults;
+      explanationsRef.current = saved.explanations;
+      setResultExplanations({ ...saved.explanations });
+      quizStartTimeRef.current = Date.now() - saved.timeSpentSeconds * 1000;
+      setQuestions(saved.questions as Question[]);
+      setAttemptNumber(saved.attemptNumber);
+      setScore(saved.score);
+      setPhase('result');
+    })();
+    return () => { cancelled = true; };
   }, [fetchQuiz]);
 
   function finishQuiz(finalScore: number) {
@@ -193,6 +207,11 @@ export function useQuiz(params: {
 
     // Sound effect based on score tier
     playSound(pct >= 80 ? 'gold' : pct >= 60 ? 'silver' : 'bronze');
+
+    saveQuizResult(studentId, subject, topic, {
+      questions, perQuestionResults: perQuestionResultsRef.current, score: finalScore,
+      attemptNumber, timeSpentSeconds: totalTimeSeconds, explanations: explanationsRef.current,
+    });
 
     setScore(finalScore);
     setPhase('result');

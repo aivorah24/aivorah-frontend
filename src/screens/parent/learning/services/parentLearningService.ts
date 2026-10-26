@@ -1,7 +1,9 @@
 import SERVER_URL from '../../../../config/serverUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
-import type { Child, ChildReport } from '../types';
+import LEADERBOARD_SERVICE_URL from '../../../../config/leaderboardServiceUrl';
+import { fetchSubjectSyllabus } from '../../../student/dashboard/services/dashboardService';
+import type { Child, ChildReport, TopicAttempt } from '../types';
 
 // Routed to aivorah-students-service (2026-09-04) - that service already
 // owns parent_children/student_stats for other refactored screens (Daily
@@ -50,4 +52,18 @@ export async function fetchCurriculumSubjects(grade: string, curriculum: string)
     `${LEARNING_PATHS_SERVER_URL}/curriculum/subjects?grade=${encodeURIComponent(grade)}&curriculum=${encodeURIComponent(curriculum)}`,
   ).then(r => r.json()).catch(() => ({ subjects: [] }));
   return data.subjects ?? [];
+}
+
+// Topic names per subject from the Learning Paths syllabus (same source as the student screens).
+export async function fetchSubjectTopics(curriculum: string, grade: string, subject: string): Promise<{ topic: string; unit: string }[]> {
+  const syl = await fetchSubjectSyllabus(curriculum, grade, subject);
+  return syl.units.flatMap(u => (u.topics ?? []).filter(t => t?.name).map(t => ({ topic: t.name, unit: u.title })));
+}
+
+// Every practice attempt for one subject, newest first, with per-question answers.
+export async function fetchTopicAttempts(childId: string, subject: string): Promise<TopicAttempt[]> {
+  const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${encodeURIComponent(childId)}/attempts?subject=${encodeURIComponent(subject)}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data?.attempts) ? data.attempts : [];
 }

@@ -52,6 +52,21 @@ describe('useParentLearningData', () => {
     });
   });
 
+  it('fills each subject\'s topics from the Learning Paths syllabus when the subjects list has none', async () => {
+    (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A]);
+    (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: ['Fractions'], topicsExplored: 1 });
+    (parentLearningService.fetchChildReport as jest.Mock).mockResolvedValue(null);
+    (parentLearningService.fetchCurriculumSubjects as jest.Mock).mockResolvedValue([{ subject: 'Mathematics', topicCount: 2, topics: [] }]);
+    (parentLearningService.fetchSubjectTopics as jest.Mock).mockResolvedValue([
+      { topic: 'Fractions', unit: 'Numbers' }, { topic: 'Decimals', unit: 'Numbers' },
+    ]);
+
+    const { result } = await renderHook(() => useParentLearningData('parent@test.com'));
+
+    await waitFor(() => expect(result.current.subjects[0]?.topics).toHaveLength(2));
+    expect(parentLearningService.fetchSubjectTopics).toHaveBeenCalledWith('CBSE', 'Grade 3', 'Mathematics');
+  });
+
   it('pre-selects the child matching targetChildId when provided', async () => {
     (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A, CHILD_B]);
     (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: [], topicsExplored: 0 });
