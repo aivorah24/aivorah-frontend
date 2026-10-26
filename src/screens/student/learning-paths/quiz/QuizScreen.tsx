@@ -36,7 +36,7 @@ export default function QuizScreen({ navigation, route }: any) {
   };
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { studentId, completeLesson, addXP, recordStudySeconds } = useStudentData();
+  const { studentId, completeLesson, addXP, recordStudySeconds, recordQuizResult } = useStudentData();
   const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const accent = colors.accentYellow;
 
@@ -48,7 +48,7 @@ export default function QuizScreen({ navigation, route }: any) {
     // silently skipped every attempt POST (score/XP still showed correctly
     // via completeLesson(), which already used the right id).
     userEmail: user?.email, userRole: user?.role, studentId,
-    navigation, completeLesson, addXP, recordStudySeconds,
+    navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult,
   });
 
   // ── Loading ────────────────────────────────────────────────────

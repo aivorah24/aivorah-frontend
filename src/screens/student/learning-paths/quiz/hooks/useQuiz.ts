@@ -18,8 +18,10 @@ export function useQuiz(params: {
   completeLesson: (topic: string, subject: string, grade: string, curriculum: string) => void;
   addXP: (xp: number) => void;
   recordStudySeconds: (seconds: number, source?: "assignment" | "challenge" | "learningPath" | "other", subject?: string) => void;
+  // Optional so existing callers/tests keep working — see StudentDataContext.
+  recordQuizResult?: (topic: string, score: number, subject?: string) => void;
 }) {
-  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds } = params;
+  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult } = params;
 
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -140,6 +142,11 @@ export function useQuiz(params: {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userEmail, role: userRole, topic, subject, grade, score: pct, totalQuestions: questions.length, correctAnswers: finalScore, firstAttemptCorrect: finalScore, attemptNumber, perQuestionAttempts: [] }),
     }).catch(() => {});
+
+    // Local copy of the result, so the dashboard shows it the moment the
+    // student returns even if the fire-and-forget track-result write below
+    // hasn't reached GET /performance yet.
+    recordQuizResult?.(topic, pct, subject);
 
     // Issue #121 — detailed attempt tracking
     if (studentId) {

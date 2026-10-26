@@ -24,11 +24,16 @@ import { useStudentData, formatStudyTime, formatLevel, xpForNextLevel } from '..
 import { useTheme } from '../../../context/ThemeContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { useResponsive } from '../../../hooks/useResponsive';
-import { getSubjectSyllabus } from '../../../data/syllabusRegistry';
 import {
-  computeRealTopicPerf, computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic,
-  computeAllBarTopics, computeMasteredTopics, computeLessonSubjects, selectFeaturedLesson,
+  computeAvgScore, computeConsistency, computeWeeklyConsistency, computeBestTopic, computeLessonSubjects,
 } from '../utils/performanceStats';
+import {
+  buildLpChapters, computeChapterProgress, countCompletedChapters, computeQuizTopicPerf,
+  computeWeeklyActiveDays, weeklyConsistencyPct, indexTopics, mergeLocalQuizResults,
+  selectContinueLearning, perfForTopic, type LessonRef,
+} from '../utils/learningPathProgress';
+import { lessonScreenParams } from '../utils/lessonNavigation';
+import { isCbseCurriculum } from '../../../utils/curriculum';
 import { isPassingScore, isMasteryScore } from '../utils/masteryRules';
 import { useDashboardData } from './hooks/useDashboardData';
 import type { CurriculumTopic, CurriculumData } from './types';
@@ -54,7 +59,7 @@ export default function DashboardScreen({ navigation, route }: any) {
   const { user, refreshProfile } = useAuth();
   // Re-pull profile on focus so a parent's grade/curriculum edit reflects here without re-login.
   useFocusEffect(useCallback(() => { refreshProfile(); }, []));
-  const { stats: ctxStats, studentId } = useStudentData();
+  const { stats: ctxStats, studentId, learningActivity: ctxActivity } = useStudentData();
   const { colors, isDark } = useTheme();
   const { unreadAssignments, unreadCount } = useNotification();
   const { isMobile, isTablet } = useResponsive();
@@ -102,6 +107,14 @@ export default function DashboardScreen({ navigation, route }: any) {
   const isIBPYP = childCurriculum
     ? /^ib.?pyp$/i.test(childCurriculum.trim())
     : IB_PYP_GRADES.includes(studentGrade);
+  // The curriculum value the Learning Paths screen sends to the
+  // learning-paths service (LearningPathsScreen: `isCBSE ? 'CBSE' : curriculum`).
+  const learningPathCurriculum = isIBPYP
+    ? (childCurriculum?.trim() || 'IB PYP')
+    : (!childCurriculum || isCbseCurriculum(childCurriculum)) ? 'CBSE' : childCurriculum.trim();
+  // Device-local activity belongs to the logged-in student, never to a
+  // child a parent is viewing.
+  const learningActivity = useMemo(() => (childOverride ? {} : (ctxActivity ?? {})), [childOverride, ctxActivity]);
 
   const [searchQuery, setSearchQuery] = useState('');
   // '' = not chosen yet — effectiveBarSubjectFilter below picks the first
@@ -119,12 +132,15 @@ export default function DashboardScreen({ navigation, route }: any) {
     upcomingDeadlines,
     perfData,
     subjectChapters,
+    syllabi,
+    weeklyDays,
     noContentGrade,
   } = useDashboardData({
     childOverride,
     childCurriculum,
     isIBPYP,
     studentGrade,
+    learningPathCurriculum,
     studentId,
     userEmail: user?.email,
     navigation,
@@ -151,155 +167,72 @@ export default function DashboardScreen({ navigation, route }: any) {
   const contentMax = isMobile ? undefined : isTablet ? 920 : 1080;
 
   // ── Derived ──────────────────────────────────────────────
+  // Every progress number below is computed on the SAME chapter → topic
+  // structure the Learning Paths section renders (per-subject syllabi from
+  // aivorah-learning-paths-service, see useDashboardData), joined to progress
+  // by topic name — the key quizzes, completeLesson and startTopicActivity
+  // save under. See utils/learningPathProgress.ts for the bug history.
   const completedSet  = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
-  // B002/B003: frontend-local only (see notes on computeAllBarTopics /
-  // selectFeaturedLesson) — defaults to [] via ZERO_STATS for old records.
+  // Local-only "opened" signal — defaults to [] via ZERO_STATS for old records.
   const startedSet    = useMemo(() => new Set(stats.startedTopics ?? []), [stats.startedTopics]);
-  const allLessons    = useMemo(() => {
-    if (!curriculum) return [];
-    return curriculum.topics.map(t => {
-      const perf = perfData.topics[t.topic];
-      // Progress = actual quiz score always; completedSet only used for "Mastered" label (≥80%)
-      let progress = 0;
-      if (perf?.avgScore != null) progress = perf.avgScore;
-      else if (completedSet.has(t.topic)) progress = 100; // legacy: completed with no quiz record
-      else if (perf?.sessions && perf.sessions > 0) progress = 30;
-      return {
-        grade: t.grade, subject: t.subject, topic: t.topic, unit: t.unit,
-        color: SUBJECT_COLORS[t.subject] ?? BRAND.violet,
-        icon: SUBJECT_ICONS[t.subject] ?? 'book-open' as const,
-        progress,
-        quizScore: perf?.avgScore ?? null,
-        quizCount: perf?.quizCount ?? 0,
-      };
-    });
-  }, [curriculum, completedSet, perfData]);
 
-  // Real, chapter-mapped topic names this student's grade/curriculum actually has a
-  // working lesson page for (see syllabusRegistry.ts). "Continue Learning" must only
-  // ever pick from THESE — picking from the full raw ~2403 ingested topics (most of
-  // which are AI-extracted sub-concepts, not real textbook lessons) was routing
-  // students into the broken generic VideoLesson "Coming Soon" placeholder instead
-  // of the real Learn/Practice/Master experience.
-  const curatedTopicNames = useMemo(() => {
-    const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
-    const set = new Set<string>();
-    subjectChapters.forEach(({ subject }) => {
-      getSubjectSyllabus(curriculumLabel, studentGrade, subject).forEach(ch => {
-        ch.topics.forEach(t => set.add(t.name));
-      });
-    });
-    return set;
-  }, [subjectChapters, isIBPYP, studentGrade]);
+  // Server quiz performance + results from this device the server may not
+  // be serving yet (quiz track-result is fire-and-forget).
+  const mergedPerf = useMemo(
+    () => mergeLocalQuizResults(perfData, learningActivity),
+    [perfData, learningActivity]
+  );
 
-  const featuredLesson = useMemo(() => {
-    // Restrict to topics with a real curated lesson, when any exist for this grade.
-    const candidates = curatedTopicNames.size > 0
-      ? allLessons.filter(l => curatedTopicNames.has(l.topic))
-      : allLessons;
-    // Pick the most recently attempted topic (by lastActivity from perfData) —
-    // extracted to selectFeaturedLesson (performanceStats.ts) for unit testing.
-    return selectFeaturedLesson(candidates, perfData, startedSet, completedSet) ?? allLessons[0];
-  }, [allLessons, perfData, curatedTopicNames, startedSet, completedSet]);
+  const lpChapters = useMemo(() => buildLpChapters(subjectChapters, syllabi), [subjectChapters, syllabi]);
+  const topicIndex = useMemo(() => indexTopics(lpChapters), [lpChapters]);
+  const chapterProgress = useMemo(
+    () => computeChapterProgress(lpChapters, mergedPerf, completedSet, startedSet, learningActivity),
+    [lpChapters, mergedPerf, completedSet, startedSet, learningActivity]
+  );
 
-  // The REAL chapter that featuredLesson.topic actually belongs to — not just
-  // chapters[0]. Previously the headline always showed the first chapter
-  // ("Fables and Folk Tales") regardless of which lesson was actually next,
-  // so it visibly disagreed with the "Next lesson" line and never advanced
-  // as the student progressed through later units.
-  const featuredChapter = useMemo(() => {
-    if (!featuredLesson) return null;
-    const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
-    const chapters = getSubjectSyllabus(curriculumLabel, studentGrade, featuredLesson.subject);
-    return chapters.find(ch => ch.topics.some(t => t.name === featuredLesson.topic)) ?? null;
-  }, [featuredLesson, isIBPYP, studentGrade]);
+  // Continue Learning: the topic the student last opened/quizzed — resume it
+  // if unfinished; once finished, mark it Completed and point at the next
+  // unfinished topic (rolling into the next chapter).
+  const continueLearning = useMemo(
+    () => selectContinueLearning(lpChapters, mergedPerf, completedSet, startedSet, learningActivity, stats.lastLesson),
+    [lpChapters, mergedPerf, completedSet, startedSet, learningActivity, stats.lastLesson]
+  );
 
-  // Tapping "Continue Learning" should open the ACTUAL lesson, not just the
-  // subject's syllabus screen. Where a curated chapter-accurate syllabus exists
-  // for this subject/grade (see syllabusRegistry.ts — currently only Grade 6),
-  // route straight into LessonScreen at the right chapter+topic. Otherwise,
-  // route into LessonScreen's DB-by-name mode instead (Bug #8,
-  // BUGS_AND_FIXES.md) — resolves real NCERT/Qdrant-only content (e.g.
-  // "Ability Beyond Disability", Grade 9 English) directly by name, so it
-  // reaches the current Learn/AI Tutor/Ask Aivorah/Practice flow instead of
-  // the deprecated VideoLesson screen. If nothing real exists for this topic
-  // either, LessonScreen's own contentReady state shows an honest "Coming
-  // Soon" pane rather than a broken lesson — never worse than the old
-  // fallback, and correct far more often.
-  function openFeaturedLesson() {
-    if (!featuredLesson) return;
-    const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
-    const chapters = getSubjectSyllabus(curriculumLabel, studentGrade, featuredLesson.subject);
-    for (let ci = 0; ci < chapters.length; ci++) {
-      const ti = chapters[ci].topics.findIndex(t => t.name === featuredLesson.topic);
-      if (ti !== -1) {
-        navigation.navigate('LessonScreen', {
-          subject: featuredLesson.subject, curriculum: curriculumLabel, grade: studentGrade,
-          chapterTitle: chapters[ci].title, chapterIndex: ci, topicIndex: ti,
-        });
-        return;
-      }
-    }
-    navigation.navigate('LessonScreen', {
-      subject: featuredLesson.subject, curriculum: isIBPYP ? 'IB_PYP' : 'CBSE', grade: studentGrade,
-      byNameTopic: featuredLesson.topic, topicName: featuredLesson.topic,
-    });
+  // Opens a Learning Path topic exactly the way the Learning Paths syllabus
+  // screen does (SubjectSyllabusScreen.openLesson), so the lesson resolves
+  // the same content.
+  function openLesson(ref: LessonRef) {
+    navigation.navigate('LessonScreen', lessonScreenParams(ref, learningPathCurriculum, studentGrade));
   }
 
   const query = normalizeSearchText(searchQuery);
   const queryTerms = query ? query.split(' ') : [];
 
-  // No "All" chip — with a subject like Mathematics carrying ~1900 topics, "All"
-  // just dumps everything together. Instead, the subject the student most
-  // recently studied (same signal as "Continue Learning") leads the list, so
-  // whatever they were last working on is the default view, not a random pick.
-  //
-  // Source is subjectChapters (the same canonical, book-derived subject list
-  // Performance's barSubjects and the actual chapter rows below use) — NOT
-  // allLessons (raw Qdrant-ingested topics). Those two disagreed: allLessons
-  // carries every raw ingestion subject tag, including near-duplicates from
-  // inconsistent ingestion ("Physical Education" vs "Physical Education and
-  // Well Being" for the same real subject) and subjects with zero real
-  // chapters. That produced Learning Path chips (e.g. "Social Science", the
-  // bare "Physical Education") that filteredChapterRows below — which is
-  // built from subjectChapters — could never actually match, so tapping them
-  // silently showed nothing. See Bug #7/#12, BUGS_AND_FIXES.md.
+  // No "All" chip — the subject the student most recently studied (same
+  // signal as "Continue Learning") leads the list. Source is subjectChapters,
+  // the canonical book-derived subject list (Bug #7/#12, BUGS_AND_FIXES.md).
   const lessonSubjects = useMemo(
-    () => computeLessonSubjects(subjectChapters, featuredLesson?.subject),
-    [subjectChapters, featuredLesson]
+    () => computeLessonSubjects(subjectChapters, continueLearning?.current.subject),
+    [subjectChapters, continueLearning]
   );
 
   const effectiveLessonSubjectFilter = lessonSubjects.includes(lessonSubjectFilter)
     ? lessonSubjectFilter
     : (lessonSubjects[0] ?? 'All');
 
-  const filteredLessons = useMemo(() => {
-    let list = allLessons;
-    if (queryTerms.length > 0) {
-      list = list.filter(l => {
-        const haystack = normalizeSearchText(`${l.topic} ${l.subject} ${l.grade} ${l.unit}`);
-        return queryTerms.every(term => haystack.includes(term));
-      });
-    }
-    list = list.filter(l => l.subject === effectiveLessonSubjectFilter);
-    return list;
-  }, [allLessons, queryTerms, effectiveLessonSubjectFilter]);
-
-  // Learning Path preview — one row per REAL chapter (from subjectChapters),
-  // not per topic. A subject can have 1000+ ingested topics (Maths alone has
-  // ~1900 for CBSE Grade 6); listing them all here doesn't scale, so this
-  // mirrors the same chapter-level approach already used for the Performance
-  // bars above.
+  // Learning Path preview — one row per real chapter with the same
+  // Not started / In progress / Completed status as the Learning Paths screen.
   const allChapterRows = useMemo(() => {
-    return subjectChapters.flatMap(({ subject, chapters }) =>
-      chapters.map((title, i) => ({
-        title, subject,
-        color: SUBJECT_COLORS[subject] ?? BRAND.violet,
-        icon: SUBJECT_ICONS[subject] ?? 'book-open' as const,
-        chapterNo: i + 1,
-      }))
-    );
-  }, [subjectChapters]);
+    return chapterProgress.map(c => ({
+      title: c.title, subject: c.subject,
+      color: SUBJECT_COLORS[c.subject] ?? BRAND.violet,
+      icon: SUBJECT_ICONS[c.subject] ?? 'book-open' as const,
+      chapterNo: c.chapterNo,
+      status: c.status,
+      doneCount: c.doneCount,
+      totalTopics: c.totalTopics,
+    }));
+  }, [chapterProgress]);
 
   const filteredChapterRows = useMemo(() => {
     let list = allChapterRows;
@@ -313,25 +246,14 @@ export default function DashboardScreen({ navigation, route }: any) {
     return list;
   }, [allChapterRows, queryTerms, effectiveLessonSubjectFilter]);
 
-  const filteredDeadlines = queryTerms.length > 0
-    ? upcomingDeadlines.filter((u) => {
-        const haystack = normalizeSearchText(`${u.title} ${u.note || ''} ${u.date}`);
-        return queryTerms.every(term => haystack.includes(term));
-      })
-    : upcomingDeadlines.slice(0, 4);
-
-  // Performance bar data — one bar per REAL textbook chapter/unit (from the
-  // authoritative manifests in subjectChapters), across every subject for this
-  // grade. Raw ingested Qdrant topics aren't tagged with which chapter they
-  // belong to, BUT where a curated syllabus exists for this subject/grade (see
-  // syllabusRegistry.ts — currently CBSE Grade 6 English/Science/Social
-  // Science), we DO have a real topic→chapter mapping, so those chapters get
-  // real attributed scores from perfData instead of a flat 0%. Chapters with
-  // no curated mapping yet (e.g. Mathematics) still show 0%/no-data — honest,
-  // not fabricated — until that subject gets the same curated treatment.
+  // Performance bars — one per real chapter, scored from that chapter's
+  // topics' quiz results.
   const allBarTopics = useMemo(
-    () => computeAllBarTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet, startedSet),
-    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet, startedSet]
+    () => chapterProgress.map(c => ({
+      label: c.title, fullLabel: c.title, subject: c.subject,
+      pct: c.pct, hasData: c.hasData, mastered: c.mastered, inProgress: c.inProgress,
+    })),
+    [chapterProgress]
   );
 
   // No "All" chip — same reasoning as lessonSubjects above: a flat "All" view
@@ -344,52 +266,43 @@ export default function DashboardScreen({ navigation, route }: any) {
     allBarTopics.filter(t => t.subject === effectiveBarSubjectFilter),
   [allBarTopics, effectiveBarSubjectFilter]);
 
-  // Real per-topic quiz results (independent of chapter grouping) — drives every
-  // metric below the bars (average score, consistency, best score, insight text).
-  // These stay accurate even though the bars themselves can't yet be attributed
-  // to a specific chapter (see note on allBarTopics above).
+  // Every topic with a real quiz result — drives average score, consistency,
+  // best score and the insight text. Previously this was filtered through the
+  // monolith's flat /curriculum topic list, which doesn't contain Learning
+  // Path topic names, so a finished quiz still read "No quizzes yet".
   const realTopicPerf = useMemo(
-    () => computeRealTopicPerf(curriculum?.topics, perfData),
-    [curriculum, perfData]
+    () => computeQuizTopicPerf(mergedPerf, name => topicIndex.get(name)?.subject),
+    [mergedPerf, topicIndex]
   );
 
   const avgScore = useMemo(
-    () => computeAvgScore(realTopicPerf, perfData.avgScore),
-    [realTopicPerf, perfData.avgScore]
+    () => computeAvgScore(realTopicPerf, mergedPerf.avgScore),
+    [realTopicPerf, mergedPerf.avgScore]
   );
 
-  // Mastered chapters — estimated per subject as (completed topics / total topics in that
-  // subject) × that subject's real chapter count, since individual topics aren't tagged
-  // with which chapter they belong to yet (see note on allBarTopics). This is a genuine
-  // progress-based estimate, not tied to any specific named chapter.
-  const masteredTopics = useMemo(
-    () => computeMasteredTopics(subjectChapters, isIBPYP, studentGrade, perfData, completedSet),
-    [subjectChapters, isIBPYP, studentGrade, perfData, completedSet]
-  );
+  // Completed chapters — every topic done, the same rule the Learning Paths
+  // chapter card uses for 100%. Shared by the hero, Goals and Performance.
+  const masteredTopics = useMemo(() => countCompletedChapters(chapterProgress), [chapterProgress]);
 
-  // % of attempted quizzes scoring ≥60% — always a real, live number (0% is a
-  // genuine value here, not a placeholder) so it visibly moves as the student
-  // takes more quizzes, same as every other stat on this card.
+  // % of quizzed topics scoring at or above the pass mark.
   const consistency = useMemo(() => computeConsistency(realTopicPerf), [realTopicPerf]);
 
-  // Real weekly activity — days active this week, same signal as the hero's
-  // "X of 7 days active" bar. Previously this pill just re-displayed the quiz-score
-  // `consistency` value above (so both pills always matched, both always 0% with
-  // only one quiz attempted) instead of being its own real weekly metric.
-  const weeklyConsistency = computeWeeklyConsistency(stats.currentStreak);
+  // Days with real learning activity this week (student_daily_log via
+  // GET /weekly, plus today from local stats). The parent child-view has no
+  // weekly log for the child here, so it keeps the streak-based estimate.
+  const weeklyConsistency = childOverride
+    ? computeWeeklyConsistency(stats.currentStreak)
+    : weeklyConsistencyPct(computeWeeklyActiveDays(
+        weeklyDays,
+        new Date().toISOString().split('T')[0],
+        stats.todayStudyMinutes > 0 || stats.todayXP > 0,
+      ));
 
   // Best topic — only topics with real quiz data
   const bestTopic = useMemo(() => computeBestTopic(realTopicPerf), [realTopicPerf]);
 
-  // Real chapter that the best-scoring topic belongs to (not the raw topic name) —
-  // same curated-syllabus lookup used for featuredChapter, so this stays consistent
-  // with how the rest of the dashboard names units/chapters instead of topics.
-  const bestChapter = useMemo(() => {
-    if (!bestTopic) return null;
-    const curriculumLabel = isIBPYP ? 'IB PYP' : 'CBSE';
-    const chapters = getSubjectSyllabus(curriculumLabel, studentGrade, bestTopic.subject);
-    return chapters.find(ch => ch.topics.some(t => t.name === bestTopic.label))?.title ?? null;
-  }, [bestTopic, isIBPYP, studentGrade]);
+  // Chapter the best-scoring topic belongs to, from the same syllabus data.
+  const bestChapter = bestTopic ? (topicIndex.get(bestTopic.label)?.title ?? null) : null;
 
   // Dynamic insight message below bars
   const perfInsight = useMemo(() => {
@@ -602,15 +515,17 @@ export default function DashboardScreen({ navigation, route }: any) {
                 )}
 
                 {/* ── CONTINUE LEARNING ───────────────────────── */}
-                {featuredLesson && (
+                {continueLearning && (
                   <ContinueLearningCard
                     styles={styles}
                     colors={colors}
                     cardBg={cardBg}
-                    featuredLesson={featuredLesson}
-                    featuredChapter={featuredChapter}
+                    continueLearning={continueLearning}
+                    chapterDone={chapterProgress.find(c => c.subject === continueLearning.current.subject && c.chapterIndex === continueLearning.current.chapter.chapterIndex)?.doneCount ?? 0}
+                    quizScore={perfForTopic(mergedPerf, continueLearning.current.topic.name, continueLearning.current.subject)?.avgScore ?? null}
+                    studentGrade={studentGrade}
                     ringTrack={ringTrack}
-                    openFeaturedLesson={openFeaturedLesson}
+                    onOpen={openLesson}
                   />
                 )}
 
@@ -629,7 +544,7 @@ export default function DashboardScreen({ navigation, route }: any) {
                   noContentGrade={noContentGrade}
                   studentGrade={studentGrade}
                   topicsGoal={topicsGoal}
-                  isIBPYP={isIBPYP}
+                  learningPathCurriculum={learningPathCurriculum}
                   lessonSubjects={lessonSubjects}
                   effectiveLessonSubjectFilter={effectiveLessonSubjectFilter}
                   setLessonSubjectFilter={setLessonSubjectFilter}
