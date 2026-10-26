@@ -5,6 +5,7 @@ import type { AppColors } from '../../../../theme';
 import { BRAND } from '../constants';
 import { SectionHeader } from './common/SectionHeader';
 import type { makeStyles } from '../DashboardScreen';
+import type { ChapterStatus } from '../../utils/learningPathProgress';
 
 interface ChapterRow {
   title: string;
@@ -12,7 +13,17 @@ interface ChapterRow {
   color: string;
   icon: React.ComponentProps<typeof Feather>['name'];
   chapterNo: number;
+  // Same rule as the Learning Paths chapter card (see computeChapterProgress).
+  status: ChapterStatus;
+  doneCount: number;
+  totalTopics: number;
 }
+
+const STATUS_PILL: Record<ChapterStatus, { label: string; cta: string }> = {
+  not_started: { label: 'Not Started', cta: 'Start' },
+  in_progress: { label: 'In Progress', cta: 'Continue' },
+  completed:   { label: 'Completed',   cta: 'Review' },
+};
 
 interface LearningPathCardProps {
   styles: ReturnType<typeof makeStyles>;
@@ -24,7 +35,8 @@ interface LearningPathCardProps {
   noContentGrade: boolean;
   studentGrade: string;
   topicsGoal: number;
-  isIBPYP: boolean;
+  // Curriculum value the Learning Paths screen navigates with.
+  learningPathCurriculum: string;
   lessonSubjects: string[];
   effectiveLessonSubjectFilter: string;
   setLessonSubjectFilter: (subject: string) => void;
@@ -46,7 +58,7 @@ export function LearningPathCard({
   noContentGrade,
   studentGrade,
   topicsGoal,
-  isIBPYP,
+  learningPathCurriculum,
   lessonSubjects,
   effectiveLessonSubjectFilter,
   setLessonSubjectFilter,
@@ -102,11 +114,14 @@ export function LearningPathCard({
               a chapter aren't tagged at ingestion time (see notes on allBarTopics
               above), so tapping a chapter opens that SUBJECT's topic list rather
               than a specific lesson directly. */}
-          {filteredChapterRows.map((item, idx) => (
+          {filteredChapterRows.map((item, idx) => {
+            const pill = STATUS_PILL[item.status];
+            const pillColor = item.status === 'completed' ? BRAND.green : item.status === 'in_progress' ? BRAND.teal : null;
+            return (
             <TouchableOpacity
               key={`${item.subject}-${item.title}`}
               style={[styles.lessonRow, idx < filteredChapterRows.length - 1 && { borderBottomWidth: 1, borderBottomColor: cardBorder }]}
-              onPress={() => navigation.navigate('SubjectSyllabus', { subject: item.subject, grade: studentGrade, curriculum: isIBPYP ? 'IB PYP' : 'CBSE', chapterTitle: item.title })}
+              onPress={() => navigation.navigate('SubjectSyllabus', { subject: item.subject, grade: studentGrade, curriculum: learningPathCurriculum, chapterTitle: item.title })}
               activeOpacity={0.78}
             >
               <View style={[styles.lessonDot, { backgroundColor: item.color }]} />
@@ -115,18 +130,21 @@ export function LearningPathCard({
               </View>
               <View style={styles.lessonMid}>
                 <Text style={[styles.lessonTopic, { color: colors.textMain }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.lessonMeta, { color: colors.textMuted }]}>{item.subject} · Chapter {item.chapterNo}</Text>
+                <Text style={[styles.lessonMeta, { color: colors.textMuted }]}>
+                  {item.subject} · Chapter {item.chapterNo}{item.totalTopics > 0 && item.status !== 'not_started' ? ` · ${item.doneCount}/${item.totalTopics} topics` : ''}
+                </Text>
               </View>
               <View style={styles.lessonRight}>
-                <View style={[styles.stagePill, { backgroundColor: subtleBg, borderColor: cardBorder }]}>
-                  <Text style={[styles.stagePillTxt, { color: colors.textDim }]}>Not Started</Text>
+                <View style={[styles.stagePill, pillColor ? { backgroundColor: pillColor + '18', borderColor: pillColor + '45' } : { backgroundColor: subtleBg, borderColor: cardBorder }]}>
+                  <Text testID={`chapter-status-${item.subject}-${item.chapterNo}`} style={[styles.stagePillTxt, { color: pillColor ?? colors.textDim }]}>{pill.label}</Text>
                 </View>
                 <View style={[styles.lessonCta, { backgroundColor: item.color + '12', borderColor: item.color + '35' }]}>
-                  <Text style={[styles.lessonCtaTxt, { color: item.color }]}>Start</Text>
+                  <Text style={[styles.lessonCtaTxt, { color: item.color }]}>{pill.cta}</Text>
                 </View>
               </View>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       )}
     </>

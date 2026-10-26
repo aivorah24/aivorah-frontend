@@ -30,6 +30,7 @@ import { teacherChapters } from './teacherChapters';
 import { useStudentSubjectEdits } from './hooks/useStudentSubjectEdits';
 import { useRefreshOnFocus } from './hooks/useRefreshOnFocus';
 import { applySubjectEdits, lessonAsTeacherContent } from './subjectEdits';
+import { syllabusLessonParams } from '../../utils/lessonNavigation';
 import { isSyllabusOnlyCurriculum } from '../../../../utils/curriculum';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -107,21 +108,8 @@ export default function SubjectSyllabusScreen({ navigation, route }: any) {
       setComingSoonTopic(topic?.name || chapter.title);
       return;
     }
-    // A topic with a real syllabus_topics id is fetched by id. Everything else from the server — Qdrant topics
-    // (kind 'qdrant', synthetic ids) and book sections (kind 'section', no id) — is fetched by name; sending
-    // neither left the lesson on the old built-in dataset. A topic the teacher renamed is looked up by its
-    // original name.
-    const isQdrantTopic = isDbBacked && (topic?.kind === 'qdrant' || !topic?.id);
     navigation.navigate('LessonScreen', {
-      subject, curriculum, grade,
-      chapterTitle: chapter.title,
-      chapterIndex,
-      topicIndex,
-      // Real teacher-published topic — LessonScreen fetches its resolved
-      // resources from the DB instead of the static curated dataset.
-      topicId: isDbBacked && !isQdrantTopic ? topic?.id : undefined,
-      topicName: isDbBacked ? topic?.name : undefined,
-      byNameTopic: isQdrantTopic ? (topic?.baseName || topic?.name) : undefined,
+      ...syllabusLessonParams({ subject, curriculum, grade, chapterTitle: chapter.title, chapterIndex, topicIndex, topic, isDbBacked }),
       ...(topic?.lessonEdit ? { editKey: topic.editKey } : {}),
     });
   }

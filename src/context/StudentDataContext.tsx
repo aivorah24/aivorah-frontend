@@ -5,6 +5,7 @@ import AUTH_SERVER_URL from '../config/authServerUrl';
 import LEADERBOARD_SERVICE_URL from '../config/leaderboardServiceUrl';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { useAuth } from './AuthContext';
+import type { LearningActivity } from '../screens/student/utils/learningPathProgress';
 
 // Known email → fixed UUID map (bypasses /user/sync for seeded accounts)
 const DEMO_IDS: Record<string, string> = {
@@ -77,6 +78,13 @@ interface StudentDataContextType {
   recordStudyTime:   (minutes: number, source?: StudySource, subject?: string) => void;
   // Carries sub-minute remainders forward so short sessions still add up.
   recordStudySeconds: (seconds: number, source?: StudySource, subject?: string) => void;
+  // Device-local Learning Path activity per topic name: when it was last
+  // opened, and quiz results the server may not be serving yet (the quiz's
+  // track-result write is fire-and-forget). Lets the dashboard show the
+  // topic the student just left / just finished without a hard refresh.
+  // Kept OUT of `stats` so it is never PUT to /student/:id.
+  learningActivity:  LearningActivity;
+  recordQuizResult:  (topic: string, score: number, subject?: string) => void;
 }
 
 export type StudySource = 'learningPath' | 'assignment' | 'challenge' | 'other';
@@ -84,6 +92,9 @@ export type StudySource = 'learningPath' | 'assignment' | 'challenge' | 'other';
 // ─────────────────────────────────────────────────────────
 // Defaults
 // ─────────────────────────────────────────────────────────
+
+const MAX_ACTIVITY_TOPICS = 200;
+const MAX_QUIZZES_PER_TOPIC = 10;
 
 const ZERO_STATS: StudentStats = {
   studyTimeMinutes:    0,
@@ -185,6 +196,8 @@ const StudentDataContext = createContext<StudentDataContextType>({
   completeAssignment:() => {},
   recordStudyTime:   () => {},
   recordStudySeconds: () => {},
+  learningActivity:  {},
+  recordQuizResult:  () => {},
 });
 
 // ─────────────────────────────────────────────────────────
@@ -213,6 +226,57 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     startedTopicsRef.current = new Set(stats.startedTopics);
   }, [stats.startedTopics]);
+
+  // ── Device-local learning activity (see learningActivity above) ──
+  const [learningActivity, setLearningActivity] = useState<LearningActivity>({});
+  const activityLoadedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!studentId) return;
+    let cancelled = false;
+    activityLoadedForRef.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on account switch before the async load below
+    setLearningActivity({});
+    AsyncStorage.getItem(`@lp_activity_${studentId}`)
+      .then(raw => {
+        if (cancelled) return;
+        // Merge rather than replace: activity recorded while the read was in
+        // flight must not be lost.
+        if (raw) setLearningActivity(prev => ({ ...JSON.parse(raw), ...prev }));
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) activityLoadedForRef.current = studentId; });
+    return () => { cancelled = true; };
+  }, [studentId]);
+  useEffect(() => {
+    if (!studentId || activityLoadedForRef.current !== studentId) return;
+    AsyncStorage.setItem(`@lp_activity_${studentId}`, JSON.stringify(learningActivity)).catch(() => {});
+  }, [learningActivity, studentId]);
+
+  function touchActivity(topic: string, patch: (prev: LearningActivity[string] | undefined) => LearningActivity[string]) {
+    if (!topic) return;
+    setLearningActivity(prev => {
+      const next = { ...prev, [topic]: patch(prev[topic]) };
+      // Bounded: keep the most recently touched topics only.
+      const names = Object.keys(next);
+      if (names.length <= MAX_ACTIVITY_TOPICS) return next;
+      const latest = (n: string) => {
+        const a = next[n];
+        return [a.lastOpenedAt ?? '', ...(a.quizzes ?? []).map(q => q.at)].reduce((m, t) => (t > m ? t : m), '');
+      };
+      const keep = names.sort((x, y) => latest(y).localeCompare(latest(x))).slice(0, MAX_ACTIVITY_TOPICS);
+      return Object.fromEntries(keep.map(n => [n, next[n]]));
+    });
+  }
+
+  function recordQuizResult(topic: string, score: number, subject?: string) {
+    if (!Number.isFinite(score)) return;
+    const at = new Date().toISOString();
+    touchActivity(topic, prev => ({
+      ...prev,
+      subject: subject ?? prev?.subject,
+      quizzes: [...(prev?.quizzes ?? []), { score, at }].slice(-MAX_QUIZZES_PER_TOPIC),
+    }));
+  }
 
   // ── Load from server — re-run whenever logged-in email changes, or when
   // refreshStats() is called after a failed load ──
@@ -347,6 +411,10 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }
 
   function startTopicActivity(topic: string) {
+    // Every open (not just the first) moves this topic to the front of
+    // "Continue Learning".
+    const openedAt = new Date().toISOString();
+    touchActivity(topic, prev => ({ ...prev, lastOpenedAt: openedAt }));
     // Rapid/synchronous repeat calls for the same topic (e.g. two effects
     // firing before React re-renders) must only count once. A closure check
     // against `stats` (render-time snapshot) isn't enough — two calls in the
@@ -428,7 +496,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, startTopicActivity, completeLesson, completeChallenge, completeAssignment, recordStudyTime, recordStudySeconds }}>
+    <StudentDataContext.Provider value={{ stats, studentId, statsLoadError, refreshStats, addXP, exploreTopic, startTopicActivity, completeLesson, completeChallenge, completeAssignment, recordStudyTime, recordStudySeconds, learningActivity, recordQuizResult }}>
       {children}
     </StudentDataContext.Provider>
   );
