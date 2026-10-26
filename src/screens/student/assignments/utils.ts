@@ -23,3 +23,9 @@ export function getStamp(score: number | null) {
   if (score == null) return STAMPS[2];
   return STAMPS.find(s => score >= s.min) ?? STAMPS[2];
 }
+
+// The assignment's own words (title, note, criteria, steps), for picking the answer-box typing language.
+export function assignmentLanguageText(a: { title?: string; note?: string; successCriteria?: string[]; taskSteps?: { label?: string; instructions?: string }[] }): string {
+  return [a.title, a.note, ...(a.successCriteria ?? []), ...(a.taskSteps ?? []).flatMap(s => [s.label, s.instructions])]
+    .filter(Boolean).join(' ');
+}

@@ -7,12 +7,12 @@ import { useStudentData } from '../../../../context/StudentDataContext';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
 import { makeModalStyles } from '../styles';
 import { SUBJECT_COLOR, SUBJECT_ICON, STEP_COLORS, STEP_TEXT_COLORS, STEP_ICONS } from '../constants';
-import { getStamp, scoreBadge } from '../utils';
+import { getStamp, scoreBadge, assignmentLanguageText } from '../utils';
 import type { Assignment, StepType, StepAnswer, PerQ, GradeResult } from '../types';
 import { ModalTopBar } from './ModalTopBar';
 import { ConfirmCloseOverlay } from './ConfirmCloseOverlay';
 import { PhotoUploadStep } from './PhotoUploadStep';
-import TransliterationInput, { detectLangCodeFromText } from '../../../../components/common/TransliterationInput';
+import TransliterationInput, { resolveTypingLang } from '../../../../components/common/TransliterationInput';
 
 // ── Scaffolded Submission Modal ───────────────────────────────────────────────
 // Flow: Step 1 (brainstorm/drawing/writing/photo) → ... → Self-Assessment → Submit → Results
@@ -495,7 +495,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
   if (!step) return null;
   const stepColor = STEP_COLORS[step.type as StepType] ?? '#BAA467';
   // Native-script assignments (Telugu, Hindi…) get English→script typing
-  const langCode = detectLangCodeFromText(`${assignment.title} ${step.label} ${step.instructions ?? ''}`);
+  const langCode = resolveTypingLang(assignment.subject, step.label, step.instructions, assignmentLanguageText(assignment));
   return (
     <Modal visible animationType="slide" transparent onRequestClose={() => setShowConfirm(true)}>
       <View style={styles.overlay}>
