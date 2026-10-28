@@ -6,6 +6,7 @@ jest.mock('../../services/parentProgressService', () => ({
   __esModule: true,
   fetchChildren: jest.fn(),
   fetchProgressData: jest.fn(),
+  fetchLearningSubjects: jest.fn(),
 }));
 
 const mockUseFocusEffect = jest.fn();
@@ -26,6 +27,7 @@ describe('useParentProgress', () => {
   beforeEach(() => {
     jest.resetAllMocks(); // Use resetAllMocks so implementations don't leak!
     mockedService.fetchChildren.mockResolvedValue([mockChild, mockChild2]);
+    mockedService.fetchLearningSubjects.mockResolvedValue([{ subject: 'Hindi', topics: ['Kabir'] }]);
     mockedService.fetchProgressData.mockResolvedValue({
       stats: { xpPoints: 100 },
       weekly: [10, 20, 30, 0, 0, 0, 0],
@@ -96,5 +98,12 @@ describe('useParentProgress', () => {
     });
     expect(result.current.refreshing).toBe(false);
     expect(mockedService.fetchProgressData).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads the child’s learning-path subjects once per child', async () => {
+    const { result, unmount } = await renderHook(() => useParentProgress({}));
+    currentUnmount = unmount;
+    await waitFor(() => expect(result.current.learningSubjects).toEqual([{ subject: 'Hindi', topics: ['Kabir'] }]));
+    expect(mockedService.fetchLearningSubjects).toHaveBeenCalledWith(mockChild);
   });
 });

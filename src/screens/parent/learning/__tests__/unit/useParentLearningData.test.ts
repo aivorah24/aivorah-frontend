@@ -67,6 +67,38 @@ describe('useParentLearningData', () => {
     expect(parentLearningService.fetchSubjectTopics).toHaveBeenCalledWith('CBSE', 'Grade 3', 'Mathematics');
   });
 
+  it('prefers the syllabus topics (real unit titles, book order) over the subjects list "Chapter N" labels', async () => {
+    (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A]);
+    (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: [], topicsExplored: 0 });
+    (parentLearningService.fetchChildReport as jest.Mock).mockResolvedValue(null);
+    (parentLearningService.fetchCurriculumSubjects as jest.Mock).mockResolvedValue([
+      { subject: 'Design', topicCount: 2, topics: [{ topic: 'Prototype', unit: 'Chapter 3' }, { topic: 'Research', unit: 'Chapter 1' }] },
+    ]);
+    const syllabus = [
+      { topic: 'Research', unit: 'Inquiring & Analyzing (Criterion A)', unitNo: 1 },
+      { topic: 'Prototype', unit: 'Creating the Solution (Criterion C)', unitNo: 3 },
+    ];
+    (parentLearningService.fetchSubjectTopics as jest.Mock).mockResolvedValue(syllabus);
+
+    const { result } = await renderHook(() => useParentLearningData('parent@test.com'));
+
+    await waitFor(() => expect(result.current.subjects[0]?.topics).toEqual(syllabus));
+  });
+
+  it('keeps the subjects list own topics when the syllabus has none', async () => {
+    (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A]);
+    (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: [], topicsExplored: 0 });
+    (parentLearningService.fetchChildReport as jest.Mock).mockResolvedValue(null);
+    const own = [{ topic: 'Prototype', unit: 'Chapter 3' }];
+    (parentLearningService.fetchCurriculumSubjects as jest.Mock).mockResolvedValue([{ subject: 'Design', topicCount: 1, topics: own }]);
+    (parentLearningService.fetchSubjectTopics as jest.Mock).mockResolvedValue([]);
+
+    const { result } = await renderHook(() => useParentLearningData('parent@test.com'));
+
+    await waitFor(() => expect(parentLearningService.fetchSubjectTopics).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.subjects[0]?.topics).toEqual(own));
+  });
+
   it('pre-selects the child matching targetChildId when provided', async () => {
     (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A, CHILD_B]);
     (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: [], topicsExplored: 0 });

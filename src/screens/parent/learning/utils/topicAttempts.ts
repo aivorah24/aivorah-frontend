@@ -9,6 +9,7 @@ export interface TopicSummary {
 
 export interface UnitGroup<T> {
   unit: string;
+  unitNo?: number;
   topics: T[];
 }
 
@@ -31,15 +32,19 @@ export function summarizeByTopic(attempts: TopicAttempt[]): Map<string, TopicSum
 }
 
 // Keeps syllabus order; topics without a unit share one unnamed group.
-export function groupByUnit<T extends { unit?: string }>(topics: T[]): UnitGroup<T>[] {
+export function groupByUnit<T extends { unit?: string; unitNo?: number }>(topics: T[]): UnitGroup<T>[] {
   const groups: UnitGroup<T>[] = [];
   const index = new Map<string, UnitGroup<T>>();
   for (const t of topics) {
     const unit = t.unit || '';
-    let g = index.get(unit);
-    if (!g) { g = { unit, topics: [] }; index.set(unit, g); groups.push(g); }
+    // Number + title: a book can repeat a title ("Unit") across chapters.
+    const id = `${t.unitNo ?? ''}|${unit}`;
+    let g = index.get(id);
+    if (!g) { g = { unit, unitNo: t.unitNo, topics: [] }; index.set(id, g); groups.push(g); }
     g.topics.push(t);
   }
+  // Book order when every unit carries its number.
+  if (groups.every(g => typeof g.unitNo === 'number')) groups.sort((a, b) => a.unitNo! - b.unitNo!);
   return groups;
 }
 

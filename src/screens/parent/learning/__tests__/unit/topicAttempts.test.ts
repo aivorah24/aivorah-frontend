@@ -29,6 +29,20 @@ describe('topicAttempts utils', () => {
     ]);
   });
 
+  test('groupByUnit sorts by the book unit number when every unit has one', () => {
+    const groups = groupByUnit([
+      { topic: 'p', unit: 'Creating', unitNo: 3 }, { topic: 'r', unit: 'Inquiring', unitNo: 1 }, { topic: 'd', unit: 'Developing', unitNo: 2 },
+    ]);
+    expect(groups.map(g => [g.unitNo, g.unit])).toEqual([[1, 'Inquiring'], [2, 'Developing'], [3, 'Creating']]);
+  });
+
+  test('groupByUnit keeps chapters apart when their titles repeat', () => {
+    const groups = groupByUnit([
+      { topic: 'a', unit: 'Unit', unitNo: 19 }, { topic: 'b', unit: 'Unit', unitNo: 20 }, { topic: 'c', unit: 'Unit', unitNo: 20 },
+    ]);
+    expect(groups.map(g => [g.unitNo, g.topics.map(t => t.topic)])).toEqual([[19, ['a']], [20, ['b', 'c']]]);
+  });
+
   test('formatDuration', () => {
     expect(formatDuration(42)).toBe('42s');
     expect(formatDuration(120)).toBe('2m');
