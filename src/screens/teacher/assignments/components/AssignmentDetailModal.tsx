@@ -15,6 +15,7 @@ import { normalizeCurriculum } from '../../../../utils/curriculum';
 export function AssignmentDetailModal({
   assignment, detailTab, setDetailTab, detailSubmissions, detailTotalLinked, loadingSubmissions,
   expandedStudent, setExpandedStudent, teacherFeedback, setTeacherFeedback, sendingFeedback, sendFeedback,
+  editingFeedbackFor = null, setEditingFeedbackFor = () => {},
   markComplete, deleteAssignment, onClose, onImagePress, onPreviewHtml,
   colors, gold, styles,
 }: {
@@ -30,6 +31,8 @@ export function AssignmentDetailModal({
   setTeacherFeedback: (v: string) => void;
   sendingFeedback: boolean;
   sendFeedback: (assignmentId: string, studentId: string) => void;
+  editingFeedbackFor?: string | null;
+  setEditingFeedbackFor?: (id: string | null) => void;
   markComplete: (id: string) => void;
   deleteAssignment: (id: string) => void;
   onClose: () => void;
@@ -248,10 +251,12 @@ export function AssignmentDetailModal({
                       let fbObj: any = {};
                       try { fbObj = JSON.parse(sub.aiFeedback || '{}'); } catch { fbObj = { text: sub.aiFeedback || '' }; }
                       const existingTeacherFb = fbObj.teacherFeedback || '';
+                      // Unchanged text can't be re-sent (it would re-notify for nothing).
+                      const canSendFb = !!teacherFeedback.trim() && teacherFeedback.trim() !== existingTeacherFb;
                       return (
                         <View key={sub.studentId || i} style={{ backgroundColor: colors.cardDark, borderRadius: radius.md, borderWidth: 1, borderColor: isExpanded ? sc + '60' : (done ? sc + '40' : colors.borderColor), overflow: 'hidden' }}>
                           {/* Student header — tappable */}
-                          <TouchableOpacity activeOpacity={0.7} onPress={() => { setExpandedStudent(isExpanded ? null : sub.studentId); setTeacherFeedback(existingTeacherFb); }} style={{ padding: 14, gap: 8 }}>
+                          <TouchableOpacity activeOpacity={0.7} onPress={() => { setExpandedStudent(isExpanded ? null : sub.studentId); setTeacherFeedback(existingTeacherFb); setEditingFeedbackFor(null); }} style={{ padding: 14, gap: 8 }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                                 <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: sc + '25', alignItems: 'center', justifyContent: 'center' }}>
@@ -420,22 +425,35 @@ export function AssignmentDetailModal({
                               ) : null}
 
                               {/* Existing teacher feedback */}
-                              {existingTeacherFb && !sendingFeedback ? (
+                              {existingTeacherFb && editingFeedbackFor !== sub.studentId ? (
                                 <View style={{ backgroundColor: colors.accentCyan + '0E', borderRadius: 8, padding: 10, borderLeftWidth: 3, borderLeftColor: colors.accentCyan + '60', gap: 4 }}>
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                     <Feather name="user" size={11} color={colors.accentCyan} />
-                                    <Text style={{ fontSize: 10, color: colors.accentCyan, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Teacher Feedback</Text>
+                                    <Text style={{ flex: 1, fontSize: 10, color: colors.accentCyan, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>Teacher Feedback</Text>
+                                    {done && (
+                                      <TouchableOpacity
+                                        testID={`editFeedback-${sub.studentId}`}
+                                        onPress={() => { setTeacherFeedback(existingTeacherFb); setEditingFeedbackFor(sub.studentId); }}
+                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4 }}
+                                        accessibilityLabel="Edit feedback"
+                                      >
+                                        <Feather name="edit-2" size={12} color={colors.accentCyan} />
+                                        <Text style={{ fontSize: 11, color: colors.accentCyan, fontWeight: '700' }}>Edit</Text>
+                                      </TouchableOpacity>
+                                    )}
                                   </View>
                                   <Text style={{ fontSize: 12, color: colors.textMain, lineHeight: 18 }}>{existingTeacherFb}</Text>
-                                  {fbObj.teacherFeedbackAt ? <Text style={{ fontSize: 10, color: colors.textDim }}>Sent {formatDate(fbObj.teacherFeedbackAt)}</Text> : null}
+                                  {fbObj.teacherFeedbackEditedAt
+                                    ? <Text style={{ fontSize: 10, color: colors.textDim }}>Edited {formatDate(fbObj.teacherFeedbackEditedAt)}</Text>
+                                    : fbObj.teacherFeedbackAt ? <Text style={{ fontSize: 10, color: colors.textDim }}>Sent {formatDate(fbObj.teacherFeedbackAt)}</Text> : null}
                                 </View>
                               ) : null}
 
                               {/* Teacher feedback input */}
-                              {done && (
+                              {done && (!existingTeacherFb || editingFeedbackFor === sub.studentId) && (
                                 <View style={{ gap: 8 }}>
                                   <Text style={{ fontSize: 11, color: colors.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    {existingTeacherFb ? 'Update Feedback' : 'Send Feedback to Student & Parent'}
+                                    {existingTeacherFb ? 'Edit Feedback' : 'Send Feedback to Student & Parent'}
                                   </Text>
                                   <TextInput
                                     style={[styles.input, { minHeight: 70, textAlignVertical: 'top' }]}
@@ -446,9 +464,9 @@ export function AssignmentDetailModal({
                                     multiline
                                   />
                                   <TouchableOpacity
-                                    style={[styles.modalSaveBtn, { backgroundColor: sc, opacity: teacherFeedback.trim() ? 1 : 0.5 }]}
+                                    style={[styles.modalSaveBtn, { backgroundColor: sc, opacity: canSendFb ? 1 : 0.5 }]}
                                     onPress={() => sendFeedback(a.id, sub.studentId)}
-                                    disabled={!teacherFeedback.trim() || sendingFeedback}
+                                    disabled={!canSendFb || sendingFeedback}
                                     activeOpacity={0.8}
                                   >
                                     {sendingFeedback ? (
@@ -456,10 +474,19 @@ export function AssignmentDetailModal({
                                     ) : (
                                       <>
                                         <Feather name="send" size={14} color="#fff" />
-                                        <Text style={styles.modalSaveBtnText}>{existingTeacherFb ? 'Update Feedback' : 'Send Feedback'}</Text>
+                                        <Text style={styles.modalSaveBtnText}>{existingTeacherFb ? 'Save Changes' : 'Send Feedback'}</Text>
                                       </>
                                     )}
                                   </TouchableOpacity>
+                                  {!!existingTeacherFb && (
+                                    <TouchableOpacity
+                                      onPress={() => { setTeacherFeedback(existingTeacherFb); setEditingFeedbackFor(null); }}
+                                      disabled={sendingFeedback}
+                                      style={{ alignItems: 'center', paddingVertical: 8 }}
+                                    >
+                                      <Text style={{ fontSize: 13, color: colors.textDim, fontWeight: '600' }}>Cancel</Text>
+                                    </TouchableOpacity>
+                                  )}
                                 </View>
                               )}
                             </View>

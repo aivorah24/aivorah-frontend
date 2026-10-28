@@ -65,7 +65,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     grade, setGrade, curriculum, setCurriculum,
     teacherEmail, isIBPYP,
     gradeOptions, effectiveGrade,
-    curriculumOptions, effectiveCurriculum,
+    curriculumOptions, effectiveCurriculum, teacherCurricula,
     availableTopics, topicsLoading,
   } = useTeacherCurriculumGrade(user, subject);
   const [chapter, setChapter] = useState('');
@@ -157,7 +157,8 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     detailSubmissions, detailTotalLinked, loadingSubmissions,
     expandedStudent, setExpandedStudent,
     teacherFeedback, setTeacherFeedback, sendingFeedback, sendFeedback,
-  } = useAssignmentDetail();
+    editingFeedbackFor, setEditingFeedbackFor,
+  } = useAssignmentDetail(teacherEmail);
 
   const {
     bulkPhase, setBulkPhase, bulkItems, setBulkItems, bulkDueDate, setBulkDueDate,
@@ -181,7 +182,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum, setCurriculum,
     gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
     setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
-    quizDifficulty, setQuizQuestions, setType,
+    quizDifficulty, setQuizQuestions, setType, teacherCurricula,
   });
 
   const {
@@ -657,6 +658,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
             expandedStudent={expandedStudent} setExpandedStudent={setExpandedStudent}
             teacherFeedback={teacherFeedback} setTeacherFeedback={setTeacherFeedback}
             sendingFeedback={sendingFeedback} sendFeedback={sendFeedback}
+            editingFeedbackFor={editingFeedbackFor} setEditingFeedbackFor={setEditingFeedbackFor}
             markComplete={markComplete} deleteAssignment={requestDelete}
             onClose={() => setDetailAssignment(null)}
             onImagePress={(uri) => setFullscreenImage(uri)}

@@ -12,7 +12,8 @@ declare const __DEV__: boolean;
 
 const LIVE_ASSIGNMENTS_BACKEND = 'https://aivorah-assignments-service.onrender.com';
 
+// EXPO_PUBLIC_ASSIGNMENTS_URL points only this service elsewhere (e.g. a local copy).
 const ASSIGNMENTS_SERVER_URL =
-  USE_LOCAL_SERVICES ? 'http://localhost:3015' : LIVE_ASSIGNMENTS_BACKEND;
+  process.env.EXPO_PUBLIC_ASSIGNMENTS_URL || (USE_LOCAL_SERVICES ? 'http://localhost:3015' : LIVE_ASSIGNMENTS_BACKEND);
 
 export default ASSIGNMENTS_SERVER_URL;

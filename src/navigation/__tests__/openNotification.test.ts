@@ -37,6 +37,15 @@ describe('resolveNotificationTarget — V2', () => {
       .toEqual({ screen: 'ParentAssignments', params: { childId: 'kid-1', highlightId: 'as-9' } });
   });
 
+  test('teacher feedback → Assignments (student) / ParentAssignments (parent), exact assignment', () => {
+    const n = v2({ type: 'assignment_feedback', entityType: 'assignment', entityId: 'as-9', data: { assignmentId: 'as-9' } });
+    expect(resolveNotificationTarget(toNotifItem(n), 'student'))
+      .toEqual({ screen: 'Assignments', params: { highlightId: 'as-9' } });
+    expect(resolveNotificationTarget(toNotifItem({ ...n, childId: 'kid-1' }), 'parent'))
+      .toEqual({ screen: 'ParentAssignments', params: { childId: 'kid-1', highlightId: 'as-9' } });
+    expect(toNotifItem(n).type).toBe('assignment');
+  });
+
   test('the row (child_id), not the signed-in role, decides parent vs student routing', () => {
     // e.g. a teacher account that is also a parent
     expect(resolveNotificationTarget(toNotifItem(v2({ childId: 'kid-1' })), 'teacher')?.screen).toBe('ParentChallenges');
