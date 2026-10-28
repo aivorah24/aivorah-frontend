@@ -15,7 +15,8 @@ declare const __DEV__: boolean;
 // original name is still claimed by the suspended account.
 const LIVE_SERVICE = 'https://aivorah-students-service.onrender.com';
 
+// EXPO_PUBLIC_STUDENTS_URL points only this service elsewhere (e.g. a local copy).
 const STUDENTS_SERVER_URL =
-  USE_LOCAL_SERVICES ? 'http://localhost:3017' : LIVE_SERVICE;
+  process.env.EXPO_PUBLIC_STUDENTS_URL || (USE_LOCAL_SERVICES ? 'http://localhost:3017' : LIVE_SERVICE);
 
 export default STUDENTS_SERVER_URL;

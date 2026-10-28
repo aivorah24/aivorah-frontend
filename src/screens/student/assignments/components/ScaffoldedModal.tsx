@@ -264,7 +264,7 @@ export function ScaffoldedModal({ assignment, colors, onClose, onSubmitted }: {
       <View style={[styles.overlay, { backgroundColor: colors.bgDark }]}>
         <ModalTopBar
           title={assignment.title}
-          subtitle={`${assignment.subject} · ${assignment.grade ?? ''}${isIBPYP ? ' · IB PYP' : ''}`}
+          subtitle={`${assignment.subject} · ${assignment.grade ?? ''}${isIBPYP && assignment.curriculum ? ` · ${assignment.curriculum}` : ''}`}
           color={color} colors={colors}
           icon={SUBJECT_ICON[assignment.subject] ?? 'file-text'}
           onBack={() => setShowConfirm(true)}

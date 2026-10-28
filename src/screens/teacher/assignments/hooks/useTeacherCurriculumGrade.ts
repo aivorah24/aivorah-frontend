@@ -25,7 +25,8 @@ export function useTeacherCurriculumGrade(user: any, subject: string) {
   const [fetchedCurricula, setFetchedCurricula] = useState<string[]>([]);
 
   const teacherEmail = user?.email || 'teacher@demo.com';
-  const isIBPYP = (curriculum || teacherCurriculum || '').toLowerCase().includes('ib');
+  // Only real IB PYP — IB MYP/DP teachers were getting the PYP generator and labels.
+  const isIBPYP = /^ib[\s_-]*pyp$/i.test((curriculum || teacherCurriculum || '').trim());
 
   // Grade pills: only show grades the teacher handles. Prefer the freshly-fetched
   // teaches[] grades; fall back to user.teaches; only show the full list if we
@@ -142,7 +143,7 @@ export function useTeacherCurriculumGrade(user: any, subject: string) {
     grade, setGrade, curriculum, setCurriculum,
     isIBPYP, teacherEmail,
     gradeOptions, effectiveGrade,
-    curriculumOptions, effectiveCurriculum,
+    curriculumOptions, effectiveCurriculum, teacherCurricula: baseCurriculumOptions,
     availableTopics, topicsLoading,
   };
 }

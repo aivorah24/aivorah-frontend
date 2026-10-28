@@ -32,6 +32,7 @@ interface UseUploadWorksheetArgs {
   quizDifficulty: 'easy' | 'medium' | 'hard';
   setQuizQuestions: (v: any[]) => void;
   setType: (v: 'assignment' | 'quiz') => void;
+  teacherCurricula?: string[];
 }
 
 // Owns the single-worksheet Upload flow (pick/upload -> auto-fill extract ->
@@ -39,12 +40,26 @@ interface UseUploadWorksheetArgs {
 // extracted verbatim (no behavior change) from TeacherAssignmentsScreen.tsx,
 // third step of its hooks/components decomposition (2026-08-25), mirroring
 // useBulkUpload's shape.
+// A curriculum printed on the sheet (e.g. a PYP worksheet) only wins if this teacher teaches it.
+export function pickDetectedCurriculum(raw: string, teacherCurricula: string[]): string | null {
+  const c = normalizeCurriculum(raw);
+  if (!c) return null;
+  if (teacherCurricula.length === 0) return c;
+  const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return teacherCurricula.find((t) => key(t) === key(c)) ?? null;
+}
+
 export function useUploadWorksheet({
   user, title, setTitle, chapter, setChapter, subject, setSubject, grade, setGrade, curriculum, setCurriculum,
   gradeOptions, effectiveGrade, effectiveCurriculum, selectedLanguage, setSelectedLanguage,
   setSuccessCriteria, setTeacherNotes, setIbWordBank, setIbStamps, setFormError,
-  quizDifficulty, setQuizQuestions, setType,
+  quizDifficulty, setQuizQuestions, setType, teacherCurricula = [],
 }: UseUploadWorksheetArgs) {
+  function applyDetectedCurriculum(raw: string) {
+    const c = pickDetectedCurriculum(raw, teacherCurricula);
+    if (c) setCurriculum(c);
+  }
+
   const [docFiles, setDocFiles] = useState<{ name: string; base64: string; mime: string; url?: string; sourcePdfBase64?: string; sourcePdfName?: string; structuredText?: string }[]>([]);
   const originalPdfRef = React.useRef<{ name: string; base64: string; mime: string; structuredText?: string } | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -92,7 +107,7 @@ export function useUploadWorksheet({
       const metaReady = detectWorksheetMeta(fileDataArr[0], ASSIGNMENTS_SERVER_URL).then((meta) => {
         if (!meta) return;
         if (meta.grade) { detected.grade = meta.grade; setGrade(gradeFromLabel(meta.grade, gradeOptions)); }
-        if (meta.curriculum) { detected.curriculum = meta.curriculum; setCurriculum(normalizeCurriculum(meta.curriculum)); }
+        if (meta.curriculum) { detected.curriculum = meta.curriculum; applyDetectedCurriculum(meta.curriculum); }
         if (meta.chapter) setChapter(prev => prev || meta.chapter);
       });
 
@@ -228,7 +243,7 @@ export function useUploadWorksheet({
             if (eData.grade && !detected.grade) setGrade(gradeFromLabel(String(eData.grade), gradeOptions));
             // Was never applied: the form kept the teacher's own curriculum
             // (e.g. CBSE) on an IB PYP worksheet.
-            if (eData.curriculum && !detected.curriculum) setCurriculum(normalizeCurriculum(String(eData.curriculum)));
+            if (eData.curriculum && !detected.curriculum) applyDetectedCurriculum(String(eData.curriculum));
             // Purpose and learning outcomes no longer auto-fill Note — teacher writes their own notes
             // if (eData.purpose) setNote(prev => prev || eData.purpose);
             // if (eData.learningOutcomes) ... removed to avoid duplication

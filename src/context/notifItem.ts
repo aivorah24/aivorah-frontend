@@ -26,7 +26,7 @@ export interface NotifItem {
 }
 
 export function isAssignmentType(n: V2Notification) {
-  return n.type === 'assignment_assigned' || n.type === 'assignment_due';
+  return n.type === 'assignment_assigned' || n.type === 'assignment_due' || n.type === 'assignment_feedback';
 }
 
 export function isEventType(n: V2Notification) {

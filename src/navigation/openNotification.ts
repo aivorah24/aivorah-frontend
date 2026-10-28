@@ -34,7 +34,7 @@ function v2Target(item: NotifItem, role: Role): NotificationTarget | null {
   const n = item.v2!;
   const isParent = !!n.childId;
   const isChallenge = n.type === 'challenge_assigned' || n.type === 'challenge_due';
-  const isAssignment = n.type === 'assignment_assigned' || n.type === 'assignment_due';
+  const isAssignment = n.type === 'assignment_assigned' || n.type === 'assignment_due' || n.type === 'assignment_feedback';
   if (isChallenge) {
     const highlightId = n.data?.challengeId || n.entityId;
     return isParent
