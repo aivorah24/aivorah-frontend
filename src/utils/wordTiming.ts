@@ -30,19 +30,34 @@ const FUNCTION_WORDS = new Set([
   'got','get','let','put','came','come','went','go','him','did','its',
 ]);
 
+// Hindi syllables are spoken faster than English ones (calibrated on Chrome's "Google हिन्दी" voice).
+const HINDI_SYLLABLE = 0.8;
+
+// Devanagari: each vowel/consonant letter not silenced by a virama is ~one syllable; a bare final consonant is not voiced.
+function hindiSyllables(word: string): number {
+  const n = (word.match(/[ऄ-हक़-ॡ]़?(?!्)/g) || []).length;
+  return n > 1 && /[क-हक़-य़]़?$/.test(word) ? n - 1 : n;
+}
+
 // Estimate spoken duration weight for a token (word + trailing spaces/punctuation).
 // Returns a float: 1.0 ≈ average content word, lower = shorter, higher = longer + pause.
 export function wordWeight(token: string): number {
-  const clean = token.toLowerCase().replace(/[^a-z]/g, '');
-  // Count vowel groups as syllable estimate, with silent-e correction
-  const vowelGroups = clean.match(/[aeiou]+/g);
-  const raw = vowelGroups ? vowelGroups.length : 1;
-  const silentE = clean.length > 2 && clean.endsWith('e') && !/[aeiou]/.test(clean[clean.length - 2]) ? 1 : 0;
-  let syllables = Math.max(1, raw - silentE);
-  // Function words are spoken ~30% faster (but never below 0.4 units)
-  if (FUNCTION_WORDS.has(clean)) syllables = Math.max(0.4, syllables * 0.7);
-  // Punctuation pauses: sentence-end adds ~1.5 units, comma/dash adds ~0.5
-  if (/[.!?]/.test(token)) syllables += 1.5;
+  const hindi = token.replace(/[^ऀ-ॣ]/g, '');
+  let syllables: number;
+  if (hindi) {
+    syllables = hindiSyllables(hindi) * HINDI_SYLLABLE || 1;
+  } else {
+    const clean = token.toLowerCase().replace(/[^a-z]/g, '');
+    // Count vowel groups as syllable estimate, with silent-e correction
+    const vowelGroups = clean.match(/[aeiou]+/g);
+    const raw = vowelGroups ? vowelGroups.length : 1;
+    const silentE = clean.length > 2 && clean.endsWith('e') && !/[aeiou]/.test(clean[clean.length - 2]) ? 1 : 0;
+    syllables = Math.max(1, raw - silentE);
+    // Function words are spoken ~30% faster (but never below 0.4 units)
+    if (FUNCTION_WORDS.has(clean)) syllables = Math.max(0.4, syllables * 0.7);
+  }
+  // Punctuation pauses: sentence-end (incl. Hindi ।/॥, Urdu ۔) adds ~1.5 units, comma/dash adds ~0.5
+  if (/[.!?।॥۔]/.test(token)) syllables += 1.5;
   else if (/[,;:—–]/.test(token)) syllables += 0.5;
   return syllables;
 }

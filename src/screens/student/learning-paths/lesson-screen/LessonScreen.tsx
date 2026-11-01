@@ -174,7 +174,7 @@ export default function LessonScreen({ navigation, route, embedded = false, prac
   // lines so it lands as a rhythmic recitation rather than flat narration.
   const isPoem = ((rawPayload?.instructionalType as string) || '').toLowerCase().includes('poem');
 
-  const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang);
+  const narration = useNarration(listenSteps, isPoem, (rawPayload as any)?.lang, navigation);
 
   // Practice unlocks once the topic is learned: Learn read to the end, or every Listen part heard.
   const { user } = useAuth() || ({} as any);

@@ -6,6 +6,7 @@
 // aivorah-students-service instead of the monolith.
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import ParentAIProgressReportScreen from '../../ParentAIProgressReportScreen';
 
@@ -234,4 +235,16 @@ describe('ParentAIProgressReportScreen', () => {
     expect(screen.getByText('Fractions · 48%')).toBeTruthy();
     expect(screen.getByText(/Strong grasp of multiplication\./)).toBeTruthy();
   }, 15000);
+
+  test('the selected child chip uses readable gold text, not white on its light tint', async () => {
+    mockFetchByUrl({ '/parent/': { body: [CHILD] } });
+    await render(<ParentAIProgressReportScreen navigation={{ navigate: jest.fn(), openDrawer: jest.fn() }} route={{}} />);
+
+    const grade = await screen.findByText('Grade 3');
+    const name = screen.getAllByText('Aanya', { exact: true }).find((n) => StyleSheet.flatten(n.props.style).fontSize === 13)!;
+
+    expect(StyleSheet.flatten(name.props.style).color).toBe('#c90');
+    expect(StyleSheet.flatten(grade.props.style).color).not.toMatch(/^#fff/i);
+    expect(StyleSheet.flatten(screen.getByText('A').props.style).color).toBe('#c90');
+  });
 });

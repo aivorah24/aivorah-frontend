@@ -16,6 +16,8 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useParentAIProgressReport } from './hooks/useParentAIProgressReport';
 import ReportSection from './components/ReportSection';
+import { pdfSafeDeep } from './utils/pdfSafeText';
+import { enableUnicodeText } from './utils/pdfUnicodeText';
 import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function ParentAIProgressReportScreen({ navigation, route }: any) {
@@ -46,10 +48,11 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
   async function downloadPDF() {
     if (!reportData || Platform.OS !== 'web') return;
     const { jsPDF } = await import('jspdf');
-    const { student, metrics, report, generatedAt } = reportData;
+    const { student, metrics, report, generatedAt } = pdfSafeDeep(reportData);
     const date = new Date(generatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    enableUnicodeText(doc);
     const W = 210;
     const ML = 20;   // left margin
     const MR = 20;   // right margin
@@ -498,14 +501,14 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                         onPress={() => selectChild(child)}
                         activeOpacity={0.8}
                       >
-                        <View style={[styles.childDot, { backgroundColor: isActive ? '#ffffff40' : colors.accentYellow + '25' }]}>
-                          <Text style={[styles.childDotText, { color: isActive ? '#fff' : colors.accentYellow }]}>
+                        <View style={[styles.childDot, { backgroundColor: colors.accentYellow + '25' }]}>
+                          <Text style={styles.childDotText}>
                             {child.name.charAt(0).toUpperCase()}
                           </Text>
                         </View>
                         <View>
-                          <Text style={[styles.childPillName, { color: isActive ? '#fff' : colors.textMain }]}>{child.name}</Text>
-                          <Text style={[styles.childPillGrade, { color: isActive ? '#ffffff80' : colors.textMuted }]}>{child.grade}</Text>
+                          <Text style={[styles.childPillName, isActive && { color: colors.accentYellow }]}>{child.name}</Text>
+                          <Text style={styles.childPillGrade}>{child.grade}</Text>
                         </View>
                       </TouchableOpacity>
                     );
