@@ -15,6 +15,7 @@ import { NO_CONTENT_GRADES } from './constants';
 import { makeStyles } from './styles';
 import { useSubjects } from './hooks/useSubjects';
 import { useBlockedSubjects } from './hooks/useBlockedSubjects';
+import { useRefreshOnFocus } from './subject-syllabus/hooks/useRefreshOnFocus';
 import { useSubjectTopics } from './hooks/useSubjectTopics';
 import SubjectCard from './components/SubjectCard';
 import { useTeacherPaths } from './teacher-learning-paths/hooks/useTeacherPaths';
@@ -46,7 +47,7 @@ export default function LearningPathsScreen({ navigation }: any) {
     () => mergeTeacherSubjects(courseSubjects, teacherPaths, grade),
     [courseSubjects, teacherPaths, grade],
   );
-  const blockedSubjects = useBlockedSubjects(user?.email);
+  const blockedSubjects = useBlockedSubjects(user?.email, useRefreshOnFocus(navigation));
 
   const completedSet = useMemo(() => new Set(stats.completedTopics ?? []), [stats.completedTopics]);
   const subjects = useSubjectTopics(mergedSubjects, curriculum, grade, completedSet.size > 0);

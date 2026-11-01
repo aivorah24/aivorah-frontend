@@ -21,7 +21,7 @@ function sentencesFor(step: ListenStep | undefined): NarrationLine[] {
   return sentencesWithOffsets(step.text);
 }
 
-export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: string) {
+export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: string, navigation?: any) {
   const [listenStep, setListenStep] = useState(0);
   const [listenPlaying, setListenPlaying] = useState(false);
   const [sentenceIdx, setSentenceIdx] = useState(0);
@@ -259,6 +259,12 @@ export function useNarration(listenSteps: ListenStep[], isPoem: boolean, lang?: 
   }, [sentenceIdx, listenPlaying]);
 
   useEffect(() => () => { playSeqRef.current++; clearWordTimer(); stopSpeaking(); }, []);
+  // Drawer screens stay mounted when the student leaves, so stop the voice on blur too.
+  useEffect(() => {
+    if (typeof navigation?.addListener !== 'function') return;
+    return navigation.addListener('blur', stopNarration);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stopNarration only uses refs and state setters
+  }, [navigation]);
 
   return {
     listenStep, listenPlaying, paused, sentenceIdx, wordIdx, visitedSteps, completedSteps, clockTick,

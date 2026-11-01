@@ -16,6 +16,9 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useParentAIProgressReport } from './hooks/useParentAIProgressReport';
 import ReportSection from './components/ReportSection';
+import { pdfSafeDeep } from './utils/pdfSafeText';
+import { enableUnicodeText } from './utils/pdfUnicodeText';
+import { textAfterFirstLine } from './utils/pdfLines';
 import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function ParentAIProgressReportScreen({ navigation, route }: any) {
@@ -46,10 +49,11 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
   async function downloadPDF() {
     if (!reportData || Platform.OS !== 'web') return;
     const { jsPDF } = await import('jspdf');
-    const { student, metrics, report, generatedAt } = reportData;
+    const { student, metrics, report, generatedAt } = pdfSafeDeep(reportData);
     const date = new Date(generatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    enableUnicodeText(doc);
     const W = 210;
     const ML = 20;   // left margin
     const MR = 20;   // right margin
@@ -328,10 +332,12 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
         doc.text(`${si.subject}`, ML, y);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...MUTED);
-        doc.text(':  ' + doc.splitTextToSize(si.insight, TW - doc.getTextWidth(`${si.subject}:  `))[0], ML + doc.getTextWidth(`${si.subject}`), y);
+        const firstLine = doc.splitTextToSize(si.insight, TW - doc.getTextWidth(`${si.subject}:  `))[0] || '';
+        doc.text(':  ' + firstLine, ML + doc.getTextWidth(`${si.subject}`), y);
         y += 5.6;
         // remaining lines of insight
-        const rest = wrap(si.insight).slice(1);
+        const restText = textAfterFirstLine(si.insight, firstLine);
+        const rest = restText ? wrap(restText) : [];
         rest.forEach(l => { doc.text(l, ML, y); y += 5.4; });
         gap(2);
       });
@@ -498,14 +504,14 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
                         onPress={() => selectChild(child)}
                         activeOpacity={0.8}
                       >
-                        <View style={[styles.childDot, { backgroundColor: isActive ? '#ffffff40' : colors.accentYellow + '25' }]}>
-                          <Text style={[styles.childDotText, { color: isActive ? '#fff' : colors.accentYellow }]}>
+                        <View style={[styles.childDot, { backgroundColor: colors.accentYellow + '25' }]}>
+                          <Text style={styles.childDotText}>
                             {child.name.charAt(0).toUpperCase()}
                           </Text>
                         </View>
                         <View>
-                          <Text style={[styles.childPillName, { color: isActive ? '#fff' : colors.textMain }]}>{child.name}</Text>
-                          <Text style={[styles.childPillGrade, { color: isActive ? '#ffffff80' : colors.textMuted }]}>{child.grade}</Text>
+                          <Text style={[styles.childPillName, isActive && { color: colors.accentYellow }]}>{child.name}</Text>
+                          <Text style={styles.childPillGrade}>{child.grade}</Text>
                         </View>
                       </TouchableOpacity>
                     );

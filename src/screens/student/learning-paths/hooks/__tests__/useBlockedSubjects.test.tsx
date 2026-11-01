@@ -6,8 +6,8 @@ import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { useBlockedSubjects } from '../useBlockedSubjects';
 
-function Harness({ email }: { email: string | undefined }) {
-  const blocked = useBlockedSubjects(email);
+function Harness({ email, refreshKey }: { email: string | undefined; refreshKey?: number }) {
+  const blocked = useBlockedSubjects(email, refreshKey);
   return <Text testID="blocked">{JSON.stringify([...blocked])}</Text>;
 }
 
@@ -62,5 +62,74 @@ describe('useBlockedSubjects — data source (parental controls RCA)', () => {
     await render(<Harness email="kid@test.com" />);
 
     expect(global.fetch).toHaveBeenCalledWith(`${PARENTAL_CONTROLS_SERVER_URL}/parent/screen-time-status/kid%40test.com`);
+  });
+});
+
+describe('useBlockedSubjects — live updates (no page refresh)', () => {
+  const respond = (body: any) => (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => body });
+
+  test('a new refresh key re-checks and shows a subject the parent just locked', async () => {
+    respond({ subjectFilter: { enabled: true, blockedSubjects: [] } });
+    const view = await render(<Harness email="a@a.com" refreshKey={0} />);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByTestId('blocked').props.children).toBe('[]');
+
+    respond({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } });
+    await view.rerender(<Harness email="a@a.com" refreshKey={1} />);
+
+    expect(await screen.findByText('["Mathematics"]')).toBeTruthy();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('unlocking (or turning the filter off) clears the old lock', async () => {
+    respond({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } });
+    const view = await render(<Harness email="a@a.com" refreshKey={0} />);
+    expect(await screen.findByText('["Mathematics"]')).toBeTruthy();
+
+    respond({ subjectFilter: { enabled: false, blockedSubjects: ['Mathematics'] } });
+    await view.rerender(<Harness email="a@a.com" refreshKey={1} />);
+
+    expect(await screen.findByText('[]')).toBeTruthy();
+  });
+
+  test('a failed re-check keeps the last known locks', async () => {
+    respond({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } });
+    const view = await render(<Harness email="a@a.com" refreshKey={0} />);
+    expect(await screen.findByText('["Mathematics"]')).toBeTruthy();
+
+    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('network down'));
+    await view.rerender(<Harness email="a@a.com" refreshKey={1} />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByTestId('blocked').props.children).toBe('["Mathematics"]');
+  });
+});
+
+describe('useBlockedSubjects — out-of-order replies and profile switch (review)', () => {
+  test('a slow older reply never overwrites a newer one', async () => {
+    let releaseOld: (v: any) => void = () => {};
+    (global.fetch as jest.Mock)
+      .mockReturnValueOnce(new Promise((r) => { releaseOld = r; }))
+      .mockResolvedValueOnce({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: [] } }) });
+    const view = await render(<Harness email="a@a.com" refreshKey={0} />);
+    await view.rerender(<Harness email="a@a.com" refreshKey={1} />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    releaseOld({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } }) });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByTestId('blocked').props.children).toBe('[]');
+  });
+
+  test("switching profile never shows the previous child's locks, even if the new check fails", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } }) });
+    const view = await render(<Harness email="a@a.com" />);
+    expect(await screen.findByText('["Mathematics"]')).toBeTruthy();
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => ({ error: 'boom' }) });
+    await view.rerender(<Harness email="b@b.com" />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByTestId('blocked').props.children).toBe('[]');
   });
 });

@@ -3,7 +3,7 @@
 // StudentDataContext mocked.
 
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { render, screen, userEvent, act } from '@testing-library/react-native';
 import LearningPathsScreen from '../LearningPathsScreen';
 
 const mockNavigate = jest.fn();
@@ -267,5 +267,26 @@ describe('LearningPathsScreen', () => {
     expect(screen.getByText('2 chapters')).toBeTruthy();
     expect(screen.getAllByText('50%')).toHaveLength(2); // the card and the overall ring
     mockCompletedTopics = [];
+  });
+
+  test('a subject the parent locks while the student is on this screen locks when they come back to it', async () => {
+    let blocked: string[] = [];
+    mockFetchByUrl({
+      subjects: () => Promise.resolve({
+        json: async () => ({ subjects: [{ subject: 'Mathematics', topicCount: 10, topics: [] }] }),
+      }),
+      blocked: () => Promise.resolve({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: blocked } }) }),
+    });
+    const listeners: Record<string, () => void> = {};
+    const navigation = { ...navProp(), isFocused: () => true, addListener: (e: string, cb: () => void) => { listeners[e] = cb; return () => {}; } };
+
+    await render(<LearningPathsScreen navigation={navigation} />);
+    expect(await screen.findByText('Mathematics')).toBeTruthy();
+    expect(screen.queryByText('Blocked by parent')).toBeNull();
+
+    blocked = ['Mathematics'];
+    await act(async () => { listeners.focus?.(); });
+
+    expect(await screen.findByText('Blocked by parent')).toBeTruthy();
   });
 });
