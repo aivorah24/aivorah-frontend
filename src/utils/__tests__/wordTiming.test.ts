@@ -30,4 +30,9 @@ describe('wordWeight — Hindi (Devanagari)', () => {
     expect(ratio).toBeGreaterThan(0.85);
     expect(ratio).toBeLessThan(1.15);
   });
+
+  test('a danda written as its own word is only a pause, not a spoken word', () => {
+    expect(wordWeight('। ')).toBe(1.5);
+    expect(wordWeight('है ') + wordWeight('। ')).toBe(wordWeight('है।'));
+  });
 });

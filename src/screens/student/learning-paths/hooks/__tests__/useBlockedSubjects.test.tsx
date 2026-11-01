@@ -104,3 +104,32 @@ describe('useBlockedSubjects — live updates (no page refresh)', () => {
     expect(screen.getByTestId('blocked').props.children).toBe('["Mathematics"]');
   });
 });
+
+describe('useBlockedSubjects — out-of-order replies and profile switch (review)', () => {
+  test('a slow older reply never overwrites a newer one', async () => {
+    let releaseOld: (v: any) => void = () => {};
+    (global.fetch as jest.Mock)
+      .mockReturnValueOnce(new Promise((r) => { releaseOld = r; }))
+      .mockResolvedValueOnce({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: [] } }) });
+    const view = await render(<Harness email="a@a.com" refreshKey={0} />);
+    await view.rerender(<Harness email="a@a.com" refreshKey={1} />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    releaseOld({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } }) });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByTestId('blocked').props.children).toBe('[]');
+  });
+
+  test("switching profile never shows the previous child's locks, even if the new check fails", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => ({ subjectFilter: { enabled: true, blockedSubjects: ['Mathematics'] } }) });
+    const view = await render(<Harness email="a@a.com" />);
+    expect(await screen.findByText('["Mathematics"]')).toBeTruthy();
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ json: async () => ({ error: 'boom' }) });
+    await view.rerender(<Harness email="b@b.com" />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.getByTestId('blocked').props.children).toBe('[]');
+  });
+});

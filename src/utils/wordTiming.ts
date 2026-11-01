@@ -35,16 +35,18 @@ const HINDI_SYLLABLE = 0.8;
 
 // Devanagari: each vowel/consonant letter not silenced by a virama is ~one syllable; a bare final consonant is not voiced.
 function hindiSyllables(word: string): number {
-  const n = (word.match(/[ऄ-हक़-ॡ]़?(?!्)/g) || []).length;
-  return n > 1 && /[क-हक़-य़]़?$/.test(word) ? n - 1 : n;
+  const n = (word.match(/[\u0904-\u0939\u0958-\u0961]\u093C?(?!\u094D)/g) || []).length;
+  return n > 1 && /[\u0915-\u0939\u0958-\u095F]\u093C?$/.test(word) ? n - 1 : n;
 }
 
 // Estimate spoken duration weight for a token (word + trailing spaces/punctuation).
 // Returns a float: 1.0 ≈ average content word, lower = shorter, higher = longer + pause.
 export function wordWeight(token: string): number {
-  const hindi = token.replace(/[^ऀ-ॣ]/g, '');
+  const hindi = token.replace(/[^\u0900-\u0963]/g, '');
   let syllables: number;
-  if (hindi) {
+  if (/^[\u0964\u0965\s]+$/.test(token)) {
+    syllables = 0; // a danda on its own is a pause, not a word
+  } else if (hindi) {
     syllables = hindiSyllables(hindi) * HINDI_SYLLABLE || 1;
   } else {
     const clean = token.toLowerCase().replace(/[^a-z]/g, '');
@@ -57,7 +59,7 @@ export function wordWeight(token: string): number {
     if (FUNCTION_WORDS.has(clean)) syllables = Math.max(0.4, syllables * 0.7);
   }
   // Punctuation pauses: sentence-end (incl. Hindi ।/॥, Urdu ۔) adds ~1.5 units, comma/dash adds ~0.5
-  if (/[.!?।॥۔]/.test(token)) syllables += 1.5;
+  if (/[.!?\u0964\u0965\u06D4]/.test(token)) syllables += 1.5;
   else if (/[,;:—–]/.test(token)) syllables += 0.5;
   return syllables;
 }

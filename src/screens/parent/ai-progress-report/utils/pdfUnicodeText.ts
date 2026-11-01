@@ -10,7 +10,7 @@ const PAD_PX = 2;
 type CanvasFactory = () => HTMLCanvasElement;
 
 export function needsUnicode(text: string): boolean {
-  return [...text].some((ch) => !/[\n\x20-\x7E -ÿ]/.test(ch) && !WIN_1252_EXTRAS.includes(ch));
+  return [...text].some((ch) => !/[\n\x20-\x7E\u00A0-\u00FF]/.test(ch) && !WIN_1252_EXTRAS.includes(ch));
 }
 
 export function enableUnicodeText(doc: any, createCanvas: CanvasFactory = () => document.createElement('canvas')) {

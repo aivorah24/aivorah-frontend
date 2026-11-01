@@ -18,6 +18,7 @@ import { useParentAIProgressReport } from './hooks/useParentAIProgressReport';
 import ReportSection from './components/ReportSection';
 import { pdfSafeDeep } from './utils/pdfSafeText';
 import { enableUnicodeText } from './utils/pdfUnicodeText';
+import { textAfterFirstLine } from './utils/pdfLines';
 import { normalizeCurriculum } from '../../../utils/curriculum';
 
 export default function ParentAIProgressReportScreen({ navigation, route }: any) {
@@ -331,10 +332,12 @@ export default function ParentAIProgressReportScreen({ navigation, route }: any)
         doc.text(`${si.subject}`, ML, y);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...MUTED);
-        doc.text(':  ' + doc.splitTextToSize(si.insight, TW - doc.getTextWidth(`${si.subject}:  `))[0], ML + doc.getTextWidth(`${si.subject}`), y);
+        const firstLine = doc.splitTextToSize(si.insight, TW - doc.getTextWidth(`${si.subject}:  `))[0] || '';
+        doc.text(':  ' + firstLine, ML + doc.getTextWidth(`${si.subject}`), y);
         y += 5.6;
         // remaining lines of insight
-        const rest = wrap(si.insight).slice(1);
+        const restText = textAfterFirstLine(si.insight, firstLine);
+        const rest = restText ? wrap(restText) : [];
         rest.forEach(l => { doc.text(l, ML, y); y += 5.4; });
         gap(2);
       });
