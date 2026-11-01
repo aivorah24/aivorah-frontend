@@ -61,3 +61,8 @@ coverage/
 .scratch/
 fix.js
 fix_teacher.js
+
+# AI assistant files (kept local, never committed)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
