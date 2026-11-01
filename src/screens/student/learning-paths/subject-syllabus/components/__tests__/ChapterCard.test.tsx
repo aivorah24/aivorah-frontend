@@ -59,3 +59,22 @@ describe('ChapterCard — pending/"Coming soon" (Bug #11 follow-up)', () => {
     expect(screen.queryByText('Coming soon')).toBeNull();
   });
 });
+
+describe('ChapterCard — single-lesson chapters (Lessons coming soon only when it really is)', () => {
+  const title = 'अंतिम दौर - दो: राष्ट्रीयता बनाम साम्राज्यवाद';
+
+  test('a CBSE chapter that is one lesson with content does not say "Lessons coming soon"', async () => {
+    await renderCard({ unitNo: 39, title, pending: false, topics: [{ name: title, kind: 'section', page: 1 }] });
+
+    expect(screen.queryByText('Lessons coming soon')).toBeNull();
+    expect(screen.queryByText('Coming soon')).toBeNull();
+    expect(screen.getByText('1 topic')).toBeTruthy();
+  });
+
+  test('an ICSE syllabus-only chapter (server marks comingSoon) still says "Lessons coming soon"', async () => {
+    await renderCard({ unitNo: 1, title: 'Numbers', pending: false, comingSoon: true, topics: [{ name: 'Numbers', comingSoon: true }] });
+
+    expect(screen.getByText('Lessons coming soon')).toBeTruthy();
+    expect(screen.getByText('Coming soon')).toBeTruthy();
+  });
+});

@@ -7,6 +7,15 @@ export type VoiceProfile = { gender?: 'f' | 'm'; pitch?: number; rate?: number; 
 // Chrome can garbage-collect an utterance mid-speech and never fire onend; keep a reference.
 let speaking: SpeechSynthesisUtterance | null = null;
 
+// Chrome's online voices silently drop a line spoken the instant after cancelling one that is still talking
+// (speed change / replay / skip mid-line), so a restart waits a moment.
+const RESTART_GAP_MS = 120;
+let restartTimer: ReturnType<typeof setTimeout> | null = null;
+let interruptedAt = -Infinity;
+function clearRestart() {
+  if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+}
+
 const FEMALE_VOICES = [/aria/i, /jenny/i, /michelle/i, /zira/i, /samantha/i, /karen/i, /moira/i, /female/i];
 const MALE_VOICES = [/guy/i, /ryan/i, /davis/i, /david/i, /mark/i, /alex/i, /daniel/i, /george/i, /male/i];
 
@@ -20,6 +29,8 @@ export function speakWithBoundary(
 ): void {
   if (Platform.OS !== 'web' || !(window as any).speechSynthesis) { onEnd(); return; }
   const synth = (window as any).speechSynthesis as SpeechSynthesis;
+  const wasTalking = synth.speaking || synth.pending || Date.now() - interruptedAt < RESTART_GAP_MS;
+  clearRestart();
   synth.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.rate = rate * (profile?.rate ?? 1);
@@ -61,7 +72,8 @@ export function speakWithBoundary(
   utter.onstart = () => onStart?.();
   utter.onend = () => { if (speaking === utter) speaking = null; onEnd(); };
   utter.onerror = () => onEnd();
-  synth.speak(utter);
+  if (wasTalking) restartTimer = setTimeout(() => { restartTimer = null; synth.speak(utter); }, RESTART_GAP_MS);
+  else synth.speak(utter);
 }
 
 let currentClip: HTMLAudioElement | null = null;
@@ -85,8 +97,11 @@ export function stopSpeaking() {
     try { currentClip.pause(); } catch {}
     currentClip.onended = null; currentClip.onerror = null; currentClip = null;
   }
+  clearRestart();
   if (Platform.OS === 'web' && (window as any).speechSynthesis) {
-    try { (window as any).speechSynthesis.cancel(); } catch {}
+    const synth = (window as any).speechSynthesis as SpeechSynthesis;
+    if (synth.speaking || synth.pending) interruptedAt = Date.now();
+    try { synth.cancel(); } catch {}
   }
 }
 

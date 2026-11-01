@@ -91,7 +91,7 @@ export default function ChapterCard({
               ? `${subtopicNames.length || 0} sub-topic${subtopicNames.length === 1 ? '' : 's'} in the textbook`
               : isUnitShaped
                 ? `${chapter.topics.length} chapter${chapter.topics.length === 1 ? '' : 's'}`
-                : chapterOnly
+                : chapterOnly && chapter.comingSoon
                   ? 'Lessons coming soon'
                   : `${chapter.topics.length} topic${chapter.topics.length === 1 ? '' : 's'}`}
           </Text>
