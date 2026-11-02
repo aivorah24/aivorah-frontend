@@ -1,28 +1,27 @@
-# Aivorah Frontend — Context Router
+# Aivorah Frontend — guide for AI assistants
 
-This file is an INDEX, not the architecture. Read the relevant `docs/*.md` file on demand — do not read all of them for every task, and do not treat this file as a substitute for them.
+Expo (React Native + web) app for every Aivorah persona. Start with `README.md` for run, test, deploy and folder layout.
 
-## Where things live
-- Full repo list + purpose/tech/deploy per repo → `docs/REPO_MAP.md`
-- Backend service details (routes, deps, consumers) → `docs/SERVICE_MAP.md`
-- High-level diagram + current vs legacy architecture → `docs/SYSTEM_ARCHITECTURE.md`
-- What's deployed where (Vercel/Render/GCP/unknown) → `docs/DEPLOYMENT_MAP.md`
-- Frontend→service and legacy→monolith request flows → `docs/DATA_FLOW.md`
-- API documentation status (no OpenAPI specs exist) → `docs/API_MAP.md`
+## Where the docs live
+Architecture docs are in the private `aivorah24/aivorah-handover` repo (clone it next to this one):
+- Repo list, purpose, deploy target → `01-overview/architecture/REPO_MAP.md`
+- Backend services, routes, callers → `01-overview/architecture/SERVICE_MAP.md`
+- Diagram, current vs legacy → `01-overview/architecture/SYSTEM_ARCHITECTURE.md`
+- What runs where → `01-overview/architecture/DEPLOYMENT_MAP.md`
+- Request flows → `01-overview/architecture/DATA_FLOW.md`
 
-## Hard architectural rules — do not violate these
-1. **E2E tests belong in `aivorah-e2e-tests`.** That is the canonical E2E repo — the only one. The former `aivorah-frontend/e2e/` embedded copy (a legacy leftover from a 2026-08-29 submodule-to-directory conversion) was deleted (2026-09-10); do not recreate it. CircleCI here no longer runs Playwright at all — after `build_and_test` passes, a `trigger-e2e` job dispatches a `repository_dispatch` to `aivorah-e2e-tests` with this commit's live Vercel preview URL; that repo runs its own smoke suite against it and reports a commit status back here.
-2. **The monolith is `ai-mentor/server`** (Node/Express) + a separate Python half `ai-mentor/backend` (RAG/Qdrant). Never edit the monolith incidentally — only as a deliberate, scoped task. Never add NEW dependencies on it. Check `docs/SERVICE_MAP.md` for whether a feature already has a dedicated microservice before assuming monolith use.
-3. **15 microservices, 1 frontend, 1 E2E repo, 1 monolith, 1 db-schema repo = 19 repos total.** Full list in `REPO_MAP.md`.
+Read the one you need, not all of them. Items marked "unconfirmed" or "sampled" are not verified facts.
 
-## Task-scoping rules
-- Identify the OWNING repository for a task first (see `REPO_MAP.md`/`SERVICE_MAP.md`) before touching anything.
-- Inspect direct dependencies only when the task requires it — do not scan all 19 repos for a single-service task.
-- Some items in the architecture docs are marked "sampled/not exhaustively verified" or "unconfirmed" — treat those as genuinely unknown, not as facts, until re-verified.
+## Hard rules
+1. **E2E tests live only in `aivorah-e2e-tests`.** Do not add Playwright/E2E code here. CircleCI's `trigger-e2e` job asks that repo to test this commit's Vercel preview.
+2. **`ai-mentor` is the legacy monolith.** Don't edit it as a side effect of another task, and never add new dependencies on it. Check `SERVICE_MAP.md` for the dedicated `aivorah-*-service` first.
+3. **Find the owning repo first** (`REPO_MAP.md`), then change only that repo and the direct dependencies the task needs.
+4. **Service URLs** come from `src/config/*ServerUrl.ts`. Don't hardcode service URLs elsewhere.
+5. **Tests sit next to the feature** in its `__tests__/` folder. Run `npm run test:ci` before opening a PR.
+6. **Never commit secrets.** `EXPO_PUBLIC_*` values are bundled into the client, so they must not be secret.
 
-## Token-efficiency rules (this session and all future ones)
-- Prefer targeted `grep`/glob searches over broad directory scans.
-- Use `Read` with offset/limit on large files instead of dumping whole files.
-- Never `cat` large files or dump full build/test logs — summarize results instead.
-- Don't re-read a file already read this session unless it changed.
-- Don't run Desktop-wide or repo-wide searches when a targeted path is known.
+## Environments
+The current Render services + Test Supabase project are the testing environment that users see today. A separate production setup (GCP + production database) is planned; check `DEPLOYMENT_MAP.md` before assuming which one a change affects.
+
+## Personal notes
+Put personal preferences in `CLAUDE.local.md` (gitignored), not in this file.
