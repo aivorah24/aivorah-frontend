@@ -62,7 +62,6 @@ coverage/
 fix.js
 fix_teacher.js
 
-# AI assistant files (kept local, never committed)
-CLAUDE.md
+# Personal AI assistant files (CLAUDE.md itself is shared and committed)
 CLAUDE.local.md
-.claude/
+.claude/settings.local.json
