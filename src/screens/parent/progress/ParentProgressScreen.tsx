@@ -17,6 +17,7 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useTheme } from '../../../context/ThemeContext';
 import { useParentProgress } from './hooks/useParentProgress';
 import { makeStyles, AV } from './styles';
+import { buildSubjectProgress, learningPathTotals } from './utils/subjectProgress';
 
 function formatStudyTime(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -75,12 +76,20 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     insightAnims,
     child,
     fetchData,
+    learningSubjects,
   } = useParentProgress(route);
 
   // Derived data
-  const completedTopics: string[] = stats?.completedTopics ?? [];
-  const totalTopics = stats?.totalTopics || completedTopics.length || 1;
-  const progressPct = Math.min(100, Math.round((completedTopics.length / totalTopics) * 100));
+  const completedTopics: string[] = useMemo(() => stats?.completedTopics ?? [], [stats]);
+  // Subjects and totals follow the child's learning path, not a fixed subject list.
+  const subjectProgress = useMemo(
+    () => buildSubjectProgress(learningSubjects ?? [], completedTopics),
+    [learningSubjects, completedTopics],
+  );
+  const pathTotals = learningPathTotals(subjectProgress);
+  const curriculumDone = pathTotals.total > 0 ? pathTotals.completed : completedTopics.length;
+  const totalTopics = pathTotals.total || stats?.totalTopics || completedTopics.length || 1;
+  const progressPct = Math.min(100, Math.round((curriculumDone / totalTopics) * 100));
   const actMax = 240; // full bar = 4 hours (240 min); goal line (2h) sits at the halfway mark
   const totalWeekMins = weekly.reduce((a, b) => a + b, 0);
   const topics: any[] = practiceInsights?.topics ?? [];
@@ -103,48 +112,6 @@ export default function ParentProgressScreen({ navigation, route }: any) {
     }
     return list.slice(0, 4);
   }, [topics, stats, gold, goldLight]);
-
-  // Subject progress — derived from completedTopics + practice insights
-  const subjectProgress: any[] = useMemo(() => {
-    // Use server-provided subjectProgress if available
-    if (stats?.subjectProgress && Array.isArray(stats.subjectProgress)) {
-      return stats.subjectProgress;
-    }
-    // Derive: keyword-based topic → subject mapping
-    // Colors match LearningPathsScreen SUBJECT_META exactly
-    const SUBJECT_MAP: Record<string, { label: string; icon: string; color: string; gradFrom: string; gradTo: string; keywords: string[] }> = {
-      Mathematics:      { label: 'Mathematics',  icon: 'trending-up', color: '#BAA467', gradFrom: '#BAA467', gradTo: '#C9B078', keywords: ['addition','subtraction','multiplication','division','fraction','decimal','algebra','geometry','number','calculation','percentage','ratio','currency','barter','coins','money','weight','measurement','time','data','graph','symmetry','area','perimeter'] },
-      Science:          { label: 'Science',       icon: 'zap',         color: '#BAA467', gradFrom: '#BAA467', gradTo: '#C9B078', keywords: ['plant','animal','adaptation','habitat','living','force','energy','matter','light','sound','water','air','body','health','food','nutrition','environment','soil','rock','weather','electricity','magnet'] },
-      English:          { label: 'English',       icon: 'book-open',   color: '#BAA467', gradFrom: '#BAA467', gradTo: '#C9B078', keywords: ['reading','writing','grammar','poem','story','comprehension','vocabulary','verb','noun','adjective','adverb','sentence','paragraph','letter','punctuation','spelling','language','composition'] },
-      'Social Studies': { label: 'Social Studies', icon: 'globe',      color: '#BAA467', gradFrom: '#BAA467', gradTo: '#C9B078', keywords: ['history','geography','community','culture','map','country','economics','trade','government','citizen','society','family','festival','tradition','heritage','resource','agriculture','industry','transport','communication','continent','climate'] },
-    };
-    const subjectCounts: Record<string, { total: number; completed: number }> = {};
-    Object.keys(SUBJECT_MAP).forEach(s => { subjectCounts[s] = { total: 0, completed: 0 }; });
-
-    // Count completed topics per subject
-    completedTopics.forEach(topic => {
-      const lower = topic.toLowerCase();
-      for (const [subj, meta] of Object.entries(SUBJECT_MAP)) {
-        if (meta.keywords.some(k => lower.includes(k))) {
-          subjectCounts[subj].completed++;
-          subjectCounts[subj].total++;
-          return;
-        }
-      }
-      // Default unmatched to Mathematics
-      subjectCounts['Mathematics'].completed++;
-      subjectCounts['Mathematics'].total++;
-    });
-
-    // Use totalTopics split equally if no matches
-    const totalPerSubject = Math.max(1, Math.floor(totalTopics / 4));
-    return Object.entries(SUBJECT_MAP).map(([key, meta]) => {
-      const counts = subjectCounts[key];
-      const effectiveTotal = Math.max(counts.total, totalPerSubject);
-      const pct = Math.min(100, Math.round((counts.completed / effectiveTotal) * 100));
-      return { label: meta.label, icon: meta.icon, color: meta.color, gradFrom: meta.gradFrom, gradTo: meta.gradTo, pct, completed: counts.completed, total: effectiveTotal };
-    }).filter(s => s.completed > 0 || completedTopics.length === 0);
-  }, [stats, completedTopics, totalTopics]);
 
   // Achievements derived from stats
   const achievements: any[] = useMemo(() => {
@@ -240,7 +207,7 @@ export default function ParentProgressScreen({ navigation, route }: any) {
                     </View>
                     <View>
                       <Text style={[styles.cardTitle, { color: colors.textMain }]}>Curriculum Progress</Text>
-                      <Text style={{ fontFamily: fonts.serif, fontSize: 10, color: colors.textDim }}>{completedTopics.length} of {totalTopics} topics completed</Text>
+                      <Text style={{ fontFamily: fonts.serif, fontSize: 10, color: colors.textDim }}>{curriculumDone} of {totalTopics} topics completed</Text>
                     </View>
                   </View>
 
@@ -351,7 +318,9 @@ export default function ParentProgressScreen({ navigation, route }: any) {
 
                   {subjectProgress.length === 0 ? (
                     <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-                      <Text style={{ fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, textAlign: 'center' }}>Complete topics to see subject breakdown</Text>
+                      {learningSubjects === null
+                        ? <ActivityIndicator size="small" color={gold} />
+                        : <Text style={{ fontFamily: fonts.serif, fontSize: 11, color: colors.textDim, textAlign: 'center' }}>No subjects in this learning path yet</Text>}
                     </View>
                   ) : (
                     subjectProgress.map((s, i) => (

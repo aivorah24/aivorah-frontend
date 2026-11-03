@@ -55,9 +55,10 @@ export async function fetchCurriculumSubjects(grade: string, curriculum: string)
 }
 
 // Topic names per subject from the Learning Paths syllabus (same source as the student screens).
-export async function fetchSubjectTopics(curriculum: string, grade: string, subject: string): Promise<{ topic: string; unit: string }[]> {
+export async function fetchSubjectTopics(curriculum: string, grade: string, subject: string): Promise<{ topic: string; unit: string; unitNo?: number }[]> {
   const syl = await fetchSubjectSyllabus(curriculum, grade, subject);
-  return syl.units.flatMap(u => (u.topics ?? []).filter(t => t?.name).map(t => ({ topic: t.name, unit: u.title })));
+  return syl.units.flatMap((u: any) => (u.topics ?? []).filter((t: any) => t?.name)
+    .map((t: any) => ({ topic: t.name, unit: u.title, unitNo: typeof u.unitNo === 'number' ? u.unitNo : undefined })));
 }
 
 // Every practice attempt for one subject, newest first, with per-question answers.

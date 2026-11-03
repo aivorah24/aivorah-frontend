@@ -9,10 +9,10 @@ import TopicProgressRow from './TopicProgressRow';
 import { useTopicAttempts } from '../hooks/useTopicAttempts';
 import { summarizeByTopic, groupByUnit, formatDuration, average, scoreColor, EMPTY_SUMMARY } from '../utils/topicAttempts';
 
-interface PanelTopic { topic: string; unit?: string }
+interface PanelTopic { topic: string; unit?: string; unitNo?: number }
 
 export default function SubjectDetailPanel({
-  sub, childId, completedSet, colors, onClose, isMobile,
+  sub, childId, completedSet, colors, onClose, isMobile, unitWord = 'Chapter',
 }: {
   sub: any;
   childId?: string;
@@ -20,6 +20,7 @@ export default function SubjectDetailPanel({
   colors: AppColors;
   onClose: () => void;
   isMobile: boolean;
+  unitWord?: 'Chapter' | 'Unit';
 }) {
   const meta = subjectMeta(sub.subject);
   const accent = colors.accentYellow;
@@ -50,9 +51,9 @@ export default function SubjectDetailPanel({
     { label: 'Avg tries / topic', value: topicsPractised ? String(avgTries) : '—' },
   ];
 
-  const renderTopic = (t: PanelTopic, first = false) => (
+  const renderTopic = (t: PanelTopic, first = false, key: string = t.topic) => (
     <TopicProgressRow
-      key={t.topic}
+      key={key}
       first={first}
       name={t.topic}
       summary={byTopic.get(t.topic) ?? EMPTY_SUMMARY}
@@ -108,25 +109,30 @@ export default function SubjectDetailPanel({
               {units.map((u, ui) => {
                 const unitDone = u.topics.filter(t => completedSet.has(t.topic)).length;
                 const unitAvg = average(u.topics.map(t => byTopic.get(t.topic)?.bestScore).filter((x): x is number => x != null));
+                const unitNo = u.unitNo ?? ui + 1;
+                // Same label as the student's syllabus card: "Chapter 1" + the unit's own title.
+                const bareTitle = !u.unit || /^(chapter|unit)\s*\d+$/i.test(u.unit.trim());
                 return (
-                  <View key={u.unit || ui} testID={`unit-${ui + 1}`} style={[styles.list, { borderColor: colors.borderColor }, isMobile ? styles.full : styles.half]}>
+                  <View key={`${u.unitNo ?? ''}-${ui}`} testID={`unit-${ui + 1}`} style={[styles.list, { borderColor: colors.borderColor }, isMobile ? styles.full : styles.half]}>
                     <View style={[styles.unitHead, { backgroundColor: accent + '0F' }]}>
-                      <Text style={[styles.unitNo, { color: accent }]}>UNIT {ui + 1}</Text>
-                      <Text style={[styles.unitTitle, { color: colors.textMain }]} numberOfLines={1}>{u.unit || 'Other topics'}</Text>
+                      <Text style={[styles.unitNo, { color: accent }]}>{u.unit ? `${unitWord.toUpperCase()} ${unitNo}` : 'OTHER TOPICS'}</Text>
+                      {bareTitle
+                        ? <View style={{ flex: 1 }} />
+                        : <Text style={[styles.unitTitle, { color: colors.textMain }]} numberOfLines={1}>{u.unit}</Text>}
                       <Text style={[styles.unitMeta, { color: colors.textMuted }]}>{unitDone}/{u.topics.length} done</Text>
                       {unitAvg != null && (
                         <Text style={[styles.unitMeta, { color: scoreColor(unitAvg, accent) }]}>· avg {unitAvg}%</Text>
                       )}
                     </View>
-                    {u.topics.map(t => renderTopic(t))}
+                    {u.topics.map((t, ti) => renderTopic(t, false, `${ti}-${t.topic}`))}
                   </View>
                 );
               })}
             </View>
           ) : (
             <View style={styles.grid}>
-              {topics.map(t => (
-                <View key={t.topic} style={[styles.list, { borderColor: colors.borderColor }, isMobile ? styles.full : styles.half]}>
+              {topics.map((t, ti) => (
+                <View key={`${ti}-${t.topic}`} style={[styles.list, { borderColor: colors.borderColor }, isMobile ? styles.full : styles.half]}>
                   {renderTopic(t, true)}
                 </View>
               ))}
