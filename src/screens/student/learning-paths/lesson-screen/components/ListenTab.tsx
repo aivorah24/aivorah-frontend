@@ -13,7 +13,7 @@ import HighlightedWords from '../../../../../components/common/HighlightedWords'
 import { splitWords } from '../../../../../utils/wordTiming';
 import ListenVisualBoard from './ListenVisualBoard';
 import MathBoard, { IntroBoard } from './MathBoard';
-import { ExampleTabs, TutorControls } from './TutorControls';
+import { ExampleTabs, TutorControls, TutorWhy } from './TutorControls';
 import TutorSteps from './TutorSteps';
 
 const PLAYBACK_RATES = [0.6, 0.78, 1.0, 1.25];
@@ -118,7 +118,9 @@ export default function ListenTab({
   return (
     <View style={styles.listenModeWrap}>
       <View style={styles.dualPane}>
-        <ScrollView ref={leftScrollRef} style={styles.leftPane} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Left column: the text scrolls, the play/pause controls stay put underneath it. */}
+        <View style={styles.leftPane}>
+        <ScrollView ref={leftScrollRef} style={styles.leftScroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.listenTopRow}>
             {tutorMode ? <View /> : (
             <View style={[styles.listeningToChip, { backgroundColor: colors.accentGreen + '1c' }]}>
@@ -282,117 +284,9 @@ export default function ListenTab({
             </View>
           )}
 
-          {/* ── Maths AI Tutor: compact "Listen" so the tutor can read the
-              current step aloud (age 7 benefits from hearing it). ── */}
-          {tutorMode && (
-            <TutorControls
-              step={step}
-              isLast={listenStep === stepsCount - 1}
-              nextLabel={listenSteps[listenStep + 1]?.math ? `Next: ${listenSteps[listenStep + 1].heading}` : 'Next'}
-              playing={listenPlaying}
-              finished={tutorFinished}
-              onPlay={toggleListenPlay}
-              onReplay={repeatStep}
-              onNext={() => { closeAllPanels(); narration.playListenStep(listenStep + 1); }}
-              onPractice={() => setMode('practice')}
-              colors={colors}
-            />
-          )}
-
-          {isMath && !tutorMode && (
-            <TouchableOpacity
-              onPress={toggleListenPlay}
-              activeOpacity={0.85}
-              style={{
-                flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 8, marginTop: 14,
-                paddingVertical: 8, paddingHorizontal: 14, borderRadius: 22,
-                backgroundColor: colors.primary + '18', borderWidth: 1, borderColor: colors.primary + '40',
-              }}
-            >
-              <Feather name={listenPlaying ? 'pause' : 'volume-2'} size={15} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>
-                {listenPlaying ? 'Pause' : 'Listen to this step'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Step navigation — placed right under the content so the student
-              moves through steps without scrolling to a far footer. */}
-          {isMath && !tutorMode && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 }}>
-              <TouchableOpacity
-                style={[styles.mathFooterBtn, { borderColor: colors.borderColor }, listenStep === 0 && { opacity: 0.4 }]}
-                onPress={() => goToListenStep(listenStep - 1, closeAllPanels)}
-                disabled={listenStep === 0}
-                activeOpacity={0.85}
-              >
-                <Feather name="arrow-left" size={14} color={colors.textMain} />
-                <Text style={[styles.mathFooterBtnText, { color: colors.textMain }]}>Previous</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.mathFooterBtnPrimary, { backgroundColor: colors.accentGreen }, listenStep === (stepsCount ?? 1) - 1 && { opacity: 0.5 }]}
-                onPress={() => goToListenStep(listenStep + 1, closeAllPanels)}
-                disabled={listenStep === (stepsCount ?? 1) - 1}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.nextPartText}>{listenStep === (stepsCount ?? 1) - 1 ? 'Finished' : 'Next'}</Text>
-                {listenStep !== (stepsCount ?? 1) - 1 && <Feather name="arrow-right" size={13} color="#fff" />}
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* ── Player (Science/English/etc — full audiobook transport) ── */}
-          {!isMath && (
-          <View style={[styles.card, styles.playerBar, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
-              <TouchableOpacity
-                style={[styles.playBtn, { backgroundColor: colors.accentGreen }]}
-                onPress={toggleListenPlay}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={listenPlaying ? 'Pause' : 'Play'}
-              >
-                <Feather name={listenPlaying ? 'pause' : 'play'} size={18} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.playerStatus, { color: colors.textMuted }]}>{listenPlaying ? 'Reading aloud…' : 'Tap to listen'}</Text>
-              <TouchableOpacity
-                style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
-                onPress={repeatStep}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Repeat"
-              >
-                <Feather name="rotate-ccw" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-              <View style={styles.speedBtn}>
-                <TouchableOpacity
-                  style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
-                  onPress={() => setSpeedMenuOpen(v => !v)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reading speed"
-                >
-                  <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 12.5 }}>{playbackRate}x</Text>
-                </TouchableOpacity>
-                {speedMenuOpen && (
-                  <View style={[styles.speedMenu, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
-                    {PLAYBACK_RATES.map(r => (
-                      <TouchableOpacity
-                        key={r}
-                        style={[styles.speedMenuRow, r === playbackRate && { backgroundColor: colors.accentGreen + '18' }]}
-                        onPress={() => { changePlaybackRate(r); setSpeedMenuOpen(false); }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={{ color: r === playbackRate ? colors.accentGreen : colors.textMain, fontWeight: r === playbackRate ? '700' : '500', fontSize: 12.5 }}>
-                          {r}x
-                        </Text>
-                        {r === playbackRate && <Feather name="check" size={12} color={colors.accentGreen} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-          </View>
-          )}
+          {/* Once the example has been heard: why the method works (the Play/Next
+              buttons are in the fixed bar under the text). */}
+          {tutorMode && tutorFinished && <TutorWhy step={step} colors={colors} />}
 
           {/* ── "Explain This Step" — written, not spoken. No audio anywhere
               in Math: the AI Tutor teaches by showing text/steps, never by
@@ -540,6 +434,120 @@ export default function ListenTab({
             </View>
           )}
         </ScrollView>
+
+        {/* Play / Pause always in view: long text scrolls (and follows the voice)
+            above this bar instead of carrying the controls away with it. */}
+        <View testID="listen-controls" style={[styles.listenControls, { borderColor: colors.borderColor, backgroundColor: colors.bgDark }]}>
+            {tutorMode && (
+              <TutorControls
+                step={step}
+                isLast={listenStep === stepsCount - 1}
+                nextLabel={listenSteps[listenStep + 1]?.math ? `Next: ${listenSteps[listenStep + 1].heading}` : 'Next'}
+                playing={listenPlaying}
+                finished={tutorFinished}
+                onPlay={toggleListenPlay}
+                onReplay={repeatStep}
+                onNext={() => { closeAllPanels(); narration.playListenStep(listenStep + 1); }}
+                onPractice={() => setMode('practice')}
+                colors={colors}
+              />
+            )}
+
+            {isMath && !tutorMode && (
+              <TouchableOpacity
+                onPress={toggleListenPlay}
+                activeOpacity={0.85}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 8,
+                  paddingVertical: 8, paddingHorizontal: 14, borderRadius: 22,
+                  backgroundColor: colors.primary + '18', borderWidth: 1, borderColor: colors.primary + '40',
+                }}
+              >
+                <Feather name={listenPlaying ? 'pause' : 'volume-2'} size={15} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>
+                  {listenPlaying ? 'Pause' : 'Listen to this step'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Step navigation sits in the same fixed bar as the Listen button. */}
+            {isMath && !tutorMode && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                <TouchableOpacity
+                  style={[styles.mathFooterBtn, { borderColor: colors.borderColor }, listenStep === 0 && { opacity: 0.4 }]}
+                  onPress={() => goToListenStep(listenStep - 1, closeAllPanels)}
+                  disabled={listenStep === 0}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="arrow-left" size={14} color={colors.textMain} />
+                  <Text style={[styles.mathFooterBtnText, { color: colors.textMain }]}>Previous</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.mathFooterBtnPrimary, { backgroundColor: colors.accentGreen }, listenStep === (stepsCount ?? 1) - 1 && { opacity: 0.5 }]}
+                  onPress={() => goToListenStep(listenStep + 1, closeAllPanels)}
+                  disabled={listenStep === (stepsCount ?? 1) - 1}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.nextPartText}>{listenStep === (stepsCount ?? 1) - 1 ? 'Finished' : 'Next'}</Text>
+                  {listenStep !== (stepsCount ?? 1) - 1 && <Feather name="arrow-right" size={13} color="#fff" />}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ── Player (Science/English/etc — full audiobook transport) ── */}
+            {!isMath && (
+            <View style={[styles.card, styles.playerBar, styles.playerBarFixed, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+                <TouchableOpacity
+                  style={[styles.playBtn, { backgroundColor: colors.accentGreen }]}
+                  onPress={toggleListenPlay}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={listenPlaying ? 'Pause' : 'Play'}
+                >
+                  <Feather name={listenPlaying ? 'pause' : 'play'} size={18} color="#fff" />
+                </TouchableOpacity>
+                <Text style={[styles.playerStatus, { color: colors.textMuted }]}>{listenPlaying ? 'Reading aloud…' : 'Tap to listen'}</Text>
+                <TouchableOpacity
+                  style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
+                  onPress={repeatStep}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Repeat"
+                >
+                  <Feather name="rotate-ccw" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <View style={styles.speedBtn}>
+                  <TouchableOpacity
+                    style={[styles.playerIconBtn, { borderColor: colors.borderColor }]}
+                    onPress={() => setSpeedMenuOpen(v => !v)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reading speed"
+                  >
+                    <Text style={{ color: colors.textMain, fontWeight: '700', fontSize: 12.5 }}>{playbackRate}x</Text>
+                  </TouchableOpacity>
+                  {speedMenuOpen && (
+                    <View style={[styles.speedMenu, { borderColor: colors.borderColor, backgroundColor: colors.cardDark }]}>
+                      {PLAYBACK_RATES.map(r => (
+                        <TouchableOpacity
+                          key={r}
+                          style={[styles.speedMenuRow, r === playbackRate && { backgroundColor: colors.accentGreen + '18' }]}
+                          onPress={() => { changePlaybackRate(r); setSpeedMenuOpen(false); }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={{ color: r === playbackRate ? colors.accentGreen : colors.textMain, fontWeight: r === playbackRate ? '700' : '500', fontSize: 12.5 }}>
+                            {r}x
+                          </Text>
+                          {r === playbackRate && <Feather name="check" size={12} color={colors.accentGreen} />}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+            </View>
+            )}
+        </View>
+        </View>
 
         {/* ── Right pane: illustration + New Word ── */}
         <ScrollView style={styles.rightPane} contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>

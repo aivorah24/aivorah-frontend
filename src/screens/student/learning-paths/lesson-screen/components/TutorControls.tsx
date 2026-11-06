@@ -39,14 +39,15 @@ export function ExampleTabs({ steps, current, completed, onOpen, colors }: {
   );
 }
 
-// One Play/Pause control, then - once the example has been heard - why the method works and a single next action.
+// Play/Pause and, once the example has been heard, the single next action - side by side in the fixed bar
+// under the steps, so they stay in reach however long the example is.
 export function TutorControls({ step, isLast, nextLabel, playing, finished, onPlay, onReplay, onNext, onPractice, colors }: {
   step?: ListenStep; isLast: boolean; nextLabel: string; playing: boolean; finished: boolean;
   onPlay: () => void; onReplay: () => void; onNext: () => void; onPractice: () => void; colors: AppColors;
 }) {
   const playLabel = playing ? 'Pause' : finished ? 'Play again' : step?.math ? 'Play this example' : 'Play';
   return (
-    <View style={{ marginHorizontal: 24, marginTop: 16, gap: 14 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
       <TouchableOpacity
         testID="tutor-play"
         onPress={finished && !playing ? onReplay : onPlay}
@@ -56,13 +57,6 @@ export function TutorControls({ step, isLast, nextLabel, playing, finished, onPl
         <Feather name={playing ? 'pause' : finished ? 'rotate-ccw' : 'play'} size={16} color={colors.bgDark} />
         <Text style={{ color: colors.bgDark, fontWeight: '800', fontSize: 14.5 }}>{playLabel}</Text>
       </TouchableOpacity>
-
-      {finished && !!step?.math?.why && (
-        <View testID="tutor-why" style={{ borderLeftWidth: 4, borderLeftColor: colors.accentYellow, backgroundColor: colors.accentYellow + '14', borderRadius: 10, padding: 12, gap: 4 }}>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentYellow, letterSpacing: 0.5 }}>WHY THIS WORKS</Text>
-          <Text style={{ fontSize: 14.5, lineHeight: 21, color: colors.textMain }}>{step.math.why}</Text>
-        </View>
-      )}
 
       {(finished || !step?.math) && (
         <TouchableOpacity
@@ -76,6 +70,17 @@ export function TutorControls({ step, isLast, nextLabel, playing, finished, onPl
         </TouchableOpacity>
       )}
 
+    </View>
+  );
+}
+
+// Why the method works - shown under the steps once the example has been heard.
+export function TutorWhy({ step, colors }: { step?: ListenStep; colors: AppColors }) {
+  if (!step?.math?.why) return null;
+  return (
+    <View testID="tutor-why" style={{ marginHorizontal: 24, marginTop: 16, borderLeftWidth: 4, borderLeftColor: colors.accentYellow, backgroundColor: colors.accentYellow + '14', borderRadius: 10, padding: 12, gap: 4 }}>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: colors.accentYellow, letterSpacing: 0.5 }}>WHY THIS WORKS</Text>
+      <Text style={{ fontSize: 14.5, lineHeight: 21, color: colors.textMain }}>{step.math.why}</Text>
     </View>
   );
 }
