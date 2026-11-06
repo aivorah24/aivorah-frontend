@@ -61,6 +61,28 @@ describe('SchoolAdminAddStudentScreen — errors', () => {
     });
   });
 
+  test('email of a student archived by another school → "moved to your school", no password shown', async () => {
+    mockFetch(200, { id: 'old1', name: 'Riya Sen', email: 'riya@x.test', transferred: true, admissionNumber: 'NS-7', grade: 'Grade 5', section: null, status: 'active' });
+    const user = userEvent.setup();
+    await render(<SchoolAdminAddStudentScreen navigation={{}} />);
+    await fillAndSubmit(user, 'riya@x.test');
+
+    expect(await screen.findByText('Student moved to your school')).toBeTruthy();
+    expect(screen.getByText('Unchanged (their own)')).toBeTruthy();
+    expect(screen.queryByText(/passwords won.t be shown again/)).toBeNull();
+    expect(screen.getByText('riya@x.test')).toBeTruthy();
+  });
+
+  test('student still active at another school → the server\'s explanation inline', async () => {
+    mockFetch(409, { error: 'This student is still active at another school. Ask that school to archive them first, then add them again.', code: 'ACTIVE_ELSEWHERE' });
+    const user = userEvent.setup();
+    await render(<SchoolAdminAddStudentScreen navigation={{}} />);
+    await fillAndSubmit(user, 'busy@x.test');
+
+    const box = await screen.findByTestId('form-submit-error');
+    expect(within(box).getByText(/still active at another school/)).toBeTruthy();
+  });
+
   test('typed email already registered → 409 message inline, values kept', async () => {
     mockFetch(409, { error: 'This email is already registered.', code: 'EMAIL_EXISTS' });
     const user = userEvent.setup();

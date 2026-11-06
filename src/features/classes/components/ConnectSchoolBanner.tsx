@@ -5,7 +5,8 @@
  * this banner as the guaranteed path to "Connect to My School".
  *
  * Self-gating: renders nothing for B2B (school-linked) or admin accounts, so
- * screens can drop it in unconditionally.
+ * screens can drop it in unconditionally. Exception: a student their school
+ * archived still carries the old schoolId, and needs this to join a new school.
  */
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -25,14 +26,19 @@ export default function ConnectSchoolBanner() {
   // Only independent (B2C) student/teacher/parent accounts see this.
   const role = user?.role;
   const isB2C = !user?.schoolId && (role === 'student' || role === 'teacher' || role === 'parent');
-  if (!isB2C) return null;
+  const archivedStudent = role === 'student' && !!user?.schoolId && user?.status === 'archived';
+  if (!isB2C && !archivedStudent) return null;
 
   return (
     <View style={styles.banner}>
       <View style={styles.iconWrap}><Feather name="home" size={16} color={colors.accentYellow} /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.title}>Join a School Classroom</Text>
-        <Text style={styles.subtitle}>Connect to your official school to unlock classes, attendance, and school updates.</Text>
+        <Text style={styles.title}>{archivedStudent ? 'Moving to a New School?' : 'Join a School Classroom'}</Text>
+        <Text style={styles.subtitle}>
+          {archivedStudent
+            ? 'Your previous school has archived your account. Connect to your new school to keep learning with your classes; your progress comes with you.'
+            : 'Connect to your official school to unlock classes, attendance, and school updates.'}
+        </Text>
       </View>
       <TouchableOpacity style={styles.btn} onPress={() => setShowConnect(true)} accessibilityRole="button">
         <Text style={styles.btnText}>Connect</Text>
