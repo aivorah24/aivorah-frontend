@@ -59,15 +59,35 @@ describe('teacherChallengesService', () => {
 
   describe('fetchClassLeaderboard', () => {
     it('fetches the teacher-scoped leaderboard from aivorah-leaderboard-service, not the monolith', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ json: jest.fn().mockResolvedValueOnce([{ id: 's1', rank: 1 }]) });
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce([{ id: 's1', rank: 1 }]) });
       const res = await svc.fetchClassLeaderboard('teacher@x.com');
       expect(fetch).toHaveBeenCalledWith(`${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=teacher%40x.com`);
       expect(res).toEqual([{ id: 's1', rank: 1 }]);
     });
 
     it('returns [] when the response is not an array', async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({ json: jest.fn().mockResolvedValueOnce({ error: 'x' }) });
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: jest.fn().mockResolvedValueOnce({ error: 'x' }) });
       expect(await svc.fetchClassLeaderboard('t@x.com')).toEqual([]);
+    });
+
+    it('adds the period, custom date and grade filters to the query', async () => {
+      (fetch as jest.Mock).mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue([]) });
+      const base = `${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=t%40x.com`;
+
+      await svc.fetchClassLeaderboard('t@x.com', { period: 'today' });
+      expect(fetch).toHaveBeenLastCalledWith(`${base}&period=today`);
+
+      await svc.fetchClassLeaderboard('t@x.com', { period: 'custom', date: '2026-11-02', classGrade: 'Grade 4' });
+      expect(fetch).toHaveBeenLastCalledWith(`${base}&period=custom&date=2026-11-02&classGrade=Grade%204`);
+
+      // all-time is the service default; a date only matters for custom
+      await svc.fetchClassLeaderboard('t@x.com', { period: 'all', date: '2026-11-02', classGrade: '' });
+      expect(fetch).toHaveBeenLastCalledWith(base);
+    });
+
+    it('returns [] for an error response (e.g. a 400 for a bad date)', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: jest.fn().mockResolvedValueOnce({ error: 'bad date' }) });
+      expect(await svc.fetchClassLeaderboard('t@x.com', { period: 'custom', date: 'x' })).toEqual([]);
     });
   });
 
