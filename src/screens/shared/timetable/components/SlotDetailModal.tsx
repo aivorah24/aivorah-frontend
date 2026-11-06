@@ -13,16 +13,19 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { spacing, radius, fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import { trUpload } from '../../../../services/timetableResourcesClient';
-import { PeriodDef, TimetableSlot, fmtTime, SUBJECT_PALETTE } from '../services/timetableApi';
+import { PeriodDef, TimetableSlot, SchoolTeacher, fmtTime, SUBJECT_PALETTE } from '../services/timetableApi';
 
 export interface SlotEdit {
   subject: string; room: string;
   materialUrl: string | null; materialName: string | null;
   color: string | null;
+  // Who takes the period; only set when the editor may choose (undefined = keep).
+  teacherId?: string | null;
 }
 
 export default function SlotDetailModal({
   visible, onClose, classLabel, dayLabel, period, slot, canEdit, saving, onSave, onClear,
+  canAssignTeacher = false, teachers = [],
 }: {
   visible: boolean;
   onClose: () => void;
@@ -34,6 +37,9 @@ export default function SlotDetailModal({
   saving?: boolean;
   onSave: (edit: SlotEdit) => void;
   onClear: () => void;
+  // School admin / homeroom teacher: choose which teacher takes the period.
+  canAssignTeacher?: boolean;
+  teachers?: SchoolTeacher[];
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -43,6 +49,8 @@ export default function SlotDetailModal({
   const [materialUrl, setMaterialUrl] = useState<string | null>(null);
   const [materialName, setMaterialName] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [teacherSearch, setTeacherSearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,7 +64,15 @@ export default function SlotDetailModal({
     setMaterialUrl(slot?.materialUrl || null);
     setMaterialName(slot?.materialName || null);
     setColor(slot?.color || null);
+    setTeacherId(slot?.teacherId || null);
+    setTeacherSearch('');
   }, [visible, slot]);
+
+  const teacherName = (id: string | null) => (id ? teachers.find((t) => t.id === id)?.name || slot?.teacherName || 'Unknown teacher' : '');
+  const teacherMatches = useMemo(() => {
+    const q = teacherSearch.trim().toLowerCase();
+    return (q ? teachers.filter((t) => String(t.name || '').toLowerCase().includes(q)) : teachers).slice(0, 8);
+  }, [teachers, teacherSearch]);
 
   const isBreak = !!period?.isBreak;
 
@@ -109,7 +125,7 @@ export default function SlotDetailModal({
 
           {/* Period + time (always shown) */}
           <Field label="Period" value={period ? `${period.code}${isBreak ? ' · Break' : ''}` : '—'} styles={styles} />
-          <Field label="Time" value={period ? `${fmtTime(period.start)} – ${fmtTime(period.end)}` : '—'} styles={styles} />
+          <Field label="Time" value={period?.start ? `${fmtTime(period.start)} – ${fmtTime(period.end)}` : '—'} styles={styles} />
           <Field label="Day" value={dayLabel} styles={styles} />
 
           {isBreak ? (
@@ -120,6 +136,33 @@ export default function SlotDetailModal({
               <TextInput style={styles.input} value={subject} onChangeText={setSubject} placeholder="e.g. Mathematics" placeholderTextColor={colors.textDim} />
               <Text style={styles.fieldLabel}>Room</Text>
               <TextInput style={styles.input} value={room} onChangeText={setRoom} placeholder="e.g. PYP 3 Homeroom" placeholderTextColor={colors.textDim} />
+
+              {canAssignTeacher && (
+                <>
+                  <Text style={styles.fieldLabel}>Teacher</Text>
+                  {teacherId ? (
+                    <View style={styles.materialRow}>
+                      <Feather name="user" size={14} color={colors.accentYellow} />
+                      <Text style={styles.materialName} numberOfLines={1}>{teacherName(teacherId)}</Text>
+                      <TouchableOpacity onPress={() => setTeacherId(null)} accessibilityRole="button" accessibilityLabel="Remove teacher" hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                        <Feather name="x" size={14} color={colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <>
+                      <TextInput style={styles.input} value={teacherSearch} onChangeText={setTeacherSearch} placeholder="Search teacher by name" placeholderTextColor={colors.textDim} />
+                      <View style={styles.teacherList}>
+                        {teacherMatches.map((t) => (
+                          <TouchableOpacity key={t.id} style={styles.teacherChip} onPress={() => setTeacherId(t.id)} accessibilityRole="button">
+                            <Text style={styles.teacherChipText} numberOfLines={1}>{t.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                        {teacherMatches.length === 0 && <Text style={styles.teacherNone}>No teacher matches.</Text>}
+                      </View>
+                    </>
+                  )}
+                </>
+              )}
 
               <Text style={styles.fieldLabel}>Lesson material</Text>
               {materialUrl ? (
@@ -166,7 +209,10 @@ export default function SlotDetailModal({
                 <TouchableOpacity
                   style={[styles.saveBtn, (saving || !subject.trim()) && { opacity: 0.6 }]}
                   disabled={saving || !subject.trim()}
-                  onPress={() => onSave({ subject: subject.trim(), room: room.trim(), materialUrl, materialName, color })}
+                  onPress={() => onSave({
+                    subject: subject.trim(), room: room.trim(), materialUrl, materialName, color,
+                    ...(canAssignTeacher ? { teacherId } : {}),
+                  })}
                   accessibilityRole="button"
                 >
                   {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}
@@ -176,6 +222,7 @@ export default function SlotDetailModal({
           ) : (
             <>
               <Field label="Subject" value={slot?.subject || 'Free period'} styles={styles} strong />
+              {!!slot?.classLabel && <Field label="Class" value={slot.classLabel} styles={styles} />}
               {!!slot?.room && <Field label="Room" value={slot.room} styles={styles} />}
               {!!slot?.teacherName && <Field label="Teacher" value={slot.teacherName} styles={styles} />}
               {!!slot?.materialUrl && (
@@ -239,5 +286,9 @@ function makeStyles(c: AppColors) {
     clearText: { fontFamily: fonts.serif, fontSize: 13, fontWeight: '700', color: c.accentRed },
     saveBtn: { flex: 1, backgroundColor: c.accentYellow, borderRadius: radius.sm, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
     saveText: { fontFamily: fonts.serif, fontSize: 14, fontWeight: '800', color: '#fff' },
+    teacherList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+    teacherChip: { borderWidth: 1, borderColor: c.borderColor, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, maxWidth: 160 },
+    teacherChipText: { fontFamily: fonts.serif, fontSize: 12, fontWeight: '600', color: c.textMuted },
+    teacherNone: { fontFamily: fonts.serif, fontSize: 12, color: c.textDim },
   });
 }

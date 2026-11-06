@@ -14,6 +14,14 @@ import { Timetable, PeriodDef, TimetableSlot, fmtTime, DAY_LABELS, subjectColor 
 const COL_W = 150;      // day column width
 const TIME_W = 62;      // left time axis width
 const ROW_H = 92;       // period row height
+const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+// '08:50'–'09:35' → '8:50 am – 9:35 am'; blank when the period has no times
+// (a bare "–" used to show on every card of schedules without times).
+function timeRange(p: PeriodDef): string {
+  if (!p.start) return '';
+  return p.end ? `${fmtTime(p.start)} – ${fmtTime(p.end)}` : fmtTime(p.start);
+}
 
 export default function TimetableGrid({
   timetable, classLabel, onCellPress,
@@ -25,6 +33,7 @@ export default function TimetableGrid({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { periodDefs, days, slots } = timetable;
+  const today = DAY_CODES[new Date().getDay()];
 
   const slotAt = (day: string, code: string): TimetableSlot | null =>
     slots.find((s) => s.day === day && s.periodCode === code) || null;
@@ -47,8 +56,9 @@ export default function TimetableGrid({
             <Text style={{ fontSize: 8.5, fontWeight: '700', color: colors.textDim, textAlign: 'center', lineHeight: 11 }}>GMT{'\n'}+05:30</Text>
           </View>
           {days.map((d) => (
-            <View key={d} style={[styles.headerCell, { width: COL_W }]}>
-              <Text style={[styles.dayText, d === 'SAT' && { color: colors.accentRed }]}>{DAY_LABELS[d] || d}</Text>
+            <View key={d} style={[styles.headerCell, { width: COL_W }, d === today && styles.todayHeader]}>
+              <Text style={[styles.dayText, d === 'SAT' && { color: colors.accentRed }, d === today && styles.todayText]}>{DAY_LABELS[d] || d}</Text>
+              {d === today && <Text style={styles.todayTag}>Today</Text>}
             </View>
           ))}
         </View>
@@ -59,13 +69,13 @@ export default function TimetableGrid({
             {/* Left time axis */}
             <View style={[styles.timeCell, { width: TIME_W, height: p.isBreak ? undefined : ROW_H }]}>
               <Text style={styles.periodCode}>{p.code}</Text>
-              <Text style={styles.timeText}>{fmtTime(p.start)}</Text>
+              {!!p.start && <Text style={styles.timeText}>{fmtTime(p.start)}</Text>}
             </View>
 
             {p.isBreak ? (
               // Break/lunch: one muted full-width strip across all days.
               <View style={[styles.breakStrip, { width: COL_W * days.length }]}>
-                <Text style={styles.breakText}>{fmtTime(p.start)} – {fmtTime(p.end)}  ·  {p.code}</Text>
+                <Text style={styles.breakText}>{timeRange(p) ? `${timeRange(p)}  ·  ` : ''}{p.code}</Text>
               </View>
             ) : (
               days.map((d) => {
@@ -74,14 +84,16 @@ export default function TimetableGrid({
                 return (
                   <TouchableOpacity
                     key={`${d}-${p.code}`}
-                    style={[styles.cell, { width: COL_W, height: ROW_H }]}
+                    style={[styles.cell, { width: COL_W, height: ROW_H }, d === today && styles.todayCell]}
                     activeOpacity={0.75}
                     onPress={() => onCellPress(d, p, slot)}
                   >
                     {slot?.subject ? (
                       <View style={[styles.subjectCard, { backgroundColor: fill }]}>
-                        <Text style={styles.cardTime}>{fmtTime(p.start)} – {fmtTime(p.end)}</Text>
+                        {!!timeRange(p) && <Text style={styles.cardTime}>{timeRange(p)}</Text>}
                         <Text style={styles.cardSubject} numberOfLines={2}>{slot.subject}</Text>
+                        {/* Teacher's own timetable: which class to go to */}
+                        {!!slot.classLabel && <Text style={styles.cardClass} numberOfLines={1}>{slot.classLabel}</Text>}
                         {!!slot.room && <Text style={styles.cardRoom} numberOfLines={1}>{slot.room || classLabel}</Text>}
                         {!!slot.materialUrl && (
                           <Text style={styles.cardMaterial}>• material attached</Text>
@@ -114,6 +126,11 @@ function makeStyles(c: AppColors) {
     subjectCard: { flex: 1, borderRadius: radius.sm, padding: 8, justifyContent: 'flex-start' },
     cardTime: { fontFamily: fonts.serif, fontSize: 9.5, color: '#5b5b5b', marginBottom: 2 },
     cardSubject: { fontFamily: fonts.serif, fontSize: 12.5, fontWeight: '800', color: '#1e1e1e' },
+    cardClass: { fontFamily: fonts.serif, fontSize: 11, fontWeight: '700', color: '#3d3d3d', marginTop: 3 },
+    todayHeader: { backgroundColor: c.accentYellow + '1F' },
+    todayText: { color: c.accentYellow, fontWeight: '800' },
+    todayTag: { fontFamily: fonts.serif, fontSize: 9, fontWeight: '800', color: c.accentYellow, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 },
+    todayCell: { backgroundColor: c.accentYellow + '0D' },
     cardRoom: { fontFamily: fonts.serif, fontSize: 10, color: '#555', marginTop: 3 },
     cardMaterial: { fontFamily: fonts.serif, fontSize: 9, color: '#3a6b4a', marginTop: 3, fontWeight: '700' },
     breakStrip: { backgroundColor: c.bgDark, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRightWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderColor },

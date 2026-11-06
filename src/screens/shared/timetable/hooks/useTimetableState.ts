@@ -1,6 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { fetchClasses, fetchTimetable, saveSlot, saveTemplate, Timetable, TimetableClass, PeriodDef, TimetableSlot } from '../services/timetableApi';
+import {
+  fetchClasses, fetchTimetable, fetchMyTimetable, fetchSchoolTeachers, saveSlot, saveTemplate,
+  Timetable, TimetableClass, PeriodDef, TimetableSlot, SchoolTeacher,
+} from '../services/timetableApi';
 import { downloadTimetablePdf } from '../utils/timetablePdf';
 import {
   programmeForGrade, computeProgrammes,
@@ -32,6 +35,11 @@ interface UseTimetableStateParams {
 }
 
 const classOf = (grade: string, section: string): TimetableClass => ({ grade, section, label: `${grade}${section ? ' ' + section : ''}` });
+const sameClass = (a: TimetableClass | null, b: TimetableClass | null) => !!a && !!b && a.grade === b.grade && a.section === b.section;
+
+// Teachers see two views: their own week across every class they teach, and
+// their homeroom class's timetable (the class a school admin assigned them).
+export type TeacherView = 'mine' | 'homeroom';
 
 // State + handlers for TimetableScreen. Classes, the school and permissions
 // all come from the signed-in user on the server.
@@ -52,6 +60,13 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
   const [programme, setProgramme] = useState<string | null>(null);
 
   const isAdmin = role === 'school_admin' || role === 'super_admin';
+  // Opened for one class (e.g. from Class Detail) keeps the single-class view.
+  const teacherViews = role === 'teacher' && !paramClass;
+  const [view, setView] = useState<TeacherView>('mine');
+  const [myTt, setMyTt] = useState<Timetable | null>(null);
+  const [mineLoading, setMineLoading] = useState(true);
+  const [mineError, setMineError] = useState('');
+  const [teachers, setTeachers] = useState<SchoolTeacher[]>([]);
 
   const loadClasses = useCallback(async () => {
     if (paramClass) return; // opened for one class: no picker
@@ -61,14 +76,32 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
       setStructure(data.grades);
       setCurriculum(data.curriculum);
       let resolved: TimetableClass | null = null;
-      setSelected((prev) => { resolved = prev || data.classes[0] || null; return resolved; });
+      if (teacherViews) {
+        // Only the teacher's own homeroom class(es), never another class.
+        const homerooms = data.classes.filter((c) => c.homeroom);
+        setSelected((prev) => { resolved = homerooms.find((c) => sameClass(c, prev)) || homerooms[0] || null; return resolved; });
+      } else {
+        setSelected((prev) => { resolved = prev || data.classes[0] || null; return resolved; });
+      }
       // loadTimetable clears the spinner; with no class it never runs.
       if (!resolved) setLoading(false);
     } catch (e: any) {
       setError(e?.message || 'Failed to load classes');
       setLoading(false);
     }
-  }, [paramClass]);
+  }, [paramClass, teacherViews]);
+
+  const loadMine = useCallback(async () => {
+    setMineLoading(true); setMineError('');
+    try {
+      setMyTt(await fetchMyTimetable());
+    } catch (e: any) {
+      setMineError(e?.message || 'Failed to load your timetable');
+      setMyTt(null);
+    } finally {
+      setMineLoading(false);
+    }
+  }, []);
 
   const loadTimetable = useCallback(async (cls: TimetableClass) => {
     if (!cls) return;
@@ -83,7 +116,20 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
     }
   }, []);
 
-  const classLabel = selected ? selected.label : 'Timetable';
+  const isMineView = teacherViews && view === 'mine';
+  const homeroomClasses = classes.filter((c) => c.homeroom);
+  // What the screen shows: the teacher's own week, or the selected class.
+  const shownTt = isMineView ? myTt : tt;
+  const shownLoading = isMineView ? mineLoading : loading;
+  const shownError = isMineView ? mineError : error;
+  const classLabel = isMineView ? 'My Timetable' : selected ? selected.label : 'Timetable';
+
+  // School's teachers for the "who takes this period" picker, once someone may choose.
+  const canAssignTeacher = !isMineView && !!tt?.permissions.canAssignTeacher;
+  useEffect(() => {
+    if (!canAssignTeacher || teachers.length > 0) return;
+    fetchSchoolTeachers().then(setTeachers).catch(() => {});
+  }, [canAssignTeacher, teachers.length]);
 
   const isIB = curriculum === 'IB';
   const programmes = computeProgrammes(structure, isIB);
@@ -120,7 +166,11 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
     if (!modal || !selected) return;
     setSaving(true);
     try {
-      await saveSlot({ grade: selected.grade, section: selected.section, day: modal.day, periodCode: modal.period.code, subject: edit.subject, room: edit.room, materialUrl: edit.materialUrl, materialName: edit.materialName, color: edit.color });
+      await saveSlot({
+        grade: selected.grade, section: selected.section, day: modal.day, periodCode: modal.period.code,
+        subject: edit.subject, room: edit.room, materialUrl: edit.materialUrl, materialName: edit.materialName, color: edit.color,
+        ...(edit.teacherId !== undefined ? { teacherId: edit.teacherId } : {}),
+      });
       await loadTimetable(selected);
       setModal(null);
     } catch (e: any) { setError(e?.message || 'Failed to save'); }
@@ -150,12 +200,14 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
   };
 
   const downloadPdf = async () => {
-    if (Platform.OS !== 'web' || !tt || !selected) return;
+    if (Platform.OS !== 'web' || !shownTt || (!selected && !isMineView)) return;
     setDownloading(true);
     const schoolName = school || 'The Shri Ram Academy';
-    const studentSubtitle = userName ? `${userName}'s Timetable (${classLabel})` : `${classLabel} — Timetable`;
+    const studentSubtitle = isMineView
+      ? `${userName ? `${userName}'s` : 'My'} Timetable`
+      : userName ? `${userName}'s Timetable (${classLabel})` : `${classLabel} — Timetable`;
     try {
-      await downloadTimetablePdf({ tt, classLabel, schoolName, studentSubtitle });
+      await downloadTimetablePdf({ tt: shownTt, classLabel, schoolName, studentSubtitle });
     } finally {
       setDownloading(false);
     }
@@ -167,5 +219,7 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
     classLabel, programmes, activeProgramme, gradesForSelector, sectionsForGrade,
     loadClasses, loadTimetable, setupDefault, onSaveSlot, onSavePeriods, onClearSlot, downloadPdf,
     pickGrade, pickSection, pickProgramme,
+    teacherViews, view, setView, isMineView, homeroomClasses, loadMine,
+    shownTt, shownLoading, shownError, teachers, canAssignTeacher,
   };
 }
