@@ -18,7 +18,10 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   viewInBookText: { fontSize: 12.5, fontWeight: '700' },
 
   dualPane: { flex: 1, flexDirection: 'row', minHeight: 0 },
-  leftPane: { flex: 0.6 },
+  leftPane: { flex: 0.6, minHeight: 0 },
+  leftScroll: { flex: 1 },
+  // Fixed under the scrolling text (Listen / AI Tutor play controls).
+  listenControls: { borderTopWidth: 1, paddingHorizontal: spacing.xl, paddingVertical: 10, gap: 8 },
   leftPaneFull: { flex: 1 },
   rightPane: { flex: 0.4, borderLeftWidth: 1, padding: spacing.lg, gap: 8 },
   paneLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, marginHorizontal: spacing.xl },
@@ -138,6 +141,7 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   playerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28, position: 'relative' },
   speedBtn: { position: 'relative', alignItems: 'center' },
   playerBar: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingVertical: 10 },
+  playerBarFixed: { marginTop: 0 },
   playerStatus: { flex: 1, fontSize: 13, fontWeight: '600' },
   playerIconBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   speedMenu: {

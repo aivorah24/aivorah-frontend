@@ -103,6 +103,19 @@ describe('ListenTab word-by-word highlight', () => {
     expect(flat(line).backgroundColor ?? 'transparent').toBe('transparent');
   });
 
+  test('Play/Pause stays in a fixed bar outside the scrolling text, so long text never carries it away', async () => {
+    await renderProse(0);
+    const bar = screen.getByTestId('listen-controls');
+    const inBar = (el: any) => { for (let n = el; n; n = n.parent) if (n === bar) return true; return false; };
+    const inScroll = (el: any) => { for (let n = el; n; n = n.parent) if (n.type === 'RCTScrollView') return true; return false; };
+    const pause = screen.getByLabelText('Pause');
+    expect(inBar(pause)).toBe(true);
+    expect(inScroll(pause)).toBe(false);
+    expect(inScroll(screen.getByLabelText('Repeat'))).toBe(false);
+    // the text itself still scrolls
+    expect(inScroll(screen.getByText('carry '))).toBe(true);
+  });
+
   test('the player is just Play/Pause, Repeat and Speed - no line buttons, counter or progress bar', async () => {
     await renderProse(0);
     expect(screen.queryByText('Line')).toBeNull();
