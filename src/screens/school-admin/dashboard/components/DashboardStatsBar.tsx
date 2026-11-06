@@ -21,7 +21,13 @@ export default function DashboardStatsBar({
   isMobile,
 }: DashboardStatsBarProps) {
   return (
-    <View style={[styles.statBar, isMobile && styles.statBarMobile]}>
+    // Theme surface (white in light mode, near-black in dark), same as the Manage
+    // card below - a hard-coded black bar left the theme's dark-brown numbers
+    // unreadable in light mode.
+    <View
+      testID="dashboard-stats-bar"
+      style={[styles.statBar, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }, isMobile && styles.statBarMobile]}
+    >
       <StatItem value={students} label="Students" colors={colors} />
       <View style={[styles.statDivider, { backgroundColor: colors.borderColor }]} />
       <StatItem value={teachers} label="Teachers" colors={colors} />
@@ -53,7 +59,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 20,
     paddingHorizontal: 24,
-    backgroundColor: '#000',
+    borderWidth: 1,
     borderRadius: 16,
     marginBottom: 24,
   },
