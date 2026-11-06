@@ -68,6 +68,18 @@ describe('useTimetableState', () => {
     expect(hookRef.curriculum).toBe('IB');
   });
 
+  test('loadClasses (teacher) never falls back to a class that is not their homeroom', async () => {
+    mockFetchClasses.mockResolvedValue(classes([{ grade: 'Grade 7', section: 'B', label: 'Grade 7 B', homeroom: false }]));
+    await renderHarness({ role: 'teacher' });
+
+    await act(async () => hookRef.loadClasses());
+
+    expect(hookRef.selected).toBeNull();
+    expect(hookRef.homeroomClasses).toEqual([]);
+    expect(hookRef.teacherViews).toBe(true);
+    expect(hookRef.view).toBe('mine');
+  });
+
   test('loadClasses (teacher) preselects the first class (homeroom first from the server)', async () => {
     mockFetchClasses.mockResolvedValue(classes([MY_CLASS]));
     await renderHarness({ role: 'teacher' });

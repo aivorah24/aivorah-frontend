@@ -18,7 +18,14 @@ export interface TimetableSlot {
   materialUrl: string | null;
   materialName: string | null;
   color: string | null;
+  // Teacher's own timetable only: the class this period is with.
+  grade?: string;
+  section?: string;
+  classLabel?: string;
 }
+
+// A period where the school timetable puts the teacher in two classes at once.
+export interface TimetableClash { day: string; periodCode: string; classes: string[] }
 
 export interface Timetable {
   grade: string;
@@ -27,7 +34,8 @@ export interface Timetable {
   periodDefs: PeriodDef[];
   days: string[];
   slots: TimetableSlot[];
-  permissions: { canManageTemplate: boolean; canEditSlot: boolean };
+  permissions: { canManageTemplate: boolean; canEditSlot: boolean; canAssignTeacher?: boolean };
+  clashes?: TimetableClash[];
 }
 
 export interface TimetableClass {
@@ -55,6 +63,19 @@ export function fetchTimetable(grade: string, section: string): Promise<Timetabl
   return trRequest<Timetable>(`/timetable?${q}`, {}, 'Failed to load timetable');
 }
 
+// A teacher's own week: every period they teach, in any class, as one grid.
+export function fetchMyTimetable(): Promise<Timetable> {
+  return trRequest<Timetable>('/timetable/mine', {}, 'Failed to load your timetable');
+}
+
+export interface SchoolTeacher { id: string; name: string }
+
+// The school's teachers, for choosing who takes a period.
+export async function fetchSchoolTeachers(): Promise<SchoolTeacher[]> {
+  const data = await trRequest<{ teachers: SchoolTeacher[] }>('/timetable/teachers', {}, 'Failed to load teachers');
+  return Array.isArray(data?.teachers) ? data.teachers : [];
+}
+
 export async function saveTemplate(body: { grade: string; section: string; title?: string; periodDefs: PeriodDef[] }): Promise<void> {
   await trRequest('/timetable/template', { method: 'PUT', body }, 'Failed to save the bell schedule');
 }
@@ -62,6 +83,8 @@ export async function saveTemplate(body: { grade: string; section: string; title
 export async function saveSlot(body: {
   grade: string; section: string; day: string; periodCode: string;
   subject?: string; room?: string; materialUrl?: string | null; materialName?: string | null; color?: string | null;
+  // Who takes the period (school admin / homeroom teacher only); leave out to keep it.
+  teacherId?: string | null;
 }): Promise<void> {
   await trRequest('/timetable/slot', { method: 'PUT', body }, 'Failed to save the slot');
 }
