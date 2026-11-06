@@ -109,7 +109,10 @@ export const makeStyles = (c: AppColors) => StyleSheet.create({
   filterChipActive:     { borderColor: c.accentYellow, backgroundColor: c.accentYellow + '1F' },
   filterChipText:       { fontSize: 12, fontWeight: '600', color: c.textMuted },
   filterChipTextActive: { color: c.accentYellow },
-  datePickerWrap:{ maxWidth: 300 },
+  // zIndex: on web every View sits at zIndex 0, so without this the podium
+  // row rendered after the date field paints over the calendar popup and
+  // swallows clicks on its month arrows (same fix as AnnouncementManagerScreen).
+  datePickerWrap:{ maxWidth: 300, zIndex: 10 },
   lbEmptyText:   { color: c.textMuted, textAlign: 'center', paddingVertical: 24, fontSize: 13 },
 
   podiumRow:     { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: spacing.lg, paddingTop: 22 },
