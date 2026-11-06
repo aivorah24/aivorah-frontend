@@ -117,6 +117,99 @@ describe('TeacherChallengesScreen (integration)', () => {
     await waitFor(() => expect(screen.getByText('Assigned to all students')).toBeTruthy());
   });
 
+  describe('Leaderboard tab filters', () => {
+    const LB = [
+      { rank: 1, id: 'a', name: 'Aanya Rao', grade: 'Grade 3', score: 90, level: 2, streak: 3, topics: 1 },
+      { rank: 2, id: 'b', name: 'Bilal Khan', grade: 'Grade 4', score: 60, level: 1, streak: 1, topics: 0 },
+      { rank: 3, id: 'c', name: 'Chitra Iyer', grade: 'Grade 3', score: 40, level: 1, streak: 0, topics: 0 },
+      { rank: 4, id: 'd', name: 'Dev Mehta', grade: 'Grade 4', score: 0, level: 1, streak: 0, topics: 0 },
+    ];
+    const lastFilters = () => mockedService.fetchClassLeaderboard.mock.calls.at(-1)?.[1];
+
+    beforeEach(() => {
+      mockedService.fetchTeacherPreferences.mockResolvedValue({ teaches: [{ grade: 'Grade 3' }, { grade: 'Grade 4' }] });
+      mockedService.fetchClassLeaderboard.mockResolvedValue(LB);
+    });
+
+    async function openLeaderboard() {
+      await render(<TeacherChallengesScreen navigation={{ openDrawer: jest.fn() }} />);
+      fireEvent.press(screen.getByText('Leaderboard'));
+      await waitFor(() => expect(screen.getByText('Top Performers This Week')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('Dev Mehta')).toBeTruthy());
+    }
+
+    it('opens on This Week for every grade the teacher teaches', async () => {
+      await openLeaderboard();
+      expect(mockedService.fetchClassLeaderboard).toHaveBeenCalledWith('teacher@x.com', { period: 'week', date: '', classGrade: '' });
+      expect(screen.getByText('XP Earned This Week')).toBeTruthy();
+      expect(screen.getByText('Days Left This Week')).toBeTruthy();
+    });
+
+    it('Today / This Month refetch the podium and the table for that period', async () => {
+      await openLeaderboard();
+
+      fireEvent.press(screen.getByText('Today'));
+      await waitFor(() => expect(lastFilters()).toEqual({ period: 'today', date: '', classGrade: '' }));
+      expect(screen.getByText('Top Performers Today')).toBeTruthy();
+      expect(screen.getByText('XP Earned Today')).toBeTruthy();
+      // 3 of the 4 students earned XP
+      await waitFor(() => expect(screen.getByText('Students Who Earned XP')).toBeTruthy());
+
+      fireEvent.press(screen.getByText('This Month'));
+      await waitFor(() => expect(lastFilters()).toEqual({ period: 'month', date: '', classGrade: '' }));
+      expect(screen.getByText('Top Performers This Month')).toBeTruthy();
+      expect(screen.getByText('Days Left This Month')).toBeTruthy();
+    });
+
+    it('Custom Date shows a calendar and loads the chosen day', async () => {
+      await openLeaderboard();
+
+      fireEvent.press(screen.getByText('Custom Date'));
+      await waitFor(() => expect(lastFilters()?.period).toBe('custom'));
+      const todayKey = lastFilters()?.date as string;
+      expect(todayKey).toMatch(/^\d{4}-\d{2}-\d{2}$/); // starts on today
+
+      // open the calendar and pick the 1st of the shown month
+      fireEvent.press(screen.getByText(/^(Su|Mo|Tu|We|Th|Fr|Sa), /));
+      const firstOfMonth = `${todayKey.slice(0, 8)}01`;
+      fireEvent.press(await screen.findByLabelText(firstOfMonth));
+      await waitFor(() => expect(lastFilters()).toEqual({ period: 'custom', date: firstOfMonth, classGrade: '' }));
+      const [y, m] = firstOfMonth.split('-').map(Number);
+      const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1];
+      expect(screen.getByText(`Top Performers on 1 ${mon} ${y}`)).toBeTruthy();
+    });
+
+    it('a grade chip narrows both the podium and the table to that grade; By XP shows all grades again', async () => {
+      await openLeaderboard();
+
+      fireEvent.press(screen.getByRole('radio', { name: 'Grade 4' }));
+      await waitFor(() => expect(lastFilters()).toEqual({ period: 'week', date: '', classGrade: 'Grade 4' }));
+      expect(screen.getByText('Students in Grade 4')).toBeTruthy();
+
+      fireEvent.press(screen.getByRole('radio', { name: 'By XP' }));
+      await waitFor(() => expect(lastFilters()).toEqual({ period: 'week', date: '', classGrade: '' }));
+    });
+
+    it('a grade with no students keeps the filters visible with an empty message', async () => {
+      await openLeaderboard();
+      mockedService.fetchClassLeaderboard.mockResolvedValue([]);
+
+      fireEvent.press(screen.getByRole('radio', { name: 'Grade 4' }));
+      await waitFor(() => expect(screen.getAllByText('No students in Grade 4 yet.').length).toBeGreaterThan(0));
+      expect(screen.getByText('Today')).toBeTruthy();
+      expect(screen.getByText('By XP')).toBeTruthy();
+    });
+
+    it('fewer than 3 students still shows the podium with who there is', async () => {
+      mockedService.fetchClassLeaderboard.mockResolvedValue(LB.slice(0, 2));
+      await render(<TeacherChallengesScreen navigation={{ openDrawer: jest.fn() }} />);
+      fireEvent.press(screen.getByText('Leaderboard'));
+      await waitFor(() => expect(screen.getByText('Aanya Rao')).toBeTruthy());
+      expect(screen.getByText('Bilal Khan')).toBeTruthy();
+      expect(screen.getByText('All class members are on the podium above.')).toBeTruthy();
+    });
+  });
+
   it('shows assigned state instead of a fresh Assign button once every student has the challenge', async () => {
     mockedService.fetchTeacherAssignments.mockResolvedValue([
       { challengeId: 'c1', studentId: 's1', status: 'assigned', dueDate: null },

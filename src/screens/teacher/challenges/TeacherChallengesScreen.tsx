@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { spacing } from '../../../theme';
@@ -6,6 +6,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import Header from '../../../components/common/Header';
+import DatePicker from '../../../components/common/DatePicker';
 import { makeStyles } from './styles';
 import { useTeacherChallenges } from './hooks/useTeacherChallenges';
 import { useTeacherLeaderboard } from './hooks/useTeacherLeaderboard';
@@ -13,6 +14,11 @@ import { useAssignChallenge } from './hooks/useAssignChallenge';
 import ChallengeCard from './components/ChallengeCard';
 import AssignChallengeModal, { filterStudentsForChallenge } from './components/AssignChallengeModal';
 import { StatCard, PodiumCard, WeeklyChart, initials } from './components/LeaderboardComponents';
+import FilterChips from './components/FilterChips';
+import {
+  LeaderboardPeriod, PERIOD_OPTIONS, DEFAULT_PERIOD,
+  localDateKey, topPerformersTitle, xpStatLabel,
+} from './utils/leaderboardPeriod';
 
 const GOLD = '#D9A93E';
 
@@ -27,12 +33,42 @@ export default function TeacherChallengesScreen({ navigation }: any) {
 
   const { selectedGrade, setSelectedGrade, fetchedGrades, challenges, loading, students, assignedByChallenge, refreshAssignments } =
     useTeacherChallenges(user?.email, teacherCurriculum);
-  const { leaderboard, lbLoading, rankChange, weekly, totalXP, yourEntry, yourAbove, daysLeft, showPodium } =
-    useTeacherLeaderboard(activeTab, user?.email, (user as any)?.name);
+  // Leaderboard filters: period (podium + table) and one of the teacher's
+  // grades ('' = "By XP", every grade they teach).
+  const [lbPeriod, setLbPeriod]         = useState<LeaderboardPeriod>(DEFAULT_PERIOD);
+  const [lbCustomDate, setLbCustomDate] = useState('');
+  const [lbGrade, setLbGrade]           = useState('');
+  const { leaderboard, lbLoading, rankChange, weekly, totalXP, activeStudents, yourEntry, yourAbove, daysLeft } =
+    useTeacherLeaderboard(activeTab, user?.email, (user as any)?.name,
+      { period: lbPeriod, customDate: lbCustomDate, classGrade: lbGrade });
   const assign = useAssignChallenge(user?.email, refreshAssignments);
   const [lbExpanded, setLbExpanded] = useState(false);
+  const todayKey = localDateKey();
 
   const gradeTabs = fetchedGrades.length > 0 ? fetchedGrades : ['Grade 3', 'Grade 4', 'Grade 5'];
+  // Only the teacher's real grades (from their saved preferences) — never the
+  // placeholder tabs above, which the class leaderboard would answer with nothing.
+  const lbGradeOptions = useMemo(
+    () => [{ key: '', label: 'By XP' }, ...fetchedGrades.map(g => ({ key: g, label: g }))],
+    [fetchedGrades],
+  );
+  // A grade removed in Settings falls back to all grades.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- keeps the filter valid when the teacher's grade list changes
+    if (lbGrade && fetchedGrades.length > 0 && !fetchedGrades.includes(lbGrade)) setLbGrade('');
+  }, [fetchedGrades, lbGrade]);
+
+  const selectPeriod = (p: LeaderboardPeriod) => {
+    setLbPeriod(p);
+    setLbExpanded(false);
+    // Custom starts on today; the calendar below the chips picks another day.
+    if (p === 'custom' && !lbCustomDate) setLbCustomDate(todayKey);
+  };
+  const selectGrade = (g: string) => { setLbGrade(g); setLbExpanded(false); };
+  const podium = [leaderboard[1], leaderboard[0], leaderboard[2]];
+  const emptyClassText = lbGrade
+    ? `No students in ${lbGrade} yet.`
+    : 'No students in this class yet. Link students to see rankings.';
 
   // Group challenges by their real `category` from the API, not a fixed
   // list of `type` values — fixed 2026-09-02, same bug class as Parent
@@ -122,50 +158,58 @@ export default function TeacherChallengesScreen({ navigation }: any) {
               )}
             </>
           ) : (
-            lbLoading ? (
-              <ActivityIndicator color={colors.accentYellow} style={{ paddingVertical: 48 }} />
-            ) : leaderboard.length === 0 ? (
-              <View style={styles.leaderCard}>
-                <Text style={{ color: colors.textMuted, textAlign: 'center', padding: 24, fontSize: 13 }}>
-                  No students in this class yet. Link students to see rankings.
-                </Text>
-              </View>
-            ) : (
               <View style={styles.lbWrap}>
                 <View style={styles.statRow}>
-                  <StatCard styles={styles} icon="users"    tint={gold} value={String(leaderboard.length)} label="Students" />
+                  <StatCard styles={styles} icon="users"    tint={gold} value={String(leaderboard.length)} label={lbGrade ? `Students in ${lbGrade}` : 'Students'} />
                   <StatCard styles={styles} icon="zap"      tint={GOLD} value={String(challenges.length)} label="Active Challenges" />
-                  <StatCard styles={styles} icon="star"     tint={GOLD} value={totalXP.toLocaleString()} label="Total XP Earned" />
-                  <StatCard styles={styles} icon="calendar" tint={colors.textMuted} value={String(daysLeft)} label="Days Left" />
+                  <StatCard styles={styles} icon="star"     tint={GOLD} value={totalXP.toLocaleString()} label={xpStatLabel(lbPeriod, lbCustomDate)} />
+                  {daysLeft != null ? (
+                    <StatCard styles={styles} icon="calendar" tint={colors.textMuted} value={String(daysLeft)} label={lbPeriod === 'month' ? 'Days Left This Month' : 'Days Left This Week'} />
+                  ) : (
+                    <StatCard styles={styles} icon="activity" tint={colors.textMuted} value={String(activeStudents)} label="Students Who Earned XP" />
+                  )}
                 </View>
 
-                {showPodium && (
-                  <View style={styles.panel}>
-                    <View style={styles.panelHeadRow}>
+                {/* zIndex keeps the calendar popup above the table below it */}
+                <View style={[styles.panel, { zIndex: 2 }]}>
+                  <View style={styles.filterHeadRow}>
+                    <View style={styles.filterTitle}>
                       <Feather name="award" size={16} color={GOLD} />
-                      <Text style={styles.panelTitle}>Top Performers This Week</Text>
-                      <View style={styles.periodChip}>
-                        <Text style={styles.periodChipText}>This Week</Text>
-                        <Feather name="chevron-down" size={13} color={colors.textMuted} />
-                      </View>
+                      <Text style={styles.panelTitle}>{topPerformersTitle(lbPeriod, lbCustomDate)}</Text>
                     </View>
-                    <View style={styles.podiumRow}>
-                      <PodiumCard entry={leaderboard[1]} place={2} colors={colors} styles={styles} isDark={isDark} />
-                      <PodiumCard entry={leaderboard[0]} place={1} colors={colors} styles={styles} isDark={isDark} elevated />
-                      <PodiumCard entry={leaderboard[2]} place={3} colors={colors} styles={styles} isDark={isDark} />
-                    </View>
+                    <FilterChips label="Leaderboard period" options={PERIOD_OPTIONS} value={lbPeriod} onChange={selectPeriod} styles={styles} />
                   </View>
-                )}
+                  {lbPeriod === 'custom' && (
+                    <View style={styles.datePickerWrap}>
+                      <DatePicker
+                        value={lbCustomDate}
+                        onChange={d => { if (d) { setLbCustomDate(d); setLbExpanded(false); } }}
+                        placeholder="Pick a date"
+                        maxDate={todayKey}
+                      />
+                    </View>
+                  )}
+                  {lbLoading ? (
+                    <ActivityIndicator color={colors.accentYellow} style={{ paddingVertical: 32 }} />
+                  ) : leaderboard.length === 0 ? (
+                    <Text style={styles.lbEmptyText}>{emptyClassText}</Text>
+                  ) : (
+                    <View style={styles.podiumRow}>
+                      {podium.map((entry, i) => entry && (
+                        <PodiumCard key={entry.id} entry={entry} place={[2, 1, 3][i]} colors={colors} styles={styles} isDark={isDark} elevated={i === 1} />
+                      ))}
+                    </View>
+                  )}
+                </View>
 
                 <View style={styles.lbBottomRow}>
                   <View style={styles.lbTablePanel}>
                     <View style={styles.lbPanelHead}>
-                      <Feather name="award" size={15} color={GOLD} />
-                      <Text style={styles.panelTitle}>Live Class Leaderboard</Text>
-                      <View style={styles.periodChip}>
-                        <Text style={styles.periodChipText}>By XP</Text>
-                        <Feather name="chevron-down" size={13} color={colors.textMuted} />
+                      <View style={styles.filterTitle}>
+                        <Feather name="award" size={15} color={GOLD} />
+                        <Text style={styles.panelTitle}>Live Class Leaderboard</Text>
                       </View>
+                      <FilterChips label="Leaderboard grade" options={lbGradeOptions} value={lbGrade} onChange={selectGrade} styles={styles} />
                     </View>
 
                     <View style={styles.colHeadRow}>
@@ -177,7 +221,9 @@ export default function TeacherChallengesScreen({ navigation }: any) {
                     </View>
 
                     {(() => {
-                      const rest  = showPodium ? leaderboard.slice(3) : leaderboard;
+                      if (lbLoading) return <ActivityIndicator color={colors.accentYellow} style={{ paddingVertical: 24 }} />;
+                      if (leaderboard.length === 0) return <Text style={styles.lbEmptyText}>{emptyClassText}</Text>;
+                      const rest  = leaderboard.slice(3);
                       const shown = lbExpanded ? rest : rest.slice(0, 5);
                       if (rest.length === 0) {
                         return (
@@ -265,7 +311,6 @@ export default function TeacherChallengesScreen({ navigation }: any) {
                   )}
                 </View>
               </View>
-            )
           )}
         </ScrollView>
       </View>

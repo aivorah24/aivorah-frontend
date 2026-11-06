@@ -57,9 +57,22 @@ export function fetchChallenges(grade: string, curriculum: string): Promise<Chal
 // student-facing Leaderboard screen (see useLeaderboard.ts). This call was
 // left pointed at the monolith instead — confirmed 2026-09-11 by reading
 // aivorah-leaderboard-service/services/leaderboard.js directly.
-export function fetchClassLeaderboard(teacherEmail: string): Promise<LeaderEntry[]> {
-  return fetch(`${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=${encodeURIComponent(teacherEmail)}`)
-    .then(r => r.json())
+//
+// period/date: rank by XP earned today / this week / this month / on one day
+// instead of all-time XP. classGrade: only that one of the teacher's grades.
+export interface ClassLeaderboardFilters {
+  period?: 'all' | 'today' | 'week' | 'month' | 'custom';
+  date?: string;        // 'YYYY-MM-DD', for period 'custom'
+  classGrade?: string;  // e.g. 'Grade 4'; empty = every grade the teacher teaches
+}
+
+export function fetchClassLeaderboard(teacherEmail: string, filters: ClassLeaderboardFilters = {}): Promise<LeaderEntry[]> {
+  let url = `${LEADERBOARD_SERVICE_URL}/student/leaderboard?limit=50&teacherEmail=${encodeURIComponent(teacherEmail)}`;
+  if (filters.period && filters.period !== 'all') url += `&period=${filters.period}`;
+  if (filters.period === 'custom' && filters.date) url += `&date=${encodeURIComponent(filters.date)}`;
+  if (filters.classGrade) url += `&classGrade=${encodeURIComponent(filters.classGrade)}`;
+  return fetch(url)
+    .then(r => r.ok ? r.json() : [])
     .then(data => Array.isArray(data) ? data : []);
 }
 

@@ -27,9 +27,10 @@ interface Props {
   onChange: (v: string) => void;
   placeholder?: string;
   minDate?: string;              // 'YYYY-MM-DD' — dates before this are disabled
+  maxDate?: string;              // 'YYYY-MM-DD' — dates after this are disabled
 }
 
-export default function DatePicker({ value, onChange, placeholder = 'Select a date', minDate }: Props) {
+export default function DatePicker({ value, onChange, placeholder = 'Select a date', minDate, maxDate }: Props) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const today = new Date();
@@ -118,7 +119,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Select a da
               const key = toKey(view.y, view.m, d);
               const isSelected = value === key;
               const isToday = key === todayKey;
-              const disabled = !!minDate && key < minDate;
+              const disabled = (!!minDate && key < minDate) || (!!maxDate && key > maxDate);
               return (
                 <TouchableOpacity
                   key={i}
