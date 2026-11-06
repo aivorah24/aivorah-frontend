@@ -44,7 +44,10 @@ interface CreateResult {
   id: string;
   name: string;
   email: string;
-  password: string;
+  // Absent when an archived student was moved here: they keep their own password.
+  password?: string;
+  // The email belonged to a student archived by another school; their account moved here.
+  transferred?: boolean;
   admissionNumber: string | null;
   grade: string | null;
   section: string | null;
@@ -289,7 +292,9 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
   // too when a parent/guardian account was created alongside the student.
   async function shareCredentials() {
     if (!result) return;
-    let message = `${result.name}'s Aivorah login:\nEmail: ${result.email}\nPassword: ${result.password}`;
+    let message = result.transferred
+      ? `${result.name} has moved to our school on Aivorah.\nThey keep signing in with ${result.email} and their own password.`
+      : `${result.name}'s Aivorah login:\nEmail: ${result.email}\nPassword: ${result.password}`;
     if (result.parent) {
       message += `\n\n${result.parent.name}'s (Parent) Aivorah login:\nEmail: ${result.parent.email}\nPassword: ${result.parent.password}`;
     }
@@ -318,8 +323,14 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
             <>
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}><Feather name="check" size={20} color="#0B0B0B" /></View>
-                <Text style={styles.summaryTitle}>Student added</Text>
-                <Text style={styles.warnText}>Save these now — passwords won&apos;t be shown again.</Text>
+                <Text style={styles.summaryTitle}>{result.transferred ? 'Student moved to your school' : 'Student added'}</Text>
+                {result.transferred ? (
+                  <Text style={styles.warnText}>
+                    Their previous school had archived them. Their account and progress came with them, and they keep signing in with their own password.
+                  </Text>
+                ) : (
+                  <Text style={styles.warnText}>Save these now — passwords won&apos;t be shown again.</Text>
+                )}
               </View>
 
               <View style={styles.card}>
@@ -328,7 +339,11 @@ export default function SchoolAdminAddStudentScreen({ navigation }: any) {
                   <Text style={styles.credBlockLabel}>Student</Text>
                   <View style={styles.credRow}><Text style={styles.credLabel}>Name</Text><Text style={styles.credValue}>{result.name}</Text></View>
                   <View style={styles.credRow}><Text style={styles.credLabel}>Login email</Text><Text style={styles.credValue} selectable>{result.email}</Text></View>
-                  <View style={styles.credRow}><Text style={styles.credLabel}>Password</Text><Text style={styles.credValueMono} selectable>{result.password}</Text></View>
+                  {result.transferred ? (
+                    <View style={styles.credRow}><Text style={styles.credLabel}>Password</Text><Text style={styles.credValue}>Unchanged (their own)</Text></View>
+                  ) : (
+                    <View style={styles.credRow}><Text style={styles.credLabel}>Password</Text><Text style={styles.credValueMono} selectable>{result.password}</Text></View>
+                  )}
                 </View>
 
                 {!!result.parent && (

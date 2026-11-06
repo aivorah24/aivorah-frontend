@@ -45,6 +45,9 @@ export interface User {
   schoolId?: string | null;  // official school-org FK. Set => B2B (school account);
                              // null/undefined => B2C (independent self-signup). Drives
                              // whether school-only features (My Classes, Attendance) show.
+  // users.status from /user/sync: 'active' | 'inactive' | 'archived'. An archived
+  // student still has their old schoolId; they are offered Connect to School.
+  status?: string;
   location?: string;
   onboardingComplete?: boolean;
   emailVerified?: boolean;
@@ -138,6 +141,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
         curriculum:         data.curriculum || undefined,
         school:             data.school     || undefined,
         schoolId:           data.schoolId   ?? null,
+        status:             data.status     || undefined,
         location:           data.location   || undefined,
         onboardingComplete: data.onboardingComplete ?? false,
         photoUrl:           data.photoUrl   || undefined,
@@ -211,6 +215,7 @@ export function mergeAccountUpdate(prev: User, fresh: Partial<User>): User {
     curriculum: fresh.curriculum,
     school:     fresh.school,
     schoolId:   fresh.schoolId !== undefined ? fresh.schoolId : prev.schoolId,
+    status:     fresh.status !== undefined ? fresh.status : prev.status,
     photoUrl:   fresh.photoUrl ?? prev.photoUrl,
     roles,
     role: switchTo,
@@ -807,6 +812,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           curriculum: fresh.curriculum ?? prev.curriculum,
           school:     fresh.school     ?? prev.school,
           schoolId:   fresh.schoolId !== undefined ? fresh.schoolId : prev.schoolId,
+          status:     fresh.status !== undefined ? fresh.status : prev.status,
           name:       fresh.name       ?? prev.name,
           photoUrl:   fresh.photoUrl   ?? prev.photoUrl,
         };
