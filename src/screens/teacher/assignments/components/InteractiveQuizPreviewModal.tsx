@@ -5,6 +5,11 @@ import { answerToEditText } from '../utils/validation';
 import { generateQuizHTMLPreview, stripInternalQuizFields } from '../utils/quizHtml';
 import SERVER_URL from '../../../../config/serverUrl';
 import ASSIGNMENTS_SERVER_URL from '../../../../config/assignmentsServerUrl';
+import { EditablePicture } from './EditablePicture';
+import {
+  taskPicture, questionPicture, setPicture, movePicture, setQuestionField, setAnswer, setOption, markCorrectOption,
+  pictureSlots, sameSlot, type PictureSlot,
+} from '../utils/quizEditing';
 
 // The unified Interactive Quiz Preview/Edit-Answers modal — server-rendered
 // HTML preview + a full editable form for every question type (plain,
@@ -27,6 +32,38 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
   const needsReviewBanner = !!conversionReport && conversionReport.overallStatus !== 'COMPLETE';
   const nonPreservedCount = needsReviewBanner ? conversionReport.items.filter((i: any) => i.status !== 'PRESERVED').length : 0;
   const [reviewBannerHeight, setReviewBannerHeight] = React.useState(0);
+  const editMode = !!(interactiveQuiz as any)._editMode;
+
+  // Edits apply to the quiz as they are typed (nothing else to save), and the
+  // Preview is rebuilt in the background a moment after the last edit, so it
+  // already shows them when the teacher switches back.
+  const latestQuiz = React.useRef(interactiveQuiz);
+  React.useEffect(() => { latestQuiz.current = interactiveQuiz; }, [interactiveQuiz]);
+  const [unrendered, setUnrendered] = React.useState<any>(null); // a quiz the preview could not be built for
+  const needsPreview = editMode && !(interactiveQuiz as any)._previewHTML;
+  const savingPreview = needsPreview && unrendered !== interactiveQuiz;
+  React.useEffect(() => {
+    if (!needsPreview) return undefined;
+    const sent = interactiveQuiz;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quiz: stripInternalQuizFields(sent) }),
+        });
+        const html = await res.text();
+        // Only if nothing changed meanwhile; a newer edit schedules its own.
+        if (latestQuiz.current !== sent) return;
+        if (res.ok) setInteractiveQuiz({ ...sent, _previewHTML: html });
+        else setUnrendered(sent);
+      } catch {
+        if (latestQuiz.current === sent) setUnrendered(sent); // Preview fetches it on switch
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [needsPreview, interactiveQuiz, setInteractiveQuiz]);
+  const update = (next: any) => setInteractiveQuiz(next);
 
   return (
     <Modal visible transparent={false} animationType="slide" onRequestClose={onClose}>
@@ -86,8 +123,16 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                 }
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: (interactiveQuiz as any)._editMode ? '#0f1117' : '#8b949e' }}>Edit Answers</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: (interactiveQuiz as any)._editMode ? '#0f1117' : '#8b949e' }}>Edit</Text>
             </TouchableOpacity>
+            {editMode && (
+              <View testID="quiz-edit-saved" style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6 }}>
+                {savingPreview
+                  ? <ActivityIndicator size="small" color="#8b949e" />
+                  : <Feather name="check" size={13} color="#4a9d6e" />}
+                <Text style={{ fontSize: 12, color: '#8b949e' }}>{savingPreview ? 'Saving…' : 'All changes saved'}</Text>
+              </View>
+            )}
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <TouchableOpacity
@@ -162,7 +207,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
             </View>
             {(interactiveQuiz as any).visualUnderstandingAvailable === false && (
               <Text testID="quiz-preview-text-only-note" style={{ color: '#c9d1d9', fontSize: 12, marginTop: 6, marginLeft: 23 }}>
-                Read from the worksheet’s text only (no vision AI available right now) — pictures are included, but answers to picture-based questions need you in Edit Answers.
+                Read from the worksheet’s text only (no vision AI available right now) — pictures are included, but answers to picture-based questions need you in Edit.
               </Text>
             )}
             {conversionReport.taskCountWarning && (
@@ -252,38 +297,51 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                   </View>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: tp.label, marginBottom: 4 }}>{(task.title || '').replace(/\*\*/g, '')}</Text>
                   {(() => {
-                    // Only show a task-level image when the task genuinely needs one as a
-                    // diagram (sharedImage / diagramFill / a question flagged hasImage with
-                    // no extracted crop) — matching exactly what Preview shows. A reading
-                    // passage task also carries task.pageImageUrl (the raw scanned page,
-                    // kept around only as an internal fallback source), but Preview never
-                    // displays that scan for a plain text task, so Edit Answers shouldn't either.
-                    const anyQuestionNeedsImage = (task.questions || []).some((q: any) => q.hasImage && !q.imageUrl);
-                    const taskDiagramUrl = task.diagramFillImageUrl
-                      || (task.sharedImage && (task.questions?.[0]?.imageUrl || task.pageImageUrl))
-                      || (anyQuestionNeedsImage && task.pageImageUrl);
-                    if (taskDiagramUrl) {
+                    // The task picture (shown once above the questions in Preview) is
+                    // editable: move it to a question, replace or remove it, or add one.
+                    // A fill-in diagram (inputs drawn on the picture) stays as it is.
+                    // A reading passage task also carries task.pageImageUrl (the raw scanned
+                    // page, kept only as an internal fallback source) - shown read-only, as before.
+                    const slotLabel = (qi: number) => { const qq = task.questions?.[qi]; return qq?.id ? `Question ${qq.id})` : `Question ${qi + 1}`; };
+                    const fromTask: PictureSlot = { kind: 'task' };
+                    const picture = taskPicture(task);
+                    if (!task.diagramFillImageUrl) {
+                      const anyQuestionNeedsImage = (task.questions || []).some((q: any) => q.hasImage && !q.imageUrl);
+                      const scan = !picture && ((task.sharedImage && task.pageImageUrl) || (anyQuestionNeedsImage && task.pageImageUrl));
                       return (
-                        <View style={{ marginBottom: 12, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', backgroundColor: '#fff', padding: 8 }}>
-                          <Image source={{ uri: taskDiagramUrl.startsWith('http') || taskDiagramUrl.startsWith('data:') ? taskDiagramUrl : `${SERVER_URL}${taskDiagramUrl}` }} style={{ width: '100%', height: 200, resizeMode: 'contain' }} />
-                        </View>
+                        <>
+                          {scan ? (
+                            <View style={{ marginBottom: 12, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', backgroundColor: '#fff', padding: 8 }}>
+                              <Image source={{ uri: scan.startsWith('http') || scan.startsWith('data:') ? scan : `${SERVER_URL}${scan}` }} style={{ width: '100%', height: 200, resizeMode: 'contain' }} />
+                            </View>
+                          ) : null}
+                          <EditablePicture
+                            testID={`edit-task-${ti}-picture`}
+                            url={picture}
+                            height={200}
+                            addLabel="Add task picture"
+                            moveTargets={pictureSlots(task, slotLabel).filter(t => !sameSlot(t.slot, fromTask))}
+                            onSet={(url) => update(setPicture(interactiveQuiz, ti, fromTask, url))}
+                            onMove={(to) => update(movePicture(interactiveQuiz, ti, fromTask, to))}
+                          />
+                          {Array.isArray(task.pyramids) && task.pyramids.length ? (
+                            <View style={{ marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(195,220,216,0.18)', borderRadius: 8, padding: 10 }}>
+                              <Text style={{ fontSize: 12, color: '#A8B5B3' }}>Diagram: number pyramid — see Preview tab to view the rendered diagram.</Text>
+                            </View>
+                          ) : task.chart && Array.isArray(task.chart.bars) && task.chart.bars.length ? (
+                            <View style={{ marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(195,220,216,0.18)', borderRadius: 8, padding: 10 }}>
+                              <Text style={{ fontSize: 12, color: '#A8B5B3' }}>Diagram: bar chart — see Preview tab to view the rendered diagram.</Text>
+                            </View>
+                          ) : null}
+                        </>
                       );
                     }
-                    if (Array.isArray(task.pyramids) && task.pyramids.length) {
-                      return (
-                        <View style={{ marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(195,220,216,0.18)', borderRadius: 8, padding: 10 }}>
-                          <Text style={{ fontSize: 12, color: '#A8B5B3' }}>Diagram: number pyramid — see Preview tab to view the rendered diagram.</Text>
-                        </View>
-                      );
-                    }
-                    if (task.chart && Array.isArray(task.chart.bars) && task.chart.bars.length) {
-                      return (
-                        <View style={{ marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(195,220,216,0.18)', borderRadius: 8, padding: 10 }}>
-                          <Text style={{ fontSize: 12, color: '#A8B5B3' }}>Diagram: bar chart — see Preview tab to view the rendered diagram.</Text>
-                        </View>
-                      );
-                    }
-                    return null;
+                    const taskDiagramUrl = task.diagramFillImageUrl;
+                    return (
+                      <View style={{ marginBottom: 12, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', backgroundColor: '#fff', padding: 8 }}>
+                        <Image source={{ uri: taskDiagramUrl.startsWith('http') || taskDiagramUrl.startsWith('data:') ? taskDiagramUrl : `${SERVER_URL}${taskDiagramUrl}` }} style={{ width: '100%', height: 200, resizeMode: 'contain' }} />
+                      </View>
+                    );
                   })()}
                   {task.passage && (
                     <View style={{ marginBottom: 12, padding: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', borderRadius: 8 }}>
@@ -363,6 +421,32 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                     // to readable, editable text so every task shows its real answer.
                     const answerText = answerToEditText(q.answer);
                     const answerIsLong = answerText.length > 48 || answerText.includes('\n');
+                    const questionInput = (
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 10 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#F0EEEC', lineHeight: 22, paddingTop: 7 }}>{questionLabel}</Text>
+                        <TextInput
+                          testID={`edit-q-${ti}-${qi}-question`}
+                          style={{ flex: 1, borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, fontWeight: '600', color: '#F0EEEC', backgroundColor: '#252525', lineHeight: 22 }}
+                          value={String(q.question ?? '')}
+                          onChangeText={(val) => update(setQuestionField(interactiveQuiz, ti, qi, 'question', val))}
+                          placeholder="Question"
+                          placeholderTextColor="#6E736B"
+                          multiline
+                        />
+                      </View>
+                    );
+                    const hintSolution = (
+                      <>
+                        <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Hint:</Text>
+                          <TextInput testID={`edit-q-${ti}-${qi}-hint`} style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => update(setQuestionField(interactiveQuiz, ti, qi, 'hint', val))} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
+                        </View>
+                        <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Solution:</Text>
+                          <TextInput testID={`edit-q-${ti}-${qi}-solution`} style={{ borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => update(setQuestionField(interactiveQuiz, ti, qi, 'solution', val))} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
+                        </View>
+                      </>
+                    );
 
                     // ── VENN DIAGRAM: edit the answer INSIDE the diagram. Two overlapping
                     //    circles with three editable regions (left-only / both / right-only),
@@ -383,7 +467,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                       const regionStyle: any = { position: 'absolute', borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(195,220,216,0.55)', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', color: '#F0EEEC', fontSize: 13, padding: 6, textAlign: 'center', textAlignVertical: 'top' };
                       return (
                         <View key={qi} style={{ backgroundColor: '#1C1C1C', padding: 16, borderRadius: 10, marginTop: 12, borderWidth: 1, borderColor: 'rgba(195,220,216,0.12)' }}>
-                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#F0EEEC', marginBottom: 4, lineHeight: 22 }}>{questionLabel} {(q.question || '').replace(/\*\*(.+?)\*\*/g, '$1')}</Text>
+                          {questionInput}
                           <Text style={{ fontSize: 12, color: '#A8B5B3', marginBottom: 8 }}>Type answer items separated by commas — shared items go in the middle overlap.</Text>
                           <View style={{ position: 'relative', width: '100%', maxWidth: 540, height: 300, alignSelf: 'center', marginBottom: 8 }}>
                             {/* two overlapping circles */}
@@ -397,45 +481,63 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
                             <TextInput multiline value={asText(ans.center)} onChangeText={(v) => setRegion('center', v)} placeholder="Both" placeholderTextColor="#6E736B" style={{ ...regionStyle, left: '37%', top: 100, width: '26%', height: 118 }} />
                             <TextInput multiline value={asText(ans.right)} onChangeText={(v) => setRegion('right', v)} placeholder={`${rightLabel} only`} placeholderTextColor="#6E736B" style={{ ...regionStyle, right: '2%', top: 92, width: '27%', height: 132 }} />
                           </View>
-                          <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Hint:</Text>
-                            <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
-                          </View>
-                          <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Solution:</Text>
-                            <TextInput style={{ borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
-                          </View>
+                          {hintSolution}
                         </View>
                       );
                     }
 
                     return (
                       <View key={qi} style={{ backgroundColor: '#1C1C1C', padding: 16, borderRadius: 10, marginTop: 12, borderWidth: 1, borderColor: 'rgba(195,220,216,0.12)' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#F0EEEC', marginBottom: 10, lineHeight: 22 }}>{questionLabel} {(q.question || '').replace(/\*\*(.+?)\*\*/g, '$1')}</Text>
-                      {/* Skip the raw scanned-page crop when this task already has a
-                          structured chart — Preview shows the chart ONCE at the top of
-                          the task (see renderBarChart in quiz.js), not the unstyled raw
-                          scan repeated under every question referring to it. Showing
-                          both was the source of the "why doesn't Edit Answers look like
-                          Preview" mismatch. */}
-                      {q.imageUrl && !(task.chart && Array.isArray(task.chart.bars) && task.chart.bars.length) && (
-                        <View style={{ marginBottom: 12, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(195,220,216,0.2)', backgroundColor: '#fff', padding: 8 }}>
-                          <Image source={{ uri: q.imageUrl.startsWith('http') ? q.imageUrl : `${SERVER_URL}${q.imageUrl}` }} style={{ width: '100%', height: 160, resizeMode: 'contain' }} />
+                        {questionInput}
+                      {/* A task with a structured chart shows the chart once at the top in
+                          Preview (see renderBarChart), not the raw scan under each question. */}
+                      {!(task.chart && Array.isArray(task.chart.bars) && task.chart.bars.length) && (() => {
+                        const here: PictureSlot = { kind: 'question', qi };
+                        const slotLabel = (k: number) => { const qq = task.questions?.[k]; return qq?.id ? `Question ${qq.id})` : `Question ${k + 1}`; };
+                        return (
+                          <EditablePicture
+                            testID={`edit-q-${ti}-${qi}-picture`}
+                            url={questionPicture(task, qi)}
+                            height={160}
+                            addLabel="Add picture"
+                            moveTargets={pictureSlots(task, slotLabel).filter(t => !sameSlot(t.slot, here))}
+                            onSet={(url) => update(setPicture(interactiveQuiz, ti, here, url))}
+                            onMove={(to) => update(movePicture(interactiveQuiz, ti, here, to))}
+                          />
+                        );
+                      })()}
+                      {/* Multiple choice: edit each option; tap the circle to mark the correct one.
+                          (Matching tasks share one pool of answers - edit those through Answer.) */}
+                      {q.type === 'mcq' && Array.isArray(q.options) && q.options.length > 0 && !task._matchTask && (
+                        <View style={{ marginBottom: 10, gap: 6 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#A8B5B3' }}>Options:</Text>
+                          {q.options.map((o: any, oi: number) => {
+                            const label = typeof o === 'string' ? o : String(o?.label ?? '');
+                            const correct = typeof o === 'object' && o && 'correct' in o ? !!o.correct : label.trim() === String(q.answer ?? '').trim();
+                            return (
+                              <View key={oi} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <TouchableOpacity testID={`edit-q-${ti}-${qi}-option-${oi}-correct`} onPress={() => update(markCorrectOption(interactiveQuiz, ti, qi, oi))} activeOpacity={0.75}>
+                                  <Feather name={correct ? 'check-circle' : 'circle'} size={18} color={correct ? '#4a9d6e' : '#6E736B'} />
+                                </TouchableOpacity>
+                                <TextInput
+                                  testID={`edit-q-${ti}-${qi}-option-${oi}`}
+                                  style={{ flex: 1, borderWidth: 1, borderColor: correct ? 'rgba(74,157,110,0.6)' : 'rgba(195,220,216,0.2)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#F0EEEC', backgroundColor: '#252525' }}
+                                  value={label}
+                                  onChangeText={(val) => update(setOption(interactiveQuiz, ti, qi, oi, val))}
+                                  placeholder={`Option ${oi + 1}`}
+                                  placeholderTextColor="#6E736B"
+                                />
+                              </View>
+                            );
+                          })}
                         </View>
                       )}
                       <View style={{ flexDirection: answerIsLong ? 'column' : 'row', alignItems: answerIsLong ? 'stretch' : 'center', gap: 8, marginBottom: 10, backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)' }}>
                         <Text style={{ fontSize: 13, fontWeight: '700', color: '#BAA467' }}>{/^-?\d+(\.\d+)?$/.test(answerText.trim()) || q.type === 'numeric' ? 'Answer =' : 'Answer:'}</Text>
-                        <TextInput style={{ flex: answerIsLong ? undefined : 1, borderWidth: 1.5, borderColor: 'rgba(195,220,216,0.25)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', minHeight: answerIsLong ? 72 : undefined, textAlignVertical: answerIsLong ? 'top' : 'center' }} value={answerText} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].answer = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Answer" placeholderTextColor="#6E736B" multiline={answerIsLong} />
+                        <TextInput style={{ flex: answerIsLong ? undefined : 1, borderWidth: 1.5, borderColor: 'rgba(195,220,216,0.25)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#F0EEEC', backgroundColor: '#252525', fontWeight: '600', minHeight: answerIsLong ? 72 : undefined, textAlignVertical: answerIsLong ? 'top' : 'center' }} testID={`edit-q-${ti}-${qi}-answer`} value={answerText} onChangeText={(val) => update(setAnswer(interactiveQuiz, ti, qi, val))} placeholder="Answer" placeholderTextColor="#6E736B" multiline={answerIsLong} />
                         {q.unit && <Text style={{ fontSize: 13, color: '#A8B5B3', fontWeight: '500' }}>{q.unit}</Text>}
                       </View>
-                      <View style={{ marginBottom: 10, backgroundColor: 'rgba(197,189,150,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Hint:</Text>
-                        <TextInput style={{ borderWidth: 1, borderColor: 'rgba(197,189,150,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.hint || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].hint = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Hint" placeholderTextColor="#6E736B" multiline />
-                      </View>
-                      <View style={{ backgroundColor: 'rgba(186,164,103,0.10)', padding: 10, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#BAA467' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#BAA467', marginBottom: 4 }}>Solution:</Text>
-                        <TextInput style={{ borderWidth: 1, borderColor: 'rgba(186,164,103,0.3)', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#D8E8E6', backgroundColor: '#252525' }} value={q.solution || ''} onChangeText={(val) => { const u = { ...interactiveQuiz }; u.tasks[ti].questions[qi].solution = val; u._previewHTML = null; setInteractiveQuiz(u); }} placeholder="Solution" placeholderTextColor="#6E736B" multiline numberOfLines={3} />
-                      </View>
+                      {hintSolution}
                       </View>
                     );
                   })}
