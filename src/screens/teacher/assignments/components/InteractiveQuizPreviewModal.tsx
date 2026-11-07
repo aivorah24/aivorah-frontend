@@ -65,6 +65,28 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
   }, [needsPreview, interactiveQuiz, setInteractiveQuiz]);
   const update = (next: any) => setInteractiveQuiz(next);
 
+  // Refresh: rebuild the Preview from the quiz as it is now (every edit made
+  // in Edit), and redraw it. The frame is redrawn by changing its key.
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [frameKey, setFrameKey] = React.useState(0);
+  const refreshPreview = async () => {
+    const current = latestQuiz.current;
+    setRefreshing(true);
+    try {
+      const res = await fetch(`${ASSIGNMENTS_SERVER_URL}/quiz/render-preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiz: stripInternalQuizFields(current) }),
+      });
+      const html = await res.text();
+      if (res.ok) {
+        setInteractiveQuiz({ ...current, _previewHTML: html, _editMode: false });
+        setFrameKey(k => k + 1);
+      }
+    } catch { /* keep the current preview */ }
+    setRefreshing(false);
+  };
+
   return (
     <Modal visible transparent={false} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: '#0f1117', position: 'relative' } as any}>
@@ -125,6 +147,17 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
             >
               <Text style={{ fontSize: 13, fontWeight: '700', color: (interactiveQuiz as any)._editMode ? '#0f1117' : '#8b949e' }}>Edit</Text>
             </TouchableOpacity>
+            {!editMode && (
+              <TouchableOpacity
+                testID="quiz-preview-refresh"
+                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#1c2129', flexDirection: 'row', gap: 6, alignItems: 'center' }}
+                onPress={refreshPreview}
+                disabled={refreshing}
+              >
+                {refreshing ? <ActivityIndicator size="small" color="#8b949e" /> : <Feather name="refresh-cw" size={13} color="#8b949e" />}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8b949e' }}>{refreshing ? 'Refreshing…' : 'Refresh'}</Text>
+              </TouchableOpacity>
+            )}
             {editMode && (
               <View testID="quiz-edit-saved" style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6 }}>
                 {savingPreview
@@ -233,6 +266,7 @@ export function InteractiveQuizPreviewModal({ quiz, setQuiz, onClose }: {
         {/* Preview Mode — server-rendered HTML embedded */}
         {!(interactiveQuiz as any)._editMode && (interactiveQuiz as any)._previewHTML && Platform.OS === 'web' && (
           <div
+            key={frameKey}
             ref={(el: any) => {
               if (el && !(el as any)._done) {
                 (el as any)._done = true;
