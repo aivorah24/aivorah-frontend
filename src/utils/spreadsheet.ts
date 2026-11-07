@@ -64,8 +64,9 @@ export function parseCsv(text: string): string[][] {
 }
 
 // Excel cells arrive as numbers/dates depending on how they were typed — force strings so it matches the CSV path.
-export function xlsxToGrid(buffer: ArrayBuffer): string[][] {
-  const XLSX = require('xlsx');
+// xlsx is ~875 KB, so it's import()ed: its own chunk, fetched only when an Excel file is read.
+export async function xlsxToGrid(buffer: ArrayBuffer): Promise<string[][]> {
+  const XLSX: any = await import('xlsx');
   const wb = XLSX.read(buffer, { type: 'array' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
@@ -122,8 +123,8 @@ export function downloadCsv(filename: string, content: string) {
 }
 
 // A ready-to-fill .xlsx with the given header row (plus optional example rows), widths sized to the headers.
-export function downloadXlsxTemplate(filename: string, headers: string[], examples: string[][] = []) {
-  const XLSX = require('xlsx');
+export async function downloadXlsxTemplate(filename: string, headers: string[], examples: string[][] = []): Promise<void> {
+  const XLSX: any = await import('xlsx');
   const ws = XLSX.utils.aoa_to_sheet([headers, ...examples]);
   ws['!cols'] = headers.map((h) => ({ wch: Math.max(14, h.length + 4) }));
   const wb = XLSX.utils.book_new();

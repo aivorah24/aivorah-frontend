@@ -8,12 +8,12 @@ describe('parseCsv', () => {
 });
 
 describe('xlsxToGrid', () => {
-  test('reads the first sheet and turns numbers into strings', () => {
+  test('reads the first sheet and turns numbers into strings', async () => {
     const XLSX = require('xlsx');
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Student Name', 'Grade'], ['Asha', 4]]), 'S');
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    expect(xlsxToGrid(buf)).toEqual([['Student Name', 'Grade'], ['Asha', '4']]);
+    expect(await xlsxToGrid(buf)).toEqual([['Student Name', 'Grade'], ['Asha', '4']]);
   });
 });
 

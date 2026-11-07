@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { primeStudentId } from '../services/studentIdCache';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -120,12 +121,19 @@ const AuthContext = createContext<AuthContextType>({
 // Fetch full profile from Supabase (includes curriculum, grade, location, onboardingComplete)
 async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _syncOk?: boolean; _accountExists?: boolean }> {
   const combined: Partial<User> & { _syncOk?: boolean; _accountExists?: boolean } = {};
+  // Both requests start together (they don't depend on each other), so a page
+  // load waits for the slower of the two instead of both back to back. The
+  // results are still merged in the same order as before: sync, then preferences.
+  const syncReq = Promise.resolve().then(() => fetch(`${AUTH_SERVER_URL}/user/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  }));
+  const prefReq = Promise.resolve().then(() => fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`));
+  // Handled below; this only stops an "unhandled rejection" while sync is awaited.
+  prefReq.catch(() => {});
   try {
-    const res = await fetch(`${AUTH_SERVER_URL}/user/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
+    const res = await syncReq;
     if (res.ok) {
       const data = await res.json();
       // _syncOk: the DB lookup itself succeeded (distinguishes "account missing"
@@ -135,6 +143,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
       // no role) — meaning the account was never created or has been deleted.
       combined._syncOk = true;
       combined._accountExists = !!(data.id || data.role);
+      if (data.id) primeStudentId(email, String(data.id));
       Object.assign(combined, {
         grade:              data.grade      || undefined,
         section:            data.section    || undefined,
@@ -164,7 +173,7 @@ async function fetchSupabaseProfile(email: string): Promise<Partial<User> & { _s
   } catch {}
 
   try {
-    const prefRes = await fetch(`${PROFILE_SERVER_URL}/user/preferences?email=${encodeURIComponent(email)}`);
+    const prefRes = await prefReq;
     if (prefRes.ok) {
       const pref = await prefRes.json();
       if (pref && typeof pref === 'object') {

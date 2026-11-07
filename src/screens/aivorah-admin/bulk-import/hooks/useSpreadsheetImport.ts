@@ -63,9 +63,9 @@ export function useSpreadsheetImport() {
     setEditingColumns(false);
   }, []);
 
-  const loadFile = useCallback((name: string, content: ArrayBuffer | string) => {
+  const loadFile = useCallback(async (name: string, content: ArrayBuffer | string) => {
     try {
-      loadGrid(typeof content === 'string' ? parseCsv(content) : xlsxToGrid(content), name);
+      loadGrid(typeof content === 'string' ? parseCsv(content) : await xlsxToGrid(content), name);
     } catch {
       setFileError("Couldn't read this file. Save it as .xlsx or .csv and try again.");
     }

@@ -132,6 +132,9 @@ import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 import { applyActionCode, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { applyDocumentChrome } from './src/utils/documentChrome';
+import { warmServices } from './src/utils/warmServices';
+import AUTH_SERVER_URL from './src/config/authServerUrl';
+import PROFILE_SERVER_URL from './src/config/profileServerUrl';
 
 // Set browser tab title
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -988,6 +991,10 @@ function RootNavigator() {
 // Inner component so useTheme() can be called inside ThemeProvider
 function ThemedRoot() {
   const { colors: c, isDark } = useTheme();
+
+  // Every visit (sign-in or refresh) starts with these two services; wake them
+  // now so a sleeping Render instance boots while the page is still loading.
+  useEffect(() => { warmServices([AUTH_SERVER_URL, PROFILE_SERVER_URL]); }, []);
 
   // Load the landing design fonts app-wide (web) so headings can use the serif.
   useEffect(() => {

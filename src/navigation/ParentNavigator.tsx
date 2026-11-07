@@ -5,34 +5,47 @@ import { ParentDrawerParamList } from './types';
 import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
-import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ParentDashboardScreen from '../screens/parent/dashboard/ParentDashboardScreen';
-import ParentProfileScreen from '../screens/parent/profile/ParentProfileScreen';
-import ParentMyKidsScreen from '../screens/parent/my-kids/ParentMyKidsScreen';
-import ParentDailyTasksScreen from '../screens/parent/daily-tasks/ParentDailyTasksScreen';
-import ParentScheduleScreen from '@legacy/parent/ParentScheduleScreen';
-import ParentAssignmentsScreen from '../screens/parent/assignments/ParentAssignmentsScreen';
-import ParentChallengesScreen from '../screens/parent/challenges/ParentChallengesScreen';
-import ParentLeaderboardScreen from '@legacy/parent/ParentLeaderboardScreen';
-import ParentProgressScreen from '../screens/parent/progress/ParentProgressScreen';
-import ParentAIProgressReportScreen from '../screens/parent/ai-progress-report/ParentAIProgressReportScreen';
-import ParentSettingsScreen from '../screens/parent/settings/ParentSettingsScreen';
-import ParentMessagesScreen from '@legacy/parent/ParentMessagesScreen';
-import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
-import SubscriptionScreen from '@legacy/student-legacy/SubscriptionScreen';
-import MyClassesScreen from '../features/classes/components/MyClassesScreen';
-import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
-import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
-import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
-import ChannelsScreen from '../features/channels/components/ChannelsScreen';
-import ParentAttendanceScreen from '../screens/parent/attendance/ParentAttendanceScreen';
-import ParentControlsScreen from '../screens/parent/parental-controls/ParentControlsScreen';
-import ParentLearningScreen from '../screens/parent/learning/ParentLearningScreen';
-import ParentHelpScreen from '../screens/parent/help-center/ParentHelpScreen';
+import STUDENTS_SERVER_URL from '../config/studentsServerUrl';
+import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
+import DAILY_HABITS_SERVER_URL from '../config/dailyHabitsServerUrl';
+import ASSIGNMENTS_SERVER_URL from '../config/assignmentsServerUrl';
+import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
+import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+
+// Every screen below loads from its own chunk on first open (lazyScreens.tsx);
+// ParentDashboardScreen stays in the main bundle so the home page needs no extra download.
+const screens = createLazyScreenGroup();
+const ROLE_SERVICES = [STUDENTS_SERVER_URL, LEARNING_PATHS_SERVER_URL, DAILY_HABITS_SERVER_URL, ASSIGNMENTS_SERVER_URL, MESSAGES_SERVER_URL];
+const DashboardScreen = screens.lazyScreen(() => import('../screens/student/dashboard/DashboardScreen'));
+const ParentProfileScreen = screens.lazyScreen(() => import('../screens/parent/profile/ParentProfileScreen'));
+const ParentMyKidsScreen = screens.lazyScreen(() => import('../screens/parent/my-kids/ParentMyKidsScreen'));
+const ParentDailyTasksScreen = screens.lazyScreen(() => import('../screens/parent/daily-tasks/ParentDailyTasksScreen'));
+const ParentScheduleScreen = screens.lazyScreen(() => import('@legacy/parent/ParentScheduleScreen'));
+const ParentAssignmentsScreen = screens.lazyScreen(() => import('../screens/parent/assignments/ParentAssignmentsScreen'));
+const ParentChallengesScreen = screens.lazyScreen(() => import('../screens/parent/challenges/ParentChallengesScreen'));
+const ParentLeaderboardScreen = screens.lazyScreen(() => import('@legacy/parent/ParentLeaderboardScreen'));
+const ParentProgressScreen = screens.lazyScreen(() => import('../screens/parent/progress/ParentProgressScreen'));
+const ParentAIProgressReportScreen = screens.lazyScreen(() => import('../screens/parent/ai-progress-report/ParentAIProgressReportScreen'));
+const ParentSettingsScreen = screens.lazyScreen(() => import('../screens/parent/settings/ParentSettingsScreen'));
+const ParentMessagesScreen = screens.lazyScreen(() => import('@legacy/parent/ParentMessagesScreen'));
+const AnnouncementsScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementsScreen'));
+const SubscriptionScreen = screens.lazyScreen(() => import('@legacy/student-legacy/SubscriptionScreen'));
+const MyClassesScreen = screens.lazyScreen(() => import('../features/classes/components/MyClassesScreen'));
+const ClassDetailScreen = screens.lazyScreen(() => import('../features/classes/components/ClassDetailScreen'));
+const TimetableScreen = screens.lazyScreen(() => import('../screens/shared/timetable/TimetableScreen'));
+const ResourcesScreen = screens.lazyScreen(() => import('../screens/shared/resources/ResourcesScreen'));
+const ChannelsScreen = screens.lazyScreen(() => import('../features/channels/components/ChannelsScreen'));
+const ParentAttendanceScreen = screens.lazyScreen(() => import('../screens/parent/attendance/ParentAttendanceScreen'));
+const ParentControlsScreen = screens.lazyScreen(() => import('../screens/parent/parental-controls/ParentControlsScreen'));
+const ParentLearningScreen = screens.lazyScreen(() => import('../screens/parent/learning/ParentLearningScreen'));
+const ParentHelpScreen = screens.lazyScreen(() => import('../screens/parent/help-center/ParentHelpScreen'));
 
 const Drawer = createDrawerNavigator<ParentDrawerParamList>();
 
 export default function ParentNavigator() {
+  // Wake this role's services and, on a good connection, prefetch its screens.
+  useRoleWarmup(screens, ROLE_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

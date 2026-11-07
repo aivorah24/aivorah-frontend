@@ -1,18 +1,32 @@
 import { Platform } from 'react-native';
 
-// @ts-ignore — pdfjs-dist v3 CommonJS import
-const pdfjsLib = Platform.OS === 'web' ? require('pdfjs-dist/build/pdf') : null;
-// @ts-ignore
-const pdfjsWorker = Platform.OS === 'web' ? require('pdfjs-dist/build/pdf.worker.entry') : null;
-if (pdfjsLib && typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-  (window as any).__pdfjsLib = pdfjsLib;
+// pdfjs-dist is ~2.5 MB of JS, so it's downloaded only when a teacher actually
+// uploads a PDF (import() → its own chunk), not with the Assignments screen.
+let pdfjsPromise: Promise<any> | null = null;
+function loadPdfjs(): Promise<any> {
+  if (!pdfjsPromise) {
+    pdfjsPromise = Promise.all([
+      // @ts-ignore — pdfjs-dist v3 CommonJS import
+      import('pdfjs-dist/build/pdf'),
+      // @ts-ignore
+      import('pdfjs-dist/build/pdf.worker.entry'),
+    ]).then(([mod]) => {
+      const lib = (mod as any).default?.getDocument ? (mod as any).default : mod;
+      if (typeof window !== 'undefined') {
+        lib.GlobalWorkerOptions.workerSrc = '';
+        (window as any).__pdfjsLib = lib;
+      }
+      return lib;
+    }).catch((err) => { pdfjsPromise = null; throw err; });
+  }
+  return pdfjsPromise;
 }
 
 /** Convert a PDF file (base64) into per-page JPEG images using browser canvas */
 export async function pdfToImages(pdfBase64: string): Promise<{ base64: string; mime: string; name: string }[]> {
   if (Platform.OS !== 'web') return [];
   try {
+    const pdfjsLib = await loadPdfjs();
     console.log('[pdfToImages] Starting, pdfjs version:', pdfjsLib.version);
     const raw = atob(pdfBase64);
     const data = new Uint8Array(raw.length);
@@ -50,7 +64,7 @@ export async function pdfToImages(pdfBase64: string): Promise<{ base64: string; 
 export async function imagesToPdfBase64(images: { base64: string; mime: string }[]): Promise<string | null> {
   if (Platform.OS !== 'web' || images.length === 0) return null;
   try {
-    const { jsPDF } = require('jspdf');
+    const { jsPDF } = await import('jspdf'); // own chunk, loaded on use
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();

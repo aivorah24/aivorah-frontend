@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AUTH_SERVER_URL from '../config/authServerUrl';
 import LEADERBOARD_SERVICE_URL from '../config/leaderboardServiceUrl';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { getPrimedStudentId } from '../services/studentIdCache';
 import { useAuth } from './AuthContext';
 import type { LearningActivity } from '../screens/student/utils/learningPathProgress';
 
@@ -148,6 +149,13 @@ export async function resolveStudentId(email: string): Promise<string> {
 
   // 1. Demo shortcut
   if (DEMO_IDS[email]) return DEMO_IDS[email];
+
+  // 1b. Same page load: AuthContext's /user/sync just returned this id
+  const primed = getPrimedStudentId(email);
+  if (primed) {
+    AsyncStorage.setItem(key, primed).catch(() => {});
+    return primed;
+  }
 
   // 2. Sync with server → get the current, authoritative UUID
   try {

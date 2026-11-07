@@ -66,8 +66,9 @@ function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ''));
 }
 
-function xlsxToGrid(buffer: ArrayBuffer): string[][] {
-  const XLSX = require('xlsx');
+// import(): xlsx (~875 KB) is its own chunk, fetched only when an Excel file is read.
+async function xlsxToGrid(buffer: ArrayBuffer): Promise<string[][]> {
+  const XLSX: any = await import('xlsx');
   const wb = XLSX.read(buffer, { type: 'array' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
@@ -219,7 +220,7 @@ export default function SchoolAdminTeacherBulkImportScreen({ navigation }: any) 
     setUploadError('');
     const isExcel = /\.xlsx?$/i.test(file.name);
     const reader = new FileReader();
-    reader.onload = () => { try { finishGrid(isExcel ? xlsxToGrid(reader.result as ArrayBuffer) : parseCsv(String(reader.result || '')), file.name); } catch { setUploadError(`Could not read that file. Please upload a valid ${isExcel ? 'Excel' : 'CSV'} file.`); } };
+    reader.onload = async () => { try { finishGrid(isExcel ? await xlsxToGrid(reader.result as ArrayBuffer) : parseCsv(String(reader.result || '')), file.name); } catch { setUploadError(`Could not read that file. Please upload a valid ${isExcel ? 'Excel' : 'CSV'} file.`); } };
     reader.onerror = () => setUploadError('Could not read that file. Please try again.');
     if (isExcel) reader.readAsArrayBuffer(file); else reader.readAsText(file);
   }

@@ -15,9 +15,10 @@ interface ExportParams {
 // jsPDF report (../../../.legacy-screens/parent/ParentAIReportsScreen.tsx:
 // banner header, rounded card, score bars) but in Aivorah's gold/cream
 // teacher palette instead of that report's teal.
-export function exportStudentProgressPdf(params: ExportParams): void {
+export async function exportStudentProgressPdf(params: ExportParams): Promise<void> {
   if (Platform.OS !== 'web') return;
-  const { jsPDF } = require('jspdf');
+  // import(): jsPDF (~330 KB) is its own chunk, fetched when Export is pressed.
+  const { jsPDF } = await import('jspdf');
   const { teacherName, filters, activityStudents, activityMode } = params;
   const generatedAt = new Date();
 

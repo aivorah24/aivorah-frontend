@@ -12,29 +12,37 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
-import SchoolAdminPeopleScreen from '../screens/school-admin/people/SchoolAdminPeopleScreen';
-import SchoolAdminStudentsScreen from '../screens/school-admin/students/SchoolAdminStudentsScreen';
-import SchoolAdminTeachersScreen from '../screens/school-admin/teachers/SchoolAdminTeachersScreen';
-import SchoolAdminParentsScreen from '../screens/school-admin/parents/SchoolAdminParentsScreen';
-import SchoolAdminAddParentScreen from '../screens/school-admin/parents/SchoolAdminAddParentScreen';
-import SchoolAdminSettingsScreen from '../screens/school-admin/workspace-settings/SchoolAdminSettingsScreen';
 import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingSoonScreen';
-import SchoolAdminImportHistoryScreen from '../screens/school-admin/import-history/SchoolAdminImportHistoryScreen';
-import SchoolAdminBulkImportScreen from '../screens/school-admin/bulk-import/SchoolAdminBulkImportScreen';
-import SchoolAdminAddStudentScreen from '../screens/school-admin/students/SchoolAdminAddStudentScreen';
-import SchoolAdminGradesSectionsScreen from '../screens/school-admin/grades-sections/SchoolAdminGradesSectionsScreen';
-import SchoolAdminClassesScreen from '../screens/school-admin/classes/SchoolAdminClassesScreen';
-import SchoolAdminAddTeacherScreen from '../screens/school-admin/teachers/SchoolAdminAddTeacherScreen';
-import SchoolAdminEditTeacherScreen from '../screens/school-admin/teachers/SchoolAdminEditTeacherScreen';
-import SchoolAdminTeacherBulkImportScreen from '../screens/school-admin/bulk-import/SchoolAdminTeacherBulkImportScreen';
-import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
-import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
-import ChannelsScreen from '../features/channels/components/ChannelsScreen';
-import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
-import SchoolAdminMessagesScreen from '@legacy/school-admin/SchoolAdminMessagesScreen';
-import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
-import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
-import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
+import SCHOOL_ADMIN_SERVER_URL from '../config/schoolAdminServerUrl';
+import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
+import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+
+// Every screen below loads from its own chunk on first open (lazyScreens.tsx);
+// SchoolAdminDashboardScreen stays in the main bundle so the home page needs no extra download.
+const screens = createLazyScreenGroup();
+const ROLE_SERVICES = [SCHOOL_ADMIN_SERVER_URL, MESSAGES_SERVER_URL];
+const SchoolAdminPeopleScreen = screens.lazyScreen(() => import('../screens/school-admin/people/SchoolAdminPeopleScreen'));
+const SchoolAdminStudentsScreen = screens.lazyScreen(() => import('../screens/school-admin/students/SchoolAdminStudentsScreen'));
+const SchoolAdminTeachersScreen = screens.lazyScreen(() => import('../screens/school-admin/teachers/SchoolAdminTeachersScreen'));
+const SchoolAdminParentsScreen = screens.lazyScreen(() => import('../screens/school-admin/parents/SchoolAdminParentsScreen'));
+const SchoolAdminAddParentScreen = screens.lazyScreen(() => import('../screens/school-admin/parents/SchoolAdminAddParentScreen'));
+const SchoolAdminSettingsScreen = screens.lazyScreen(() => import('../screens/school-admin/workspace-settings/SchoolAdminSettingsScreen'));
+const SchoolAdminImportHistoryScreen = screens.lazyScreen(() => import('../screens/school-admin/import-history/SchoolAdminImportHistoryScreen'));
+const SchoolAdminBulkImportScreen = screens.lazyScreen(() => import('../screens/school-admin/bulk-import/SchoolAdminBulkImportScreen'));
+const SchoolAdminAddStudentScreen = screens.lazyScreen(() => import('../screens/school-admin/students/SchoolAdminAddStudentScreen'));
+const SchoolAdminGradesSectionsScreen = screens.lazyScreen(() => import('../screens/school-admin/grades-sections/SchoolAdminGradesSectionsScreen'));
+const SchoolAdminClassesScreen = screens.lazyScreen(() => import('../screens/school-admin/classes/SchoolAdminClassesScreen'));
+const SchoolAdminAddTeacherScreen = screens.lazyScreen(() => import('../screens/school-admin/teachers/SchoolAdminAddTeacherScreen'));
+const SchoolAdminEditTeacherScreen = screens.lazyScreen(() => import('../screens/school-admin/teachers/SchoolAdminEditTeacherScreen'));
+const SchoolAdminTeacherBulkImportScreen = screens.lazyScreen(() => import('../screens/school-admin/bulk-import/SchoolAdminTeacherBulkImportScreen'));
+const AnnouncementManagerScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementManagerScreen'));
+const AnnouncementsScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementsScreen'));
+const ChannelsScreen = screens.lazyScreen(() => import('../features/channels/components/ChannelsScreen'));
+const TeacherSettingsScreen = screens.lazyScreen(() => import('../screens/teacher/settings/TeacherSettingsScreen'));
+const SchoolAdminMessagesScreen = screens.lazyScreen(() => import('@legacy/school-admin/SchoolAdminMessagesScreen'));
+const HelpSupportScreen = screens.lazyScreen(() => import('../screens/shared/help-support/HelpSupportScreen'));
+const TimetableScreen = screens.lazyScreen(() => import('../screens/shared/timetable/TimetableScreen'));
+const ResourcesScreen = screens.lazyScreen(() => import('../screens/shared/resources/ResourcesScreen'));
 
 export type SchoolAdminDrawerParamList = {
   SchoolAdminDashboard: undefined;
@@ -67,6 +75,8 @@ export type SchoolAdminDrawerParamList = {
 const Drawer = createDrawerNavigator<SchoolAdminDrawerParamList>();
 
 export default function SchoolAdminNavigator() {
+  // Wake this role's services and, on a good connection, prefetch its screens.
+  useRoleWarmup(screens, ROLE_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

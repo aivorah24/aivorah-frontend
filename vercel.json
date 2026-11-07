@@ -1,7 +1,26 @@
 {
   "buildCommand": "EXPO_NO_TELEMETRY=1 CI=1 npx expo export --platform web",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/_expo/static/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/((?!_expo/|assets/).*)",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "<https://aivorah-auth-service.onrender.com>; rel=preconnect; crossorigin, <https://aivorah-profile-service.onrender.com>; rel=preconnect; crossorigin, <https://securetoken.googleapis.com>; rel=preconnect; crossorigin, <https://identitytoolkit.googleapis.com>; rel=preconnect; crossorigin"
+        }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!_expo/|assets/).*)", "destination": "/index.html" }
   ]
 }

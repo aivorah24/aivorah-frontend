@@ -273,9 +273,9 @@ export default function SchoolAdminBulkImportScreen({ navigation }: any) {
     setUploadError('');
     const isExcel = /\.xlsx?$/i.test(file.name);
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const grid = isExcel ? xlsxToGrid(reader.result as ArrayBuffer) : parseCsv(String(reader.result || ''));
+        const grid = isExcel ? await xlsxToGrid(reader.result as ArrayBuffer) : parseCsv(String(reader.result || ''));
         finishGrid(grid, file.name);
       } catch {
         setUploadError(`Could not read that file. Please upload a valid ${isExcel ? 'Excel' : 'CSV'} file.`);

@@ -37,71 +37,71 @@ function student(overrides: Partial<RosterStudent> = {}): RosterStudent {
 beforeEach(() => jest.clearAllMocks());
 
 describe('exportStudentProgressPdf', () => {
-  test('web platform with real students -> builds the PDF and saves without throwing', () => {
-    expect(() => exportStudentProgressPdf({
+  test('web platform with real students -> builds the PDF and saves without throwing', async () => {
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: { curriculum: 'IB PYP', grade: 'Grade 4', section: 'A', subject: 'Mathematics' },
       activityStudents: [student()],
       activityMode: 'overall',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
 
     expect(mockDoc.save).toHaveBeenCalledTimes(1);
     expect(mockDoc.save.mock.calls[0][0]).toMatch(/^activity-performance-\d{4}-\d{2}-\d{2}\.pdf$/);
   });
 
-  test('a needsAttention student draws the flag dot, not a crash', () => {
-    expect(() => exportStudentProgressPdf({
+  test('a needsAttention student draws the flag dot, not a crash', async () => {
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: {},
       activityStudents: [student({ needsAttention: true })],
       activityMode: 'overall',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
     expect(mockDoc.circle).toHaveBeenCalled();
   });
 
-  test('Today mode with a student missing per-day data (null) does not crash — real "not tracked" dash', () => {
-    expect(() => exportStudentProgressPdf({
+  test('Today mode with a student missing per-day data (null) does not crash — real "not tracked" dash', async () => {
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: {},
       activityStudents: [student({ learningPathTimeToday: null })],
       activityMode: 'today',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
   });
 
-  test('a student with zero real topic data does not crash — real "No topic data" state', () => {
-    expect(() => exportStudentProgressPdf({
+  test('a student with zero real topic data does not crash — real "No topic data" state', async () => {
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: {},
       activityStudents: [student({ totalTopics: 0, completedTopics: [] })],
       activityMode: 'overall',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
   });
 
-  test('no students for the filter -> the honest empty state, not a crash', () => {
-    expect(() => exportStudentProgressPdf({
+  test('no students for the filter -> the honest empty state, not a crash', async () => {
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: {},
       activityStudents: [],
       activityMode: 'overall',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
     expect(mockDoc.save).toHaveBeenCalled();
   });
 
-  test('non-web platform is a real no-op — never touches jsPDF', () => {
+  test('non-web platform is a real no-op — never touches jsPDF', async () => {
     (Platform as any).OS = 'ios';
-    exportStudentProgressPdf({ teacherName: 'Priya Menon', filters: {}, activityStudents: [student()], activityMode: 'overall' });
+    await exportStudentProgressPdf({ teacherName: 'Priya Menon', filters: {}, activityStudents: [student()], activityMode: 'overall' });
     expect(mockDoc.save).not.toHaveBeenCalled();
     (Platform as any).OS = 'web';
   });
 
-  test('a class of 30 students does not crash — real class-size scale, one PDF, real pagination if needed', () => {
+  test('a class of 30 students does not crash — real class-size scale, one PDF, real pagination if needed', async () => {
     const students = Array.from({ length: 30 }, (_, i) => student({ id: `s${i}`, name: `Student ${i}` }));
-    expect(() => exportStudentProgressPdf({
+    await expect(exportStudentProgressPdf({
       teacherName: 'Priya Menon',
       filters: {},
       activityStudents: students,
       activityMode: 'overall',
-    })).not.toThrow();
+    })).resolves.toBeUndefined();
     expect(mockDoc.save).toHaveBeenCalledTimes(1);
   });
 });

@@ -27,11 +27,11 @@ export async function downloadTimetablePdf(params: {
 }): Promise<void> {
   const { tt, classLabel, schoolName, studentSubtitle } = params;
   try {
-    // require(), not a dynamic import() — the latter needs a Node VM flag
-    // Jest doesn't set, so it throws ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG
-    // under test. Same lazy-load behavior either way (Metro/webpack still
-    // code-split this at build time), matching the exportPdf.ts precedent.
-    const { jsPDF } = require('jspdf');
+    // import(), not require(): Metro only splits a module into its own chunk
+    // for import(), so jsPDF (~330 KB) is now fetched on Download instead of
+    // with the Timetable screen. babel.config.js maps import() back to
+    // require() under Jest, so jest.mock('jspdf') still applies.
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const W = 842;
     const H = 595;

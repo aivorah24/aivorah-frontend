@@ -6,34 +6,48 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
-import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
-import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
-import TeacherAttendanceScreen from '../screens/teacher/attendance/TeacherAttendanceScreen';
-import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
+import TEACHER_DASHBOARD_SERVER_URL from '../config/teacherDashboardServerUrl';
+import ASSIGNMENTS_SERVER_URL from '../config/assignmentsServerUrl';
+import STUDENTS_SERVER_URL from '../config/studentsServerUrl';
+import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
+import SCHEDULE_SERVER_URL from '../config/scheduleServerUrl';
+import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
+import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+
+// Every screen below loads from its own chunk on first open (lazyScreens.tsx);
+// TeacherDashboardScreen stays in the main bundle so the home page needs no extra download.
+const screens = createLazyScreenGroup();
+const ROLE_SERVICES = [TEACHER_DASHBOARD_SERVER_URL, ASSIGNMENTS_SERVER_URL, STUDENTS_SERVER_URL, LEARNING_PATHS_SERVER_URL, SCHEDULE_SERVER_URL, MESSAGES_SERVER_URL];
+const TeacherStudentsScreen = screens.lazyScreen(() => import('../screens/teacher/students/TeacherStudentsScreen'));
+const TeacherScheduleScreen = screens.lazyScreen(() => import('../screens/teacher/schedule/TeacherScheduleScreen'));
+const TeacherAttendanceScreen = screens.lazyScreen(() => import('../screens/teacher/attendance/TeacherAttendanceScreen'));
+const TeacherAssignmentsScreen = screens.lazyScreen(() => import('../screens/teacher/assignments/TeacherAssignmentsScreen'));
+const TeacherChallengesScreen = screens.lazyScreen(() => import('../screens/teacher/challenges/TeacherChallengesScreen'));
 // Bug tracker / Student Progress work-order (2026-08-29): the legacy screen
 // was a dummy — hardcoded "Alice Smith"/"Bob Jones", zero real backend call.
 // Replaced with the real screen, backed by the extracted heatmap route in
 // aivorah-teacher-dashboard-service.
-import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
-import AnnouncementsScreen from '../screens/shared/announcements/AnnouncementsScreen';
-import TeacherLearningPathsScreen from '../screens/teacher/learning-paths/TeacherLearningPathsScreen';
-import TeacherCurriculumLearningPathScreen from '../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen';
-import TeacherLearningPathsManageScreen from '../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen';
-import TeacherSubjectEditorScreen from '../screens/teacher/subject-paths/TeacherSubjectEditorScreen';
-import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
-import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
-import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
-import MyClassesScreen from '../features/classes/components/MyClassesScreen';
-import ClassDetailScreen from '../features/classes/components/ClassDetailScreen';
-import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
-import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
-import ChannelsScreen from '../features/channels/components/ChannelsScreen';
-import HelpSupportScreen from '../screens/shared/help-support/HelpSupportScreen';
+const TeacherProgressScreen = screens.lazyScreen(() => import('../screens/teacher/student-progress/TeacherStudentProgressScreen'));
+const AnnouncementsScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementsScreen'));
+const TeacherLearningPathsScreen = screens.lazyScreen(() => import('../screens/teacher/learning-paths/TeacherLearningPathsScreen'));
+const TeacherCurriculumLearningPathScreen = screens.lazyScreen(() => import('../screens/teacher/curriculum-learning-path/TeacherCurriculumLearningPathScreen'));
+const TeacherLearningPathsManageScreen = screens.lazyScreen(() => import('../screens/teacher/curriculum-learning-path/TeacherLearningPathsManageScreen'));
+const TeacherSubjectEditorScreen = screens.lazyScreen(() => import('../screens/teacher/subject-paths/TeacherSubjectEditorScreen'));
+const TeacherSettingsScreen = screens.lazyScreen(() => import('../screens/teacher/settings/TeacherSettingsScreen'));
+const TeacherMessagesScreen = screens.lazyScreen(() => import('@legacy/teacher-legacy/TeacherMessagesScreen'));
+const AnnouncementManagerScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementManagerScreen'));
+const MyClassesScreen = screens.lazyScreen(() => import('../features/classes/components/MyClassesScreen'));
+const ClassDetailScreen = screens.lazyScreen(() => import('../features/classes/components/ClassDetailScreen'));
+const TimetableScreen = screens.lazyScreen(() => import('../screens/shared/timetable/TimetableScreen'));
+const ResourcesScreen = screens.lazyScreen(() => import('../screens/shared/resources/ResourcesScreen'));
+const ChannelsScreen = screens.lazyScreen(() => import('../features/channels/components/ChannelsScreen'));
+const HelpSupportScreen = screens.lazyScreen(() => import('../screens/shared/help-support/HelpSupportScreen'));
 
 const Drawer = createDrawerNavigator<TeacherDrawerParamList>();
 
 export default function TeacherNavigator() {
+  // Wake this role's services and, on a good connection, prefetch its screens.
+  useRoleWarmup(screens, ROLE_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

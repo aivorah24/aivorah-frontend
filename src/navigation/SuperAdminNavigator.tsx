@@ -5,18 +5,27 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import TeacherDashboardScreen from '../screens/teacher/dashboard/TeacherDashboardScreen';
-import TeacherStudentsScreen from '../screens/teacher/students/TeacherStudentsScreen';
-import TeacherScheduleScreen from '../screens/teacher/schedule/TeacherScheduleScreen';
-import TeacherAttendanceScreen from '../screens/teacher/attendance/TeacherAttendanceScreen';
-import TeacherAssignmentsScreen from '../screens/teacher/assignments/TeacherAssignmentsScreen';
-import TeacherChallengesScreen from '../screens/teacher/challenges/TeacherChallengesScreen';
-import TeacherProgressScreen from '../screens/teacher/student-progress/TeacherStudentProgressScreen';
-import TeacherSettingsScreen from '../screens/teacher/settings/TeacherSettingsScreen';
-import TeacherMessagesScreen from '@legacy/teacher-legacy/TeacherMessagesScreen';
-import AnnouncementManagerScreen from '../screens/shared/announcements/AnnouncementManagerScreen';
-import TimetableScreen from '../screens/shared/timetable/TimetableScreen';
-import ResourcesScreen from '../screens/shared/resources/ResourcesScreen';
-import ChannelsScreen from '../features/channels/components/ChannelsScreen';
+import TEACHER_DASHBOARD_SERVER_URL from '../config/teacherDashboardServerUrl';
+import STUDENTS_SERVER_URL from '../config/studentsServerUrl';
+import CHALLENGES_SERVER_URL from '../config/challengesServerUrl';
+import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+
+// Every screen below loads from its own chunk on first open (lazyScreens.tsx);
+// TeacherDashboardScreen stays in the main bundle so the home page needs no extra download.
+const screens = createLazyScreenGroup();
+const ROLE_SERVICES = [TEACHER_DASHBOARD_SERVER_URL, STUDENTS_SERVER_URL, CHALLENGES_SERVER_URL];
+const TeacherStudentsScreen = screens.lazyScreen(() => import('../screens/teacher/students/TeacherStudentsScreen'));
+const TeacherScheduleScreen = screens.lazyScreen(() => import('../screens/teacher/schedule/TeacherScheduleScreen'));
+const TeacherAttendanceScreen = screens.lazyScreen(() => import('../screens/teacher/attendance/TeacherAttendanceScreen'));
+const TeacherAssignmentsScreen = screens.lazyScreen(() => import('../screens/teacher/assignments/TeacherAssignmentsScreen'));
+const TeacherChallengesScreen = screens.lazyScreen(() => import('../screens/teacher/challenges/TeacherChallengesScreen'));
+const TeacherProgressScreen = screens.lazyScreen(() => import('../screens/teacher/student-progress/TeacherStudentProgressScreen'));
+const TeacherSettingsScreen = screens.lazyScreen(() => import('../screens/teacher/settings/TeacherSettingsScreen'));
+const TeacherMessagesScreen = screens.lazyScreen(() => import('@legacy/teacher-legacy/TeacherMessagesScreen'));
+const AnnouncementManagerScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementManagerScreen'));
+const TimetableScreen = screens.lazyScreen(() => import('../screens/shared/timetable/TimetableScreen'));
+const ResourcesScreen = screens.lazyScreen(() => import('../screens/shared/resources/ResourcesScreen'));
+const ChannelsScreen = screens.lazyScreen(() => import('../features/channels/components/ChannelsScreen'));
 
 export type SuperAdminDrawerParamList = {
   TeacherDashboard: undefined;
@@ -37,6 +46,8 @@ export type SuperAdminDrawerParamList = {
 const Drawer = createDrawerNavigator<SuperAdminDrawerParamList>();
 
 export default function SuperAdminNavigator() {
+  // Wake this role's services and, on a good connection, prefetch its screens.
+  useRoleWarmup(screens, ROLE_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();
