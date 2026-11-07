@@ -16,6 +16,23 @@ const VERDICT: Record<SpokenEvaluation['verdict'], string> = {
   needs_work: 'Needs more work',
 };
 
+function ReportList({ title, items, icon, color, textColor }: {
+  title: string; items?: string[]; icon: any; color: string; textColor: string;
+}) {
+  if (!items || !items.length) return null;
+  return (
+    <View style={s.listBlock}>
+      <Text style={[s.listTitle, { color }]}>{title}</Text>
+      {items.map((t, i) => (
+        <View key={i} style={s.listRow}>
+          <Feather name={icon} size={13} color={color} style={{ marginTop: 3 }} />
+          <Text style={[s.listText, { color: textColor }]}>{t}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function SpokenReport({ question, said, evaluation, colors }: {
   question: string;
   said: string;
@@ -29,20 +46,6 @@ export default function SpokenReport({ question, said, evaluation, colors }: {
   const score = typeof ev.score === 'number' ? ev.score : null;
   const passed = !!ev.passed;
   const tone = passed ? good : warn;
-
-  const List = ({ title, items, icon, color }: { title: string; items?: string[]; icon: any; color: string }) => (
-    items && items.length ? (
-      <View style={s.listBlock}>
-        <Text style={[s.listTitle, { color }]}>{title}</Text>
-        {items.map((t, i) => (
-          <View key={i} style={s.listRow}>
-            <Feather name={icon} size={13} color={color} style={{ marginTop: 3 }} />
-            <Text style={[s.listText, { color: colors.textMain }]}>{t}</Text>
-          </View>
-        ))}
-      </View>
-    ) : null
-  );
 
   return (
     <View testID="spoken-report" style={[s.card, { backgroundColor: colors.cardDark, borderColor: tone + '40', borderLeftColor: tone }]}>
@@ -64,9 +67,9 @@ export default function SpokenReport({ question, said, evaluation, colors }: {
         <Text style={[s.saidText, { color: colors.textMain }]} selectable>“{said}”</Text>
       </View>
 
-      <List title="You explained well" items={ev.covered} icon="check" color={good} />
-      <List title="Add next time" items={ev.missing} icon="plus-circle" color={accent} />
-      <List title="Check this" items={ev.mistakes} icon="alert-circle" color={warn} />
+      <ReportList title="You explained well" items={ev.covered} icon="check" color={good} textColor={colors.textMain} />
+      <ReportList title="Add next time" items={ev.missing} icon="plus-circle" color={accent} textColor={colors.textMain} />
+      <ReportList title="Check this" items={ev.mistakes} icon="alert-circle" color={warn} textColor={colors.textMain} />
 
       {!!ev.feedback && (
         <View style={[s.feedback, { backgroundColor: accent + '10', borderColor: accent + '30' }]}>
