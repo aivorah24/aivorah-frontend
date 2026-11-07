@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import ConnectSchoolBanner from '../../../features/classes/components/ConnectSchoolBanner';
+import FaceLoginCard from '../../../components/common/FaceLoginCard';
 import { useAuth } from '../../../context/AuthContext';
 import { useStudentData, formatLevel } from '../../../context/StudentDataContext';
 import { useTheme } from '../../../context/ThemeContext';
@@ -111,6 +112,7 @@ export default function SettingsScreen({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
         >
           <ConnectSchoolBanner />
+          <FaceLoginCard colors={colors} />
           <View style={styles.columns}>
             <View style={styles.col}>
               <SectionHeader icon="user" label="Profile & Account" color={colors.accentYellow} styles={styles} />

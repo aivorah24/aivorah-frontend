@@ -42,6 +42,17 @@ jest.mock('../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {}, isDark: true }),
 }));
 
+// Face login (passkeys): off by default, so the other tests see the old screens.
+const mockFaceAvailable = jest.fn(async () => false);
+const mockSignInWithFace = jest.fn(async () => {});
+const mockRememberOffer = jest.fn();
+jest.mock('../../../services/faceLogin', () => ({
+  faceLoginAvailable: () => mockFaceAvailable(),
+  signInWithFace: () => mockSignInWithFace(),
+  rememberFaceLoginOffer: (on: boolean) => mockRememberOffer(on),
+  faceLoginErrorMessage: (e: any) => e?.message || 'Face login did not work.',
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -208,3 +219,45 @@ describe('Signup', () => {
     expect(await screen.findByText('Please enter a valid email format.')).toBeTruthy();
   });
 });
+
+describe('Face login', () => {
+  test('no "Use face authentication" where the device cannot do it', async () => {
+    const user = userEvent.setup();
+    await render(<LandingScreen />);
+    await user.press(screen.getByText('Login'));
+    await screen.findByPlaceholderText('you@example.com');
+    expect(screen.queryByText('Use face authentication')).toBeNull();
+  });
+
+  test('login: "Use face authentication" under email & password signs in with the face', async () => {
+    mockFaceAvailable.mockResolvedValue(true);
+    const user = userEvent.setup();
+    await render(<LandingScreen />);
+    await user.press(screen.getByText('Login'));
+    await user.press(await screen.findByText('Use face authentication'));
+    expect(mockSignInWithFace).toHaveBeenCalledTimes(1);
+    expect(mockSignInWithEmail).not.toHaveBeenCalled();
+  });
+
+  test('login: a failed face sign-in shows why', async () => {
+    mockFaceAvailable.mockResolvedValue(true);
+    mockSignInWithFace.mockRejectedValueOnce(new Error('Face login did not match an Aivorah account on this device.'));
+    const user = userEvent.setup();
+    await render(<LandingScreen />);
+    await user.press(screen.getByText('Login'));
+    await user.press(await screen.findByText('Use face authentication'));
+    expect(await screen.findByText('Face login did not match an Aivorah account on this device.')).toBeTruthy();
+  });
+
+  test('sign-up: an optional "Add face login" choice under the password', async () => {
+    mockFaceAvailable.mockResolvedValue(true);
+    const user = userEvent.setup();
+    await render(<LandingScreen />);
+    await user.press(screen.getByText('Join Early Access'));
+    const toggle = await screen.findByTestId('signup-add-face');
+    expect(toggle.props.accessibilityState).toEqual({ checked: false });
+    await user.press(toggle);
+    expect(screen.getByTestId('signup-add-face').props.accessibilityState).toEqual({ checked: true });
+  });
+});
+

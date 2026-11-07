@@ -21,6 +21,7 @@ import { validateLoginForm, validateSignupForm } from './utils/validation';
 import SERVER_URL from '../../config/serverUrl';
 import PROFILE_SERVER_URL from '../../config/profileServerUrl';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
+import { faceLoginAvailable, signInWithFace, faceLoginErrorMessage, rememberFaceLoginOffer } from '../../services/faceLogin';
 import { BLOCKED_ACCOUNT_MESSAGE } from '../../constants/supportContact';
 
 // ─────────────────────────────────────────────────────────
@@ -365,6 +366,16 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  // Face login (passkeys): only offered where this device can do it.
+  const [faceAvailable, setFaceAvailable] = useState(false);
+  const [faceLoading, setFaceLoading] = useState(false);
+  useEffect(() => { if (visible) faceLoginAvailable().then(setFaceAvailable); }, [visible]);
+  async function faceSignIn() {
+    setError(''); setFaceLoading(true);
+    try { await signInWithFace(); onClose(); }
+    catch (e: any) { setError(faceLoginErrorMessage(e)); }
+    finally { setFaceLoading(false); }
+  }
 
   // Show external error (e.g. role mismatch from Google SSO) and re-open modal
   useEffect(() => {
@@ -454,6 +465,19 @@ function LoginModal({ visible, onClose, onSwitchSignup, onSwitchForgot, signInEm
       {!!error && <View style={s.errorBox}><Feather name="alert-circle" size={13} color={RED} /><Text style={s.errorText}>{error}</Text></View>}
 
       <GradientButton label="Sign In" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
+      {faceAvailable && (
+        <TouchableOpacity
+          testID="login-face"
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: BORDER }}
+          onPress={faceSignIn}
+          disabled={faceLoading}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          {faceLoading ? <ActivityIndicator size="small" color={CYAN} /> : <Feather name="smile" size={16} color={CYAN} />}
+          <Text style={{ color: FORE, fontWeight: '700', fontSize: 14 }}>Use face authentication</Text>
+        </TouchableOpacity>
+      )}
       <View style={s.formFooter}>
         <Text style={s.footerText}>Don&apos;t have an account? </Text>
         <TouchableOpacity onPress={onSwitchSignup}><Text style={s.linkText}>Sign up free</Text></TouchableOpacity>
@@ -488,6 +512,11 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
   const [emailSent, setEmailSent]   = useState(false); // post-signup verification screen
 
   const showCurriculum = role === 'student' || role === 'teacher';
+  // Optional: set up face login right after the account is created
+  // (on the Verify Email screen, where the user is signed in).
+  const [faceAvailable, setFaceAvailable] = useState(false);
+  const [addFace, setAddFace] = useState(false);
+  useEffect(() => { if (visible) faceLoginAvailable().then(setFaceAvailable); }, [visible]);
 
   async function submit() {
     setError('');
@@ -499,6 +528,7 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
 
     setLoading(true);
     try {
+      rememberFaceLoginOffer(faceAvailable && addFace);
       await signUpEmail(nameTrim, emailTrim, pass, role, showCurriculum ? curriculum : undefined);
       // Persist the student's date of birth (collected here, not in onboarding).
       if (role === 'student' && dob.trim()) {
@@ -661,6 +691,25 @@ function SignupModal({ visible, onClose, onSwitchLogin, signUpEmail, signInGoogl
           </TouchableOpacity>
         </View>
       </View>
+
+      {faceAvailable && (
+        <TouchableOpacity
+          testID="signup-add-face"
+          onPress={() => setAddFace((v) => !v)}
+          activeOpacity={0.8}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: addFace }}
+          style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 6, marginBottom: 4, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: addFace ? CYAN : BORDER }}
+        >
+          <Feather name={addFace ? 'check-square' : 'square'} size={16} color={addFace ? CYAN : DIM} style={{ marginTop: 1 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: FORE, fontWeight: '700', fontSize: 13 }}>Add face login (optional)</Text>
+            <Text style={{ color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
+              Next time, sign in with this device&apos;s face unlock (Face ID / Windows Hello) instead of your password. Your face never leaves your device.
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {!!error && <View style={s.errorBox}><Feather name="alert-circle" size={13} color={RED} /><Text style={s.errorText}>{error}</Text></View>}
 
