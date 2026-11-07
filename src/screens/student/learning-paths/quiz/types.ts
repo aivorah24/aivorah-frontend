@@ -10,7 +10,8 @@ export type Question = {
   explanation: string;
 };
 
-export type QuizPhase = 'loading' | 'quiz' | 'result';
+// 'hub': the Practice start page (Take a Test / History) - see QuizScreen.
+export type QuizPhase = 'hub' | 'loading' | 'quiz' | 'result';
 
 // POST /ibpyp/evaluate-explanation's answer for the spoken question.
 export type SpokenEvaluation = {

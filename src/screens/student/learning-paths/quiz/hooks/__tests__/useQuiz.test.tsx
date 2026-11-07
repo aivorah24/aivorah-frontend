@@ -43,7 +43,7 @@ function mockFetchRoutes(overrides: Record<string, any> = {}) {
   }) as any;
 }
 
-function Harness({ questions, studentId, practiceQuiz, keyPoints }: { questions?: any; studentId?: string; practiceQuiz?: any[]; keyPoints?: string[] } = {}) {
+function Harness({ questions, studentId, practiceQuiz, keyPoints, autoStart = true }: { questions?: any; studentId?: string; practiceQuiz?: any[]; keyPoints?: string[]; autoStart?: boolean } = {}) {
   const completeLesson = React.useMemo(() => jest.fn(), []);
   const addXP = React.useMemo(() => jest.fn(), []);
   const recordStudySeconds = React.useMemo(() => jest.fn(), []);
@@ -65,6 +65,12 @@ function Harness({ questions, studentId, practiceQuiz, keyPoints }: { questions?
     addXP,
     recordStudySeconds,
     recordQuizResult,
+  });
+
+  // The screen starts a test from the Practice start page ("Take a Test").
+  const started = React.useRef(false);
+  React.useEffect(() => {
+    if (autoStart && !started.current && h.phase === 'hub') { started.current = true; h.startTest(); }
   });
 
   return (
@@ -107,6 +113,15 @@ beforeEach(() => {
   clearQuizResults();
   jest.clearAllMocks();
   mockFetchRoutes();
+});
+
+describe('useQuiz — start page', () => {
+  test('opens on the start page and generates nothing until a test is started', async () => {
+    await render(<Harness autoStart={false} />);
+    expect(screen.getByTestId('phase').props.children).toBe('hub');
+    await new Promise((r) => setTimeout(r, 50));
+    expect((global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/ibpyp/quiz'))).toHaveLength(0);
+  });
 });
 
 describe('useQuiz — fetching', () => {

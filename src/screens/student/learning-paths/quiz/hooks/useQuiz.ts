@@ -6,7 +6,7 @@ import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl
 import { computeCappedQuizSeconds } from '../../../../../services/studyTime';
 import { normalizeQuizQuestions, playSound, withSpokenQuestion, countWords, MIN_SPOKEN_WORDS } from '../utils';
 import type { Question, QuizPhase, SpokenStatus } from '../types';
-import { loadQuizResult, saveQuizResult } from '../resultCache';
+import { saveQuizResult } from '../resultCache';
 
 export function useQuiz(params: {
   topic: string; grade: string; subject: string; curriculum: string;
@@ -26,7 +26,8 @@ export function useQuiz(params: {
 }) {
   const { topic, grade, subject, curriculum, passageText, topicId, keyPoints, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult } = params;
 
-  const [phase, setPhase] = useState<QuizPhase>('loading');
+  // Opens on the Practice start page; a test starts with startTest().
+  const [phase, setPhase] = useState<QuizPhase>('hub');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
@@ -136,24 +137,16 @@ export function useQuiz(params: {
     }
   }, [topic, grade, subject, curriculum, passageText, userEmail, practiceQuiz]);
 
-  // Reopening Practice for a topic already tried shows its last result; otherwise a new test.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const saved = await loadQuizResult(studentId, subject, topic);
-      if (cancelled) return;
-      if (!saved) { fetchQuiz(); return; }
-      perQuestionResultsRef.current = saved.perQuestionResults;
-      explanationsRef.current = saved.explanations;
-      setResultExplanations({ ...saved.explanations });
-      quizStartTimeRef.current = Date.now() - saved.timeSpentSeconds * 1000;
-      setQuestions(saved.questions as Question[]);
-      setAttemptNumber(saved.attemptNumber);
-      setScore(saved.score);
-      setPhase('result');
-    })();
-    return () => { cancelled = true; };
-  }, [fetchQuiz]);
+  // Take a Test from the start page: a new test, numbered after the past ones.
+  function startTest(nextAttemptNumber?: number) {
+    if (nextAttemptNumber && nextAttemptNumber > 0) setAttemptNumber(nextAttemptNumber);
+    fetchQuiz(false);
+  }
+
+  // Back to the start page (e.g. from the results to History).
+  function backToHub() {
+    setPhase('hub');
+  }
 
   function finishQuiz(finalScore: number) {
     const pct = Math.round((finalScore / questions.length) * 100);
@@ -429,7 +422,7 @@ export function useQuiz(params: {
     explanation, loadingExplain,
     attemptNumber, perQuestionResultsRef, explanationsRef, quizStartTimeRef,
     resultExplanations,
-    fetchQuiz, goNext, goPrev, handleMcqAnswer, handleFillSubmit,
+    fetchQuiz, startTest, backToHub, goNext, goPrev, handleMcqAnswer, handleFillSubmit,
     spokenText, setSpokenText, spokenStatus, spokenError, submitSpoken,
   };
 }

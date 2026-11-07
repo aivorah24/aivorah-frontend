@@ -29,6 +29,9 @@ export default function QuizResult({
   nextTopic,
   nextTopicLoading,
   onNextTopic,
+  onHistory,
+  takenAt,
+  review = false,
 }: {
   topic: string;
   score: number;
@@ -47,6 +50,11 @@ export default function QuizResult({
   nextTopic?: NextTopic | null;
   nextTopicLoading?: boolean;
   onNextTopic?: (next: NextTopic) => void;
+  // Practice History: "See all past tests" / "Back to history"
+  onHistory?: () => void;
+  // A past test opened from History: when it was taken; no celebration, no next-topic.
+  takenAt?: string;
+  review?: boolean;
 }) {
   const accent = colors.accentYellow;
   const gold = colors.accentYellow;
@@ -73,14 +81,14 @@ export default function QuizResult({
   // Soft pulsing glow on the Next topic button.
   const [glow] = React.useState(() => new Animated.Value(0));
   useEffect(() => {
-    if (!passed || !nextTopic) return;
+    if (!passed || !nextTopic || review) return; // the next-topic button is hidden in a past test's report
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(glow, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
       Animated.timing(glow, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
     ]));
     loop.start();
     return () => loop.stop();
-  }, [passed, nextTopic, glow]);
+  }, [passed, nextTopic, glow, review]);
 
   // The spoken question has its own report card; right/wrong lists are the others.
   const spokenQs = perQuestionResults.filter(r => r?.type === 'spoken');
@@ -90,12 +98,12 @@ export default function QuizResult({
   return (
     <ScreenLayout>
       <View style={styles.screen}>
-        <Header title="Practice Results" showBack onBack={onBack} onMenuPress={onMenuPress} />
+        <Header title={review ? 'Test Report' : 'Practice Results'} subtitle={review ? topic : undefined} showBack onBack={onBack} onMenuPress={onMenuPress} />
         <ScrollView contentContainerStyle={[styles.scrollContent]} showsVerticalScrollIndicator={false}>
         <View style={[styles.content, { alignItems: 'center', paddingTop: 32 }]}>
 
           {/* ── Score hero ── */}
-          {passed && <Confetti trigger />}
+          {passed && !review && <Confetti trigger />}
           <TrophyIcon size={96} tier={trophyTier} />
           <Text style={[styles.resultScore, { color: scoreColor, marginTop: 12 }]}>{pct}%</Text>
           <Text style={[styles.resultLabel, { color: colors.textMain }]}>{score} / {questions.length} correct</Text>
@@ -110,6 +118,12 @@ export default function QuizResult({
               <Feather name="clock" size={11} color={colors.textMuted} />
               <Text style={[styles.topicBadgeText, { color: colors.textMuted }]}> {timeStr}</Text>
             </View>
+            {!!takenAt && (
+              <View testID="quiz-taken-at" style={[styles.topicBadge, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
+                <Feather name="calendar" size={11} color={colors.textMuted} />
+                <Text style={[styles.topicBadgeText, { color: colors.textMuted }]}> {takenAt}</Text>
+              </View>
+            )}
             {attemptNumber > 1 && (
               <View style={[styles.topicBadge, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
                 <Text style={[styles.topicBadgeText, { color: colors.textMuted }]}>Attempt #{attemptNumber}</Text>
@@ -125,12 +139,18 @@ export default function QuizResult({
             >
               <Feather name="refresh-cw" size={16} color={!passed ? '#C98A8A' : accent} />
               <Text style={[styles.retryBtnText, { color: !passed ? '#C98A8A' : accent }]}>
-                {!passed ? 'Retake (New Questions)' : 'Try Again'}
+                {review ? 'Take a New Test' : !passed ? 'Retake (New Questions)' : 'Try Again'}
               </Text>
             </TouchableOpacity>
           </View>
+          {!!onHistory && (
+            <TouchableOpacity testID="quiz-see-history" onPress={onHistory} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }} accessibilityRole="button">
+              <Feather name={review ? 'arrow-left' : 'clock'} size={14} color={accent} />
+              <Text style={{ fontSize: 13.5, fontWeight: '700', color: accent }}>{review ? 'Back to history' : 'See all past tests'}</Text>
+            </TouchableOpacity>
+          )}
 
-          {passed && nextTopic && onNextTopic && (
+          {passed && !review && nextTopic && onNextTopic && (
             <Animated.View style={{
               width: '100%', marginTop: 12, borderRadius: 14,
               shadowColor: gold, shadowOffset: { width: 0, height: 0 },
@@ -153,12 +173,12 @@ export default function QuizResult({
               </TouchableOpacity>
             </Animated.View>
           )}
-          {passed && !nextTopic && !nextTopicLoading && onNextTopic && (
+          {passed && !review && !nextTopic && !nextTopicLoading && onNextTopic && (
             <Text testID="quiz-subject-finished" style={{ marginTop: 12, fontSize: 13, fontWeight: '700', color: gold, textAlign: 'center' }}>
               That was the last topic in this subject. Well done!
             </Text>
           )}
-          {!passed && (
+          {!passed && !review && (
             <View testID="quiz-next-locked" style={{ width: '100%', marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.borderColor, backgroundColor: colors.cardDark }}>
               <Feather name="lock" size={16} color={colors.textMuted} />
               <Text style={{ flex: 1, fontSize: 13, color: colors.textMuted, lineHeight: 19 }}>
