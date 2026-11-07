@@ -88,3 +88,28 @@ describe('QuizResult — next topic gate', () => {
     });
   });
 });
+
+describe('QuizResult — a past test opened from History', () => {
+  const NEXT = { name: 'A Concrete Example', chapterTitle: 'Wit and Wisdom', params: {} } as any;
+
+  test('a just-finished test offers "See all past tests"', async () => {
+    const onHistory = jest.fn();
+    await renderResult(4, { onHistory });
+    fireEvent.press(screen.getByText('See all past tests'));
+    expect(onHistory).toHaveBeenCalled();
+    expect(screen.queryByTestId('quiz-taken-at')).toBeNull();
+  });
+
+  test('shows when it was taken, "Take a New Test" and "Back to history"; no next-topic button', async () => {
+    const onHistory = jest.fn();
+    const onRetry = jest.fn();
+    await renderResult(4, { review: true, takenAt: '7 Nov 2026, 2:40 pm', onHistory, onRetry, nextTopic: NEXT, onNextTopic: jest.fn() });
+    expect(screen.getByTestId('quiz-taken-at')).toBeTruthy();
+    expect(screen.getByText(/7 Nov 2026, 2:40 pm/)).toBeTruthy();
+    expect(screen.queryByTestId('quiz-next-topic')).toBeNull();
+    fireEvent.press(screen.getByText('Take a New Test'));
+    expect(onRetry).toHaveBeenCalled();
+    fireEvent.press(screen.getByText('Back to history'));
+    expect(onHistory).toHaveBeenCalled();
+  });
+});

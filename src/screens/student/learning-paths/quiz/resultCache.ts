@@ -47,3 +47,28 @@ export async function loadQuizResult(studentId: string | undefined, subject: str
     return null;
   }
 }
+
+// ── Practice History ──────────────────────────────────────────────────────
+// Every finished practice test for one topic, newest first, from the same
+// server record the dashboard uses (topic_attempts via leaderboard-service).
+export interface PastAttempt {
+  id: string;
+  createdAt: string;          // ISO date-time the test was finished
+  attemptNumber: number | null;
+  score: number;              // percent
+  passed: boolean;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeSpentSeconds: number;
+  questions: any[];           // per-question results (incl. the spoken one's evaluation)
+}
+
+export async function fetchTopicAttempts(studentId: string | undefined, subject: string, topic: string): Promise<PastAttempt[]> {
+  if (!studentId) return [];
+  const res = await fetch(`${LEADERBOARD_SERVICE_URL}/student/${encodeURIComponent(studentId)}/attempts?subject=${encodeURIComponent(subject)}`);
+  if (!res.ok) throw new Error('Could not load your past tests');
+  const data = await res.json();
+  return (Array.isArray(data?.attempts) ? data.attempts : [])
+    .filter((a: any) => a.topic === topic && Array.isArray(a.questions) && a.questions.length > 0)
+    .sort((a: any, b: any) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+}

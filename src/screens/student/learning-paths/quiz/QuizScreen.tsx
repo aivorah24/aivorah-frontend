@@ -1,6 +1,8 @@
 /**
  * QuizScreen.tsx
- * Practice test for any topic — Grades 3, 4, 5
+ * Practice for any topic. Opens on a start page - Take a Test / History - then:
+ * - Take a Test: a new test (questions + the spoken explanation), then its results
+ * - History: every past test for this topic by date & time; tap one for its report
  * - Generates mixed MCQ + fill-in-the-blank questions via Groq (/ibpyp/quiz)
  * - MCQ wrong → hint available → retry (up to 2 attempts) → explanation
  * - Fill-blank: 3-attempt nudge logic (wrong1 → retry, wrong2 → hint, wrong3 → reveal)
@@ -17,6 +19,9 @@ import { useQuiz } from './hooks/useQuiz';
 import QuizResult from './components/QuizResult';
 import { useNextTopic } from './hooks/useNextTopic';
 import QuizQuestion from './components/QuizQuestion';
+import { PracticeStart, PracticeHistoryList, formatTakenAt } from './components/PracticeHome';
+import { usePracticeHistory, useAttemptExplanations } from './hooks/usePracticeHistory';
+import type { PastAttempt } from './resultCache';
 
 // The drawer keeps this screen mounted, so coming back would show the last test's
 // questions/results. Each new visit gets a fresh session (new questions).
@@ -71,6 +76,67 @@ function QuizSession({ navigation, route }: any) {
 
   const nextTopic = useNextTopic(subject, curriculum, grade, topic);
 
+  // Start page / History / one past test's report (while no test is running)
+  const history = usePracticeHistory(studentId, subject, topic);
+  const [view, setView] = useState<'start' | 'history' | 'report'>('start');
+  const [pastAttempt, setPastAttempt] = useState<PastAttempt | null>(null);
+  const pastExplanations = useAttemptExplanations(view === 'report' ? pastAttempt : null, { topic, subject, grade });
+  const pastExplanationsRef = useRef<Record<number, string>>({});
+  const [pastStartedAt, setPastStartedAt] = useState(0);
+  const openHistory = () => { history.reload(); setView('history'); quiz.backToHub(); };
+  const takeTest = () => { setView('start'); quiz.startTest(history.nextAttemptNumber); };
+
+  // ── Start page / History / past report ─────────────────────────
+  if (quiz.phase === 'hub') {
+    const menu = () => navigation.openDrawer();
+    if (view === 'report' && pastAttempt) {
+      return (
+        <QuizResult
+          topic={topic}
+          score={pastAttempt.correctAnswers}
+          questions={pastAttempt.questions}
+          perQuestionResults={pastAttempt.questions}
+          resultExplanations={pastExplanations}
+          explanationsRef={pastExplanationsRef}
+          attemptNumber={pastAttempt.attemptNumber || 1}
+          quizStartTime={pastStartedAt}
+          colors={colors}
+          isDark={isDark}
+          styles={styles}
+          onRetry={takeTest}
+          onBack={() => setView('history')}
+          onMenuPress={menu}
+          onHistory={() => setView('history')}
+          takenAt={formatTakenAt(pastAttempt.createdAt)}
+          review
+        />
+      );
+    }
+    if (view === 'history') {
+      return (
+        <PracticeHistoryList
+          topic={topic} subject={subject} colors={colors}
+          attempts={history.attempts} loading={history.loading} error={history.error}
+          onOpen={(a) => { setPastAttempt(a); setPastStartedAt(Date.now() - (a.timeSpentSeconds || 0) * 1000); setView('report'); }}
+          onRetry={history.reload}
+          onTakeTest={takeTest}
+          onBack={() => setView('start')}
+          onMenuPress={menu}
+        />
+      );
+    }
+    return (
+      <PracticeStart
+        topic={topic} subject={subject} colors={colors}
+        attempts={history.attempts} loading={history.loading}
+        onTakeTest={takeTest}
+        onHistory={() => setView('history')}
+        onBack={goBackToOrigin}
+        onMenuPress={menu}
+      />
+    );
+  }
+
   // ── Loading ────────────────────────────────────────────────────
   if (quiz.phase === 'loading') return (
     <ScreenLayout>
@@ -102,6 +168,7 @@ function QuizSession({ navigation, route }: any) {
         nextTopic={nextTopic.next}
         nextTopicLoading={nextTopic.loading}
         onNextTopic={(next) => navigation.navigate('LessonScreen', next.params)}
+        onHistory={openHistory}
       />
     );
   }
