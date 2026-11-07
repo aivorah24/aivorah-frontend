@@ -17,6 +17,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, radius } from '../../theme';
 import type { AppColors } from '../../theme';
 import SERVER_URL from '../../config/serverUrl';
+import FaceLoginCard from '../../components/common/FaceLoginCard';
+import { faceLoginOffered } from '../../services/faceLogin';
 import AUTH_SERVER_URL from '../../config/authServerUrl';
 
 // ── Landing-page "Enchanting Forest" palette (matches the marketing/auth UI) ──
@@ -87,6 +89,7 @@ function EnvelopeIllustration({ color, accent }: { color: string; accent: string
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function VerifyEmailScreen() {
   const { user, updateUser, logout } = useAuth();
+  const [showFaceOffer, setShowFaceOffer] = useState(faceLoginOffered);
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -265,6 +268,17 @@ export default function VerifyEmailScreen() {
         <Text style={styles.hint}>
           Open the email and click the link to verify your account, then come back here.
         </Text>
+
+        {/* Face login chosen at sign-up: set it up now, while signed in */}
+        {showFaceOffer && (
+          <View style={{ width: '100%', marginTop: 16 }}>
+            <FaceLoginCard
+              variant="setup"
+              colors={{ cardDark: SURFACE, borderColor: 'rgba(197,255,218,0.18)', textMain: FORE, textMuted: MUTED, accentYellow: GOLD, accentRed: RED }}
+              onDone={() => setShowFaceOffer(false)}
+            />
+          </View>
+        )}
 
         {/* Spam folder warning */}
         <View style={styles.spamWarning}>

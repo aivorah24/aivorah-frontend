@@ -20,7 +20,7 @@
     "preset": "jest-expo",
     "testTimeout": 15000,
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@simplewebauthn/.*)"
     ],
     "setupFiles": [
       "<rootDir>/jest.setup.js"
@@ -38,6 +38,7 @@
     "@react-navigation/drawer": "^7.9.5",
     "@react-navigation/native": "^7.1.34",
     "@react-navigation/stack": "^7.8.6",
+    "@simplewebauthn/browser": "^11.0.0",
     "babel-preset-expo": "^55.0.12",
     "expo": "~55.0.8",
     "expo-asset": "~55.0.10",
