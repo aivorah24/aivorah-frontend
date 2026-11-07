@@ -15,6 +15,11 @@ const mcqQuestions = [
   { type: 'mcq', question: 'Q2', options: ['A', 'B', 'C', 'D'], correct: 0, hint: 'h2', explanation: 'e2' },
 ];
 
+// POST /ibpyp/evaluate-explanation for the spoken last question
+const GOOD_EVAL = { score: 8, outOf: 10, passed: true, verdict: 'excellent', covered: ['the main idea'], missing: [], mistakes: [], feedback: 'Well explained!' };
+const LOW_EVAL = { ...GOOD_EVAL, score: 3, passed: false, verdict: 'partial', feedback: 'Add the main idea next time.' };
+const SPOKEN = 'Tenali Rama used his clever wit to make the king and queen friends again';
+
 const fillQuestion = [
   { type: 'fill_blank', question: 'The cat sat on the ___', correct: 'mat', hint: 'h', explanation: 'e' },
 ];
@@ -28,13 +33,17 @@ function mockFetchRoutes(overrides: Record<string, any> = {}) {
       return jsonRes({ correct: body.studentAnswer === 'mat' });
     }
     if (url.includes('/ibpyp/explain-wrong')) return jsonRes({ explanation: 'explained' });
+    if (url.includes('/ibpyp/evaluate-explanation')) {
+      if (overrides.evaluate) return overrides.evaluate(JSON.parse(opts.body));
+      return jsonRes(GOOD_EVAL);
+    }
     if (url.includes('/ibpyp/track-result')) return jsonRes({});
     if (url.includes('/student/track-attempt')) return jsonRes({});
     return jsonRes({});
   }) as any;
 }
 
-function Harness({ questions, studentId, practiceQuiz }: { questions?: any; studentId?: string; practiceQuiz?: any[] } = {}) {
+function Harness({ questions, studentId, practiceQuiz, keyPoints }: { questions?: any; studentId?: string; practiceQuiz?: any[]; keyPoints?: string[] } = {}) {
   const completeLesson = React.useMemo(() => jest.fn(), []);
   const addXP = React.useMemo(() => jest.fn(), []);
   const recordStudySeconds = React.useMemo(() => jest.fn(), []);
@@ -50,7 +59,7 @@ function Harness({ questions, studentId, practiceQuiz }: { questions?: any; stud
     // resolved id string) — distinct from AuthContext's user.id, which the
     // real app never populates (B004's root cause). studentId is explicitly
     // undefined-able per-test to cover that missing case.
-    userEmail: 'a@a.com', userRole: 'student', studentId, practiceQuiz,
+    userEmail: 'a@a.com', userRole: 'student', studentId, practiceQuiz, keyPoints,
     navigation,
     completeLesson,
     addXP,
@@ -76,8 +85,22 @@ function Harness({ questions, studentId, practiceQuiz }: { questions?: any; stud
       <TouchableOpacity testID="goNextCorrect" onPress={() => h.goNext(true)}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="goNextWrong" onPress={() => h.goNext(false)}><Text>x</Text></TouchableOpacity>
       <TouchableOpacity testID="goPrev" onPress={() => h.goPrev()}><Text>x</Text></TouchableOpacity>
+      <Text testID="qType">{h.questions[h.currentQ]?.type}</Text>
+      <Text testID="qCount">{h.questions.length}</Text>
+      <Text testID="spokenStatus">{h.spokenStatus}</Text>
+      <Text testID="spokenError">{h.spokenError}</Text>
+      <Text testID="results">{JSON.stringify(h.perQuestionResultsRef.current)}</Text>
+      <TouchableOpacity testID="setSpoken" onPress={() => h.setSpokenText(SPOKEN)}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="setSpokenShort" onPress={() => h.setSpokenText('um ok')}><Text>x</Text></TouchableOpacity>
+      <TouchableOpacity testID="submitSpoken" onPress={() => h.submitSpoken()}><Text>x</Text></TouchableOpacity>
     </>
   );
+}
+
+async function answerSpoken(user: ReturnType<typeof userEvent.setup>) {
+  await waitFor(() => expect(screen.getByTestId('qType').props.children).toBe('spoken'));
+  await user.press(screen.getByTestId('setSpoken'));
+  await user.press(screen.getByTestId('submitSpoken'));
 }
 
 beforeEach(() => {
@@ -233,7 +256,8 @@ describe('useQuiz — navigation between questions', () => {
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
 
     await user.press(screen.getByTestId('goNextCorrect')); // Q1 -> Q2
-    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> finish
+    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> Q3 (spoken)
+    await answerSpoken(user); // Q3 (spoken) -> finish
 
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
     expect((globalThis as any).__lastMocks.completeLesson).toHaveBeenCalled();
@@ -250,10 +274,12 @@ describe('useQuiz — navigation between questions', () => {
 
     await user.press(screen.getByTestId('goNextCorrect'));
     await user.press(screen.getByTestId('goNextWrong'));
+    await answerSpoken(user); // Q3 (spoken) -> finish
 
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
     expect((globalThis as any).__lastMocks.recordQuizResult).toHaveBeenCalledTimes(1);
-    expect((globalThis as any).__lastMocks.recordQuizResult).toHaveBeenCalledWith('Topic', 50, 'English');
+    // Q1 right, Q2 wrong, spoken explanation passed (8/10) -> 2 of 3
+    expect((globalThis as any).__lastMocks.recordQuizResult).toHaveBeenCalledWith('Topic', 67, 'English');
   });
 
   test('goPrev on the real first question is a real no-op', async () => {
@@ -277,7 +303,8 @@ describe('useQuiz — navigation between questions', () => {
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
 
     await user.press(screen.getByTestId('goNextCorrect')); // Q1 -> Q2
-    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> finish
+    await user.press(screen.getByTestId('goNextCorrect')); // Q2 -> Q3 (spoken)
+    await answerSpoken(user); // Q3 (spoken) -> finish
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
 
     const trackAttemptCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/student/track-attempt'));
@@ -294,6 +321,7 @@ describe('useQuiz — navigation between questions', () => {
 
     await user.press(screen.getByTestId('goNextCorrect'));
     await user.press(screen.getByTestId('goNextCorrect'));
+    await answerSpoken(user); // Q3 (spoken) -> finish
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
 
     const trackAttemptCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/student/track-attempt'));
@@ -311,6 +339,7 @@ describe('useQuiz — navigation between questions', () => {
 
     await user.press(screen.getByTestId('goNextCorrect'));
     await user.press(screen.getByTestId('goNextCorrect'));
+    await answerSpoken(user); // Q3 (spoken) -> finish
     await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
 
     const trackAttemptCalls = (global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/student/track-attempt'));
@@ -331,5 +360,94 @@ describe('useQuiz — navigation between questions', () => {
     expect(screen.getByTestId('currentQ').props.children).toBe(0);
     await waitFor(() => expect(screen.getByTestId('mcqDone').props.children).toBe('true'));
     expect(screen.getByTestId('mcqSelected').props.children).toBe('1');
+  });
+});
+
+describe('useQuiz — the spoken last question', () => {
+  test('every practice test ends with a spoken question after the generated ones', async () => {
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    expect(screen.getByTestId('qCount').props.children).toBe(3);
+  });
+
+  test('teacher-authored practice questions get it too', async () => {
+    await render(<Harness practiceQuiz={[{ type: 'mcq', question: 'T1', options: ['a', 'b'], correct: 0 }]} />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    expect(screen.getByTestId('qCount').props.children).toBe(2);
+  });
+
+  test('submitting sends what was said, with the topic\'s key points, and records the evaluation', async () => {
+    const user = userEvent.setup();
+    await render(<Harness studentId="s1" keyPoints={['Tenali Rama used wit']} />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await answerSpoken(user);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+
+    const call = (global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/ibpyp/evaluate-explanation'));
+    expect(JSON.parse(call[1].body)).toMatchObject({ topic: 'Topic', subject: 'English', grade: 'Grade 6', transcript: SPOKEN, keyPoints: ['Tenali Rama used wit'] });
+    const results = JSON.parse(screen.getByTestId('results').props.children);
+    expect(results).toHaveLength(3);
+    expect(results[2]).toMatchObject({ type: 'spoken', studentAnswer: SPOKEN, isCorrect: true, evaluation: GOOD_EVAL });
+    expect(screen.getByTestId('score').props.children).toBe(3);
+    // the attempt saved for the dashboard carries the spoken answer and its evaluation
+    const attempt = JSON.parse((global.fetch as jest.Mock).mock.calls.find(([url]) => url.includes('/student/track-attempt'))[1].body);
+    expect(attempt.totalQuestions).toBe(3);
+    expect(attempt.perQuestionResults[2].evaluation.score).toBe(8);
+  });
+
+  test('a low-scoring explanation counts as wrong and gets no extra "explain-wrong" call', async () => {
+    mockFetchRoutes({ evaluate: () => jsonRes(LOW_EVAL) });
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await answerSpoken(user);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+    expect(screen.getByTestId('score').props.children).toBe(2);
+    expect((global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/ibpyp/explain-wrong'))).toHaveLength(0);
+  });
+
+  test('a grading failure keeps the student on the question with their text and a message', async () => {
+    mockFetchRoutes({ evaluate: () => jsonRes({ error: 'Could not check your explanation. Please try again.' }, false) });
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await answerSpoken(user);
+    await waitFor(() => expect(screen.getByTestId('spokenStatus').props.children).toBe('error'));
+    expect(screen.getByTestId('spokenError').props.children).toMatch(/Could not check your explanation/);
+    expect(screen.getByTestId('phase').props.children).toBe('quiz');
+    expect(screen.getByTestId('qType').props.children).toBe('spoken');
+  });
+
+  test('too little said is not sent', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await user.press(screen.getByTestId('goNextCorrect'));
+    await waitFor(() => expect(screen.getByTestId('qType').props.children).toBe('spoken'));
+    await user.press(screen.getByTestId('setSpokenShort'));
+    await user.press(screen.getByTestId('submitSpoken'));
+    expect((global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/ibpyp/evaluate-explanation'))).toHaveLength(0);
+  });
+
+  test('going Previous and Next again never counts a question twice', async () => {
+    const user = userEvent.setup();
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('quiz'));
+    await user.press(screen.getByTestId('answer1'));
+    await user.press(screen.getByTestId('goNextCorrect')); // Q1 right
+    await user.press(screen.getByTestId('goPrev'));
+    await user.press(screen.getByTestId('goNextCorrect')); // Q1 again
+    await user.press(screen.getByTestId('goNextWrong'));   // Q2 wrong
+    await answerSpoken(user);
+    await waitFor(() => expect(screen.getByTestId('phase').props.children).toBe('result'));
+    expect(JSON.parse(screen.getByTestId('results').props.children)).toHaveLength(3);
+    expect(screen.getByTestId('score').props.children).toBe(2);
   });
 });

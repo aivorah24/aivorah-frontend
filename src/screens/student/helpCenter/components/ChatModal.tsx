@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import MicButton from '../../../../components/common/MicButton';
 import { fonts } from '../../../../theme';
 import type { AppColors } from '../../../../theme';
 import type { ChatMsg } from '../types';
@@ -117,6 +118,8 @@ export default function ChatModal({
               returnKeyType="send"
               editable={!chatLoading}
             />
+            {/* Speak instead of typing (hidden where the browser can't) */}
+            <MicButton value={chatInput} onChangeText={setChatInput} colors={colors} disabled={chatLoading} style={{ marginRight: 8 }} />
             <TouchableOpacity
               style={[styles.chatSendBtn, { backgroundColor: chatInput.trim() ? colors.accentYellow : colors.borderColor }]}
               onPress={() => sendSupportMessage()}

@@ -52,6 +52,7 @@ export function usePracticeRedirect(
     })) : undefined);
     navigation.navigate('Quiz', {
       topic: topic.name, grade: params.grade, subject: params.subject, curriculum: params.curriculum, topicId: params.topicId,
+      keyPoints: (topic as any).readText?.keyLearnings,
       passageText: (topic as any).readText
         ? `${(topic as any).readText.intro} ${(topic as any).readText.body?.join(' ') ?? ''}`.trim()
         : undefined,

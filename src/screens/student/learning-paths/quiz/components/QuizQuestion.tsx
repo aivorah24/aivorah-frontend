@@ -7,7 +7,8 @@ import TransliterationInput, { resolveTypingLang } from '../../../../../componen
 import type { AppColors } from '../../../../../theme';
 import { SUBJECT_ICON } from '../constants';
 import { makeStyles } from '../styles';
-import type { Question } from '../types';
+import type { Question, SpokenStatus } from '../types';
+import SpokenQuestion from './SpokenQuestion';
 
 export default function QuizQuestion({
   q,
@@ -33,6 +34,11 @@ export default function QuizQuestion({
   onPrev,
   onBack,
   onMenuPress,
+  spokenText = '',
+  setSpokenText = () => {},
+  spokenStatus = 'idle',
+  spokenError = '',
+  onSpokenSubmit = () => {},
 }: {
   q: Question;
   currentQ: number;
@@ -57,9 +63,16 @@ export default function QuizQuestion({
   onPrev: () => void;
   onBack: () => void;
   onMenuPress: () => void;
+  // The last, spoken question (see SpokenQuestion / useQuiz.submitSpoken)
+  spokenText?: string;
+  setSpokenText?: (t: string) => void;
+  spokenStatus?: SpokenStatus;
+  spokenError?: string;
+  onSpokenSubmit?: () => void;
 }) {
   const accent = colors.accentYellow;
   const isFill = q.type === 'fill_blank';
+  const isSpoken = q.type === 'spoken';
   const fillDone = fillFeedback === 'correct' || fillFeedback === 'revealed';
   const mcqCorrect = mcqDone && mcqSelected === (q.correct as number);
   const showNext = isFill ? fillDone : (mcqDone && !loadingExplain);
@@ -96,8 +109,8 @@ export default function QuizQuestion({
               <Text style={[styles.leftCounter, { color: colors.textMain }]}>{currentQ + 1}</Text>
               <Text style={[styles.leftOf, { color: colors.textMuted }]}>of {questions.length}</Text>
               <View style={[styles.leftTypeBadge, { backgroundColor: accent + '18', borderColor: accent + '40' }]}>
-                <Feather name={isFill ? 'edit-3' : 'list'} size={10} color={accent} />
-                <Text style={[styles.leftTypeTxt, { color: accent }]}>{isFill ? 'Fill Blank' : 'MCQ'}</Text>
+                <Feather name={isSpoken ? 'mic' : isFill ? 'edit-3' : 'list'} size={10} color={accent} />
+                <Text style={[styles.leftTypeTxt, { color: accent }]}>{isSpoken ? 'Speak' : isFill ? 'Fill Blank' : 'MCQ'}</Text>
               </View>
             </View>
           </View>
@@ -109,8 +122,22 @@ export default function QuizQuestion({
             <Text style={[styles.questionText, { color: colors.textMain }]}>{q.question}</Text>
             <View style={[styles.divider, { backgroundColor: colors.borderColor }]} />
 
+          {/* ── Spoken explanation (last question) ── */}
+          {isSpoken && (
+            <SpokenQuestion
+              hint={q.hint}
+              text={spokenText}
+              setText={setSpokenText}
+              status={spokenStatus}
+              error={spokenError}
+              onSubmit={onSpokenSubmit}
+              colors={colors}
+              isDark={isDark}
+            />
+          )}
+
           {/* ── MCQ options — inside the card ── */}
-          {!isFill && (
+          {!isFill && !isSpoken && (
             <View style={styles.optionsList}>
               {q.options.map((opt, i) => {
                 const isSelected = mcqSelected === i;
@@ -225,7 +252,7 @@ export default function QuizQuestion({
           )}
 
           {/* Explanation row — inside card, after divider */}
-          {(explanation || loadingExplain) && (
+          {!isSpoken && (explanation || loadingExplain) && (
             <View style={[styles.explanationRow, { borderTopWidth: 1, borderTopColor: colors.borderColor, paddingTop: 12, marginTop: 4 }]}>
               {loadingExplain
                 ? <ActivityIndicator color={accent} size="small" />
@@ -255,7 +282,7 @@ export default function QuizQuestion({
                 <Text style={[styles.nextBtnText, { color: colors.textMain }]}>Previous</Text>
               </TouchableOpacity>
             ) : <View />}
-            {showNext ? (
+            {showNext && !isSpoken ? (
               <TouchableOpacity
                 style={[styles.nextBtn, { backgroundColor: accent }]}
                 onPress={() => onNext(isFill ? fillFeedback === 'correct' : mcqCorrect)}

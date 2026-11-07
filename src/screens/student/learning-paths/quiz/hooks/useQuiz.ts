@@ -4,13 +4,15 @@ import ASSIGNMENTS_SERVER_URL from '../../../../../config/assignmentsServerUrl';
 import LEARNING_PATHS_SERVER_URL from '../../../../../config/learningPathsServerUrl';
 import LEADERBOARD_SERVICE_URL from '../../../../../config/leaderboardServiceUrl';
 import { computeCappedQuizSeconds } from '../../../../../services/studyTime';
-import { normalizeQuizQuestions, playSound } from '../utils';
-import type { Question, QuizPhase } from '../types';
+import { normalizeQuizQuestions, playSound, withSpokenQuestion, countWords, MIN_SPOKEN_WORDS } from '../utils';
+import type { Question, QuizPhase, SpokenStatus } from '../types';
 import { loadQuizResult, saveQuizResult } from '../resultCache';
 
 export function useQuiz(params: {
   topic: string; grade: string; subject: string; curriculum: string;
   passageText?: string; topicId?: string;
+  // The topic's "What you'll learn" points: what the spoken answer is graded on.
+  keyPoints?: string[];
   // Teacher-authored practice questions (Phase 2/4) — when present, skip
   // /ibpyp/quiz generation and use these directly.
   practiceQuiz?: any[];
@@ -22,7 +24,7 @@ export function useQuiz(params: {
   // Optional so existing callers/tests keep working — see StudentDataContext.
   recordQuizResult?: (topic: string, score: number, subject?: string) => void;
 }) {
-  const { topic, grade, subject, curriculum, passageText, topicId, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult } = params;
+  const { topic, grade, subject, curriculum, passageText, topicId, keyPoints, practiceQuiz, userEmail, userRole, studentId, navigation, completeLesson, addXP, recordStudySeconds, recordQuizResult } = params;
 
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -40,6 +42,11 @@ export function useQuiz(params: {
   const [fillAttempts, setFillAttempts] = useState(0);
   const [fillFeedback, setFillFeedback] = useState<'idle' | 'wrong1' | 'wrong2' | 'revealed' | 'correct'>('idle');
   const [fillValidating, setFillValidating] = useState(false);
+
+  // Spoken question (the last one): what the student said, and grading progress
+  const [spokenText, setSpokenText] = useState('');
+  const [spokenStatus, setSpokenStatus] = useState<SpokenStatus>('idle');
+  const [spokenError, setSpokenError] = useState('');
 
   // Explanation
   const [explanation, setExplanation] = useState('');
@@ -63,7 +70,7 @@ export function useQuiz(params: {
   useEffect(() => {
     if (phase !== 'result') return;
     perQuestionResultsRef.current.forEach((r, i) => {
-      if (r.isCorrect) return;
+      if (!r || r.isCorrect || r.type === 'spoken') return; // the spoken answer has its own feedback
       if (explanationsRef.current[i]) return; // already have it
       fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/explain-wrong`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -108,8 +115,9 @@ export function useQuiz(params: {
     quizStartTimeRef.current = Date.now();
     questionStartTimeRef.current = Date.now();
     if (isRetake) setAttemptNumber(n => n + 1);
+    setSpokenText(''); setSpokenStatus('idle'); setSpokenError('');
     if (practiceQuiz?.length) {
-      setQuestions(normalizeQuizQuestions(practiceQuiz));
+      setQuestions(withSpokenQuestion(normalizeQuizQuestions(practiceQuiz), topic));
       setPhase('quiz');
       return;
     }
@@ -120,7 +128,7 @@ export function useQuiz(params: {
       });
       const data = await res.json();
       if (!data.questions?.length) throw new Error('No questions');
-      setQuestions(normalizeQuizQuestions(data.questions));
+      setQuestions(withSpokenQuestion(normalizeQuizQuestions(data.questions), topic));
       setPhase('quiz');
     } catch {
       Alert.alert('Error', 'Could not generate quiz. Please try again.');
@@ -228,15 +236,17 @@ export function useQuiz(params: {
     const correctAnswer = q.type === 'fill_blank'
       ? String(q.correct)
       : q.options[q.correct as number];
-    perQuestionResultsRef.current.push({
+    // By index, not push: going Previous and Next again must not record the
+    // same question twice (or count its point twice).
+    perQuestionResultsRef.current[currentQ] = {
       question: q.question,
       studentAnswer,
       correctAnswer,
       isCorrect,
       timeSeconds: qTimeSeconds,
-    });
+    };
 
-    const newScore = scoreRef.current + (isCorrect ? 1 : 0);
+    const newScore = perQuestionResultsRef.current.filter((r) => r?.isCorrect).length;
     scoreRef.current = newScore;
     setScore(newScore);
     if (currentQ < questions.length - 1) {
@@ -258,6 +268,7 @@ export function useQuiz(params: {
     resetQuestionState();
     if (!rec) return;
     const q = questions[prevIdx];
+    if (q.type === 'spoken') { questionStartTimeRef.current = Date.now(); return; }
     // Restore the locked answer so the review shows what the student chose.
     if (q.type === 'fill_blank') {
       setFillInput(rec.studentAnswer || '');
@@ -269,6 +280,51 @@ export function useQuiz(params: {
     }
     setExplanation(explanationsRef.current[prevIdx] || q.explanation || '');
     questionStartTimeRef.current = Date.now();
+  }
+
+  // ── Spoken question ───────────────────────────────────────────
+  // Grades what the student said against the topic's key points, records it
+  // like any other answer (correct at 6/10 or more), then moves on.
+  async function submitSpoken() {
+    const text = spokenText.trim();
+    if (spokenStatus === 'checking' || countWords(text) < MIN_SPOKEN_WORDS) return;
+    const q = questions[currentQ];
+    setSpokenStatus('checking'); setSpokenError('');
+    try {
+      const res = await fetch(`${LEARNING_PATHS_SERVER_URL}/ibpyp/evaluate-explanation`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, subject, grade, curriculum, topicId, keyPoints, passageText, transcript: text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data?.score !== 'number') {
+        throw new Error(data?.error || 'Could not check your explanation. Check your connection and try again.');
+      }
+      perQuestionResultsRef.current[currentQ] = {
+        question: q.question,
+        studentAnswer: text,
+        correctAnswer: '',
+        isCorrect: !!data.passed,
+        timeSeconds: Math.round((Date.now() - questionStartTimeRef.current) / 1000),
+        type: 'spoken',
+        evaluation: data,
+      };
+      explanationsRef.current[currentQ] = data.feedback || '';
+      setResultExplanations(prev => ({ ...prev, [currentQ]: data.feedback || '' }));
+      const newScore = perQuestionResultsRef.current.filter((r) => r?.isCorrect).length;
+      scoreRef.current = newScore;
+      setScore(newScore);
+      setSpokenStatus('idle');
+      if (currentQ < questions.length - 1) {
+        setCurrentQ(c => c + 1);
+        resetQuestionState();
+        questionStartTimeRef.current = Date.now();
+      } else {
+        finishQuiz(newScore);
+      }
+    } catch (e: any) {
+      setSpokenStatus('error');
+      setSpokenError(e?.message || 'Could not check your explanation. Please try again.');
+    }
   }
 
   async function fetchExplanation(q: Question, wrong: string, correct: string, wasCorrect: boolean) {
@@ -374,5 +430,6 @@ export function useQuiz(params: {
     attemptNumber, perQuestionResultsRef, explanationsRef, quizStartTimeRef,
     resultExplanations,
     fetchQuiz, goNext, goPrev, handleMcqAnswer, handleFillSubmit,
+    spokenText, setSpokenText, spokenStatus, spokenError, submitSpoken,
   };
 }

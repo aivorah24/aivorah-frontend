@@ -36,7 +36,7 @@ export default function QuizScreen({ navigation, route }: any) {
 }
 
 function QuizSession({ navigation, route }: any) {
-  const { topic, grade = 'Grade 3', subject = 'Mathematics', curriculum = 'IB PYP', returnTo, returnParams, passageText, topicId, practiceQuiz } = route?.params ?? {};
+  const { topic, grade = 'Grade 3', subject = 'Mathematics', curriculum = 'IB PYP', returnTo, returnParams, passageText, topicId, keyPoints, practiceQuiz } = route?.params ?? {};
   // Whoever launched this quiz — SubjectTopics by default, but LessonScreen's
   // Practice tab passes its own returnTo/returnParams so back lands there
   // instead of always dumping the student back on the topic list.
@@ -59,7 +59,7 @@ function QuizSession({ navigation, route }: any) {
   const accent = colors.accentYellow;
 
   const quiz = useQuiz({
-    topic, grade, subject, curriculum, passageText, topicId, practiceQuiz,
+    topic, grade, subject, curriculum, passageText, topicId, keyPoints, practiceQuiz,
     // B004 fix: track-attempt needs the real resolved student id
     // (StudentDataContext.studentId, from POST /user/sync), not AuthContext's
     // user.id — that field is never populated on the real user object, which
@@ -134,6 +134,11 @@ function QuizSession({ navigation, route }: any) {
       onPrev={quiz.goPrev}
       onBack={goBackToOrigin}
       onMenuPress={() => navigation.openDrawer()}
+      spokenText={quiz.spokenText}
+      setSpokenText={quiz.setSpokenText}
+      spokenStatus={quiz.spokenStatus}
+      spokenError={quiz.spokenError}
+      onSpokenSubmit={quiz.submitSpoken}
     />
   );
 }

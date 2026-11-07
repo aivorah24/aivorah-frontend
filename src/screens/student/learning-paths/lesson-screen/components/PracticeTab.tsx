@@ -78,6 +78,8 @@ export default function PracticeTab({
           passageText: (topic as any).readText
             ? `${(topic as any).readText.intro} ${(topic as any).readText.body?.join(' ') ?? ''}`.trim()
             : undefined,
+          // What the spoken last question is graded on ("What you'll learn").
+          keyPoints: (topic as any).readText?.keyLearnings,
           // So the quiz's back button returns here instead of the old
           // SubjectTopics list — it only knew that one hardcoded target before.
           returnTo: 'LessonScreen',
