@@ -27,6 +27,8 @@ import { useTeacherCurriculumGrade } from './hooks/useTeacherCurriculumGrade';
 import { useBulkUpload } from './hooks/useBulkUpload';
 import { useUploadWorksheet } from './hooks/useUploadWorksheet';
 import { useQuizLibrary } from './hooks/useQuizLibrary';
+import { useTeacherScope } from './hooks/useTeacherScope';
+import { MyLibrary } from './components/MyLibrary';
 import { useTaskSteps } from './hooks/useTaskSteps';
 import { useIBGeneration } from './hooks/useIBGeneration';
 import { useQuizGeneration } from './hooks/useQuizGeneration';
@@ -191,6 +193,15 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
     libraryPreviewQuiz, setLibraryPreviewQuiz, libraryPreviewLoading,
     openLibraryPreview,
   } = useQuizLibrary({ activeTab, teacherEmail });
+  // Library: "My Library" (this teacher's own saved assignments) or the
+  // school's shared quiz bank - both limited to the grades/subjects they teach.
+  const [libraryView, setLibraryView] = useState<'mine' | 'school'>('mine');
+  const teacherScope = useTeacherScope(teacherEmail, (user as any)?.teaches);
+  const librarySubjects = teacherScope.subjects.length
+    ? [...SUBJECTS.filter((x) => teacherScope.subjects.includes(x)), ...teacherScope.subjects.filter((x) => !SUBJECTS.includes(x))]
+    : SUBJECTS;
+  const libraryGrades = teacherScope.grades.length ? teacherScope.grades : ALL_GRADES;
+  const schoolQuizzes = libraryQuizzes.filter((q: any) => teacherScope.allows(q.grade, q.subject));
 
   const {
     taskSteps, setTaskSteps, generatingSteps, stepsError,
@@ -418,10 +429,33 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
           {/* ── QUIZ LIBRARY TAB ── */}
           {activeTab === 'Quiz Library' && (
             <View style={{ flex: 1 }}>
-              {/* Subject + Grade filters */}
-              <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 10 }}>
+              {/* My Library (private) / School Library (shared bank) */}
+              <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 14 }} accessibilityRole="tablist">
+                {([['mine', 'My Library'], ['school', 'School Library']] as const).map(([key, label]) => (
+                  <TouchableOpacity
+                    key={key}
+                    testID={`library-view-${key}`}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: libraryView === key ? gold : colors.borderColor, backgroundColor: libraryView === key ? gold + '20' : 'transparent' }}
+                    onPress={() => setLibraryView(key)}
+                    activeOpacity={0.75}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: libraryView === key }}
+                  >
+                    <Feather name={key === 'mine' ? 'lock' : 'users'} size={13} color={libraryView === key ? gold : colors.textDim} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: libraryView === key ? gold : colors.textDim }}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ paddingHorizontal: 16, paddingTop: 6, fontSize: 12, color: colors.textMuted }}>
+                {libraryView === 'mine'
+                  ? 'Every assignment you create is saved here. Only you can see it. Assign it again any time, e.g. to a new student.'
+                  : 'Quizzes shared in your school, for the grades and subjects you teach.'}
+              </Text>
+
+              {/* Subject + Grade filters: only what this teacher teaches */}
+              <View style={{ paddingHorizontal: 16, paddingTop: 10, gap: 10 }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {['', ...SUBJECTS].map((s) => (
+                  {['', ...librarySubjects].map((s) => (
                     <TouchableOpacity
                       key={s || 'all'}
                       style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5, borderColor: librarySubject === s ? gold : colors.borderColor, backgroundColor: librarySubject === s ? gold + '20' : 'transparent' }}
@@ -433,7 +467,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                   ))}
                 </ScrollView>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {['', ...ALL_GRADES].map((g) => (
+                  {['', ...libraryGrades].map((g) => (
                     <TouchableOpacity
                       key={g || 'all'}
                       style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5, borderColor: libraryGrade === g ? gold : colors.borderColor, backgroundColor: libraryGrade === g ? gold + '20' : 'transparent' }}
@@ -448,9 +482,22 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
 
               {/* Results */}
               <View style={{ marginTop: 10, paddingHorizontal: 16, flex: 1 }}>
-                {libraryLoading ? (
+                {libraryView === 'mine' ? (
+                  <MyLibrary
+                    active={activeTab === 'Quiz Library' && libraryView === 'mine'}
+                    teacherEmail={teacherEmail}
+                    students={students}
+                    scope={teacherScope}
+                    subject={librarySubject}
+                    grade={libraryGrade}
+                    colors={colors}
+                    gold={gold}
+                    styles={styles}
+                    onAssigned={(row) => setAssignments(prev => [row, ...prev])}
+                  />
+                ) : libraryLoading ? (
                   <ActivityIndicator color={colors.accentYellow} style={{ marginTop: 32 }} />
-                ) : libraryLoaded && libraryQuizzes.length === 0 ? (
+                ) : libraryLoaded && schoolQuizzes.length === 0 ? (
                   <View style={styles.empty}>
                     <Feather name="inbox" size={36} color={colors.textDim} />
                     <Text style={styles.emptyTitle}>No quizzes found</Text>
@@ -466,7 +513,7 @@ export default function TeacherAssignmentsScreen({ navigation }: any) {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                  {libraryQuizzes.map((q) => {
+                  {schoolQuizzes.map((q) => {
                     const subjectColor = SUBJECT_COLORS[q.subject] || gold;
                     const questionCount = q.quiz_data?.tasks?.reduce((s: number, t: any) => s + (t.questions?.length || 0), 0) || 0;
                     return (
