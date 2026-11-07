@@ -9,6 +9,7 @@ import type { AppColors } from '../../../../../theme';
 import { useResponsive } from '../../../../../hooks/useResponsive';
 import type { NextTopic } from '../hooks/useNextTopic';
 import { makeStyles } from '../styles';
+import SpokenReport from './SpokenReport';
 
 export default function QuizResult({
   topic,
@@ -81,8 +82,10 @@ export default function QuizResult({
     return () => loop.stop();
   }, [passed, nextTopic, glow]);
 
-  const correctQs = perQuestionResults.filter(r => r.isCorrect);
-  const wrongQs = perQuestionResults.map((r, i) => ({ ...r, idx: i })).filter(r => !r.isCorrect);
+  // The spoken question has its own report card; right/wrong lists are the others.
+  const spokenQs = perQuestionResults.filter(r => r?.type === 'spoken');
+  const correctQs = perQuestionResults.filter(r => r && r.isCorrect && r.type !== 'spoken');
+  const wrongQs = perQuestionResults.map((r, i) => ({ ...r, idx: i })).filter(r => r && !r.isCorrect && r.type !== 'spoken');
 
   return (
     <ScreenLayout>
@@ -166,6 +169,21 @@ export default function QuizResult({
         </View>
 
         <View style={{ width: '100%', maxWidth: 1040, alignSelf: 'center' }}>
+
+          {/* ── The spoken explanation ── */}
+          {spokenQs.length > 0 && (
+            <View style={styles.reviewSection}>
+              <View style={styles.reviewSectionHeader}>
+                <View style={[styles.reviewSectionIcon, { backgroundColor: accent + '20' }]}>
+                  <Feather name="mic" size={16} color={accent} />
+                </View>
+                <Text style={[styles.reviewSectionTitle, { color: accent }]}>Your Spoken Explanation</Text>
+              </View>
+              {spokenQs.map((r, i) => (
+                <SpokenReport key={i} question={r.question} said={r.studentAnswer} evaluation={r.evaluation} colors={colors} />
+              ))}
+            </View>
+          )}
 
           {/* ── What you got RIGHT ── */}
           {correctQs.length > 0 && (

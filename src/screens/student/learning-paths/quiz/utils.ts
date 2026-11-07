@@ -64,3 +64,20 @@ export function normalizeQuizQuestions(rawQs: any[]): Question[] {
     };
   });
 }
+
+// Every practice test ends with one spoken question: the student explains the
+// topic in their own words. Added after the generated / teacher questions.
+export function withSpokenQuestion(list: Question[], topic: string): Question[] {
+  if (list.some((q) => q.type === 'spoken')) return list;
+  return [...list, {
+    type: 'spoken',
+    question: `Explain "${topic}" in your own words. What did you learn?`,
+    options: [],
+    correct: '',
+    hint: 'Talk about the main ideas: what happened or how it works, and why it matters.',
+    explanation: '',
+  }];
+}
+
+export const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+export const MIN_SPOKEN_WORDS = 3;
