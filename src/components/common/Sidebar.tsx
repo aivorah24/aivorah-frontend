@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Modal,
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -167,7 +166,6 @@ const COLLAPSE_KEY = 'aivorah_sidebar_collapsed';
 
 export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const { logout, user, updateUser } = useAuth();
-  const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   const activeItemRef = useRef<any>(null);
 
   // Keep the active nav item visible when it changes (e.g. after navigating
@@ -248,6 +246,10 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
   const NAV_ITEMS = ((!isB2B && (role === 'teacher' || role === 'parent' || role === 'student'))
     ? NAV_ITEMS_ROLE.filter((i) => !SCHOOL_ONLY_SCREENS.includes(i.screen))
     : NAV_ITEMS_ROLE).filter((i) => i.screen !== 'ReadAloud' || hasReadAloudStories(user?.grade));
+  // The logo / brand name takes you to your own dashboard (the first item of
+  // your menu). It used to ask "Leave to Home?" and sign you out.
+  const homeItem = NAV_ITEMS[0];
+  const goToDashboard = () => { if (homeItem) onNavigate(homeItem.screen, (homeItem as any).params); };
   const groups = isAdmin ? ['MENU'] : (role === 'super_admin' || role === 'teacher') ? ['MENU', 'MANAGE', 'SYSTEM'] : role === 'school_admin' ? ['WORKSPACE', 'STUDENT MANAGEMENT', 'ACADEMIC STRUCTURE', 'PEOPLE', 'COMMUNICATION', 'ADMINISTRATION', 'SUPPORT'] : role === 'parent' ? ['MENU', 'CHILDREN', 'SYSTEM'] : ['MENU', 'FOCUS', 'SYSTEM'];
   const { colors, themeMode, setThemeMode } = useTheme();
   const { unreadCount, unreadAssignments, unreadChallenges } = useNotification();
@@ -263,7 +265,7 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
     <View style={[styles.container, collapsed && styles.containerCollapsed]}>
       {/* Logo */}
       <View style={[styles.logoRow, collapsed && styles.logoRowCollapsed]}>
-        <TouchableOpacity style={[styles.logo, collapsed && { paddingLeft: 0 }]} activeOpacity={0.7} onPress={() => setShowHomeConfirm(true)}>
+        <TouchableOpacity style={[styles.logo, collapsed && { paddingLeft: 0 }]} activeOpacity={0.7} onPress={goToDashboard} accessibilityRole="button" accessibilityLabel="Go to your dashboard" testID="logo-home">
           <View style={styles.logoMark}>
             <Feather name="zap" size={18} color="white" />
           </View>
@@ -472,30 +474,6 @@ export default function Sidebar({ currentScreen, onNavigate }: SidebarProps) {
       </View>
       </ScrollView>
 
-      {/* Branded Home Confirmation Modal */}
-      <Modal visible={showHomeConfirm} transparent animationType="fade" onRequestClose={() => setShowHomeConfirm(false)}>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmLogoRow}>
-              <View style={styles.logoMark}>
-                <Feather name="zap" size={18} color="white" />
-              </View>
-              <Text style={styles.confirmBrand}>Aivorah</Text>
-            </View>
-            <Text style={styles.confirmTitle}>Leave to Home?</Text>
-            <Text style={styles.confirmSub}>You&apos;ll be taken back to the Aivorah landing page and signed out.</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity style={styles.confirmCancel} onPress={() => setShowHomeConfirm(false)} activeOpacity={0.8}>
-                <Text style={styles.confirmCancelText}>Stay</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmGo} onPress={() => { setShowHomeConfirm(false); logout(); }} activeOpacity={0.8}>
-                <Feather name="home" size={14} color="#fff" />
-                <Text style={styles.confirmGoText}>Go to Home</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -730,15 +708,4 @@ const makeStyles = (c: AppColors) => StyleSheet.create({
   planBadgeTextPro: { color: '#C5A56A' },
 
   // Home confirm modal
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  confirmCard: { backgroundColor: c.cardDark, borderRadius: 20, borderWidth: 1, borderColor: c.borderColor, padding: 28, width: '100%', maxWidth: 360, gap: 12 },
-  confirmLogoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  confirmBrand: { fontSize: 18, fontWeight: '800', color: c.textMain, letterSpacing: -0.3 },
-  confirmTitle: { fontSize: 20, fontWeight: '700', color: c.textMain },
-  confirmSub: { fontSize: 13, color: c.textMuted, lineHeight: 20 },
-  confirmBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  confirmCancel: { flex: 1, borderWidth: 1, borderColor: c.borderColor, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  confirmCancelText: { fontSize: 14, fontWeight: '600', color: c.textMuted },
-  confirmGo: { flex: 1, backgroundColor: c.accentYellow, borderRadius: 10, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  confirmGoText: { fontSize: 14, fontWeight: '700', color: '#0B0B0B' },
 });
