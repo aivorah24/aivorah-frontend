@@ -31,9 +31,9 @@ const generated = () => ({
 
 let latest: any;
 function Harness() {
-  const [quiz, setQuiz] = React.useState<any>(generated());
-  latest = quiz;
-  return <InteractiveQuizPreviewModal quiz={quiz} setQuiz={setQuiz} onClose={jest.fn()} />;
+  const [quiz, setQuiz] = React.useState<any>(() => (latest = generated()));
+  const keep = (next: any) => { latest = next; setQuiz(next); };
+  return <InteractiveQuizPreviewModal quiz={quiz} setQuiz={keep} onClose={jest.fn()} />;
 }
 
 beforeEach(() => {
@@ -93,4 +93,22 @@ test('multiple choice: options are editable and the correct one can be changed',
   expect(latest.tasks[1].questions[0].answer).toBe('B');
   await user.type(screen.getByTestId('edit-q-1-0-option-1'), ' (square)');
   expect(latest.tasks[1].questions[0]).toMatchObject({ answer: 'B (square)', options: ['A', 'B (square)'] });
+});
+
+test('Refresh rebuilds the Preview from the edited quiz (an added picture shows)', async () => {
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+  const setQuiz = jest.fn();
+  const edited = { ...generated(), _editMode: false, _previewHTML: '<html>old</html>' };
+  edited.tasks[0].sharedImageUrl = 'https://x.test/added.png';
+  await render(<InteractiveQuizPreviewModal quiz={edited} setQuiz={setQuiz} onClose={jest.fn()} />);
+  await user.press(screen.getByTestId('quiz-preview-refresh'));
+  const sent = JSON.parse((global as any).fetch.mock.calls.at(-1)[1].body).quiz;
+  expect(sent.tasks[0].sharedImageUrl).toBe('https://x.test/added.png');
+  expect(sent._previewHTML).toBeUndefined();
+  expect(setQuiz).toHaveBeenLastCalledWith(expect.objectContaining({ _previewHTML: '<html>edited</html>', _editMode: false }));
+});
+
+test('Refresh is only on the Preview tab', async () => {
+  await render(<Harness />);
+  expect(screen.queryByTestId('quiz-preview-refresh')).toBeNull();
 });
