@@ -290,13 +290,14 @@ export default function DashboardScreen({ navigation, route }: any) {
   // Days with real learning activity this week (student_daily_log via
   // GET /weekly, plus today from local stats). The parent child-view has no
   // weekly log for the child here, so it keeps the streak-based estimate.
-  const weeklyConsistency = childOverride
-    ? computeWeeklyConsistency(stats.currentStreak)
-    : weeklyConsistencyPct(computeWeeklyActiveDays(
-        weeklyDays,
-        new Date().toISOString().split('T')[0],
-        stats.todayStudyMinutes > 0 || stats.todayXP > 0,
-      ));
+  const todayDate = new Date().toISOString().split('T')[0];
+  const activeToday = stats.todayStudyMinutes > 0 || stats.todayXP > 0;
+  const weeklyConsistency = useMemo(
+    () => (childOverride
+      ? computeWeeklyConsistency(stats.currentStreak)
+      : weeklyConsistencyPct(computeWeeklyActiveDays(weeklyDays, todayDate, activeToday))),
+    [childOverride, stats.currentStreak, weeklyDays, todayDate, activeToday],
+  );
 
   // Best topic — only topics with real quiz data
   const bestTopic = useMemo(() => computeBestTopic(realTopicPerf), [realTopicPerf]);

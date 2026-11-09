@@ -704,7 +704,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Poll every 30 s while a real user is logged in.
+  // Poll every 2 min while a real user is logged in (was 30 s: each poll is
+  // two requests per signed-in user, which adds up as more users are online).
   // If the DB row is gone (admin deleted the account), sign out immediately to Landing.
   useEffect(() => {
     const isDemoOrTest = user?.email?.endsWith('@demo.com') || user?.email?.endsWith('@test.ai') || user?.email?.endsWith('@aivorah.ai');
@@ -742,9 +743,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch {}
     };
-    const interval = setInterval(() => tick(interval), 30_000);
+    const interval = setInterval(() => tick(interval), 120_000);
     // Also check once shortly after mount so a deleted account is bounced to
-    // Landing within seconds, not after the first 30s interval.
+    // Landing within seconds, not after the first 2-minute interval.
     const kick = setTimeout(() => tick(interval), 4_000);
     return () => { stopped = true; clearInterval(interval); clearTimeout(kick); };
   }, [user?.email, user?.emailVerified]);
