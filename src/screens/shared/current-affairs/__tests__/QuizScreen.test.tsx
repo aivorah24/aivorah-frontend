@@ -130,7 +130,8 @@ test('80%+: submits, records completion, shows score, points and the excellence 
   expect(screen.getAllByText('Correct answer: B. Bravo')).toHaveLength(2);
 
   await fireEvent.press(screen.getByText('Try Again Next Week'));
-  expect(navigation.navigate).toHaveBeenCalledWith('CurrentAffairs');
+  // Opened without history (e.g. a link) → The World & You → Current Affairs tab.
+  expect(navigation.navigate).toHaveBeenCalledWith('WorldAndYou', { tab: 'news' });
 });
 
 test('below 80%: no excellence badge, still +20 points', async () => {
@@ -153,6 +154,15 @@ test('if saving the points fails the result is still shown', async () => {
   await playQuiz(10);
   expect(await screen.findByText('10/10')).toBeTruthy();
   expect(screen.getByText('Could not save your quiz points')).toBeTruthy();
+});
+
+test('Try Again Next Week goes back to where the student came from', async () => {
+  mocked.fetchWeeklyQuiz.mockResolvedValue(quiz({ attempt: resultFor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) }));
+  const navigation = { navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true };
+  await render(<QuizScreen navigation={navigation} route={route} />);
+  await fireEvent.press(await screen.findByText('Try Again Next Week'));
+  expect(navigation.goBack).toHaveBeenCalled();
+  expect(navigation.navigate).not.toHaveBeenCalled();
 });
 
 test('a quiz already taken this week opens on its result', async () => {

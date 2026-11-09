@@ -107,7 +107,7 @@ test('the age group falls back to the profile grade', async () => {
   expect(mocked.fetchStory).toHaveBeenCalledWith('s1', 'under-8');
 });
 
-test('back goes to the previous screen, or the digest when there is none', async () => {
+test('back goes to the previous screen, or The World & You → Current Affairs when there is none', async () => {
   const withHistory = nav(true);
   await render(<StoryScreen navigation={withHistory} route={route()} />);
   await fireEvent.press(await screen.findByText('Header back: Current Affairs'));
@@ -116,7 +116,7 @@ test('back goes to the previous screen, or the digest when there is none', async
   const fresh = nav(false);
   await render(<StoryScreen navigation={fresh} route={route()} />);
   await fireEvent.press((await screen.findAllByText('Back to today’s stories'))[0]);
-  expect(fresh.navigate).toHaveBeenCalledWith('CurrentAffairs');
+  expect(fresh.navigate).toHaveBeenCalledWith('WorldAndYou', { tab: 'news' });
 });
 
 test('no story id (e.g. an opened link without one) shows not found', async () => {

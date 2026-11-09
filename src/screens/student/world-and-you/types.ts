@@ -20,11 +20,3 @@ export interface TidbitData {
   gk: GKFact;
   currentAffairs: CurrentAffair;
 }
-
-export interface QuizQuestion {
-  question: string;
-  options: string[];
-  correct: number;
-}
-
-export type QuizState = 'idle' | 'loading' | 'active' | 'done' | 'already_done';

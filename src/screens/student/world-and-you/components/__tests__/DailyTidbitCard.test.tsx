@@ -1,6 +1,6 @@
-// Integration test for DailyTidbitCard — the real card, real hooks
-// (useDailyTidbit, useTidbitQuiz), and real QuizSection, driven entirely
-// through a mocked global.fetch (no module-boundary mocks for the hooks).
+// Integration test for DailyTidbitCard — the real card and real
+// useDailyTidbit hook, driven through a mocked global.fetch. The Current
+// Affairs tab content (daily digest) is rendered by WorldAndYouScreen.
 
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,7 +31,7 @@ describe('DailyTidbitCard — GK tab (default)', () => {
       currentAffairs: { headline: 'H', summary: 'S' },
     })) as any;
 
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
+    await render(<DailyTidbitCard grade="Grade 4" />);
 
     await waitFor(() => expect(screen.getByText('Octopuses have three hearts.')).toBeTruthy());
     expect(screen.getByText('Animals')).toBeTruthy();
@@ -44,93 +44,65 @@ describe('DailyTidbitCard — GK tab (default)', () => {
       currentAffairs: { headline: 'H', summary: 'S' },
     })) as any;
 
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
+    await render(<DailyTidbitCard grade="Grade 4" />);
 
     await waitFor(() => expect(screen.getByText('The real fact.')).toBeTruthy());
   });
 
   test('a load failure shows the real "Couldn\'t load" retry message', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
+    await render(<DailyTidbitCard grade="Grade 4" />);
     await waitFor(() => expect(screen.getByText("Couldn't load. Tap refresh to try again.")).toBeTruthy());
   });
 });
 
+const TIDBIT = {
+  gk: { fact: 'A fact', category: 'Science' },
+  currentAffairs: { headline: 'Old single headline', summary: 'Old summary' },
+};
+
 describe('DailyTidbitCard — Current Affairs tab', () => {
-  test('switching tabs shows the real headline and summary', async () => {
-    global.fetch = jest.fn().mockResolvedValue(jsonRes({
-      gk: { fact: 'A fact', category: 'Science' },
-      currentAffairs: { headline: 'Robot Helps in Surgery', summary: 'A robot assisted doctors today.' },
-    })) as any;
+  test('switching to Current Affairs reports the tab and no longer shows the old single headline', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes(TIDBIT)) as any;
+    const onTabChange = jest.fn();
     const user = userEvent.setup();
 
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
+    await render(<DailyTidbitCard grade="Grade 4" onTabChange={onTabChange} />);
     await waitFor(() => expect(screen.getByText('A fact')).toBeTruthy());
 
     await user.press(screen.getByText('Current Affairs'));
 
-    expect(screen.getByText('Robot Helps in Surgery')).toBeTruthy();
-    expect(screen.getByText('A robot assisted doctors today.')).toBeTruthy();
+    expect(onTabChange).toHaveBeenCalledWith('news');
+    expect(screen.getByText('Today in the World')).toBeTruthy();
+    expect(screen.queryByText('A fact')).toBeNull();
+    expect(screen.queryByText('Old single headline')).toBeNull();
+    expect(screen.queryByText('Test Your Knowledge')).toBeNull();
   });
 
-  test('pressing the real "GK Fact" tab switches back from Current Affairs', async () => {
-    global.fetch = jest.fn().mockResolvedValue(jsonRes({
-      gk: { fact: 'A fact', category: 'Science' },
-      currentAffairs: { headline: 'Robot Helps in Surgery', summary: 'A robot assisted doctors today.' },
-    })) as any;
+  test('pressing "GK Fact" switches back', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes(TIDBIT)) as any;
     const user = userEvent.setup();
 
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
+    await render(<DailyTidbitCard grade="Grade 4" />);
     await waitFor(() => expect(screen.getByText('A fact')).toBeTruthy());
     await user.press(screen.getByText('Current Affairs'));
-    await waitFor(() => expect(screen.getByText('Robot Helps in Surgery')).toBeTruthy());
-
     await user.press(screen.getByText('GK Fact'));
 
     expect(screen.getByText('A fact')).toBeTruthy();
-    expect(screen.queryByText('Robot Helps in Surgery')).toBeNull();
+    expect(screen.getByText('Did You Know?')).toBeTruthy();
   });
 
-  test('the real "Test Your Knowledge" quiz button starts a real comprehension quiz', async () => {
-    global.fetch = jest.fn((url: string) => {
-      if (url.includes('/daily-tidbit/quiz')) return jsonRes({ questions: [{ question: 'What happened?', options: ['A', 'B'], correct: 0 }] });
-      return jsonRes({
-        gk: { fact: 'A fact', category: 'Science' },
-        currentAffairs: { headline: 'Robot Helps in Surgery', summary: 'A robot assisted doctors today.' },
-      });
-    }) as any;
+  test('controlled by the parent: shows the tab it is given and asks the parent to change it', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes(TIDBIT)) as any;
+    const onTabChange = jest.fn();
     const user = userEvent.setup();
 
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
-    await waitFor(() => expect(screen.getByText('A fact')).toBeTruthy());
-    await user.press(screen.getByText('Current Affairs'));
+    await render(<DailyTidbitCard grade="Grade 4" tab="news" onTabChange={onTabChange} />);
+    expect(screen.getByText('Today in the World')).toBeTruthy();
 
-    await user.press(screen.getByText('Test Your Knowledge'));
-
-    await waitFor(() => expect(screen.getByText('What happened?')).toBeTruthy());
-  });
-
-  test('answering the real quiz inside the card calls through to useTidbitQuiz.handleAnswer and reaches a result', async () => {
-    global.fetch = jest.fn((url: string) => {
-      if (url.includes('/daily-tidbit/quiz-complete')) return jsonRes({ xpAwarded: 10 });
-      if (url.includes('/daily-tidbit/quiz')) return jsonRes({ questions: [{ question: 'What happened?', options: ['Yes it did', 'No it did not'], correct: 0 }] });
-      return jsonRes({
-        gk: { fact: 'A fact', category: 'Science' },
-        currentAffairs: { headline: 'Robot Helps in Surgery', summary: 'A robot assisted doctors today.' },
-      });
-    }) as any;
-    const user = userEvent.setup();
-
-    await render(<DailyTidbitCard grade="Grade 4" studentId="s1" />);
-    await waitFor(() => expect(screen.getByText('A fact')).toBeTruthy());
-    await user.press(screen.getByText('Current Affairs'));
-    await user.press(screen.getByText('Test Your Knowledge'));
-    await waitFor(() => expect(screen.getByText('What happened?')).toBeTruthy());
-
-    await user.press(screen.getByText('Yes it did'));
-
-    await waitFor(() => expect(screen.getByText('Perfect score!')).toBeTruthy(), { timeout: 2000 });
-    expect(screen.getByText('+10 XP earned')).toBeTruthy();
+    await user.press(screen.getByText('GK Fact'));
+    expect(onTabChange).toHaveBeenCalledWith('gk');
+    // Still on news until the parent changes the prop.
+    expect(screen.getByText('Today in the World')).toBeTruthy();
   });
 });
-

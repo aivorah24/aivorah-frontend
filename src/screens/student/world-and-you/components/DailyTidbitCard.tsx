@@ -1,9 +1,11 @@
 /**
  * DailyTidbitCard.tsx
- * Dashboard widget — shows today's GK Fact + Current Affairs.
- * Content is grade-specific and rotates daily via the server cache.
+ * The World & You card with the "GK Fact | Current Affairs" tabs.
+ * GK Fact: today's grade-specific fact (aivorah-world-and-you-service).
+ * Current Affairs: the tab switch only — the parent screen shows the daily
+ * digest from aivorah-current-affairs-service below this card.
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -11,20 +13,20 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../../context/ThemeContext';
 import { spacing, radius } from '../../../../theme';
 import { useDailyTidbit } from '../hooks/useDailyTidbit';
-import { useTidbitQuiz } from '../hooks/useTidbitQuiz';
 import { categoryIcon } from '../utils/quizHelpers';
-import QuizSection from './QuizSection';
 
 interface Props {
   grade: string;
-  studentId?: string;
   onTabChange?: (tab: 'gk' | 'news') => void;
+  /** Controlled tab (The World & You owns it so Back can reopen Current Affairs). */
+  tab?: 'gk' | 'news';
 }
 
-export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props) {
+export default function DailyTidbitCard({ grade, onTabChange, tab: controlledTab }: Props) {
   const { colors, isDark } = useTheme();
-  const { resetQuiz, ...quiz } = useTidbitQuiz({ grade, studentId });
-  const { tab, setTab, data, loading, error, loadTidbit } = useDailyTidbit(grade, resetQuiz, onTabChange);
+  const { tab: ownTab, setTab: setOwnTab, data, loading, error, loadTidbit } = useDailyTidbit(grade, undefined, onTabChange);
+  const tab = controlledTab ?? ownTab;
+  const setTab = (next: 'gk' | 'news') => (controlledTab === undefined ? setOwnTab(next) : onTabChange?.(next));
 
   // ── Theme tokens ─────────────────────────────────────────────────
   const teal        = '#BAA467';
@@ -52,9 +54,11 @@ export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props
             </Text>
           </View>
         </View>
-        <TouchableOpacity onPress={loadTidbit} style={s.refreshBtn} disabled={loading}>
-          <Feather name="refresh-cw" size={14} color={mutedColor} />
-        </TouchableOpacity>
+        {tab === 'gk' ? (
+          <TouchableOpacity onPress={loadTidbit} style={s.refreshBtn} disabled={loading}>
+            <Feather name="refresh-cw" size={14} color={mutedColor} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Tab switcher */}
@@ -77,8 +81,8 @@ export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
-      {loading ? (
+      {/* Content — GK only; Current Affairs is rendered by the parent screen */}
+      {tab !== 'gk' ? null : loading ? (
         <View style={s.loadingBox}>
           <ActivityIndicator size="small" color={activeTab} />
           <Text style={[s.loadingText, { color: mutedColor }]}>Fetching today&apos;s tidbit...</Text>
@@ -89,42 +93,21 @@ export default function DailyTidbitCard({ grade, studentId, onTabChange }: Props
           <Text style={[s.loadingText, { color: mutedColor }]}>Couldn&apos;t load. Tap refresh to try again.</Text>
         </View>
       ) : data ? (
-        tab === 'gk' ? (
-          <View style={s.content}>
-            <View style={[s.categoryBadge, { backgroundColor: teal + '18', borderColor: teal + '40' }]}>
-              <Feather name={categoryIcon(data.gk.category) as any} size={11} color={teal} />
-              <Text style={[s.categoryText, { color: teal }]}>{data.gk.category}</Text>
-            </View>
-            <Text style={[s.factText, { color: titleColor }]}>
-              {(() => {
-                const f = data.gk.fact;
-                if (typeof f === 'string' && f.trim().startsWith('{')) {
-                  try { return JSON.parse(f).fact || f; } catch { return f; }
-                }
-                return f;
-              })()}
-            </Text>
+        <View style={s.content}>
+          <View style={[s.categoryBadge, { backgroundColor: teal + '18', borderColor: teal + '40' }]}>
+            <Feather name={categoryIcon(data.gk.category) as any} size={11} color={teal} />
+            <Text style={[s.categoryText, { color: teal }]}>{data.gk.category}</Text>
           </View>
-        ) : (
-          <View style={s.content}>
-            <View style={[s.categoryBadge, { backgroundColor: rose + '18', borderColor: rose + '40' }]}>
-              <Feather name="radio" size={11} color={rose} />
-              <Text style={[s.categoryText, { color: rose }]}>Current Affairs</Text>
-            </View>
-            <Text style={[s.headlineText, { color: titleColor }]}>{data.currentAffairs.headline}</Text>
-            <Text style={[s.summaryText, { color: mutedColor }]}>{data.currentAffairs.summary}</Text>
-
-            {/* ── Comprehension Quiz ───────────────────────────── */}
-            <QuizSection
-              {...quiz}
-              isDark={isDark}
-              colors={colors}
-              styles={s}
-              onStart={() => quiz.startQuiz(data.currentAffairs)}
-              onAnswer={(idx) => quiz.handleAnswer(idx, data.currentAffairs)}
-            />
-          </View>
-        )
+          <Text style={[s.factText, { color: titleColor }]}>
+            {(() => {
+              const f = data.gk.fact;
+              if (typeof f === 'string' && f.trim().startsWith('{')) {
+                try { return JSON.parse(f).fact || f; } catch { return f; }
+              }
+              return f;
+            })()}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -195,42 +178,4 @@ const s = StyleSheet.create({
   },
   categoryText: { fontSize: 11, fontWeight: '700' },
   factText:     { fontSize: 14, fontWeight: '500', lineHeight: 22 },
-  headlineText: { fontSize: 14, fontWeight: '700', lineHeight: 20 },
-  summaryText:  { fontSize: 13, lineHeight: 20 },
-
-  // Quiz
-  quizBtn: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
-    gap: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, marginTop: 4,
-  },
-  quizBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  quizLoadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  quizLoadText: { fontSize: 12 },
-  quizDoneBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 4,
-  },
-  quizDoneIcon: {
-    width: 30, height: 30, borderRadius: 9,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  quizDoneText:  { fontSize: 13, fontWeight: '600', flex: 1 },
-  quizDoneTitle: { fontSize: 14, fontWeight: '800' },
-  quizXpText:    { fontSize: 12, marginTop: 2 },
-  quizBox: {
-    borderWidth: 1, borderRadius: 12, padding: 12, gap: 10, marginTop: 4,
-  },
-  quizCounter:  { fontSize: 11, fontWeight: '600' },
-  quizQuestion: { fontSize: 14, fontWeight: '700', lineHeight: 20 },
-  optionsCol:   { gap: 6 },
-  optionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    padding: 10, borderRadius: 8, borderWidth: 1,
-  },
-  optionIdx: {
-    width: 22, height: 22, borderRadius: 6,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  optionIdxText: { fontSize: 11, fontWeight: '800' },
-  optionText:    { flex: 1, fontSize: 13, fontWeight: '500' },
 });

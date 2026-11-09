@@ -2,12 +2,11 @@
  * WorldAndYouScreen.tsx
  * "The World & You" — GK facts, On This Day, Current Affairs
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
-import { useStudentData } from '../../../context/StudentDataContext';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { spacing, radius } from '../../../theme';
@@ -18,11 +17,11 @@ import DailyTidbitCard from './components/DailyTidbitCard';
 import OnThisDayCard from './components/OnThisDayCard';
 import BrainTeaserCard from './components/BrainTeaserCard';
 import { TEAL } from './constants';
+import CurrentAffairsTab from '../../shared/current-affairs/components/CurrentAffairsTab';
 
-export default function WorldAndYouScreen({ navigation }: any) {
+export default function WorldAndYouScreen({ navigation, route }: any) {
   const { colors, isDark } = useTheme();
   const { user }           = useAuth();
-  const { studentId }      = useStudentData();
   const styles             = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   const grade = user?.grade || 'Grade 3';
@@ -32,7 +31,16 @@ export default function WorldAndYouScreen({ navigation }: any) {
   // (real news). Tracked here (not just inside DailyTidbitCard) so this
   // screen can hide them under the Current Affairs tab instead of always
   // showing regardless of which tab is selected.
-  const [tidbitTab, setTidbitTab] = useState<'gk' | 'news'>('gk');
+  // Current Affairs (daily digest + weekly quiz) lives in the "news" tab.
+  // route.params.tab lets a story / the quiz come back to that tab.
+  const [tidbitTab, setTidbitTab] = useState<'gk' | 'news'>(route?.params?.tab === 'news' ? 'news' : 'gk');
+  const requestedTab = route?.params?.tab;
+  useEffect(() => {
+    // Sync to a tab asked for by navigation (e.g. Back from a story) — a prop
+    // change, not a cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (requestedTab === 'news' || requestedTab === 'gk') setTidbitTab(requestedTab);
+  }, [requestedTab]);
 
   return (
     <ScreenLayout>
@@ -58,7 +66,10 @@ export default function WorldAndYouScreen({ navigation }: any) {
           </View>
 
           {/* ── GK + Current Affairs card ─────────────────────── */}
-          <DailyTidbitCard grade={grade} studentId={studentId || undefined} onTabChange={setTidbitTab} />
+          <DailyTidbitCard grade={grade} tab={tidbitTab} onTabChange={setTidbitTab} />
+
+          {/* ── Current Affairs tab: today's stories + weekly quiz ── */}
+          {tidbitTab === 'news' && <CurrentAffairsTab navigation={navigation} />}
 
           {/* ── On This Day / Brain Teaser — GK-tab content only ─ */}
           {tidbitTab === 'gk' && (

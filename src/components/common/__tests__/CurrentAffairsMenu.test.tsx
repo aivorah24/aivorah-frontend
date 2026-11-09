@@ -1,5 +1,7 @@
-// Students reach Current Affairs from the sidebar (web) and the drawer (phone).
+// Current Affairs lives inside The World & You (its Current Affairs tab), so
+// the menus have no separate item; World & You stays highlighted on its pages.
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import Sidebar from '../Sidebar';
 import DrawerContent from '../DrawerContent';
@@ -28,23 +30,41 @@ beforeEach(() => {
   global.fetch = jest.fn(() => Promise.resolve({ ok: false, json: async () => ({}) })) as any;
 });
 
-test('sidebar: students see Current Affairs and it opens the digest', async () => {
+test('sidebar: no separate Current Affairs item; The World & You opens it', async () => {
   mockUser = STUDENT;
   const onNavigate = jest.fn();
   await render(<Sidebar currentScreen="Dashboard" onNavigate={onNavigate} />);
-  fireEvent.press(screen.getByText('Current Affairs'));
-  expect(onNavigate).toHaveBeenCalledWith('CurrentAffairs', undefined);
+  expect(screen.queryByText('Current Affairs')).toBeNull();
+  fireEvent.press(screen.getByText('The World & You'));
+  expect(onNavigate).toHaveBeenCalledWith('WorldAndYou', undefined);
 });
 
-test('drawer: students see Current Affairs and it opens the digest', async () => {
+test('drawer: no separate Current Affairs item', async () => {
   mockUser = STUDENT;
   const navigation = { navigate: jest.fn(), closeDrawer: jest.fn() };
   await render(<DrawerContent state={{ routes: [{ name: 'Dashboard' }], index: 0 }} navigation={navigation} />);
-  fireEvent.press(screen.getByText('Current Affairs'));
-  expect(navigation.navigate).toHaveBeenCalledWith('CurrentAffairs', undefined);
+  expect(screen.queryByText('Current Affairs')).toBeNull();
+  expect(screen.getByText('The World & You')).toBeTruthy();
 });
 
-test('teachers do not get the student-only item', async () => {
+// The menu item's label style: the active one is gold/bold, others muted.
+async function worldAndYouLabelStyle(currentScreen: string) {
+  const view = await render(<Sidebar currentScreen={currentScreen} onNavigate={jest.fn()} />);
+  const style = StyleSheet.flatten(view.getByText('The World & You').props.style);
+  await view.unmount();
+  return style;
+}
+
+test.each(['CurrentAffairs', 'CurrentAffairsStory', 'CurrentAffairsQuiz'])(
+  'sidebar keeps The World & You highlighted on %s', async (current) => {
+    mockUser = STUDENT;
+    const active = await worldAndYouLabelStyle('WorldAndYou');
+    const inactive = await worldAndYouLabelStyle('Dashboard');
+    expect(active).not.toEqual(inactive);
+    expect(await worldAndYouLabelStyle(current)).toEqual(active);
+  });
+
+test('teachers do not see it either', async () => {
   mockUser = TEACHER;
   await render(<Sidebar currentScreen="TeacherDashboard" onNavigate={jest.fn()} />);
   expect(screen.queryByText('Current Affairs')).toBeNull();

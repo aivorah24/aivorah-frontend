@@ -69,7 +69,11 @@ export default function QuizScreen({ navigation, route }: any) {
   const questions = quiz?.questions || [];
   const question = questions[index];
   const isLast = index === questions.length - 1;
-  const goToDigest = () => navigation.navigate('CurrentAffairs');
+  // Back to where the student came from (The World & You → Current Affairs).
+  const goToDigest = () => {
+    if (navigation.canGoBack?.()) navigation.goBack();
+    else navigation.navigate('WorldAndYou', { tab: 'news' });
+  };
 
   const onCheck = async () => {
     if (selected === null || !question) return;

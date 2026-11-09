@@ -38,7 +38,7 @@ export type DrawerParamList = {
   DrawingBuddy: { topic: string; chapterId: number; unit: string; subject?: string; grade?: string; curriculum?: string };
   WordWizard: { topic: string; chapterId: number; unit: string } | undefined;
   Quiz: { topic: string; grade: string; subject: string; curriculum?: string };
-  WorldAndYou: undefined;
+  WorldAndYou: { tab?: 'gk' | 'news' } | undefined;
   TopicLesson: { topic: string; grade: string; subject: string; curriculum?: string };
   BhagavathaStories: undefined;
   StoryReader: { storyId: string; storyTitle: string };

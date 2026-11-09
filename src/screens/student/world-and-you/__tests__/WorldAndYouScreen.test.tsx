@@ -1,6 +1,6 @@
 // Integration test for WorldAndYouScreen — the real screen, real
-// DailyTidbitCard/OnThisDayCard/BrainTeaserCard, and real hooks
-// (useWorldData, useDailyTidbit, useTidbitQuiz), driven entirely through a
+// DailyTidbitCard/OnThisDayCard/BrainTeaserCard, the real Current Affairs tab
+// (useDigest + DigestContent + currentAffairsApi), driven entirely through a
 // mocked global.fetch routed by URL path.
 
 import React from 'react';
@@ -10,10 +10,14 @@ import WorldAndYouScreen from '../WorldAndYouScreen';
 
 jest.setTimeout(15000);
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
-  useRoute: () => ({ key: 'WorldAndYou', name: 'WorldAndYou' }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const ReactActual = jest.requireActual('react');
+  return {
+    useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
+    useRoute: () => ({ key: 'WorldAndYou', name: 'WorldAndYou' }),
+    useFocusEffect: (effect: () => void) => ReactActual.useEffect(effect, [effect]),
+  };
+});
 
 jest.mock('../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
@@ -33,16 +37,27 @@ function jsonRes(data: any, ok = true) {
   return Promise.resolve({ ok, json: async () => data });
 }
 
-function mockFetchRoutes({ tidbit, world, tidbitOk = true, worldOk = true }: any) {
+const DIGEST = {
+  date: '2026-11-09', isToday: true, ageGroup: '8-12', target: 10, readCount: 0, completed: false,
+  stories: [{
+    id: 's1', category: 'india', publishDate: '2026-11-09', title: 'India and Space Exploration: Chandrayaan-3',
+    summary: 'India landed near the Moon’s south pole.', whatHappened: 'W', whyImportant: 'Y', didYouKnow: null,
+    newWords: [], thinkAboutIt: null, imageUrl: null, source: 'ISRO', sourceUrl: null, readTimeSeconds: 60, read: false,
+  }],
+};
+
+function mockFetchRoutes({ tidbit, world, tidbitOk = true, worldOk = true, digest = DIGEST }: any) {
   global.fetch = jest.fn((url: string) => {
     if (url.includes('/daily-tidbit')) return jsonRes(tidbit, tidbitOk);
     if (url.includes('/world/daily')) return jsonRes(world, worldOk);
+    if (url.includes('/current-affairs/digest/today')) return jsonRes(digest);
+    if (url.includes('/current-affairs/progress/')) return jsonRes({ progress: { points: 15, currentStreak: 2, badges: {} } });
     return jsonRes({});
   }) as any;
 }
 
 function navProp() {
-  return { openDrawer: jest.fn() };
+  return { openDrawer: jest.fn(), navigate: jest.fn() };
 }
 
 beforeEach(async () => {
@@ -109,13 +124,51 @@ describe('WorldAndYouScreen — loaded state', () => {
     expect(screen.getByText('Why is the sky blue?')).toBeTruthy();
 
     await user.press(screen.getByText('Current Affairs'));
-    await waitFor(() => expect(screen.getByText('Real headline')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('India and Space Exploration: Chandrayaan-3')).toBeTruthy());
+    expect(screen.queryByText('Real headline')).toBeNull(); // the old single headline is gone
     expect(screen.queryByText('Moon landing.')).toBeNull();
     expect(screen.queryByText('Why is the sky blue?')).toBeNull();
 
     await user.press(screen.getByText('GK Fact'));
     await waitFor(() => expect(screen.getByText('Moon landing.')).toBeTruthy());
     expect(screen.getByText('Why is the sky blue?')).toBeTruthy();
+  });
+
+  test('the Current Affairs tab shows today’s digest, the student’s points and the weekly quiz', async () => {
+    mockFetchRoutes({
+      tidbit: { gk: { fact: 'A fact', category: 'Science' }, currentAffairs: { headline: 'H', summary: 'S' } },
+      world: { date: 'August 18', onThisDay: [], funChallenge: { question: 'Q?', answer: 'A' } },
+    });
+    const navigation = navProp();
+    const user = userEvent.setup();
+
+    await render(<WorldAndYouScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByText('A fact')).toBeTruthy());
+    // Nothing is fetched for Current Affairs until the tab is opened.
+    expect((global.fetch as jest.Mock).mock.calls.some(([u]) => String(u).includes('/current-affairs/'))).toBe(false);
+
+    await user.press(screen.getByText('Current Affairs'));
+    expect(await screen.findByText('India and Space Exploration: Chandrayaan-3')).toBeTruthy();
+    expect(screen.getByLabelText('15 Points')).toBeTruthy();
+    expect(screen.getByText('0 of 1 story read')).toBeTruthy();
+    expect(screen.getByText('Weekly Quiz')).toBeTruthy();
+
+    await user.press(screen.getByText('India and Space Exploration: Chandrayaan-3'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CurrentAffairsStory', { storyId: 's1', ageGroup: '8-12' });
+    await user.press(screen.getByText('Weekly Quiz'));
+    expect(navigation.navigate).toHaveBeenCalledWith('CurrentAffairsQuiz', { ageGroup: '8-12' });
+  });
+
+  test('opening with { tab: "news" } (Back from a story or the quiz) lands on Current Affairs', async () => {
+    mockFetchRoutes({
+      tidbit: { gk: { fact: 'A fact', category: 'Science' }, currentAffairs: { headline: 'H', summary: 'S' } },
+      world: { date: 'August 18', onThisDay: [{ year: 1969, fact: 'Moon landing.' }], funChallenge: { question: 'Q?', answer: 'A' } },
+    });
+
+    await render(<WorldAndYouScreen navigation={navProp()} route={{ params: { tab: 'news' } }} />);
+
+    expect(await screen.findByText('India and Space Exploration: Chandrayaan-3')).toBeTruthy();
+    expect(screen.queryByText('Moon landing.')).toBeNull();
   });
 
   test('an empty onThisDay array hides the OnThisDayCard entirely', async () => {

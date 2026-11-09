@@ -42,7 +42,6 @@ const STUDENT_NAV_ITEMS = [
   { label: 'Resources', icon: 'folder', screen: 'Resources', group: 'MENU' },
   { label: 'Announcements', icon: 'volume-2', screen: 'Announcements', group: 'MENU' },
   { label: 'The World & You', icon: 'globe', screen: 'WorldAndYou', group: 'MENU' },
-  { label: 'Current Affairs', icon: 'file-text', screen: 'CurrentAffairs', group: 'MENU' },
   { label: 'Bedtime Stories', icon: 'book', screen: 'BhagavathaStories', group: 'MENU', premium: false },
   { label: 'Daily Habits', icon: 'sun', screen: 'DailyHabits', group: 'MENU' },
   { label: 'Read Aloud', icon: 'mic', screen: 'ReadAloud', group: 'MENU' },

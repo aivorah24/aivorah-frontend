@@ -57,7 +57,7 @@ export default function StoryScreen({ navigation, route }: any) {
 
   const goBack = () => {
     if (navigation.canGoBack?.()) navigation.goBack();
-    else navigation.navigate('CurrentAffairs');
+    else navigation.navigate('WorldAndYou', { tab: 'news' });
   };
 
   const markRead = async () => {
