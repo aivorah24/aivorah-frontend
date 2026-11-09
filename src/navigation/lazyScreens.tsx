@@ -44,11 +44,14 @@ function withRetry(loader: Loader): Loader {
       });
 }
 
+// Spinner color requested for the screen-loading state (Aivorah gold).
+const SPINNER_COLOR = '#B4A467';
+
 function ScreenFallback() {
   const { colors } = useTheme();
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgDark }}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator testID="screen-loading" size="large" color={SPINNER_COLOR} />
     </View>
   );
 }

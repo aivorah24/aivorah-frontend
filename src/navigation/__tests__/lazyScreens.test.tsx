@@ -19,6 +19,14 @@ describe('lazyScreens', () => {
     expect(await screen.findByText('Hello Asha')).toBeTruthy();
   });
 
+  test('shows a centered #B4A467 spinner while the chunk loads', async () => {
+    const group = createLazyScreenGroup();
+    const Pending = group.lazyScreen(() => new Promise(() => {}));
+    await render(<Pending />);
+    const spinner = screen.getByTestId('screen-loading');
+    expect(spinner.props.color).toBe('#B4A467');
+  });
+
   test('retries a failed chunk load once', async () => {
     jest.useFakeTimers();
     const loader = jest.fn()
