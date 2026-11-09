@@ -27,6 +27,18 @@ describe('lazyScreens', () => {
     expect(spinner.props.color).toBe('#B4A467');
   });
 
+  test('a screen that crashes shows Reload for that screen instead of blanking the app', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const group = createLazyScreenGroup();
+    const Broken = group.lazyScreen(() => Promise.resolve({ default: () => { throw new Error("Cannot read properties of undefined (reading 'rose')"); } }));
+    await render(<><Text>Sidebar stays</Text><Broken /></>);
+    expect(await screen.findByTestId('screen-crashed')).toBeTruthy();
+    expect(screen.getByText('Something went wrong loading this page.')).toBeTruthy();
+    expect(screen.getByText('Reload')).toBeTruthy();
+    expect(screen.getByText('Sidebar stays')).toBeTruthy();
+    error.mockRestore();
+  });
+
   test('retries a failed chunk load once', async () => {
     jest.useFakeTimers();
     const loader = jest.fn()

@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { getNetworkQuality, onNetworkQualityChange } from '../utils/networkQuality';
 import { warmServices } from '../utils/warmServices';
@@ -56,6 +56,47 @@ function ScreenFallback() {
   );
 }
 
+// One screen crashing must not blank the whole app (an uncaught render error
+// unmounts everything). Show a small message with Reload for that screen only.
+class ScreenErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('[screen] crashed while rendering:', error);
+  }
+
+  render() {
+    if (this.state.failed) return <ScreenCrashed onRetry={() => this.setState({ failed: false })} />;
+    return this.props.children;
+  }
+}
+
+function ScreenCrashed({ onRetry }: { onRetry: () => void }) {
+  const { colors } = useTheme();
+  const reload = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.reload();
+    else onRetry();
+  };
+  return (
+    <View testID="screen-crashed" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: colors.bgDark }}>
+      <Text style={{ color: colors.textMain, fontSize: 15, fontWeight: '700', textAlign: 'center' }}>
+        Something went wrong loading this page.
+      </Text>
+      <TouchableOpacity
+        onPress={reload}
+        accessibilityRole="button"
+        style={{ backgroundColor: SPINNER_COLOR, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20 }}
+      >
+        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Reload</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export type LazyScreenGroup = {
   lazyScreen: (loader: Loader) => React.ComponentType<any>;
   prefetchAll: () => Promise<void>;
@@ -74,9 +115,11 @@ export function createLazyScreenGroup(): LazyScreenGroup {
     const Lazy = React.lazy(load);
     function LazyScreen(props: any) {
       return (
-        <Suspense fallback={<ScreenFallback />}>
-          <Lazy {...props} />
-        </Suspense>
+        <ScreenErrorBoundary>
+          <Suspense fallback={<ScreenFallback />}>
+            <Lazy {...props} />
+          </Suspense>
+        </ScreenErrorBoundary>
       );
     }
     return LazyScreen;
