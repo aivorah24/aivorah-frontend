@@ -20,8 +20,8 @@ beforeEach(() => {
   global.fetch = jest.fn().mockResolvedValue(ok({})) as any;
 });
 
-test('uses the Render URL by default (no ai-mentor monolith)', () => {
-  expect(CURRENT_AFFAIRS_SERVER_URL).toBe('https://aivorah-current-affairs-service.onrender.com');
+test('uses the live attendance service, which hosts the API (no ai-mentor monolith)', () => {
+  expect(CURRENT_AFFAIRS_SERVER_URL).toBe('https://aivorah-attendance-service-y3t6.onrender.com');
 });
 
 describe('reads', () => {
