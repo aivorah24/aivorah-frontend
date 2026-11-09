@@ -15,7 +15,7 @@ jest.mock('../../../../components/common/Header', () => {
 });
 jest.mock('../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
-    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777',
+    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777', accentRed: '#c00',
   }, isDark: false }),
 }));
 jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { email: 'kid@school.in', grade: 'Grade 5' } }) }));
@@ -76,7 +76,7 @@ test('shows one question at a time with lettered options', async () => {
   expect(mocked.fetchWeeklyQuiz).toHaveBeenCalledWith('8-12', 'kid@school.in');
   expect(screen.getByText('Question 1?')).toBeTruthy();
   expect(screen.getByText('Multiple choice')).toBeTruthy();
-  expect(screen.getByText('🇮🇳 India')).toBeTruthy();
+  expect(screen.getByText('India')).toBeTruthy();
   for (const letter of ['A', 'B', 'C', 'D']) expect(screen.getByText(letter)).toBeTruthy();
   expect(screen.queryByText('Question 2?')).toBeNull();
 });
@@ -102,7 +102,7 @@ test('Check Answer reveals the correct answer, explanation, extra fact and story
   expect(screen.getByText('True or false')).toBeTruthy();
   await fireEvent.press(screen.getByTestId(`option-${CORRECT}`));
   await fireEvent.press(screen.getByText('Check Answer'));
-  expect(await screen.findByText('🎉 Correct!')).toBeTruthy();
+  expect(await screen.findByText('Correct!')).toBeTruthy();
 });
 
 test('80%+: submits, records completion, shows score, points and the excellence badge', async () => {
@@ -143,7 +143,7 @@ test('below 80%: no excellence badge, still +20 points', async () => {
   expect(await screen.findByText('5/10')).toBeTruthy();
   expect(screen.getByText('+20 points')).toBeTruthy();
   expect(screen.queryByTestId('excellence-badge')).toBeNull();
-  expect(screen.getByText('📈 Growth badge — you beat your last score!')).toBeTruthy();
+  expect(screen.getByText('Growth badge — you beat your last score!')).toBeTruthy();
 });
 
 test('if saving the points fails the result is still shown', async () => {

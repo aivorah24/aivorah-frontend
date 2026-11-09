@@ -4,26 +4,30 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Header from '../../../components/common/Header';
 import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useResponsive } from '../../../hooks/useResponsive';
-import { spacing, radius } from '../../../theme';
+import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import {
   fetchTodayDigest, fetchProgress, recordDigestComplete,
   type Digest, type Progress, type Story,
 } from '../../../services/currentAffairsApi';
 import {
-  BRAND, CATEGORIES, AGE_GROUPS, POINTS, ageGroupForGrade, categoryColors, formatReadTime, formatDigestDate,
+  GOLD, SAGE, DEEP_SAGE, TINT_BG, TITLE_LIGHT, AGE_GROUPS, POINTS,
+  ageGroupForGrade, formatReadTime, formatDigestDate,
 } from './constants';
+import CategoryBadge from './components/CategoryBadge';
 
 export default function DigestScreen({ navigation }: any) {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const styles = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const titleColor = isDark ? colors.textMain : TITLE_LIGHT;
 
   const email = user?.email || undefined;
   const ageGroup = ageGroupForGrade(user?.grade);
@@ -36,7 +40,7 @@ export default function DigestScreen({ navigation }: any) {
   const [completing, setCompleting] = useState(false);
   const [completeMessage, setCompleteMessage] = useState<string | null>(null);
 
-  const load = useCallback(async (mode: 'initial' | 'refresh' | 'focus' = 'initial') => {
+  const load = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
     if (mode === 'refresh') setRefreshing(true);
     setError(null);
     try {
@@ -56,7 +60,7 @@ export default function DigestScreen({ navigation }: any) {
   }, [ageGroup, email]);
 
   // Reload on every focus so stories read in StoryScreen show as checked.
-  useFocusEffect(useCallback(() => { load('focus'); }, [load]));
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onComplete = async () => {
     if (!email || !digest) return;
@@ -81,6 +85,7 @@ export default function DigestScreen({ navigation }: any) {
 
   const stories = digest?.stories || [];
   const readCount = stories.filter((s) => s.read).length;
+  const allRead = stories.length > 0 && readCount === stories.length;
   const badgeCount = progress ? Object.values(progress.badges).filter(Boolean).length : 0;
   const totalMinutes = Math.max(1, Math.round(stories.reduce((n, s) => n + (s.readTimeSeconds || 0), 0) / 60));
 
@@ -89,196 +94,249 @@ export default function DigestScreen({ navigation }: any) {
       <View style={styles.screen}>
         <Header
           title="Current Affairs"
-          subtitle={`Daily digest · ${AGE_GROUPS[ageGroup].label}`}
+          subtitle="Read, understand and remember the news"
+          showBack={true}
           showSearch={false}
           onMenuPress={() => navigation.openDrawer?.()}
         />
 
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator testID="digest-loading" size="large" color={BRAND.gold} />
-            <Text style={styles.muted}>Loading today’s stories…</Text>
-          </View>
-        ) : error && !digest ? (
-          <View style={styles.center}>
-            <Feather name="wifi-off" size={36} color={colors.textMuted} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => { setLoading(true); load(); }} accessibilityRole="button">
-              <Text style={styles.secondaryButtonText}>Try again</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <ScrollView
-            testID="digest-scroll"
-            contentContainerStyle={styles.content}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={BRAND.gold} />}
-          >
-            {/* Progress row */}
-            <View style={styles.statsRow}>
-              <Stat styles={styles} icon="star" color={BRAND.gold} value={progress?.points ?? 0} label="Points" />
-              <Stat styles={styles} icon="zap" color={BRAND.orange} value={progress?.currentStreak ?? 0} label="Day streak" />
-              <Stat styles={styles} icon="award" color={BRAND.purple} value={badgeCount} label="Badges" />
+        <ScrollView
+          testID="digest-scroll"
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={GOLD} />}
+        >
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator testID="digest-loading" size="large" color={GOLD} />
             </View>
-
-            {/* Daily target */}
-            <View style={styles.targetCard}>
-              <View style={styles.targetHeader}>
-                <Text style={styles.targetTitle}>Today’s target</Text>
-                <Text style={styles.targetCount} testID="digest-read-count">{readCount}/{stories.length} read</Text>
-              </View>
-              <Text style={styles.muted}>
-                {stories.length
-                  ? `Read ${stories.length} ${stories.length === 1 ? 'story' : 'stories'} · about ${totalMinutes} min`
-                  : `${AGE_GROUPS[ageGroup].storiesPerDay} stories a day · ${AGE_GROUPS[ageGroup].minutes} min`}
-              </Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${stories.length ? Math.round((readCount / stories.length) * 100) : 0}%` }]} />
-              </View>
-              {digest && !digest.isToday && digest.date ? (
-                <Text style={styles.note}>No new stories yet today — here is the digest from {formatDigestDate(digest.date)}.</Text>
-              ) : null}
+          ) : error && !digest ? (
+            <View style={styles.center}>
+              <Feather name="wifi-off" size={28} color={colors.textDim} />
+              <Text style={[styles.hint, { color: colors.textMuted }]}>{error}</Text>
+              <TouchableOpacity
+                style={[styles.outlineBtn, { borderColor: GOLD + '60' }]}
+                onPress={() => { setLoading(true); load(); }}
+                accessibilityRole="button"
+              >
+                <Feather name="refresh-cw" size={13} color={GOLD} />
+                <Text style={[styles.outlineBtnText, { color: GOLD }]}>Try again</Text>
+              </TouchableOpacity>
             </View>
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            {/* Stories */}
-            {stories.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyEmoji}>📰</Text>
-                <Text style={styles.emptyTitle}>No stories yet</Text>
-                <Text style={styles.muted}>Today’s digest is being prepared. Check back soon!</Text>
+          ) : (
+            <>
+              {/* Date row — same as The World & You */}
+              <View style={styles.dateRow}>
+                <Feather name="calendar" size={13} color={GOLD} />
+                <Text style={[styles.dateText, { color: GOLD }]}>{formatDigestDate(digest?.date || null) || 'Today'}</Text>
+                <Text style={[styles.ageText, { color: colors.textMuted }]}>{AGE_GROUPS[ageGroup].label}</Text>
               </View>
-            ) : stories.map((story) => {
-              const cat = CATEGORIES[story.category];
-              const tone = categoryColors(story.category, isDark);
-              return (
+
+              {/* Stats — same tiles as Daily Habits */}
+              <View style={styles.statsRow}>
+                <StatTile styles={styles} icon="zap" color={GOLD} value={progress?.currentStreak ?? 0} label="Day Streak" muted={colors.textMuted} />
+                <StatTile styles={styles} icon="star" color={SAGE} value={progress?.points ?? 0} label="Points" muted={colors.textMuted} />
+                <StatTile styles={styles} icon="award" color={DEEP_SAGE} value={badgeCount} label="Badges" muted={colors.textMuted} />
+              </View>
+
+              {/* Today's target */}
+              <View style={[styles.card, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
+                <View style={styles.progressTop}>
+                  <Text style={[styles.progressTitle, { color: colors.textMain }]} testID="digest-read-count">
+                    {stories.length
+                      ? `${readCount} of ${stories.length} ${stories.length === 1 ? 'story' : 'stories'} read`
+                      : `${AGE_GROUPS[ageGroup].storiesPerDay} stories a day`}
+                  </Text>
+                  <Text style={[styles.progressPoints, { color: GOLD }]}>
+                    {stories.length ? `about ${totalMinutes} min` : `${AGE_GROUPS[ageGroup].minutes} min`}
+                  </Text>
+                </View>
+                <View style={[styles.track, { backgroundColor: colors.borderColor }]}>
+                  <View style={[styles.fill, {
+                    width: `${stories.length ? Math.round((readCount / stories.length) * 100) : 0}%`,
+                    backgroundColor: allRead ? DEEP_SAGE : SAGE,
+                  }]} />
+                </View>
+                {digest && !digest.isToday && digest.date ? (
+                  <View style={styles.noteRow}>
+                    <Feather name="info" size={12} color={colors.textMuted} />
+                    <Text style={[styles.noteText, { color: colors.textMuted }]}>
+                      No new stories yet today — here is the digest from {formatDigestDate(digest.date)}.
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {error ? <Text style={[styles.hint, { color: colors.accentRed }]}>{error}</Text> : null}
+
+              <Text style={[styles.sectionTitle, { color: GOLD }]}>TODAY&apos;S STORIES</Text>
+
+              {stories.length === 0 ? (
+                <View style={[styles.emptyBox, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
+                  <View style={[styles.iconCircle, { backgroundColor: GOLD + '20' }]}>
+                    <Feather name="radio" size={16} color={GOLD} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: titleColor }]}>No stories yet</Text>
+                  <Text style={[styles.emptySub, { color: colors.textMuted }]}>Today’s digest is being prepared. Check back soon!</Text>
+                </View>
+              ) : stories.map((story) => (
                 <TouchableOpacity
                   key={story.id}
                   testID={`story-card-${story.id}`}
-                  style={styles.storyCard}
+                  style={[styles.storyCard, { backgroundColor: colors.cardDark, borderColor: story.read ? SAGE + '60' : colors.borderColor }]}
                   onPress={() => openStory(story)}
+                  activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityLabel={`${story.title}${story.read ? ', read' : ''}`}
                 >
                   <View style={styles.storyTop}>
-                    <View style={[styles.badge, { backgroundColor: tone.bg }]}>
-                      <Text style={[styles.badgeText, { color: tone.fg }]}>{cat?.emoji} {cat?.label || story.category}</Text>
-                    </View>
-                    <Feather
+                    <CategoryBadge category={story.category} />
+                    <View
                       testID={story.read ? `story-read-${story.id}` : `story-unread-${story.id}`}
-                      name={story.read ? 'check-circle' : 'circle'}
-                      size={20}
-                      color={story.read ? BRAND.forest : colors.textDim}
-                    />
+                      style={[styles.checkbox, story.read
+                        ? { backgroundColor: SAGE, borderColor: SAGE }
+                        : { borderColor: colors.borderColor }]}
+                    >
+                      {story.read ? <Feather name="check" size={12} color="#fff" /> : null}
+                    </View>
                   </View>
-                  <Text style={styles.storyTitle}>{story.title}</Text>
-                  <Text style={styles.storySummary}>{story.summary}</Text>
-                  <Text style={styles.storyMeta}>{story.source} · {formatReadTime(story.readTimeSeconds)}</Text>
+                  <Text style={[styles.storyTitle, { color: titleColor }]}>{story.title}</Text>
+                  <Text style={[styles.storySummary, { color: colors.textMuted }]}>{story.summary}</Text>
+                  <View style={styles.metaRow}>
+                    <Feather name="clock" size={11} color={colors.textDim} />
+                    <Text style={[styles.metaText, { color: colors.textDim }]}>{formatReadTime(story.readTimeSeconds)} · {story.source}</Text>
+                  </View>
                 </TouchableOpacity>
-              );
-            })}
+              ))}
 
-            {/* Finish the digest */}
-            {stories.length > 0 && email ? (
-              digest?.completed ? (
-                <View style={[styles.primaryButton, styles.doneButton]} testID="digest-completed">
-                  <Feather name="check" size={18} color="#fff" />
-                  <Text style={styles.primaryButtonText}>Today’s digest is complete</Text>
+              {/* Finish the digest */}
+              {stories.length > 0 && email ? (
+                digest?.completed ? (
+                  <View style={[styles.banner, { backgroundColor: SAGE + '15', borderColor: SAGE + '35' }]} testID="digest-completed">
+                    <View style={[styles.bannerIcon, { backgroundColor: SAGE + '25' }]}>
+                      <Feather name="check-circle" size={14} color={DEEP_SAGE} />
+                    </View>
+                    <Text style={[styles.bannerText, { color: DEEP_SAGE }]}>Today’s digest is complete. See you tomorrow!</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: GOLD }, completing && styles.disabled]}
+                    onPress={onComplete}
+                    disabled={completing}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                  >
+                    {completing ? <ActivityIndicator color="#fff" size="small" /> : (
+                      <>
+                        <Feather name="check-square" size={14} color="#fff" />
+                        <Text style={styles.primaryBtnText}>I’ve read all stories (+{POINTS.digest} points)</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )
+              ) : null}
+              {completeMessage ? <Text style={[styles.hint, { color: colors.textMain }]}>{completeMessage}</Text> : null}
+
+              {/* Weekly quiz — card in the World & You style */}
+              <TouchableOpacity
+                style={[styles.card, styles.quizCard, {
+                  backgroundColor: isDark ? colors.cardDark : TINT_BG,
+                  borderColor: isDark ? colors.borderColor : GOLD + '25',
+                }]}
+                onPress={openQuiz}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                testID="weekly-quiz-cta"
+              >
+                <View style={[styles.iconCircle, { backgroundColor: GOLD + '20' }]}>
+                  <Feather name="help-circle" size={16} color={GOLD} />
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.primaryButton, completing && styles.disabled]}
-                  onPress={onComplete}
-                  disabled={completing}
-                  accessibilityRole="button"
-                >
-                  {completing
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryButtonText}>I’ve read all stories (+{POINTS.digest} points)</Text>}
-                </TouchableOpacity>
-              )
-            ) : null}
-            {completeMessage ? <Text style={styles.completeMessage}>{completeMessage}</Text> : null}
-
-            {/* Weekly quiz */}
-            <TouchableOpacity style={styles.quizCard} onPress={openQuiz} accessibilityRole="button" testID="weekly-quiz-cta">
-              <Text style={styles.quizEmoji}>🧠</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quizTitle}>Weekly Quiz</Text>
-                <Text style={styles.quizText}>10 questions on this week’s news · +{POINTS.quiz} points</Text>
-              </View>
-              <Feather name="chevron-right" size={22} color={BRAND.purple} />
-            </TouchableOpacity>
-          </ScrollView>
-        )}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardTitle, { color: titleColor }]}>Weekly Quiz</Text>
+                  <Text style={[styles.cardSub, { color: colors.textMuted }]}>10 questions on this week’s news · +{POINTS.quiz} points</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
       </View>
     </ScreenLayout>
   );
 }
 
-function Stat({ styles, icon, color, value, label }: { styles: ReturnType<typeof makeStyles>; icon: any; color: string; value: number; label: string }) {
+function StatTile({ styles, icon, color, value, label, muted }: {
+  styles: ReturnType<typeof makeStyles>; icon: any; color: string; value: number; label: string; muted: string;
+}) {
   return (
-    <View style={styles.stat} accessibilityLabel={`${value} ${label}`}>
-      <Feather name={icon} size={18} color={color} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    <LinearGradient
+      colors={[color + '30', color + '10']}
+      style={[styles.statCard, { borderColor: color + '40' }]}
+      accessibilityLabel={`${value} ${label}`}
+    >
+      <Feather name={icon} size={20} color={color} />
+      <Text style={[styles.statNum, { color }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: muted }]}>{label}</Text>
+    </LinearGradient>
   );
 }
 
-function makeStyles(colors: AppColors, isMobile: boolean) {
-  return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bgDark },
-    content: { padding: isMobile ? spacing.lg : spacing.xxl, paddingBottom: spacing.xxxl * 2, gap: spacing.md, maxWidth: 860, width: '100%', alignSelf: 'center' },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.md },
-    muted: { color: colors.textMuted, fontSize: 14 },
-    errorText: { color: BRAND.rose, fontSize: 14, textAlign: 'center' },
-    note: { color: colors.textMuted, fontSize: 13, marginTop: spacing.sm, fontStyle: 'italic' },
+const makeStyles = (c: AppColors, isMobile: boolean) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bgDark },
+  content: { padding: isMobile ? spacing.lg : spacing.xl, paddingBottom: 56, gap: spacing.md },
+  center: { alignItems: 'center', paddingVertical: 60, gap: 10 },
+  hint: { fontSize: 13, textAlign: 'center' },
 
-    statsRow: { flexDirection: 'row', gap: spacing.md },
-    stat: {
-      flex: 1, alignItems: 'center', paddingVertical: spacing.md, borderRadius: radius.md,
-      backgroundColor: colors.cardDark, borderWidth: 1, borderColor: colors.borderColor, gap: 2,
-    },
-    statValue: { color: colors.textMain, fontSize: 20, fontWeight: '700' },
-    statLabel: { color: colors.textMuted, fontSize: 12 },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dateText: { fontSize: 13, fontWeight: '700' },
+  ageText: { marginLeft: 'auto', fontSize: 12 },
 
-    targetCard: { backgroundColor: colors.cardDark, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderColor, gap: spacing.xs },
-    targetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    targetTitle: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-    targetCount: { color: BRAND.gold, fontSize: 14, fontWeight: '700' },
-    barTrack: { height: 8, borderRadius: 4, backgroundColor: colors.borderColor, overflow: 'hidden', marginTop: spacing.sm },
-    barFill: { height: 8, borderRadius: 4, backgroundColor: BRAND.gold },
+  statsRow: { flexDirection: 'row', gap: spacing.md },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.lg, borderRadius: radius.xl, borderWidth: 1, gap: 4 },
+  statNum: { fontSize: 22, fontWeight: '800', fontFamily: fonts.serif },
+  statLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-    storyCard: { backgroundColor: colors.cardDark, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderColor, gap: spacing.sm },
-    storyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    badge: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full },
-    badgeText: { fontSize: 12, fontWeight: '700' },
-    storyTitle: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-    storySummary: { color: colors.textMain, fontSize: 14, lineHeight: 20 },
-    storyMeta: { color: colors.textDim, fontSize: 12 },
+  card: { borderRadius: radius.xl, borderWidth: 1, padding: spacing.lg, gap: spacing.sm },
+  progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progressTitle: { fontSize: 13, fontWeight: '700' },
+  progressPoints: { fontSize: 13, fontWeight: '800' },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 4 },
+  noteRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  noteText: { flex: 1, fontSize: 12 },
 
-    emptyCard: { alignItems: 'center', padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.cardDark, borderRadius: radius.lg },
-    emptyEmoji: { fontSize: 36 },
-    emptyTitle: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
+  sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: spacing.xs },
 
-    primaryButton: {
-      flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center',
-      backgroundColor: BRAND.gold, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 48,
-    },
-    doneButton: { backgroundColor: BRAND.forest },
-    primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-    disabled: { opacity: 0.6 },
-    completeMessage: { color: colors.textMain, textAlign: 'center', fontSize: 14 },
-    secondaryButton: { borderWidth: 1, borderColor: BRAND.gold, borderRadius: radius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-    secondaryButtonText: { color: BRAND.gold, fontWeight: '700' },
+  storyCard: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.lg, gap: spacing.sm },
+  storyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  storyTitle: { fontSize: 15, fontWeight: '700', lineHeight: 21 },
+  storySummary: { fontSize: 13, lineHeight: 20 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontSize: 11 },
 
-    quizCard: {
-      flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg,
-      backgroundColor: colors.cardDark, borderWidth: 2, borderColor: BRAND.purple, marginTop: spacing.sm,
-    },
-    quizEmoji: { fontSize: 30 },
-    quizTitle: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-    quizText: { color: colors.textMuted, fontSize: 13 },
-  });
-}
+  emptyBox: { alignItems: 'center', paddingVertical: 40, borderRadius: radius.xl, borderWidth: 1, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '700' },
+  emptySub: { fontSize: 13, textAlign: 'center', maxWidth: 280, lineHeight: 20 },
+
+  iconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  quizCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  cardTitle: { fontSize: 14, fontWeight: '700' },
+  cardSub: { fontSize: 11, marginTop: 1 },
+
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, minHeight: 44,
+  },
+  primaryBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  disabled: { opacity: 0.6 },
+  outlineBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 16,
+    borderRadius: 10, borderWidth: 1,
+  },
+  outlineBtnText: { fontSize: 13, fontWeight: '700' },
+
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  bannerIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  bannerText: { flex: 1, fontSize: 13, fontWeight: '600' },
+});

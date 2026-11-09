@@ -16,7 +16,7 @@ jest.mock('../../../../components/common/Header', () => {
 });
 jest.mock('../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
-    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777',
+    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777', accentRed: '#c00',
   }, isDark: false }),
 }));
 let mockUser: any = { email: 'kid@school.in', grade: 'Grade 5' };
@@ -61,12 +61,12 @@ test('shows the stories with category, source, read time and read checks', async
   await render(<DigestScreen navigation={nav()} />);
   expect(await screen.findByText('Story 1')).toBeTruthy();
   expect(screen.getByText('Summary 2')).toBeTruthy();
-  expect(screen.getByText('🔬 Science & Tech')).toBeTruthy();
-  expect(screen.getByText('🇮🇳 India')).toBeTruthy();
-  expect(screen.getAllByText('NASA · 50 sec read')).toHaveLength(2);
+  expect(screen.getByText('Science & Tech')).toBeTruthy();
+  expect(screen.getByText('India')).toBeTruthy();
+  expect(screen.getAllByText('50 sec read · NASA')).toHaveLength(2);
   expect(screen.getByTestId('story-read-s1')).toBeTruthy();
   expect(screen.getByTestId('story-unread-s2')).toBeTruthy();
-  expect(screen.getByTestId('digest-read-count').props.children.join('')).toBe('1/2 read');
+  expect(screen.getByTestId('digest-read-count').props.children).toBe('1 of 2 stories read');
   expect(mocked.fetchTodayDigest).toHaveBeenCalledWith('8-12', 'kid@school.in');
   expect(mocked.fetchProgress).toHaveBeenCalledWith('kid@school.in', '8-12');
 });
@@ -74,7 +74,7 @@ test('shows the stories with category, source, read time and read checks', async
 test('shows points, streak and badge count', async () => {
   await render(<DigestScreen navigation={nav()} />);
   expect(await screen.findByLabelText('45 Points')).toBeTruthy();
-  expect(screen.getByLabelText('3 Day streak')).toBeTruthy();
+  expect(screen.getByLabelText('3 Day Streak')).toBeTruthy();
   expect(screen.getByLabelText('2 Badges')).toBeTruthy();
 });
 
@@ -86,7 +86,7 @@ test.each([
   mockUser = { email: 'kid@school.in', grade };
   await render(<DigestScreen navigation={nav()} />);
   await waitFor(() => expect(mocked.fetchTodayDigest).toHaveBeenCalledWith(ageGroup, 'kid@school.in'));
-  expect(screen.getByText(`Current Affairs | Daily digest · ${label}`)).toBeTruthy();
+  expect(screen.getByText(label)).toBeTruthy();
 });
 
 test('opening a story and the weekly quiz pass the age group', async () => {

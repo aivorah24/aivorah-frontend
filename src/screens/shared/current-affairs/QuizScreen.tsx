@@ -7,21 +7,24 @@ import ScreenLayout from '../../../components/common/ScreenLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useResponsive } from '../../../hooks/useResponsive';
-import { spacing, radius } from '../../../theme';
+import { spacing, radius, fonts } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import {
   fetchWeeklyQuiz, checkQuizAnswer, submitQuiz, recordQuizComplete,
   type AgeGroup, type AnswerReveal, type Quiz, type QuizAnswer, type QuizCompleteResult, type QuizResult,
 } from '../../../services/currentAffairsApi';
 import {
-  BRAND, PASTEL, CATEGORIES, QUESTION_TYPES, OPTION_LETTERS, EXCELLENCE_PERCENT, ageGroupForGrade, categoryColors,
+  GOLD, SAGE, DEEP_SAGE, CORRECT, WRONG, TINT_BG, TITLE_LIGHT,
+  QUESTION_TYPES, OPTION_LETTERS, EXCELLENCE_PERCENT, ageGroupForGrade,
 } from './constants';
+import CategoryBadge from './components/CategoryBadge';
 
 export default function QuizScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const styles = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const titleColor = isDark ? colors.textMain : TITLE_LIGHT;
 
   const ageGroup: AgeGroup = route?.params?.ageGroup || ageGroupForGrade(user?.grade);
   const email = user?.email || undefined;
@@ -108,149 +111,183 @@ export default function QuizScreen({ navigation, route }: any) {
     }
   };
 
-  const header = <Header title="Weekly Quiz" subtitle="Current Affairs" showSearch={false} showBack onBack={goToDigest} onMenuPress={goToDigest} />;
-
+  let body: React.ReactNode;
   if (loading) {
-    return (
-      <ScreenLayout>
-        <View style={styles.screen}>
-          {header}
-          <View style={styles.center}><ActivityIndicator testID="quiz-loading" size="large" color={BRAND.gold} /></View>
-        </View>
-      </ScreenLayout>
+    body = (
+      <View style={styles.center}>
+        <ActivityIndicator testID="quiz-loading" size="large" color={GOLD} />
+      </View>
     );
-  }
+  } else if (error || !quiz) {
+    body = (
+      <View style={styles.center}>
+        <Feather name="wifi-off" size={28} color={colors.textDim} />
+        <Text style={[styles.hint, { color: colors.textMuted }]}>{error}</Text>
+        <TouchableOpacity style={[styles.outlineBtn, { borderColor: GOLD + '60' }]} onPress={load} accessibilityRole="button">
+          <Feather name="refresh-cw" size={13} color={GOLD} />
+          <Text style={[styles.outlineBtnText, { color: GOLD }]}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  } else if (result) {
+    body = (
+      <ResultView
+        styles={styles} colors={colors} titleColor={titleColor} isDark={isDark}
+        result={result} award={award} awardError={awardError}
+        alreadyTaken={!!result.alreadySubmitted || (!!quiz.attempt && result === quiz.attempt)}
+        onDone={goToDigest}
+      />
+    );
+  } else if (questions.length === 0) {
+    body = (
+      <View style={[styles.emptyBox, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]} testID="quiz-empty">
+        <View style={[styles.iconCircle, { backgroundColor: GOLD + '20' }]}>
+          <Feather name="calendar" size={16} color={GOLD} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: titleColor }]}>This week’s quiz isn’t ready yet</Text>
+        <Text style={[styles.emptySub, { color: colors.textMuted }]}>A new quiz comes out every Sunday. Keep reading the daily stories!</Text>
+        <TouchableOpacity style={[styles.outlineBtn, { borderColor: GOLD + '60' }]} onPress={goToDigest} accessibilityRole="button">
+          <Feather name="arrow-left" size={13} color={GOLD} />
+          <Text style={[styles.outlineBtnText, { color: GOLD }]}>Back to today’s stories</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  } else if (question) {
+    body = (
+      <>
+        <View style={[styles.card, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
+          <View style={styles.counterRow}>
+            <Text style={[styles.counter, { color: colors.textMuted }]}>Question {index + 1} of {questions.length}</Text>
+            <Text style={[styles.typeText, { color: GOLD }]}>{QUESTION_TYPES[question.type]}</Text>
+          </View>
+          <View style={[styles.track, { backgroundColor: colors.borderColor }]}>
+            <View style={[styles.fill, { width: `${Math.round(((index + (reveal ? 1 : 0)) / questions.length) * 100)}%` }]} />
+          </View>
+          <CategoryBadge category={question.category} />
+          <Text style={[styles.question, { color: titleColor }]}>{question.question}</Text>
 
-  if (error || !quiz) {
-    return (
-      <ScreenLayout>
-        <View style={styles.screen}>
-          {header}
-          <View style={styles.center}>
-            <Feather name="wifi-off" size={36} color={colors.textMuted} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={load} accessibilityRole="button">
-              <Text style={styles.secondaryButtonText}>Try again</Text>
-            </TouchableOpacity>
+          <View style={styles.options}>
+            {question.options.map((option, i) => {
+              const isChosen = selected === i;
+              const isCorrect = !!reveal && reveal.correctIndex === i;
+              const isWrongChoice = !!reveal && isChosen && !reveal.correct;
+              let bg = isDark ? colors.bgDark : '#fff';
+              let border = GOLD + '40';
+              if (isCorrect) { bg = CORRECT + '18'; border = CORRECT + '80'; }
+              else if (isWrongChoice) { bg = WRONG + '18'; border = WRONG + '80'; }
+              else if (isChosen) { bg = GOLD + '18'; border = GOLD; }
+              return (
+                <TouchableOpacity
+                  key={`${question.id}-${i}`}
+                  testID={`option-${i}`}
+                  disabled={!!reveal || busy}
+                  onPress={() => setSelected(i)}
+                  activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isChosen, disabled: !!reveal }}
+                  style={[styles.option, { backgroundColor: bg, borderColor: border }]}
+                >
+                  <View style={[styles.optionIdx, { backgroundColor: (isChosen ? GOLD : GOLD + '20') }]}>
+                    <Text style={[styles.optionIdxText, { color: isChosen ? '#fff' : GOLD }]}>{OPTION_LETTERS[i]}</Text>
+                  </View>
+                  <Text style={[styles.optionText, { color: titleColor }]}>{option}</Text>
+                  {isCorrect ? <Feather name="check" size={14} color={CORRECT} /> : null}
+                  {isWrongChoice ? <Feather name="x" size={14} color={WRONG} /> : null}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
-      </ScreenLayout>
+
+        {reveal ? (
+          <View
+            testID="answer-feedback"
+            style={[styles.feedback, {
+              backgroundColor: (reveal.correct ? CORRECT : WRONG) + '12',
+              borderColor: (reveal.correct ? CORRECT : WRONG) + '35',
+            }]}
+          >
+            <View style={styles.feedbackTop}>
+              <Feather name={reveal.correct ? 'check-circle' : 'info'} size={15} color={reveal.correct ? CORRECT : WRONG} />
+              <Text style={[styles.feedbackTitle, { color: reveal.correct ? CORRECT : WRONG }]}>
+                {reveal.correct ? 'Correct!' : `Not quite — the answer is ${OPTION_LETTERS[reveal.correctIndex]}: ${question.options[reveal.correctIndex]}`}
+              </Text>
+            </View>
+            <Text style={[styles.body, { color: colors.textMain }]}>{reveal.explanation}</Text>
+            {reveal.extraFact ? (
+              <Text style={[styles.body, { color: colors.textMain }]}>
+                <Text style={styles.bold}>Did you know? </Text>{reveal.extraFact}
+              </Text>
+            ) : null}
+            {reveal.storyId ? (
+              <TouchableOpacity
+                style={styles.linkRow}
+                onPress={() => navigation.navigate('CurrentAffairsStory', { storyId: reveal.storyId, ageGroup })}
+                accessibilityRole="link"
+              >
+                <Feather name="book-open" size={12} color={GOLD} />
+                <Text style={[styles.link, { color: GOLD }]}>Read the story</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
+        {actionError ? <Text style={[styles.hint, { color: colors.accentRed }]}>{actionError}</Text> : null}
+
+        {!reveal ? (
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: GOLD }, (selected === null || busy) && styles.disabled]}
+            disabled={selected === null || busy}
+            onPress={onCheck}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            {busy ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Check Answer</Text>}
+          </TouchableOpacity>
+        ) : isLast ? (
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: GOLD }, busy && styles.disabled]}
+            disabled={busy}
+            onPress={onSubmit}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            {busy ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Submit Quiz</Text>}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: GOLD }]} onPress={onNext} activeOpacity={0.85} accessibilityRole="button">
+            <Text style={styles.primaryBtnText}>Next Question</Text>
+            <Feather name="arrow-right" size={14} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </>
     );
   }
 
   return (
     <ScreenLayout>
       <View style={styles.screen}>
-        {header}
-        <ScrollView contentContainerStyle={styles.content}>
-          {result ? (
-            <ResultView
-              styles={styles} result={result} award={award} awardError={awardError}
-              alreadyTaken={!!result.alreadySubmitted || (!!quiz.attempt && result === quiz.attempt)}
-              onDone={goToDigest}
-            />
-          ) : questions.length === 0 ? (
-            <View style={styles.emptyCard} testID="quiz-empty">
-              <Text style={styles.bigEmoji}>🗓️</Text>
-              <Text style={styles.emptyTitle}>This week’s quiz isn’t ready yet</Text>
-              <Text style={styles.muted}>A new quiz comes out every Sunday. Keep reading the daily stories!</Text>
-              <TouchableOpacity style={styles.secondaryButton} onPress={goToDigest} accessibilityRole="button">
-                <Text style={styles.secondaryButtonText}>Back to today’s stories</Text>
-              </TouchableOpacity>
-            </View>
-          ) : question ? (
-            <>
-              <View style={styles.progressRow}>
-                <Text style={styles.progressText}>Question {index + 1} of {questions.length}</Text>
-                <Text style={styles.typeText}>{QUESTION_TYPES[question.type]}</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${Math.round(((index + (reveal ? 1 : 0)) / questions.length) * 100)}%` }]} />
-              </View>
-
-              <View style={styles.card}>
-                <View style={[styles.badge, { backgroundColor: categoryColors(question.category, isDark).bg }]}>
-                  <Text style={[styles.badgeText, { color: categoryColors(question.category, isDark).fg }]}>
-                    {CATEGORIES[question.category]?.emoji} {CATEGORIES[question.category]?.label}
-                  </Text>
-                </View>
-                <Text style={styles.question}>{question.question}</Text>
-
-                {question.options.map((option, i) => {
-                  const isChosen = selected === i;
-                  const isCorrect = reveal && reveal.correctIndex === i;
-                  const isWrongChoice = reveal && isChosen && !reveal.correct;
-                  return (
-                    <TouchableOpacity
-                      key={`${question.id}-${i}`}
-                      testID={`option-${i}`}
-                      disabled={!!reveal || busy}
-                      onPress={() => setSelected(i)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: isChosen, disabled: !!reveal }}
-                      style={[
-                        styles.option,
-                        isChosen && styles.optionChosen,
-                        isCorrect && styles.optionCorrect,
-                        isWrongChoice && styles.optionWrong,
-                      ]}
-                    >
-                      <View style={[styles.letter, isChosen && styles.letterChosen, isCorrect && styles.letterCorrect, isWrongChoice && styles.letterWrong]}>
-                        <Text style={[styles.letterText, (isChosen || isCorrect) && styles.letterTextOn]}>{OPTION_LETTERS[i]}</Text>
-                      </View>
-                      <Text style={styles.optionText}>{option}</Text>
-                      {isCorrect ? <Feather name="check-circle" size={20} color={BRAND.forest} /> : null}
-                      {isWrongChoice ? <Feather name="x-circle" size={20} color={BRAND.rose} /> : null}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {reveal ? (
-                <View style={[styles.feedback, { backgroundColor: isDark ? `${reveal.correct ? BRAND.forest : BRAND.rose}26` : reveal.correct ? PASTEL.forest : PASTEL.rose }]} testID="answer-feedback">
-                  <Text style={[styles.feedbackTitle, { color: reveal.correct ? BRAND.forest : BRAND.rose }]}>
-                    {reveal.correct ? '🎉 Correct!' : `Not quite — the answer is ${OPTION_LETTERS[reveal.correctIndex]}: ${question.options[reveal.correctIndex]}`}
-                  </Text>
-                  <Text style={styles.body}>{reveal.explanation}</Text>
-                  {reveal.extraFact ? <Text style={styles.body}><Text style={styles.bold}>Did you know? </Text>{reveal.extraFact}</Text> : null}
-                  {reveal.storyId ? (
-                    <TouchableOpacity onPress={() => navigation.navigate('CurrentAffairsStory', { storyId: reveal.storyId, ageGroup })} accessibilityRole="link">
-                      <Text style={styles.link}>Read the story</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              ) : null}
-
-              {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
-
-              {!reveal ? (
-                <TouchableOpacity
-                  style={[styles.primaryButton, (selected === null || busy) && styles.disabled]}
-                  disabled={selected === null || busy}
-                  onPress={onCheck}
-                  accessibilityRole="button"
-                >
-                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Check Answer</Text>}
-                </TouchableOpacity>
-              ) : isLast ? (
-                <TouchableOpacity style={[styles.primaryButton, busy && styles.disabled]} disabled={busy} onPress={onSubmit} accessibilityRole="button">
-                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Submit Quiz</Text>}
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.primaryButton} onPress={onNext} accessibilityRole="button">
-                  <Text style={styles.primaryButtonText}>Next Question</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          ) : null}
+        <Header
+          title="Weekly Quiz"
+          subtitle="Current Affairs"
+          showSearch={false}
+          showBack
+          onBack={goToDigest}
+          onMenuPress={() => navigation.openDrawer?.()}
+        />
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {body}
         </ScrollView>
       </View>
     </ScreenLayout>
   );
 }
 
-function ResultView({ styles, result, award, awardError, alreadyTaken, onDone }: {
+function ResultView({ styles, colors, titleColor, isDark, result, award, awardError, alreadyTaken, onDone }: {
   styles: ReturnType<typeof makeStyles>;
+  colors: AppColors;
+  titleColor: string;
+  isDark: boolean;
   result: QuizResult;
   award: QuizCompleteResult | null;
   awardError: string | null;
@@ -260,114 +297,120 @@ function ResultView({ styles, result, award, awardError, alreadyTaken, onDone }:
   const excellent = result.percentage >= EXCELLENCE_PERCENT;
   return (
     <View style={{ gap: spacing.md }} testID="quiz-result">
-      <View style={styles.resultCard}>
-        <Text style={styles.bigEmoji}>{excellent ? '🏅' : result.percentage >= 50 ? '🌟' : '💪'}</Text>
-        <Text style={styles.score}>{result.score}/{result.total}</Text>
-        <Text style={styles.percent}>{result.percentage}%</Text>
-        {alreadyTaken ? <Text style={styles.muted}>You already took this week’s quiz — here is your result.</Text> : null}
+      <View style={[styles.card, styles.resultCard, {
+        backgroundColor: isDark ? colors.cardDark : TINT_BG,
+        borderColor: isDark ? colors.borderColor : GOLD + '25',
+      }]}>
+        <View style={[styles.bigIcon, { backgroundColor: GOLD + '20' }]}>
+          <Feather name={excellent ? 'award' : 'check-circle'} size={22} color={GOLD} />
+        </View>
+        <Text style={[styles.score, { color: GOLD }]}>{result.score}/{result.total}</Text>
+        <Text style={[styles.percent, { color: DEEP_SAGE }]}>{result.percentage}%</Text>
+        {alreadyTaken ? <Text style={[styles.hint, { color: colors.textMuted }]}>You already took this week’s quiz — here is your result.</Text> : null}
         {award ? (
-          <Text style={styles.points}>
+          <Text style={[styles.points, { color: GOLD }]}>
             {award.alreadyRecorded ? 'Points for this quiz were already added.' : `+${award.pointsAwarded} points`}
           </Text>
         ) : null}
-        {awardError ? <Text style={styles.errorText}>{awardError}</Text> : null}
+        {awardError ? <Text style={[styles.hint, { color: colors.accentRed }]}>{awardError}</Text> : null}
         {excellent ? (
-          <View style={styles.excellence} testID="excellence-badge">
-            <Feather name="award" size={18} color="#fff" />
-            <Text style={styles.excellenceText}>Excellence badge — {EXCELLENCE_PERCENT}% or more!</Text>
+          <View style={[styles.pill, { backgroundColor: GOLD }]} testID="excellence-badge">
+            <Feather name="award" size={13} color="#fff" />
+            <Text style={styles.pillText}>Excellence badge — {EXCELLENCE_PERCENT}% or more!</Text>
           </View>
         ) : (
-          <Text style={styles.muted}>Every week is a chance to learn more. Keep reading the daily stories!</Text>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>Every week is a chance to learn more. Keep reading the daily stories!</Text>
         )}
-        {award?.newBadges.includes('growth') ? <Text style={styles.growth}>📈 Growth badge — you beat your last score!</Text> : null}
+        {award?.newBadges.includes('growth') ? (
+          <View style={[styles.pill, { backgroundColor: SAGE + '25' }]}>
+            <Feather name="trending-up" size={13} color={DEEP_SAGE} />
+            <Text style={[styles.pillText, { color: DEEP_SAGE }]}>Growth badge — you beat your last score!</Text>
+          </View>
+        ) : null}
       </View>
 
-      <Text style={styles.reviewTitle}>Review your answers</Text>
+      <Text style={[styles.sectionTitle, { color: GOLD }]}>REVIEW YOUR ANSWERS</Text>
       {result.results.map((r, i) => (
-        <View key={r.questionId} style={styles.reviewItem}>
+        <View key={r.questionId} style={[styles.reviewItem, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
           <View style={styles.reviewHeader}>
-            <Feather name={r.correct ? 'check-circle' : 'x-circle'} size={18} color={r.correct ? BRAND.forest : BRAND.rose} />
-            <Text style={styles.reviewQuestion}>{i + 1}. {r.question}</Text>
+            <Feather name={r.correct ? 'check-circle' : 'x-circle'} size={16} color={r.correct ? CORRECT : WRONG} />
+            <Text style={[styles.reviewQuestion, { color: titleColor }]}>{i + 1}. {r.question}</Text>
           </View>
-          <Text style={styles.body}>
+          <Text style={[styles.reviewText, { color: colors.textMain }]}>
             Your answer: {r.selected === null ? 'not answered' : `${OPTION_LETTERS[r.selected]}. ${r.options[r.selected]}`}
           </Text>
-          {!r.correct ? <Text style={styles.body}>Correct answer: {OPTION_LETTERS[r.correctIndex]}. {r.options[r.correctIndex]}</Text> : null}
-          <Text style={styles.muted}>{r.explanation}</Text>
+          {!r.correct ? (
+            <Text style={[styles.reviewText, { color: CORRECT }]}>Correct answer: {OPTION_LETTERS[r.correctIndex]}. {r.options[r.correctIndex]}</Text>
+          ) : null}
+          <Text style={[styles.reviewExplain, { color: colors.textMuted }]}>{r.explanation}</Text>
         </View>
       ))}
 
-      <TouchableOpacity style={styles.primaryButton} onPress={onDone} accessibilityRole="button">
-        <Text style={styles.primaryButtonText}>Try Again Next Week</Text>
+      <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: GOLD }]} onPress={onDone} activeOpacity={0.85} accessibilityRole="button">
+        <Feather name="calendar" size={14} color="#fff" />
+        <Text style={styles.primaryBtnText}>Try Again Next Week</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-function makeStyles(colors: AppColors, isMobile: boolean) {
-  return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bgDark },
-    content: { padding: isMobile ? spacing.lg : spacing.xxl, paddingBottom: spacing.xxxl * 2, gap: spacing.md, maxWidth: 760, width: '100%', alignSelf: 'center' },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.md },
-    muted: { color: colors.textMuted, fontSize: 14, textAlign: 'center' },
-    body: { color: colors.textMain, fontSize: 15, lineHeight: 22 },
-    bold: { fontWeight: '800' },
-    link: { color: BRAND.blue, fontSize: 14, textDecorationLine: 'underline' },
-    errorText: { color: BRAND.rose, fontSize: 14, textAlign: 'center' },
+const makeStyles = (c: AppColors, isMobile: boolean) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bgDark },
+  content: { padding: isMobile ? spacing.lg : spacing.xl, paddingBottom: 56, gap: spacing.md },
+  center: { alignItems: 'center', paddingVertical: 60, gap: 10 },
+  hint: { fontSize: 13, textAlign: 'center' },
+  body: { fontSize: 14, lineHeight: 21 },
+  bold: { fontWeight: '800' },
 
-    progressRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    progressText: { color: colors.textHeading, fontWeight: '700', fontSize: 15 },
-    typeText: { color: colors.textMuted, fontSize: 13 },
-    barTrack: { height: 8, borderRadius: 4, backgroundColor: colors.borderColor, overflow: 'hidden' },
-    barFill: { height: 8, borderRadius: 4, backgroundColor: BRAND.purple },
+  card: { borderRadius: radius.xl, borderWidth: 1, padding: spacing.lg, gap: spacing.md },
+  counterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  counter: { fontSize: 11, fontWeight: '600' },
+  typeText: { fontSize: 11, fontWeight: '700' },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 3, backgroundColor: GOLD },
+  question: { fontSize: 15, fontWeight: '700', lineHeight: 22 },
 
-    card: { backgroundColor: colors.cardDark, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderColor, gap: spacing.md },
-    badge: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full },
-    badgeText: { fontSize: 12, fontWeight: '700' },
-    question: { color: colors.textHeading, fontSize: 19, fontWeight: '700', lineHeight: 26 },
+  options: { gap: 8 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1 },
+  optionIdx: { width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  optionIdxText: { fontSize: 12, fontWeight: '800' },
+  optionText: { flex: 1, fontSize: 14, fontWeight: '500' },
 
-    option: {
-      flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md,
-      borderRadius: radius.md, borderWidth: 2, borderColor: colors.borderColor, minHeight: 52,
-    },
-    optionChosen: { borderColor: BRAND.purple },
-    optionCorrect: { borderColor: BRAND.forest },
-    optionWrong: { borderColor: BRAND.rose },
-    letter: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: colors.textDim, alignItems: 'center', justifyContent: 'center' },
-    letterChosen: { backgroundColor: BRAND.purple, borderColor: BRAND.purple },
-    letterCorrect: { backgroundColor: BRAND.forest, borderColor: BRAND.forest },
-    letterWrong: { backgroundColor: BRAND.rose, borderColor: BRAND.rose },
-    letterText: { color: colors.textMuted, fontWeight: '800' },
-    letterTextOn: { color: '#fff' },
-    optionText: { flex: 1, color: colors.textMain, fontSize: 16 },
+  feedback: { borderRadius: 12, borderWidth: 1, padding: spacing.lg, gap: spacing.sm },
+  feedbackTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  feedbackTitle: { flex: 1, fontSize: 14, fontWeight: '800' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  link: { fontSize: 13, fontWeight: '600' },
 
-    feedback: { borderRadius: radius.md, padding: spacing.lg, gap: spacing.sm },
-    feedbackTitle: { fontSize: 16, fontWeight: '800' },
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, minHeight: 44,
+  },
+  primaryBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  disabled: { opacity: 0.5 },
+  outlineBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 16,
+    borderRadius: 10, borderWidth: 1,
+  },
+  outlineBtnText: { fontSize: 13, fontWeight: '700' },
 
-    primaryButton: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-      backgroundColor: BRAND.gold, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 48,
-    },
-    primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-    disabled: { opacity: 0.5 },
-    secondaryButton: { borderWidth: 1, borderColor: BRAND.gold, borderRadius: radius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-    secondaryButtonText: { color: BRAND.gold, fontWeight: '700' },
+  emptyBox: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: spacing.lg, borderRadius: radius.xl, borderWidth: 1, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  emptySub: { fontSize: 13, textAlign: 'center', maxWidth: 300, lineHeight: 20 },
+  iconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
 
-    emptyCard: { alignItems: 'center', padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.cardDark, borderRadius: radius.lg },
-    emptyTitle: { color: colors.textHeading, fontSize: 18, fontWeight: '700', textAlign: 'center' },
-    bigEmoji: { fontSize: 44 },
+  resultCard: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
+  bigIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  score: { fontSize: 34, fontWeight: '800', fontFamily: fonts.serif },
+  percent: { fontSize: 16, fontWeight: '700' },
+  points: { fontSize: 15, fontWeight: '800' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.full, paddingHorizontal: 14, paddingVertical: 7 },
+  pillText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 
-    resultCard: { alignItems: 'center', gap: spacing.sm, padding: spacing.xxl, backgroundColor: colors.cardDark, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderColor },
-    score: { color: colors.textHeading, fontSize: 40, fontWeight: '800' },
-    percent: { color: BRAND.purple, fontSize: 20, fontWeight: '700' },
-    points: { color: BRAND.gold, fontSize: 18, fontWeight: '800' },
-    excellence: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: BRAND.gold, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-    excellenceText: { color: '#fff', fontWeight: '800' },
-    growth: { color: BRAND.forest, fontWeight: '700' },
-
-    reviewTitle: { color: colors.textHeading, fontSize: 17, fontWeight: '700', marginTop: spacing.sm },
-    reviewItem: { backgroundColor: colors.cardDark, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs, borderWidth: 1, borderColor: colors.borderColor },
-    reviewHeader: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-    reviewQuestion: { flex: 1, color: colors.textHeading, fontWeight: '700', fontSize: 15 },
-  });
-}
+  sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: spacing.xs },
+  reviewItem: { borderRadius: radius.md, borderWidth: 1, padding: spacing.md, gap: 4 },
+  reviewHeader: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  reviewQuestion: { flex: 1, fontSize: 14, fontWeight: '700' },
+  reviewText: { fontSize: 13 },
+  reviewExplain: { fontSize: 12, lineHeight: 18 },
+});

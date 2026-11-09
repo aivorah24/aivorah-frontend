@@ -1,37 +1,25 @@
 import type { AgeGroup, Category, QuestionType } from '../../../services/currentAffairsApi';
 
-// Current Affairs palette — Aivorah gold plus one colour per subject.
-export const BRAND = {
-  gold: '#B4A467',
-  rose: '#E8748A',
-  blue: '#5B9BD5',
-  purple: '#8B6FB0',
-  forest: '#5B9B6F',
-  orange: '#E89B5B',
-  teal: '#5BB0A0',
-};
+// Same palette as the rest of the student app (World & You, Daily Habits,
+// Dashboard): Aivorah gold + sage, muted green/rose only for right/wrong answers.
+export const GOLD = '#BAA467';
+export const SAGE = '#9FB2A4';
+export const DEEP_SAGE = '#82A896';
+export const CORRECT = '#4A9E70';
+export const WRONG = '#C85870';
+// Light-mode tinted card background and heading colour used by World & You.
+export const TINT_BG = '#F0F7F6';
+export const TITLE_LIGHT = '#1C2A28';
 
-// Soft card backgrounds matching BRAND (light mode).
-export const PASTEL = {
-  gold: '#F4EFDC',
-  rose: '#FBE6EA',
-  blue: '#E3EEF8',
-  purple: '#EDE7F4',
-  forest: '#E2F0E6',
-  orange: '#FBEADC',
-  teal: '#DFF1EE',
-};
-
-type Tone = keyof typeof BRAND;
-
-export const CATEGORIES: Record<Category, { label: string; emoji: string; tone: Tone }> = {
-  india: { label: 'India', emoji: '🇮🇳', tone: 'orange' },
-  world: { label: 'World', emoji: '🌍', tone: 'blue' },
-  economy: { label: 'Economy', emoji: '💰', tone: 'gold' },
-  science: { label: 'Science & Tech', emoji: '🔬', tone: 'purple' },
-  environment: { label: 'Environment', emoji: '🌱', tone: 'forest' },
-  sports: { label: 'Sports & Achievements', emoji: '🏆', tone: 'rose' },
-  society: { label: 'Society & Culture', emoji: '🧑‍🤝‍🧑', tone: 'teal' },
+// Feather icon per category (emoji flags don't render on Windows).
+export const CATEGORIES: Record<Category, { label: string; icon: string }> = {
+  india: { label: 'India', icon: 'flag' },
+  world: { label: 'World', icon: 'globe' },
+  economy: { label: 'Economy', icon: 'trending-up' },
+  science: { label: 'Science & Tech', icon: 'cpu' },
+  environment: { label: 'Environment', icon: 'feather' },
+  sports: { label: 'Sports & Achievements', icon: 'award' },
+  society: { label: 'Society & Culture', icon: 'users' },
 };
 
 export const AGE_GROUPS: Record<AgeGroup, { label: string; storiesPerDay: number; minutes: string }> = {
@@ -65,15 +53,9 @@ export function ageGroupForGrade(grade?: string | null): AgeGroup {
   return '8-12';
 }
 
-export function categoryColors(category: Category, isDark: boolean) {
-  const tone = CATEGORIES[category]?.tone || 'gold';
-  return { fg: BRAND[tone], bg: isDark ? `${BRAND[tone]}26` : PASTEL[tone] };
-}
-
 export function formatReadTime(seconds: number): string {
   if (!seconds || seconds < 60) return `${Math.max(30, Math.round(seconds || 0))} sec read`;
-  const mins = Math.round(seconds / 60);
-  return `${mins} min read`;
+  return `${Math.round(seconds / 60)} min read`;
 }
 
 export function formatDigestDate(date: string | null): string {

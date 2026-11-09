@@ -16,7 +16,7 @@ jest.mock('../../../../components/common/Header', () => {
 });
 jest.mock('../../../../context/ThemeContext', () => ({
   useTheme: () => ({ colors: {
-    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777',
+    bgDark: '#fff', cardDark: '#fff', borderColor: '#ddd', textMain: '#000', textHeading: '#000', textMuted: '#555', textDim: '#777', accentRed: '#c00',
   }, isDark: false }),
 }));
 let mockUser: any = { email: 'kid@school.in', grade: 'Grade 5' };
@@ -56,8 +56,8 @@ test('shows every section of the story format', async () => {
   expect(screen.getByText('Species: ')).toBeTruthy();
   expect(screen.getByText('Deep sea: ')).toBeTruthy();
   expect(screen.getByText('Why are so many animals unknown?')).toBeTruthy();
-  expect(screen.getByText('🌍 World')).toBeTruthy();
-  expect(screen.getByText('Current Biology · 1 min read')).toBeTruthy();
+  expect(screen.getByText('World')).toBeTruthy();
+  expect(screen.getByText('1 min read · Current Biology')).toBeTruthy();
 });
 
 test('optional sections are left out when empty', async () => {

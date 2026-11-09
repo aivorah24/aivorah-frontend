@@ -1,4 +1,4 @@
-import { ageGroupForGrade, formatReadTime, categoryColors, CATEGORIES, AGE_GROUPS, BRAND, PASTEL } from '../constants';
+import { ageGroupForGrade, formatReadTime, CATEGORIES, AGE_GROUPS, GOLD, SAGE } from '../constants';
 
 test.each([
   ['Nursery', 'under-8'], ['LKG', 'under-8'], ['UKG', 'under-8'], ['Pre-KG', 'under-8'],
@@ -15,13 +15,17 @@ test('stories per day match the PRD', () => {
   expect(AGE_GROUPS['13+'].storiesPerDay).toBe(18);
 });
 
-test('all 7 categories have a label, emoji and colour', () => {
+test('all 7 categories have a label and a Feather icon (no emoji)', () => {
   expect(Object.keys(CATEGORIES).sort()).toEqual(['economy', 'environment', 'india', 'science', 'society', 'sports', 'world']);
-  for (const key of Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]) {
-    expect(CATEGORIES[key].emoji).toBeTruthy();
-    expect(categoryColors(key, false)).toEqual({ fg: BRAND[CATEGORIES[key].tone], bg: PASTEL[CATEGORIES[key].tone] });
+  for (const cat of Object.values(CATEGORIES)) {
+    expect(cat.label).toBeTruthy();
+    expect(cat.icon).toMatch(/^[a-z-]+$/);
   }
-  expect(BRAND.gold).toBe('#B4A467');
+});
+
+test('uses the app palette (gold + sage, same as World & You / Daily Habits)', () => {
+  expect(GOLD).toBe('#BAA467');
+  expect(SAGE).toBe('#9FB2A4');
 });
 
 test('formatReadTime', () => {

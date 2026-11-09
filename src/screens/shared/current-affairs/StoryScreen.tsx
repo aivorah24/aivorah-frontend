@@ -10,15 +10,15 @@ import { useResponsive } from '../../../hooks/useResponsive';
 import { spacing, radius } from '../../../theme';
 import type { AppColors } from '../../../theme';
 import { fetchStory, recordStoryRead, type AgeGroup, type Story } from '../../../services/currentAffairsApi';
-import { BRAND, PASTEL, CATEGORIES, POINTS, ageGroupForGrade, categoryColors, formatReadTime } from './constants';
-
-type Tone = keyof typeof BRAND;
+import { GOLD, SAGE, DEEP_SAGE, TITLE_LIGHT, CATEGORIES, POINTS, ageGroupForGrade, formatReadTime } from './constants';
+import CategoryBadge from './components/CategoryBadge';
 
 export default function StoryScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const { isMobile } = useResponsive();
   const styles = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const titleColor = isDark ? colors.textMain : TITLE_LIGHT;
 
   const storyId: string | undefined = route?.params?.storyId;
   const ageGroup: AgeGroup = route?.params?.ageGroup || ageGroupForGrade(user?.grade);
@@ -75,140 +75,170 @@ export default function StoryScreen({ navigation, route }: any) {
     }
   };
 
-  const cat = story ? CATEGORIES[story.category] : null;
-  const tone = story ? categoryColors(story.category, isDark) : null;
+  const backButton = (
+    <TouchableOpacity style={[styles.outlineBtn, { borderColor: GOLD + '60' }]} onPress={goBack} accessibilityRole="button">
+      <Feather name="arrow-left" size={13} color={GOLD} />
+      <Text style={[styles.outlineBtnText, { color: GOLD }]}>Back to today’s stories</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <ScreenLayout>
       <View style={styles.screen}>
-        <Header title="Current Affairs" subtitle="Story" showSearch={false} showBack onBack={goBack} onMenuPress={goBack} />
+        <Header
+          title="Current Affairs"
+          subtitle={story ? CATEGORIES[story.category]?.label : 'Story'}
+          showSearch={false}
+          showBack
+          onBack={goBack}
+          onMenuPress={() => navigation.openDrawer?.()}
+        />
 
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator testID="story-loading" size="large" color={BRAND.gold} />
-          </View>
-        ) : error || !story ? (
-          <View style={styles.center}>
-            <Feather name="alert-circle" size={36} color={colors.textMuted} />
-            <Text style={styles.errorText}>{error || 'Story not found'}</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={goBack} accessibilityRole="button">
-              <Text style={styles.secondaryButtonText}>Back to today’s stories</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.content}>
-            <View style={[styles.badge, { backgroundColor: tone!.bg }]}>
-              <Text style={[styles.badgeText, { color: tone!.fg }]}>{cat?.emoji} {cat?.label}</Text>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator testID="story-loading" size="large" color={GOLD} />
             </View>
-            <Text style={styles.title}>{story.title}</Text>
-            <Text style={styles.meta}>{story.source} · {formatReadTime(story.readTimeSeconds)}</Text>
-
-            <Section styles={styles} isDark={isDark} icon="book-open" tone="blue" title="What happened?">
-              <Text style={styles.body}>{story.whatHappened}</Text>
-            </Section>
-
-            <Section styles={styles} isDark={isDark} icon="star" tone="orange" title="Why is it important?">
-              <Text style={styles.body}>{story.whyImportant}</Text>
-            </Section>
-
-            {story.didYouKnow ? (
-              <Section styles={styles} isDark={isDark} icon="zap" tone="purple" title="Did you know?">
-                <Text style={styles.body}>{story.didYouKnow}</Text>
-              </Section>
-            ) : null}
-
-            {story.newWords.length ? (
-              <Section styles={styles} isDark={isDark} icon="bookmark" tone="forest" title="Learn a new word">
-                {story.newWords.map((w) => (
-                  <Text key={w.word} style={styles.body}>
-                    <Text style={styles.word}>{w.word}: </Text>{w.definition}
-                  </Text>
-                ))}
-              </Section>
-            ) : null}
-
-            {story.thinkAboutIt ? (
-              <Section styles={styles} isDark={isDark} icon="message-circle" tone="teal" title="Think about it">
-                <Text style={styles.body}>{story.thinkAboutIt}</Text>
-              </Section>
-            ) : null}
-
-            {story.sourceUrl ? (
-              <TouchableOpacity onPress={() => Linking.openURL(story.sourceUrl!)} accessibilityRole="link">
-                <Text style={styles.sourceLink}>Read the original at {story.source}</Text>
-              </TouchableOpacity>
-            ) : null}
-
-            {email ? (
-              done ? (
-                <View style={[styles.primaryButton, styles.doneButton]} testID="story-done">
-                  <Feather name="check" size={18} color="#fff" />
-                  <Text style={styles.primaryButtonText}>Read</Text>
+          ) : error || !story ? (
+            <View style={styles.center}>
+              <Feather name="alert-circle" size={28} color={colors.textDim} />
+              <Text style={[styles.hint, { color: colors.textMuted }]}>{error || 'Story not found'}</Text>
+              {backButton}
+            </View>
+          ) : (
+            <>
+              <View style={[styles.card, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
+                <CategoryBadge category={story.category} />
+                <Text style={[styles.title, { color: titleColor }]}>{story.title}</Text>
+                <View style={styles.metaRow}>
+                  <Feather name="clock" size={11} color={colors.textDim} />
+                  <Text style={[styles.metaText, { color: colors.textDim }]}>{formatReadTime(story.readTimeSeconds)} · {story.source}</Text>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.primaryButton, saving && styles.disabled]}
-                  onPress={markRead}
-                  disabled={saving}
-                  accessibilityRole="button"
-                >
-                  {saving
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryButtonText}>I’ve read this (+{POINTS.story} points)</Text>}
-                </TouchableOpacity>
-              )
-            ) : null}
-            {readMessage ? <Text style={styles.readMessage}>{readMessage}</Text> : null}
+              </View>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={goBack} accessibilityRole="button">
-              <Text style={styles.secondaryButtonText}>Back to today’s stories</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        )}
+              <Section styles={styles} colors={colors} titleColor={titleColor} icon="book-open" color={GOLD} title="What happened?">
+                <Text style={[styles.body, { color: colors.textMain }]}>{story.whatHappened}</Text>
+              </Section>
+
+              <Section styles={styles} colors={colors} titleColor={titleColor} icon="star" color={SAGE} title="Why is it important?">
+                <Text style={[styles.body, { color: colors.textMain }]}>{story.whyImportant}</Text>
+              </Section>
+
+              {story.didYouKnow ? (
+                <Section styles={styles} colors={colors} titleColor={titleColor} icon="zap" color={GOLD} title="Did you know?">
+                  <Text style={[styles.body, { color: colors.textMain }]}>{story.didYouKnow}</Text>
+                </Section>
+              ) : null}
+
+              {story.newWords.length ? (
+                <Section styles={styles} colors={colors} titleColor={titleColor} icon="bookmark" color={DEEP_SAGE} title="Learn a new word">
+                  {story.newWords.map((w) => (
+                    <Text key={w.word} style={[styles.body, { color: colors.textMain }]}>
+                      <Text style={[styles.word, { color: DEEP_SAGE }]}>{w.word}: </Text>{w.definition}
+                    </Text>
+                  ))}
+                </Section>
+              ) : null}
+
+              {story.thinkAboutIt ? (
+                <Section styles={styles} colors={colors} titleColor={titleColor} icon="message-circle" color={GOLD} title="Think about it">
+                  <Text style={[styles.body, { color: colors.textMain }]}>{story.thinkAboutIt}</Text>
+                </Section>
+              ) : null}
+
+              {story.sourceUrl ? (
+                <TouchableOpacity style={styles.sourceRow} onPress={() => Linking.openURL(story.sourceUrl!)} accessibilityRole="link">
+                  <Feather name="external-link" size={12} color={GOLD} />
+                  <Text style={[styles.sourceLink, { color: GOLD }]}>Read the original at {story.source}</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {email ? (
+                done ? (
+                  <View style={[styles.banner, { backgroundColor: SAGE + '15', borderColor: SAGE + '35' }]} testID="story-done">
+                    <View style={[styles.bannerIcon, { backgroundColor: SAGE + '25' }]}>
+                      <Feather name="check-circle" size={14} color={DEEP_SAGE} />
+                    </View>
+                    <Text style={[styles.bannerText, { color: DEEP_SAGE }]}>{readMessage}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: GOLD }, saving && styles.disabled]}
+                    onPress={markRead}
+                    disabled={saving}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                  >
+                    {saving ? <ActivityIndicator color="#fff" size="small" /> : (
+                      <>
+                        <Feather name="check-square" size={14} color="#fff" />
+                        <Text style={styles.primaryBtnText}>I’ve read this (+{POINTS.story} points)</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )
+              ) : null}
+              {readMessage && !done ? <Text style={[styles.hint, { color: colors.accentRed }]}>{readMessage}</Text> : null}
+
+              {backButton}
+            </>
+          )}
+        </ScrollView>
       </View>
     </ScreenLayout>
   );
 }
 
-function Section({ styles, isDark, icon, tone, title, children }: {
-  styles: ReturnType<typeof makeStyles>; isDark: boolean; icon: any; tone: Tone; title: string; children: React.ReactNode;
+function Section({ styles, colors, titleColor, icon, color, title, children }: {
+  styles: ReturnType<typeof makeStyles>; colors: AppColors; titleColor: string;
+  icon: any; color: string; title: string; children: React.ReactNode;
 }) {
   return (
-    <View style={[styles.section, { backgroundColor: isDark ? `${BRAND[tone]}1F` : PASTEL[tone], borderLeftColor: BRAND[tone] }]}>
+    <View style={[styles.card, { backgroundColor: colors.cardDark, borderColor: colors.borderColor }]}>
       <View style={styles.sectionHeader}>
-        <Feather name={icon} size={18} color={BRAND[tone]} />
-        <Text style={[styles.sectionTitle, { color: BRAND[tone] }]}>{title}</Text>
+        <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
+          <Feather name={icon} size={14} color={color} />
+        </View>
+        <Text style={[styles.sectionTitle, { color: titleColor }]}>{title}</Text>
       </View>
       {children}
     </View>
   );
 }
 
-function makeStyles(colors: AppColors, isMobile: boolean) {
-  return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.bgDark },
-    content: { padding: isMobile ? spacing.lg : spacing.xxl, paddingBottom: spacing.xxxl * 2, gap: spacing.md, maxWidth: 760, width: '100%', alignSelf: 'center' },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.md },
-    errorText: { color: BRAND.rose, fontSize: 15, textAlign: 'center' },
-    badge: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full },
-    badgeText: { fontSize: 12, fontWeight: '700' },
-    title: { color: colors.textHeading, fontSize: isMobile ? 22 : 26, fontWeight: '800', lineHeight: isMobile ? 28 : 32 },
-    meta: { color: colors.textDim, fontSize: 13 },
-    section: { borderRadius: radius.md, padding: spacing.lg, borderLeftWidth: 4, gap: spacing.sm },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    sectionTitle: { fontSize: 15, fontWeight: '800' },
-    body: { color: colors.textMain, fontSize: 16, lineHeight: 24 },
-    word: { fontWeight: '800' },
-    sourceLink: { color: BRAND.blue, fontSize: 14, textDecorationLine: 'underline' },
-    primaryButton: {
-      flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center',
-      backgroundColor: BRAND.gold, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 48, marginTop: spacing.sm,
-    },
-    doneButton: { backgroundColor: BRAND.forest },
-    primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-    disabled: { opacity: 0.6 },
-    readMessage: { color: colors.textMain, textAlign: 'center', fontSize: 14 },
-    secondaryButton: { alignSelf: 'center', borderWidth: 1, borderColor: BRAND.gold, borderRadius: radius.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-    secondaryButtonText: { color: BRAND.gold, fontWeight: '700' },
-  });
-}
+const makeStyles = (c: AppColors, isMobile: boolean) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.bgDark },
+  content: { padding: isMobile ? spacing.lg : spacing.xl, paddingBottom: 56, gap: spacing.md },
+  center: { alignItems: 'center', paddingVertical: 60, gap: 10 },
+  hint: { fontSize: 13, textAlign: 'center' },
+
+  card: { borderRadius: radius.xl, borderWidth: 1, padding: spacing.lg, gap: spacing.sm },
+  title: { fontSize: isMobile ? 18 : 20, fontWeight: '800', lineHeight: isMobile ? 24 : 27 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontSize: 11 },
+
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: 14, fontWeight: '700' },
+  body: { fontSize: 14, lineHeight: 22 },
+  word: { fontWeight: '800' },
+
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  sourceLink: { fontSize: 13, fontWeight: '600' },
+
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, minHeight: 44,
+  },
+  primaryBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  disabled: { opacity: 0.6 },
+  outlineBtn: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 7,
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
+  },
+  outlineBtnText: { fontSize: 13, fontWeight: '700' },
+
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  bannerIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  bannerText: { flex: 1, fontSize: 13, fontWeight: '600' },
+});
