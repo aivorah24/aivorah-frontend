@@ -1,3 +1,5 @@
+import type { AgeGroup } from '../services/currentAffairsApi';
+
 type ClassDetailParams = {
   grade: string;
   section: string;
@@ -45,6 +47,9 @@ export type DrawerParamList = {
   Subscription: undefined;
   Messages: undefined;
   Announcements: { openId?: string } | undefined;
+  CurrentAffairs: undefined;
+  CurrentAffairsStory: { storyId: string; ageGroup?: AgeGroup };
+  CurrentAffairsQuiz: { ageGroup?: AgeGroup } | undefined;
   StudentAttendance: undefined;
   MyClasses: undefined;
   ClassDetail: ClassDetailParams;

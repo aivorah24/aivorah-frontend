@@ -54,6 +54,9 @@ const DailyHabitsScreen = screens.lazyScreen(() => import('../screens/student/da
 const SubscriptionScreen = screens.lazyScreen(() => import('@legacy/student-legacy/SubscriptionScreen'));
 const MessagesScreen = screens.lazyScreen(() => import('../screens/shared/messages/MessagesScreen'));
 const AnnouncementsScreen = screens.lazyScreen(() => import('../screens/shared/announcements/AnnouncementsScreen'));
+const CurrentAffairsScreen = screens.lazyScreen(() => import('../screens/shared/current-affairs/DigestScreen'));
+const CurrentAffairsStoryScreen = screens.lazyScreen(() => import('../screens/shared/current-affairs/StoryScreen'));
+const CurrentAffairsQuizScreen = screens.lazyScreen(() => import('../screens/shared/current-affairs/QuizScreen'));
 const MyClassesScreen = screens.lazyScreen(() => import('../features/classes/components/MyClassesScreen'));
 const ClassDetailScreen = screens.lazyScreen(() => import('../features/classes/components/ClassDetailScreen'));
 const StudentAttendanceScreen = screens.lazyScreen(() => import('../screens/student/attendance/StudentAttendanceScreen'));
@@ -123,6 +126,9 @@ export default function AppNavigator() {
       <Drawer.Screen name="Subscription" component={SubscriptionScreen} />
       <Drawer.Screen name="Messages" component={MessagesScreen} />
       <Drawer.Screen name="Announcements" component={AnnouncementsScreen} />
+      <Drawer.Screen name="CurrentAffairs" component={CurrentAffairsScreen} />
+      <Drawer.Screen name="CurrentAffairsStory" component={CurrentAffairsStoryScreen} />
+      <Drawer.Screen name="CurrentAffairsQuiz" component={CurrentAffairsQuizScreen} />
       <Drawer.Screen name="StudentAttendance" component={StudentAttendanceScreen} />
       <Drawer.Screen name="MyClasses" component={MyClassesScreen} />
       <Drawer.Screen name="ClassDetail" component={ClassDetailScreen} />
