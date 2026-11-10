@@ -10,11 +10,10 @@ import { normalizeCurriculum } from '../../../../utils/curriculum';
 // fetch resolved, the screen queried curriculum content for the WRONG
 // child's grade - a real bug, not a data-seeding gap. The real fetch below
 // is the only source of truth.
-// /curriculum/subjects returns no topic names, so per-subject progress always
-// read 0. Fill topics from the Learning Paths syllabus — the names progress is saved under.
+// Topics come from the Learning Paths syllabus — the student screen's source: real unit titles in
+// book order. /curriculum/subjects only labels them "Chapter N", shuffled; it's the fallback.
 async function withSyllabusTopics(subs: any[], curriculum: string, grade: string): Promise<any[]> {
   return Promise.all(subs.map(async (sub) => {
-    if ((sub.topics ?? []).length > 0) return sub;
     try {
       const topics = (await fetchSubjectTopics(curriculum, grade, sub.subject)) ?? [];
       return topics.length > 0 ? { ...sub, topics } : sub;

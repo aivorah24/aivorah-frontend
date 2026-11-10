@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../../../context/AuthContext';
 import * as parentProgressService from '../services/parentProgressService';
 import type { ProgressData } from '../services/parentProgressService';
+import type { LearningSubject } from '../utils/subjectProgress';
 
 export function useParentProgress(route: any) {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export function useParentProgress(route: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [practiceInsights, setPracticeInsights] = useState<any>(null);
   const [insightsGenerating, setInsightsGenerating] = useState(false);
+  const [learningSubjects, setLearningSubjects] = useState<LearningSubject[] | null>(null);
   
   // Need to be very careful with useMemo on Animated.Value so they don't recreate constantly.
   // Animated.Value is designed to be read directly during render (native-driven,
@@ -80,6 +82,18 @@ export function useParentProgress(route: any) {
     fetchData();
   }, [selectedIdx, children]);
 
+  // Subjects change only with the child's grade/curriculum, so no polling.
+  useEffect(() => {
+    if (!child) return;
+    let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clears the previous child's subjects while the new ones load
+    setLearningSubjects(null);
+    parentProgressService.fetchLearningSubjects(child)
+      .then((subs) => { if (active) setLearningSubjects(subs); })
+      .catch(() => { if (active) setLearningSubjects([]); });
+    return () => { active = false; };
+  }, [child?.id, child?.grade, child?.curriculum]);
+
   // 4. Polling & Focus Refresh
   useFocusEffect(
     useCallback(() => {
@@ -137,5 +151,6 @@ export function useParentProgress(route: any) {
     insightAnims,
     child,
     fetchData,
+    learningSubjects,
   };
 }

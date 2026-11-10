@@ -1,6 +1,9 @@
 import LEARNING_PATHS_SERVER_URL from '../../../../config/learningPathsServerUrl';
 import STUDENTS_SERVER_URL from '../../../../config/studentsServerUrl';
 import PARENT_SERVER_URL from '../../../../config/parentServerUrl';
+import { fetchCurriculumSubjects, fetchSubjectTopics } from '../../learning/services/parentLearningService';
+import { normalizeCurriculum } from '../../../../utils/curriculum';
+import type { LearningSubject } from '../utils/subjectProgress';
 
 export async function fetchChildren(parentEmail: string): Promise<any[]> {
   const res = await fetch(`${PARENT_SERVER_URL}/parent/${encodeURIComponent(parentEmail)}/children`);
@@ -47,4 +50,17 @@ export async function fetchProgressData(child: any): Promise<ProgressData> {
     weekly,
     practiceInsights: trendsRes ?? null,
   };
+}
+
+// The child's learning-path subjects with their syllabus topic names — same source as the Learning page.
+export async function fetchLearningSubjects(child: any): Promise<LearningSubject[]> {
+  const curriculum = normalizeCurriculum(child?.curriculum) ?? '';
+  const grade = child?.grade || '';
+  if (!curriculum || !grade) return [];
+  const subjects = await fetchCurriculumSubjects(grade, curriculum).catch(() => []);
+  return Promise.all(subjects.map(async (s: any) => {
+    const syllabus = await fetchSubjectTopics(curriculum, grade, s.subject).catch(() => []);
+    const own = (s.topics ?? []).map((x: any) => (typeof x === 'string' ? x : x?.topic)).filter(Boolean);
+    return { subject: s.subject, topics: syllabus.length ? syllabus.map((x) => x.topic) : own, topicCount: s.topicCount };
+  }));
 }

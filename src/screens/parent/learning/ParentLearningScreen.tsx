@@ -159,6 +159,7 @@ export default function ParentLearningScreen({ navigation, route }: any) {
                       colors={colors}
                       onClose={closePanel}
                       isMobile={isMobile}
+                      unitWord={normalizeCurriculum(childCurriculum) === 'CBSE' && (childGrade === 'Grade 1' || childGrade === 'Grade 2') ? 'Unit' : 'Chapter'}
                     />
                     </View>
                   )}

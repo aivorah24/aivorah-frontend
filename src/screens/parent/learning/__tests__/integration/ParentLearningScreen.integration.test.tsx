@@ -110,6 +110,27 @@ describe('ParentLearningScreen Integration', () => {
     expect(screen.getAllByText('Not started').length).toBe(2);
   });
 
+  it('labels units like the student syllabus: "Chapter N" + the real title, in book order', async () => {
+    (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A]);
+    (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: [], topicsExplored: 0 });
+    (parentLearningService.fetchCurriculumSubjects as jest.Mock).mockResolvedValue([{ subject: 'Design', topicCount: 4, topics: [] }]);
+    (parentLearningService.fetchSubjectTopics as jest.Mock).mockResolvedValue([
+      { topic: 'Prototype', unit: 'Creating the Solution', unitNo: 2 }, { topic: 'Build', unit: 'Creating the Solution', unitNo: 2 },
+      { topic: 'Research', unit: 'Inquiring & Analyzing', unitNo: 1 }, { topic: 'Specs', unit: 'Inquiring & Analyzing', unitNo: 1 },
+    ]);
+    (parentLearningService.fetchTopicAttempts as jest.Mock).mockResolvedValue([]);
+
+    await renderScreen();
+    await act(async () => { fireEvent.press(await screen.findByText('Design')); });
+
+    expect(await screen.findByText('Inquiring & Analyzing')).toBeTruthy();
+    expect(screen.getByTestId('unit-1')).toHaveTextContent(/CHAPTER 1/);
+    expect(screen.getByTestId('unit-1')).toHaveTextContent(/Inquiring & Analyzing/);
+    expect(screen.getByTestId('unit-2')).toHaveTextContent(/CHAPTER 2/);
+    expect(screen.getByTestId('unit-2')).toHaveTextContent(/Creating the Solution/);
+    expect(screen.queryByText(/UNIT d/)).toBeNull();
+  });
+
   it('shows each unit, per-topic best score and tries, and the mistakes of a practice try', async () => {
     (parentLearningService.fetchChildren as jest.Mock).mockResolvedValue([CHILD_A]);
     (parentLearningService.fetchStudentStats as jest.Mock).mockResolvedValue({ completedTopics: ['Fractions'], topicsExplored: 2 });

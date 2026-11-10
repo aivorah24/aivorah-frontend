@@ -119,7 +119,8 @@ export function LearningPathCard({
             const pillColor = item.status === 'completed' ? BRAND.green : item.status === 'in_progress' ? BRAND.teal : null;
             return (
             <TouchableOpacity
-              key={`${item.subject}-${item.title}`}
+              // Titles repeat within a book ("Unit", "Let's Begin"); a title key left stale rows behind on chip switch.
+              key={`${item.subject}-${item.chapterNo}-${idx}`}
               style={[styles.lessonRow, idx < filteredChapterRows.length - 1 && { borderBottomWidth: 1, borderBottomColor: cardBorder }]}
               onPress={() => navigation.navigate('SubjectSyllabus', { subject: item.subject, grade: studentGrade, curriculum: learningPathCurriculum, chapterTitle: item.title })}
               activeOpacity={0.78}

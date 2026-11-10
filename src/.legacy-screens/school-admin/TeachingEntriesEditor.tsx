@@ -5,8 +5,9 @@
  * Shared by SchoolAdminAddTeacherScreen and SchoolAdminEditTeacherScreen.
  */
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable, Platform, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useLearningPathSubjects } from '../../hooks/useLearningPathSubjects';
 import { spacing, radius, fonts } from '../../theme';
 import type { AppColors } from '../../theme';
 
@@ -97,6 +98,36 @@ function FormDropdown({ value, placeholder, options, onChange, colors, open, onT
   );
 }
 
+// Subjects from the Learning Path for this curriculum + grade; the fixed list is only a fallback.
+// Already-saved subjects stay visible so they can still be unticked.
+function SubjectChips({ curriculum, grade, subjectsInput, onChange, colors }: {
+  curriculum: string; grade: string; subjectsInput: string; onChange: (v: string) => void; colors: AppColors;
+}) {
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const fallback = useMemo(() => getSubjectsForEntry(curriculum, grade), [curriculum, grade]);
+  const { subjects, loading } = useLearningPathSubjects(curriculum, grade, fallback);
+  const selected = subjectsInput.split(',').map((s) => s.trim()).filter(Boolean);
+  const options = [...subjects, ...selected.filter((s) => !subjects.includes(s))];
+  if (curriculum && grade && loading) return <ActivityIndicator size="small" color={colors.accentYellow} style={{ alignSelf: 'flex-start' }} />;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {options.map((subj) => {
+        const on = selected.includes(subj);
+        return (
+          <Pressable
+            key={subj}
+            style={[styles.subjectChip, on && styles.subjectChipActive]}
+            onPress={() => onChange((on ? selected.filter((s) => s !== subj) : [...selected, subj]).join(', '))}
+          >
+            {on && <Feather name="check" size={12} color={colors.accentYellow} />}
+            <Text style={[styles.subjectChipText, on && styles.subjectChipTextActive]}>{subj}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function TeachingEntriesEditor({
   entries, onChange, schoolCurriculumBase, colors, openDropdown, setOpenDropdown,
 }: {
@@ -153,28 +184,10 @@ export default function TeachingEntriesEditor({
               </View>
             </View>
             <Text style={styles.formLabel}>Subjects for this grade</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {(() => {
-                const selected = entry.subjectsInput.split(',').map((s) => s.trim()).filter(Boolean);
-                const options = getSubjectsForEntry(entry.curriculum, entry.grade);
-                return options.map((subj) => {
-                  const on = selected.includes(subj);
-                  return (
-                    <Pressable
-                      key={subj}
-                      style={[styles.subjectChip, on && styles.subjectChipActive]}
-                      onPress={() => {
-                        const next = on ? selected.filter((s) => s !== subj) : [...selected, subj];
-                        updateEntry(idx, { subjectsInput: next.join(', ') });
-                      }}
-                    >
-                      {on && <Feather name="check" size={12} color={colors.accentYellow} />}
-                      <Text style={[styles.subjectChipText, on && styles.subjectChipTextActive]}>{subj}</Text>
-                    </Pressable>
-                  );
-                });
-              })()}
-            </View>
+            <SubjectChips
+              curriculum={entry.curriculum} grade={entry.grade} subjectsInput={entry.subjectsInput}
+              onChange={(subjectsInput) => updateEntry(idx, { subjectsInput })} colors={colors}
+            />
           </View>
         );
       })}
