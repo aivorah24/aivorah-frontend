@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { readScreenCache, writeScreenCache } from '../../../../utils/screenCache';
 import { Platform } from 'react-native';
 import {
   fetchClasses, fetchTimetable, fetchMyTimetable, fetchSchoolTeachers, saveSlot, saveTemplate,
@@ -44,6 +45,8 @@ export type TeacherView = 'mine' | 'homeroom';
 // State + handlers for TimetableScreen. Classes, the school and permissions
 // all come from the signed-in user on the server.
 export function useTimetableState({ role, school, userName, paramClass }: UseTimetableStateParams) {
+  // Last classes / timetable this user saw: shown instantly while fresh data loads.
+  const userKey = `${role}:${school || ''}:${userName || ''}`;
   const [classes, setClasses] = useState<TimetableClass[]>(paramClass ? [paramClass] : []);
   const [selected, setSelected] = useState<TimetableClass | null>(paramClass);
   const [tt, setTt] = useState<Timetable | null>(null);
@@ -70,8 +73,20 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
 
   const loadClasses = useCallback(async () => {
     if (paramClass) return; // opened for one class: no picker
+    const classesKey = `timetable:classes:${userKey}`;
+    const cachedClasses = readScreenCache<Awaited<ReturnType<typeof fetchClasses>>>(classesKey);
     try {
+      if (cachedClasses) applyClasses(cachedClasses);
       const data = await fetchClasses();
+      writeScreenCache(classesKey, data);
+      applyClasses(data);
+    } catch (e: any) {
+      if (cachedClasses) return; // keep showing the last classes
+      setError(e?.message || 'Failed to load classes');
+      setLoading(false);
+    }
+
+    function applyClasses(data: Awaited<ReturnType<typeof fetchClasses>>) {
       setClasses(data.classes);
       setStructure(data.grades);
       setCurriculum(data.curriculum);
@@ -85,36 +100,47 @@ export function useTimetableState({ role, school, userName, paramClass }: UseTim
       }
       // loadTimetable clears the spinner; with no class it never runs.
       if (!resolved) setLoading(false);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load classes');
-      setLoading(false);
     }
-  }, [paramClass, teacherViews]);
+  }, [paramClass, teacherViews, userKey]);
 
   const loadMine = useCallback(async () => {
-    setMineLoading(true); setMineError('');
+    const key = `timetable:mine:${userKey}`;
+    const cached = readScreenCache<Timetable>(key);
+    if (cached) setMyTt(cached);
+    setMineLoading(!cached); setMineError('');
     try {
-      setMyTt(await fetchMyTimetable());
+      const fresh = await fetchMyTimetable();
+      writeScreenCache(key, fresh);
+      setMyTt(fresh);
     } catch (e: any) {
-      setMineError(e?.message || 'Failed to load your timetable');
-      setMyTt(null);
+      if (!cached) {
+        setMineError(e?.message || 'Failed to load your timetable');
+        setMyTt(null);
+      }
     } finally {
       setMineLoading(false);
     }
-  }, []);
+  }, [userKey]);
 
   const loadTimetable = useCallback(async (cls: TimetableClass) => {
     if (!cls) return;
-    setLoading(true); setError('');
+    const key = `timetable:class:${userKey}:${cls.grade}:${cls.section}`;
+    const cached = readScreenCache<Timetable>(key);
+    if (cached) setTt(cached);
+    setLoading(!cached); setError('');
     try {
-      setTt(await fetchTimetable(cls.grade, cls.section));
+      const fresh = await fetchTimetable(cls.grade, cls.section);
+      writeScreenCache(key, fresh);
+      setTt(fresh);
     } catch (e: any) {
-      setError(e?.message || 'Failed to load timetable');
-      setTt(null);
+      if (!cached) {
+        setError(e?.message || 'Failed to load timetable');
+        setTt(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userKey]);
 
   const isMineView = teacherViews && view === 'mine';
   const homeroomClasses = classes.filter((c) => c.homeroom);

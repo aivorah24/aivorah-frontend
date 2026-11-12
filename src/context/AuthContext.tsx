@@ -15,6 +15,7 @@ import { auth } from '../config/firebase';
 import SERVER_URL from '../config/serverUrl';
 import AUTH_SERVER_URL from '../config/authServerUrl';
 import PROFILE_SERVER_URL from '../config/profileServerUrl';
+import { clearScreenCache } from '../utils/screenCache';
 import { useTheme } from './ThemeContext';
 import { prefetchStudentDashboard } from '../utils/curriculumPrefetch';
 import { BLOCKED_ACCOUNT_MESSAGE } from '../constants/supportContact';
@@ -898,6 +899,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('aivorah_auth_this_session'); } catch {}
     try { if (typeof localStorage !== 'undefined') localStorage.removeItem('aivorah_last_active_ts'); } catch {}
+    clearScreenCache(); // last-shown data of Timetable, Attendance, Challenges, ...
     await AsyncStorage.removeItem(PROFILE_KEY).catch(() => {});
     await AsyncStorage.removeItem(PENDING_VERIFY_KEY).catch(() => {});
     await signOut(auth).catch(() => {});

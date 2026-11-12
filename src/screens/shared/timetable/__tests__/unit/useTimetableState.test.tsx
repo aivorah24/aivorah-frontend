@@ -5,6 +5,7 @@ import { Text } from 'react-native';
 import { useTimetableState } from '../../hooks/useTimetableState';
 import { fetchClasses, fetchTimetable, saveSlot, saveTemplate } from '../../services/timetableApi';
 import { downloadTimetablePdf } from '../../utils/timetablePdf';
+import { clearScreenCache } from '../../../../../utils/screenCache';
 
 jest.mock('../../services/timetableApi', () => ({
   fetchClasses: jest.fn(), fetchTimetable: jest.fn(), saveSlot: jest.fn(), saveTemplate: jest.fn(),
@@ -215,3 +216,6 @@ describe('useTimetableState', () => {
     expect(hookRef.classLabel).toBe('Timetable');
   });
 });
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());

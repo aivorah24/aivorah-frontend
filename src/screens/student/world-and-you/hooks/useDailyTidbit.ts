@@ -38,7 +38,9 @@ export function useDailyTidbit(grade: string, onReload?: () => void, onTabChange
       const resp = await fetch(`${SERVER_URL}/daily-tidbit?grade=${encodeURIComponent(grade)}`);
       if (!resp.ok) throw new Error('Server error');
       const json: TidbitData = await resp.json();
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
+      // A quick ready-made fact (AI still writing) is shown but not kept for
+      // the day, so the next visit gets the real one.
+      if (!json.partial) await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
       setData(json);
     } catch {
       setError(true);

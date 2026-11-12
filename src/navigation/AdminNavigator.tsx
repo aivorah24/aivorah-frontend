@@ -11,13 +11,12 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import PlatformOverviewScreen from '../screens/aivorah-admin/overview/PlatformOverviewScreen';
-import PLATFORM_ADMIN_SERVER_URL from '../config/platformAdminServerUrl';
 import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+import { PLATFORM_ADMIN_SERVICES } from '../config/roleServices';
 
 // Every screen below loads from its own chunk on first open (lazyScreens.tsx);
 // PlatformOverviewScreen stays in the main bundle so the home page needs no extra download.
 const screens = createLazyScreenGroup();
-const ROLE_SERVICES = [PLATFORM_ADMIN_SERVER_URL];
 const AdminUsersScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/users/AdminUsersScreen'));
 const MapToTeacherScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/map-to-teacher/MapToTeacherScreen'));
 const BulkImportScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/bulk-import/BulkImportScreen'));
@@ -48,7 +47,7 @@ export function adminRouteFromPath(path: string): keyof AdminDrawerParamList {
 
 export default function AdminNavigator() {
   // Wake this role's services and, on a good connection, prefetch its screens.
-  useRoleWarmup(screens, ROLE_SERVICES);
+  useRoleWarmup(screens, PLATFORM_ADMIN_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

@@ -6,19 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
-import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
-import ASSIGNMENTS_SERVER_URL from '../config/assignmentsServerUrl';
-import LEADERBOARD_SERVICE_URL from '../config/leaderboardServiceUrl';
-import SCHEDULE_SERVER_URL from '../config/scheduleServerUrl';
-import CHALLENGES_SERVER_URL from '../config/challengesServerUrl';
-import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+import { STUDENT_SERVICES } from '../config/roleServices';
 
 // Every screen below loads from its own chunk on first open (lazyScreens.tsx);
 // DashboardScreen stays in the main bundle so the home page needs no extra download.
 const screens = createLazyScreenGroup();
 const LessonScreen = screens.lazyScreen(() => import('../screens/student/learning-paths/lesson-screen/LessonScreen'));
-const ROLE_SERVICES = [LEARNING_PATHS_SERVER_URL, ASSIGNMENTS_SERVER_URL, LEADERBOARD_SERVICE_URL, SCHEDULE_SERVER_URL, CHALLENGES_SERVER_URL, MESSAGES_SERVER_URL];
 const ProfileScreen = screens.lazyScreen(() => import('../screens/student/profile/ProfileScreen'));
 const LearningPathsScreen = screens.lazyScreen(() => import('../screens/student/learning-paths/LearningPathsScreen'));
 const AICoachScreen = screens.lazyScreen(() => import('../screens/student/ai-coach/AICoachScreen'));
@@ -65,7 +59,7 @@ const Drawer = createDrawerNavigator<DrawerParamList>();
 
 export default function AppNavigator() {
   // Wake this role's services and, on a good connection, prefetch its screens.
-  useRoleWarmup(screens, ROLE_SERVICES);
+  useRoleWarmup(screens, STUDENT_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

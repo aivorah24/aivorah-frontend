@@ -2,6 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { useWorldData } from '../useWorldData';
+import { clearScreenCache, readScreenCache, writeScreenCache } from '../../../../../utils/screenCache';
 
 jest.setTimeout(15000);
 
@@ -76,5 +77,32 @@ describe('useWorldData — refetch on grade change', () => {
 
     await waitFor(() => expect(screen.getByTestId('funChallengeAnswer').props.children).toBe('A2'));
     expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('Grade%204'));
+  });
+});
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());
+
+describe('useWorldData — instant from earlier today', () => {
+  const todayKey = (grade: string) => {
+    const d = new Date();
+    return `world-daily:${grade}:${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  test('shows today’s cached content without a spinner, even if the refresh fails', async () => {
+    writeScreenCache(todayKey('Grade 4'), { date: 'Today', onThisDay: [], funChallenge: { question: 'Q', answer: 'Cached answer' } });
+    global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
+    await render(<Harness />);
+    expect(screen.getByTestId('loading').props.children).toBe('false');
+    expect(screen.getByTestId('funChallengeAnswer').props.children).toBe('Cached answer');
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(screen.getByTestId('error').props.children).toBe('');
+  });
+
+  test('a quick first version (partial) is shown but not kept', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({ partial: true, onThisDay: [], funChallenge: { question: 'Q', answer: 'Quick' } })) as any;
+    await render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('funChallengeAnswer').props.children).toBe('Quick'));
+    expect(readScreenCache(todayKey('Grade 4'))).toBeNull();
   });
 });

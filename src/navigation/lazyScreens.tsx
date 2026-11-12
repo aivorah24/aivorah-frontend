@@ -2,7 +2,7 @@ import React, { Suspense, useEffect } from 'react';
 import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { getNetworkQuality, onNetworkQualityChange } from '../utils/networkQuality';
-import { warmServices } from '../utils/warmServices';
+import { keepServicesWarm } from '../utils/warmServices';
 
 // Code-splitting for the role navigators. Every screen except the role's home
 // screen is loaded from its own JS chunk the first time it's opened, so the
@@ -144,12 +144,13 @@ function idle(): Promise<void> {
   });
 }
 
-// Called once by each role navigator: wakes the services that role uses and,
-// on a good connection, prefetches the role's other screens after first paint.
+// Called once by each role navigator: wakes the services that role uses (and
+// keeps them awake while the app is open — see keepServicesWarm) and, on a
+// good connection, prefetches the role's other screens after first paint.
 export function useRoleWarmup(group: LazyScreenGroup, serviceUrls: string[]) {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    warmServices(serviceUrls);
+    const stopWarming = keepServicesWarm(serviceUrls);
 
     let cancelled = false;
     let started = false;
@@ -164,7 +165,7 @@ export function useRoleWarmup(group: LazyScreenGroup, serviceUrls: string[]) {
     schedule();
     // Started on a slow link and it got better (e.g. back on Wi-Fi) → prefetch then.
     const unsubscribe = onNetworkQualityChange((q) => { if (q !== 'slow') schedule(); });
-    return () => { cancelled = true; if (timer) clearTimeout(timer); unsubscribe(); };
+    return () => { cancelled = true; if (timer) clearTimeout(timer); unsubscribe(); stopWarming(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per navigator mount
   }, []);
 }

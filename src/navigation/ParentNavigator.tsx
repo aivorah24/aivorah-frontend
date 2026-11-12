@@ -6,17 +6,12 @@ import { useTheme } from '../context/ThemeContext';
 
 import DrawerContent from '../components/common/DrawerContent';
 import ParentDashboardScreen from '../screens/parent/dashboard/ParentDashboardScreen';
-import STUDENTS_SERVER_URL from '../config/studentsServerUrl';
-import LEARNING_PATHS_SERVER_URL from '../config/learningPathsServerUrl';
-import DAILY_HABITS_SERVER_URL from '../config/dailyHabitsServerUrl';
-import ASSIGNMENTS_SERVER_URL from '../config/assignmentsServerUrl';
-import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+import { PARENT_SERVICES } from '../config/roleServices';
 
 // Every screen below loads from its own chunk on first open (lazyScreens.tsx);
 // ParentDashboardScreen stays in the main bundle so the home page needs no extra download.
 const screens = createLazyScreenGroup();
-const ROLE_SERVICES = [STUDENTS_SERVER_URL, LEARNING_PATHS_SERVER_URL, DAILY_HABITS_SERVER_URL, ASSIGNMENTS_SERVER_URL, MESSAGES_SERVER_URL];
 const DashboardScreen = screens.lazyScreen(() => import('../screens/student/dashboard/DashboardScreen'));
 const ParentProfileScreen = screens.lazyScreen(() => import('../screens/parent/profile/ParentProfileScreen'));
 const ParentMyKidsScreen = screens.lazyScreen(() => import('../screens/parent/my-kids/ParentMyKidsScreen'));
@@ -45,7 +40,7 @@ const Drawer = createDrawerNavigator<ParentDrawerParamList>();
 
 export default function ParentNavigator() {
   // Wake this role's services and, on a good connection, prefetch its screens.
-  useRoleWarmup(screens, ROLE_SERVICES);
+  useRoleWarmup(screens, PARENT_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

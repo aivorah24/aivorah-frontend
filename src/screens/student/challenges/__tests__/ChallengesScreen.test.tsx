@@ -8,6 +8,7 @@ import React from 'react';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import ChallengesScreen from '../ChallengesScreen';
 import type { Challenge } from '../types';
+import { clearScreenCache } from '../../../../utils/screenCache';
 
 jest.setTimeout(15000);
 
@@ -206,3 +207,6 @@ describe('ChallengesScreen — deep-link highlight', () => {
     expect(mockStartChallenge).not.toHaveBeenCalled();
   });
 });
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());

@@ -7,6 +7,7 @@ import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import WorldAndYouScreen from '../WorldAndYouScreen';
+import { clearScreenCache } from '../../../../utils/screenCache';
 
 jest.setTimeout(15000);
 
@@ -198,3 +199,6 @@ describe('WorldAndYouScreen — error state', () => {
     expect(screen.queryByText('On This Day')).toBeNull();
   });
 });
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());

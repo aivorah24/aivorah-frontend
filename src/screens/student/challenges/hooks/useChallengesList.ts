@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import SERVER_URL from '../../../../config/challengesServerUrl';
 import { fetchWithRetry } from '../../../../utils/fetchWithRetry';
+import { readScreenCache, writeScreenCache } from '../../../../utils/screenCache';
 import type { Challenge } from '../types';
 
 // Started by the student from Available, not given by a teacher/parent.
@@ -21,8 +22,10 @@ export function useChallengesList({
   refreshProfile: () => Promise<any>;
 }) {
   const [activeTab, setActiveTab] = useState(initialTab === 'assigned' ? 'Assigned' : 'Available');
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Last list this student saw: shown instantly while the fresh one loads.
+  const cacheKey = `challenges:${studentId || 'none'}:${grade}:${curriculum}`;
+  const [challenges, setChallenges] = useState<Challenge[]>(() => readScreenCache<Challenge[]>(cacheKey) || []);
+  const [loading, setLoading] = useState(() => !readScreenCache<Challenge[]>(cacheKey));
   const [refreshing, setRefreshing] = useState(false);
 
   // Re-sync the tab when initialTab changes — adjusted during render (React's
@@ -34,7 +37,9 @@ export function useChallengesList({
   }
 
   const fetchChallenges = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    const cached = isRefresh ? null : readScreenCache<Challenge[]>(cacheKey);
+    if (cached) { setChallenges(cached); setLoading(false); }
+    else if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
       // Bug #22 ("no challenges available"): this used to be a bare
       // single-attempt fetch() — the same intermittent network flakiness
@@ -61,12 +66,13 @@ export function useChallengesList({
             }
           }
           setChallenges(merged);
+          writeScreenCache(cacheKey, merged);
         }
       }
     } catch {}
     setLoading(false);
     setRefreshing(false);
-  }, [grade, curriculum, studentId]);
+  }, [grade, curriculum, studentId, cacheKey]);
 
   useEffect(() => {
     // data fetching effect — setState happens inside fetchChallenges, not synchronously here

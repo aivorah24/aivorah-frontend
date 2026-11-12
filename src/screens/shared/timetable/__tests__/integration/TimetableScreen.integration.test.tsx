@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, userEvent } from '@testing-library/react-native';
 import TimetableScreen from '../../TimetableScreen';
 import TIMETABLE_RESOURCES_SERVER_URL from '../../../../../config/timetableResourcesServerUrl';
+import { clearScreenCache } from '../../../../../utils/screenCache';
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
@@ -260,3 +261,6 @@ describe('TimetableScreen — integration', () => {
     expect(await screen.findByText('Failed to load timetable')).toBeTruthy();
   });
 });
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());

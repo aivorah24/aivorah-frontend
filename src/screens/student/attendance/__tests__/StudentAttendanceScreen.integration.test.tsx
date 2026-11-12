@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import StudentAttendanceScreen from '../StudentAttendanceScreen';
+import { clearScreenCache } from '../../../../utils/screenCache';
 
 jest.mock('../../../../config/firebase', () => ({
   auth: { authStateReady: jest.fn().mockResolvedValue(undefined), currentUser: { getIdToken: jest.fn().mockResolvedValue('tok') } },
@@ -80,3 +81,6 @@ describe('StudentAttendanceScreen', () => {
     }
   });
 });
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());

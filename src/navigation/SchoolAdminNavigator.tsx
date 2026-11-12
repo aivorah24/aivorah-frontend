@@ -13,14 +13,12 @@ import { useTheme } from '../context/ThemeContext';
 import DrawerContent from '../components/common/DrawerContent';
 import SchoolAdminDashboardScreen from '../screens/school-admin/dashboard/SchoolAdminDashboardScreen';
 import SchoolAdminComingSoonScreen from '@legacy/school-admin/SchoolAdminComingSoonScreen';
-import SCHOOL_ADMIN_SERVER_URL from '../config/schoolAdminServerUrl';
-import MESSAGES_SERVER_URL from '../config/messagesServerUrl';
 import { createLazyScreenGroup, useRoleWarmup } from './lazyScreens';
+import { SCHOOL_ADMIN_SERVICES } from '../config/roleServices';
 
 // Every screen below loads from its own chunk on first open (lazyScreens.tsx);
 // SchoolAdminDashboardScreen stays in the main bundle so the home page needs no extra download.
 const screens = createLazyScreenGroup();
-const ROLE_SERVICES = [SCHOOL_ADMIN_SERVER_URL, MESSAGES_SERVER_URL];
 const SchoolAdminPeopleScreen = screens.lazyScreen(() => import('../screens/school-admin/people/SchoolAdminPeopleScreen'));
 const SchoolAdminStudentsScreen = screens.lazyScreen(() => import('../screens/school-admin/students/SchoolAdminStudentsScreen'));
 const SchoolAdminTeachersScreen = screens.lazyScreen(() => import('../screens/school-admin/teachers/SchoolAdminTeachersScreen'));
@@ -76,7 +74,7 @@ const Drawer = createDrawerNavigator<SchoolAdminDrawerParamList>();
 
 export default function SchoolAdminNavigator() {
   // Wake this role's services and, on a good connection, prefetch its screens.
-  useRoleWarmup(screens, ROLE_SERVICES);
+  useRoleWarmup(screens, SCHOOL_ADMIN_SERVICES);
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
   const { colors } = useTheme();

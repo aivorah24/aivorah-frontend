@@ -4,6 +4,8 @@ export interface WorldData {
   onThisDay: OnThisDay[];
   funChallenge: FunChallenge;
   date: string;
+  /** true = a ready-made puzzle while the AI is still writing today's. */
+  partial?: boolean;
 }
 
 export interface GKFact {
@@ -18,5 +20,8 @@ export interface TidbitData {
   grade: string;
   date: string;
   gk: GKFact;
-  currentAffairs: CurrentAffair;
+  /** Only when asked with currentAffairs=1 (the app no longer shows it). */
+  currentAffairs?: CurrentAffair | null;
+  /** true = a ready-made fact while the AI is still writing today's. */
+  partial?: boolean;
 }

@@ -94,3 +94,15 @@ describe('useDailyTidbit — tabs and reload', () => {
     expect(onReload).toHaveBeenCalled();
   });
 });
+
+describe('useDailyTidbit — quick reply while the AI writes', () => {
+  test('a partial (ready-made) fact is shown but not kept for the day', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonRes({ grade: 'Grade 4', gk: { fact: 'Ready-made fact.' }, partial: true })) as any;
+
+    await render(<Harness />);
+
+    await waitFor(() => expect(screen.getByTestId('gkFact').props.children).toBe('Ready-made fact.'));
+    const keys = await AsyncStorage.getAllKeys();
+    expect(keys.filter((k) => k.startsWith('daily_tidbit'))).toEqual([]);
+  });
+});

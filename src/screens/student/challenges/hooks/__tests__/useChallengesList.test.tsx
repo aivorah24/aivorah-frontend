@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useChallengesList } from '../useChallengesList';
+import { clearScreenCache, readScreenCache, writeScreenCache } from '../../../../../utils/screenCache';
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => void) => { const React = require('react'); React.useEffect(cb, []); },
@@ -273,5 +274,35 @@ describe('useChallengesList — self-started vs assigned', () => {
     const user = userEvent.setup();
     await user.press(screen.getByTestId('setInProgress'));
     expect(screen.getByTestId('filteredIds').props.children).toBe('self');
+  });
+});
+
+// Screens show their last data instantly from this cache; start every test empty.
+beforeEach(() => clearScreenCache());
+
+describe('useChallengesList — instant from the last visit', () => {
+  test('shows the cached list right away (no spinner), then the fresh one', async () => {
+    writeScreenCache('challenges:s1:Grade 4:NCERT', [{ id: 'old', status: 'available' }]);
+    let resolveFetch: (v: any) => void = () => {};
+    global.fetch = jest.fn((url: string) => (url.includes('/assigned')
+      ? jsonRes([])
+      : new Promise((r) => { resolveFetch = r; }))) as any;
+
+    await render(<Harness />);
+    expect(screen.getByTestId('loading').props.children).toBe('false');
+    expect(screen.getByTestId('challengesCount').props.children).toBe(1);
+
+    resolveFetch({ ok: true, json: async () => [{ id: 'a', status: 'available' }, { id: 'b', status: 'available' }] });
+    await waitFor(() => expect(screen.getByTestId('challengesCount').props.children).toBe(2));
+    expect(readScreenCache('challenges:s1:Grade 4:NCERT')).toHaveLength(2);
+  });
+
+  test('a failed refresh keeps the cached list', async () => {
+    writeScreenCache('challenges:s1:Grade 4:NCERT', [{ id: 'old', status: 'available' }]);
+    global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
+    await render(<Harness />);
+    await waitFor(() => expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(0));
+    expect(screen.getByTestId('loading').props.children).toBe('false');
+    expect(screen.getByTestId('challengesCount').props.children).toBe(1);
   });
 });
