@@ -21,6 +21,7 @@ const AdminUsersScreen = screens.lazyScreen(() => import('../screens/aivorah-adm
 const MapToTeacherScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/map-to-teacher/MapToTeacherScreen'));
 const BulkImportScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/bulk-import/BulkImportScreen'));
 const LlmUsageScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/llm-usage/LlmUsageScreen'));
+const CurrentAffairsAdminScreen = screens.lazyScreen(() => import('../screens/aivorah-admin/current-affairs/CurrentAffairsAdminScreen'));
 
 export type AdminDrawerParamList = {
   PlatformOverview: undefined;
@@ -28,6 +29,7 @@ export type AdminDrawerParamList = {
   MapToTeacher: undefined;
   BulkImport: undefined;
   LlmUsage: undefined;
+  CurrentAffairsAdmin: undefined;
 };
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
@@ -38,6 +40,7 @@ const ROUTE_BY_PATH: Record<string, keyof AdminDrawerParamList> = {
   'admin-map-to-teacher': 'MapToTeacher', maptoteacher: 'MapToTeacher',
   'admin-bulk-import': 'BulkImport', bulkimport: 'BulkImport',
   'admin-llm-usage': 'LlmUsage', llmusage: 'LlmUsage',
+  'admin-current-affairs': 'CurrentAffairsAdmin', currentaffairsadmin: 'CurrentAffairsAdmin',
 };
 
 export function adminRouteFromPath(path: string): keyof AdminDrawerParamList {
@@ -76,6 +79,7 @@ export default function AdminNavigator() {
       <Drawer.Screen name="MapToTeacher" component={MapToTeacherScreen} />
       <Drawer.Screen name="BulkImport" component={BulkImportScreen} />
       <Drawer.Screen name="LlmUsage" component={LlmUsageScreen} />
+      <Drawer.Screen name="CurrentAffairsAdmin" component={CurrentAffairsAdminScreen} />
     </Drawer.Navigator>
   );
 }

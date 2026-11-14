@@ -127,6 +127,7 @@ const ADMIN_NAV_ITEMS = [
   { label: 'Map to Teacher', icon: 'user-check', screen: 'MapToTeacher', group: 'MENU' },
   { label: 'Bulk Import', icon: 'upload-cloud', screen: 'BulkImport', group: 'MENU' },
   { label: 'LLM Usage', icon: 'cpu', screen: 'LlmUsage', group: 'MENU' },
+  { label: 'Current Affairs', icon: 'globe', screen: 'CurrentAffairsAdmin', group: 'MENU' },
 ];
 
 const SUPER_ADMIN_NAV_ITEMS = [

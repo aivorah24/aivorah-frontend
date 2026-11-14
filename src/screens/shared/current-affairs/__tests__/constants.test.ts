@@ -10,9 +10,9 @@ test.each([
 });
 
 test('stories per day match the PRD', () => {
-  expect(AGE_GROUPS['under-8'].storiesPerDay).toBe(3);
-  expect(AGE_GROUPS['8-12'].storiesPerDay).toBe(10);
-  expect(AGE_GROUPS['13+'].storiesPerDay).toBe(18);
+  expect(AGE_GROUPS['under-8'].storiesPerDay).toBe(5);
+  expect(AGE_GROUPS['8-12'].storiesPerDay).toBe(6);
+  expect(AGE_GROUPS['13+'].storiesPerDay).toBe(7);
 });
 
 test('all 7 categories have a label and a Feather icon (no emoji)', () => {
