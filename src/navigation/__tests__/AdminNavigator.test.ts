@@ -7,6 +7,7 @@ jest.mock('../../screens/aivorah-admin/users/AdminUsersScreen', () => () => null
 jest.mock('../../screens/aivorah-admin/map-to-teacher/MapToTeacherScreen', () => () => null);
 jest.mock('../../screens/aivorah-admin/bulk-import/BulkImportScreen', () => () => null);
 jest.mock('../../screens/aivorah-admin/llm-usage/LlmUsageScreen', () => () => null);
+jest.mock('../../screens/aivorah-admin/current-affairs/CurrentAffairsAdminScreen', () => () => null);
 jest.mock('../../context/ThemeContext', () => ({ useTheme: () => ({ colors: {} }) }));
 
 describe('adminRouteFromPath', () => {
@@ -16,6 +17,7 @@ describe('adminRouteFromPath', () => {
     ['/admin-map-to-teacher', 'MapToTeacher'],
     ['/admin-bulk-import?x=1', 'BulkImport'],
     ['/LlmUsage/', 'LlmUsage'],
+    ['/admin-current-affairs', 'CurrentAffairsAdmin'],
     ['/admin-login', 'PlatformOverview'],
     ['/', 'PlatformOverview'],
     ['/teacher/dashboard', 'PlatformOverview'],

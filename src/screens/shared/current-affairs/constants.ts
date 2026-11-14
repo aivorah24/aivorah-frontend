@@ -23,9 +23,10 @@ export const CATEGORIES: Record<Category, { label: string; icon: string }> = {
 };
 
 export const AGE_GROUPS: Record<AgeGroup, { label: string; storiesPerDay: number; minutes: string }> = {
-  'under-8': { label: 'Ages 3-8', storiesPerDay: 3, minutes: '3-5' },
-  '8-12': { label: 'Ages 8-12', storiesPerDay: 10, minutes: '5-7' },
-  '13+': { label: 'Ages 13+', storiesPerDay: 18, minutes: '7-10' },
+  // Spec: 5-7 stories a day (the service picks the same numbers).
+  'under-8': { label: 'Ages 3-8', storiesPerDay: 5, minutes: '3-5' },
+  '8-12': { label: 'Ages 8-12', storiesPerDay: 6, minutes: '5-7' },
+  '13+': { label: 'Ages 13+', storiesPerDay: 7, minutes: '7-10' },
 };
 
 export const QUESTION_TYPES: Record<QuestionType, string> = {
